@@ -14,14 +14,18 @@ import type { SleepNote } from "@/lib/types";
 
 export function InsightsView() {
   const { state, loadSampleWeek, removeLatestReport } = useCircadia();
-  const profile = state.profile!;
+  const profile = state.profile;
   const recs = useMemo(
-    () => buildRecommendations(profile, state.reports),
+    () => (profile ? buildRecommendations(profile, state.reports) : null),
     [profile, state.reports],
   );
-  const notes = useMemo(() => buildSleepNotes(profile, state.reports), [profile, state.reports]);
+  const notes = useMemo(
+    () => (profile ? buildSleepNotes(profile, state.reports) : []),
+    [profile, state.reports],
+  );
   const week = useMemo(() => weekBreakdown(state.reports), [state.reports]);
   const dreamReports = state.reports.filter((r) => r.dream?.text);
+  if (!profile || !recs) return null;
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-8">

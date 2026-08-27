@@ -64,9 +64,11 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/app/layout.tsx", "utf8")).toContain('force-dynamic');
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
-    expect(pkg.scripts.dock).toContain("repair-app.cjs");
-    expect(pkg.scripts.repair).toBe("node electron/repair-app.cjs");
-    expect(pkg.scripts.dock).toContain("--operator");
+    expect(pkg.scripts.dock).toContain("fix-mac.cjs");
+    expect(pkg.scripts.dock).not.toContain("--operator");
+    expect(pkg.scripts["dock:mod"]).toContain("--operator");
+    expect(pkg.scripts["fix-mac"]).toBe("node electron/fix-mac.cjs");
+    expect(pkg.scripts.repair).toBe("node electron/fix-mac.cjs");
     expect(pkg.scripts["reveal:mod"]).toBe("node electron/install-mac.cjs --operator --reveal");
     expect(install).toContain("aliasOnDesktop");
     expect(install).toContain("--operator");
@@ -80,14 +82,16 @@ describe("Dock install invariants", () => {
 
   it("does not put an absolute repo path in Electron's package.json main", () => {
     const pack = readFileSync("electron/pack-app.cjs", "utf8");
-    expect(install).toContain("pack-app.cjs");
     expect(install).toContain("writePackagedApp");
+    expect(install).toContain("fix-mac.cjs");
     expect(install).not.toMatch(/main:\s*path\.join\(root/);
     expect(pack).toContain('RELATIVE_MAIN = "main.cjs"');
     expect(pack).toContain("packagedMainPath");
     expect(pack).not.toMatch(/main:\s*path\.join/);
     expect(install).toContain("isNativeBundle");
-    expect(install).toContain("repairAll");
+    expect(install).toContain("fix-mac.cjs");
+    expect(install).toContain("--electron");
+    expect(install).toContain("electron-repaired");
     expect(install).toContain("Leaving the existing native app");
     expect(main).toContain("CIRCADIA_SURFACE");
     expect(main).toContain("NEXT_PUBLIC_CIRCADIA_SURFACE");
@@ -100,7 +104,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.5.3");
+    expect(APP_VERSION).toBe("0.5.4");
   });
 
   it("does not run diary views while compiling the operator", () => {
@@ -113,6 +117,6 @@ describe("morning sleep-aid question", () => {
     ]) {
       expect(readFileSync(file, "utf8")).toContain("DiarySurface");
     }
-    expect(readFileSync("src/components/diary-surface.tsx", "utf8")).toContain("isOperatorSurface");
+    expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain('typeof window === "undefined"');
   });
 });

@@ -18,8 +18,9 @@ const pack = require("../../electron/pack-app.cjs") as {
     },
   ) => string;
 };
-const repair = require("../../electron/repair-app.cjs") as {
+const repair = require("../../electron/fix-mac.cjs") as {
   repairAll: () => number;
+  packagedMainPath: (appDir: string, mainField: string) => string;
 };
 
 const CRASH_APP = "/Applications/Circadia.app/Contents/Resources/app";
@@ -107,6 +108,8 @@ describe("Electron packaged main path", () => {
       expect(pkg.main).toBe("main.cjs");
       expect(existsSync(path.join(appDir, "main.cjs"))).toBe(true);
       expect(path.isAbsolute(pkg.main)).toBe(false);
+      const shim = repair.packagedMainPath(appDir, path.join(path.resolve("."), "electron", "main.cjs"));
+      expect(existsSync(shim)).toBe(true);
     } finally {
       if (prev === undefined) delete process.env.CIRCADIA_REPAIR_ROOT;
       else process.env.CIRCADIA_REPAIR_ROOT = prev;

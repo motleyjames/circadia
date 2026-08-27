@@ -14,23 +14,26 @@ import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
 
 export function YouView() {
   const { state, saveProfile, resetAll, loadSampleWeek } = useCircadia();
-  const profile = state.profile!;
-  const imperial = cmToFeetInches(profile.heightCm);
+  const profile = state.profile;
+  const imperial = cmToFeetInches(profile?.heightCm ?? 170);
   const [feet, setFeet] = useState(String(imperial.feet));
   const [inches, setInches] = useState(String(imperial.inches));
-  const [pounds, setPounds] = useState(String(Math.round(kgToLb(profile.weightKg))));
-  const [age, setAge] = useState(String(profile.age));
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
+  const [pounds, setPounds] = useState(String(Math.round(kgToLb(profile?.weightKg ?? 70))));
+  const [age, setAge] = useState(String(profile?.age ?? 18));
+  const [name, setName] = useState(profile?.name ?? "");
+  const [email, setEmail] = useState(profile?.email ?? "");
+  const [phone, setPhone] = useState(profile?.phone ?? "");
   const [medDraft, setMedDraft] = useState("");
   const [supDraft, setSupDraft] = useState("");
 
+  if (!profile) return null;
+  const current = profile;
+
   function persist(patch: Partial<Profile>) {
-    saveProfile({ ...profile, ...patch });
+    saveProfile({ ...current, ...patch });
   }
 
-  const bmi = bmiKgM(profile.weightKg, profile.heightCm);
+  const bmi = bmiKgM(current.weightKg, current.heightCm);
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-16 xl:px-10">

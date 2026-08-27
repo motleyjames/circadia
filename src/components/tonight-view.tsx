@@ -21,7 +21,7 @@ import {
 
 export function TonightView() {
   const { state } = useCircadia();
-  const profile = state.profile!;
+  const profile = state.profile;
   const [now, setNow] = useState(() => new Date());
   const today = todayIsoDate(now);
   const loggedToday = state.reports.some((r) => r.morningDate === today);
@@ -33,6 +33,8 @@ export function TonightView() {
     const t = window.setInterval(() => setNow(new Date()), 30_000);
     return () => window.clearInterval(t);
   }, []);
+
+  if (!profile) return null;
 
   const offClock = screenOffClock(profile.targetSleep);
   const screensDown = shouldBeOffScreens(profile.targetSleep, now);

@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { writePackagedApp } = require("./pack-app.cjs");
-const { repairAll } = require("./repair-app.cjs");
+const { isElectronApp, repairAll, repairDest } = require("./fix-mac.cjs");
 
 const operator = process.argv.includes("--operator");
 const APP_DISPLAY = operator ? "Circadia Operator" : "Circadia";
@@ -64,7 +64,7 @@ const root = path.join(__dirname, "..");
 const swift = path.join(__dirname, "launcher.swift");
 const png = path.join(__dirname, operator ? "operator-icon.png" : "icon.png");
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
-const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.3";
+const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.4";
 
 spawnSync("killall", [EXEC_NAME], { stdio: "ignore" });
 freePort(DOCK_PORT);
@@ -270,7 +270,7 @@ buildDiary();
 try {
   dest = place(installNative);
 } catch (error) {
-  console.warn("Native launcher did not compile (install Xcode Command Line Tools with: xcode-select --install).");
+  console.warn("Native launcher did not compile. Install Command Line Tools: xcode-select --install");
   console.warn(String(error));
   const existing = findInstalled();
   if (existing && isNativeBundle(existing)) {
@@ -278,10 +278,18 @@ try {
     finishBundle(existing, EXEC_NAME);
     dest = existing;
     mode = "native-kept";
-  } else {
-    console.warn("Falling back to this Mac's Electron — executable stays named Electron.");
+  } else if (process.argv.includes("--electron")) {
+    console.warn("Installing Electron fallback because you passed --electron.");
     mode = "electron-fallback";
     dest = place(installElectronFallback);
+  } else if (existing && isElectronApp(existing) && repairDest(existing, operator ? "mod" : "diary")) {
+    dest = existing;
+    mode = "electron-repaired";
+    console.warn("Patched the existing Electron app. Did not copy a new Electron.app.");
+  } else {
+    console.error(`${APP_FILE} was not installed. Circadia needs a native window (xcode-select --install), then npm run dock.`);
+    console.error("If a broken Electron Circadia is already in /Applications: node electron/fix-mac.cjs");
+    process.exit(1);
   }
 }
 
@@ -291,7 +299,9 @@ console.log(
     ? `Installed a native ${APP_DISPLAY} window (not a packaged Chromium).`
     : mode === "native-kept"
       ? `Kept the native ${APP_DISPLAY} window and refreshed its pointer. Swift did not compile this time.`
-      : `Installed ${APP_DISPLAY} using this Mac's Electron (binary not renamed).`,
+      : mode === "electron-repaired"
+        ? `Patched the existing Electron ${APP_DISPLAY}. Native Swift is still the real install (xcode-select --install).`
+        : `Installed ${APP_DISPLAY} using this Mac's Electron (binary not renamed).`,
 );
 console.log(dest);
 console.log(`Node: ${process.execPath}`);
