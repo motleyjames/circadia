@@ -3,6 +3,8 @@ import { buildSleepNotes } from "@/lib/advisor";
 import { readDream } from "@/lib/dreams";
 import { flagMedications, weekBreakdown } from "@/lib/metrics";
 import { buildRecommendations } from "@/lib/recommendations";
+import { extraConsult } from "@/lib/consult-extra";
+import { resolveQuestion } from "@/lib/chat-history";
 import { matchResearch } from "@/lib/research";
 import { formatClock, formatDuration, newId, overnightDuration, sleepNeedHours } from "@/lib/time";
 
@@ -67,7 +69,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
   const meds = flagMedications(profile.medications);
   const diary = lastNight(latest, units);
 
-  if (/dream|nightmare|meaning/.test(lower)) {
+  if (/dream|nightmare|meaning/.test(lower) && !/doxylamine|unisom|melatonin/.test(lower)) {
     const lastDream = [...reports].reverse().find((r) => r.dream?.text);
     if (lastDream?.dream) {
       const read = readDream(lastDream.dream.text, lastDream, profile);
@@ -78,6 +80,9 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
       citations: ["dreams"],
     };
   }
+
+  const extra = extraConsult(lower);
+  if (extra) return extra;
 
   if (
     /ambien|zolpidem|lunesta|trazodone|hydroxyzine|atarax|sonata|restoril|silenor/.test(
@@ -95,8 +100,14 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
       lower,
     )
   ) {
+    const gel = /gel|sleepgel|dipheng/.test(lower)
+      ? " The gels are usually diphenhydramine, not doxylamine. Same family: drowsy, foggy next day, not a nightly plan."
+      : "";
+    const nightly = /every night|habit|long term|daily|each night/.test(lower)
+      ? " Taking it every night is the thing clinics do not want."
+      : "";
     return {
-      text: "Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep — next-day fog is common, and they work less if you take them often. Sleep clinics do not use these as a nightly plan. Fine as a rare backup; not a habit. Do not mix with alcohol. If you are older or already take drowsy meds, ask a pharmacist or doctor first. I will not tell you to start them.",
+      text: `Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep — next-day fog is common, and they work less if you take them often. Sleep clinics do not use these as a nightly plan. Fine as a rare backup; not a habit. Do not mix with alcohol. If you are older or already take drowsy meds, ask a pharmacist or doctor first. I will not tell you to start them.${gel}${nightly}`,
       citations: ["otc-antihistamines"],
     };
   }
@@ -108,12 +119,25 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
+  if (/\b(adderall|vyvanse|ritalin|concerta|wellbutrin|ssri|zoloft|lexapro|medication|prescription med)\b/.test(lower)) {
+    const named = meds.length
+      ? meds.map((m) => `${m.name}: ${m.note}`).join(" ")
+      : "I only comment on names you listed in You. I will never tell you to stop a prescribed drug.";
+    return { text: named, citations: ["medications"] };
+  }
+
   if (/melatonin/.test(lower)) {
+    const when = /when|how long before|what time/.test(lower)
+      ? " Timing people discuss with a clinician is often 1–3 hours before desired sleep, not at lights-out."
+      : "";
+    const howMuch = /how much|dose|mg\b|milligram/.test(lower)
+      ? " The clock-tool discussion is often 0.3–1 mg — not 10 mg."
+      : "";
     const rec = recs.ready ? recs.supplements.find((s) => s.id === "melatonin" || s.id === "none") : undefined;
     const plan = recs.ready
       ? rec?.body
       : `Melatonin is a clock signal, not a sleeping pill. Sleep clinics try a stable wake time first. I wait for about ${recs.nightsNeeded} mornings before talking about it as a clock tool — you have ${recs.nightsLogged}. If a clinician later agrees, the usual discussion is a low dose (often 0.3–1 mg) earlier than bedtime, not a big dose at lights-out.`;
-    return { text: [diary, plan].filter(Boolean).join(" "), citations: ["melatonin"] };
+    return { text: [diary, plan, howMuch, when].filter(Boolean).join(" "), citations: ["melatonin"] };
   }
 
   if (/magnesium/.test(lower)) {
@@ -124,7 +148,14 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     return { text: plan ?? "", citations: ["magnesium"] };
   }
 
-  if (/alcohol|drink|drunk|spins|hangover/.test(lower)) {
+  if (/caffeine|coffee|espresso|energy drink/.test(lower)) {
+    return {
+      text: `${meds.length ? `You listed ${meds.map((m) => m.name).join(", ")} — late caffeine on top of a stimulant is a common way to show up as “I can’t sleep.” ` : ""}Caffeine blocks the chemical that builds up while you are awake and tells you it is time to sleep. It hangs around about 5–6 hours for most people. A 3 pm coffee can still be working at 9 pm. If falling asleep is the problem, last caffeine by early afternoon.`,
+      citations: ["caffeine"],
+    };
+  }
+
+  if (/alcohol|drink|drunk|spins|hangover|\b(beer|wine|vodka|shots?|tequila|whiskey)\b/.test(lower) && !/coffee|caffeine|water/.test(lower)) {
     const n = week.alcoholNights;
     const chart = reports.length
       ? `On your diary: drinks on ${n} of ${reports.length} nights.`
@@ -135,7 +166,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/screen|phone|blue light|blue-light|scroll/.test(lower)) {
+  if (/screen|phone|blue light|blue-light|scroll|night mode/.test(lower)) {
     const avg = reports.length ? ` Your average screens-off window is about ${Math.round(week.meanScreenOffMinutes)} min.` : "";
     return {
       text: `Bright evening light can delay the “it is night” signal. The bigger problem is usually the content — unfinished work and feeds keep the brain on.${avg} Dim the room, get off the phone for an hour, and get morning outdoor light. That pair trains the clock.`,
@@ -143,14 +174,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/caffeine|coffee|espresso|energy drink/.test(lower)) {
-    return {
-      text: `${meds.length ? `You listed ${meds.map((m) => m.name).join(", ")} — late caffeine on top of a stimulant is a common way to show up as “I can’t sleep.” ` : ""}Caffeine blocks the chemical that builds up while you are awake and tells you it is time to sleep. It hangs around about 5–6 hours for most people. A 3 pm coffee can still be working at 9 pm. If falling asleep is the problem, last caffeine by early afternoon.`,
-      citations: ["caffeine"],
-    };
-  }
-
-  if (/nap|sleep in|sleeping in|catch up|weekend|slept until|sleep till/.test(lower)) {
+  if (/nap|sleep in|sleeping in|catch up|weekend|slept until|sleep till/.test(lower) && !/lie awake|lying awake|fall asleep/.test(lower)) {
     return {
       text: `Sleeping until noon after a short night feels kind and pushes tonight later — like a tiny time-zone shift. Protect your wake time (${formatClock(profile.targetWake, units)}) even after a rough night. Catch-up: a ~20 minute nap before mid-afternoon, or go to bed earlier only once you are actually sleepy. Exception: if you might drive or cannot stay awake, sleep is safety. That severity belongs with a doctor.`,
       citations: ["naps", "circadian-anchor"],
@@ -168,14 +192,14 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/can'?t fall|cannot fall|fall asleep|falling asleep|onset|wired|mind racing|lying awake/.test(lower)) {
+  if (/can'?t fall|cannot fall|can'?t sleep|cannot sleep|\binsomnia\b|fall asleep|falling asleep|onset|wired|mind racing|lie awake|lying awake/.test(lower)) {
     return {
       text: `${diary ? `${diary} ` : ""}Trouble falling asleep is usually “not sleepy enough yet” plus a bed that has been used for thinking. Do not get in to try. Dim lights, off screens, wind-down here. Get in when you are actually sleepy. Still awake about 20 minutes: get up. That beats a sleeping pill at lights-out.`,
       citations: ["sleep-pressure", "wind-down"],
     };
   }
 
-  if (/how much sleep|how many hours|sleep need|enough sleep|6 hours|seven hours/.test(lower)) {
+  if (/how much sleep|how many hours|sleep need|enough sleep|[6-9] hours|eight hours|seven hours|do i need \d/.test(lower)) {
     const need = sleepNeedHours(profile.age);
     const mean = reports.length ? ` Your average on the chart is ${formatDuration(week.meanDurationMinutes)}.` : "";
     return {
@@ -184,7 +208,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/exercise|workout|gym|run|sedentary|active/.test(lower)) {
+  if (/exercise|work out|workout|\bgym\b|sedentary|hiit/.test(lower)) {
     return {
       text: `You marked activity as ${profile.activity}. Moving during the day usually helps sleep. A hard workout in the last hour can delay it for some people. Walk and morning light first. Do not make the first experiment 10 pm HIIT.`,
       citations: ["activity"],
@@ -198,18 +222,14 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (
-    /\b(meds?|medication|prescription|adderall|vyvanse|ritalin|stimulant|wellbutrin|ssri|zoloft|lexapro)\b/.test(
-      lower,
-    )
-  ) {
+  if (/\b(meds?|medication)s?\b/.test(lower)) {
     const named = meds.length
       ? meds.map((m) => `${m.name}: ${m.note}`).join(" ")
       : "I only comment on names you listed in You. I will never tell you to stop a prescribed drug.";
     return { text: named, citations: ["medications"] };
   }
 
-  if (/breathe|478|4-7-8|meditation|noise|brown|wind-down|wind down|calm/.test(lower)) {
+  if (/breathe|478|4-7-8|meditat|noise|brown|wind-down|wind down|calm/.test(lower)) {
     return {
       text: `A racing mind at bedtime keeps insomnia going. Slow breathing, muscle release, and boring noise lower that. They are not magic frequencies. Use one session tonight, then tell the morning interview if it helped — your response beats a population average.`,
       citations: ["wind-down"],
@@ -223,7 +243,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/how.*(doing|sleeping)|am i ok|is my sleep|tips|advice|help me|what should i do|plan|impression/.test(lower)) {
+  if (/how.*(doing|sleeping)|am i ok|is my sleep|tips|advice|what should i do|plan|impression/.test(lower)) {
     const top = notes.filter((n) => n.kind === "alert" || n.kind === "lever" || n.kind === "steady").slice(0, 2);
     const plan = top.map((n) => n.body).join(" ");
     return {
@@ -234,7 +254,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
 
   const retrieved = matchResearch(q);
   if (retrieved) {
-    return { text: retrieved.summary, citations: [retrieved.id] };
+    return { text: retrieved.say ?? retrieved.summary, citations: [retrieved.id] };
   }
 
   return {
@@ -247,9 +267,10 @@ export function answerQuestion(
   question: string,
   profile: Profile | null,
   reports: MorningReport[],
+  history: ChatMessage[] = [],
 ): ChatReply {
-  const q = question.trim();
-  if (!q) {
+  const raw = question.trim();
+  if (!raw) {
     return { text: "What is the actual problem tonight — falling asleep, waking, or tomorrow’s clock?", citations: [] };
   }
 
@@ -260,6 +281,7 @@ export function answerQuestion(
     };
   }
 
+  const q = resolveQuestion(raw, history);
   const sorted = [...reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate));
   return answerQuestionWithProfile(q, {
     profile,

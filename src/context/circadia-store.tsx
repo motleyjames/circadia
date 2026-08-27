@@ -109,7 +109,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     if (!trimmed) return;
     patch((prev) => {
       const you = makeChatMessage("you", trimmed);
-      const reply = answerQuestion(trimmed, prev.profile, prev.reports);
+      const reply = answerQuestion(trimmed, prev.profile, prev.reports, prev.chat);
       const circadia = makeChatMessage("circadia", reply.text, reply.citations);
       return { ...prev, chat: [...prev.chat, you, circadia].slice(-200) };
     });
