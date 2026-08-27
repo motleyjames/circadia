@@ -31,6 +31,8 @@ npx tsc --noEmit
 npm run build
 ```
 
+`npm test` includes a generated consult corpus — thousands of paraphrases plus follow-ups (`what about the gels?` after Unisom). It checks routing and safety, not frozen essays. The library in `src/lib/research.ts` is the source of truth.
+
 ## What this is not
 
 Not medical care. Not a diagnosis. Not a prescription. If you snore and gasp, fall asleep while driving, or cannot stay awake, that is a clinic.
