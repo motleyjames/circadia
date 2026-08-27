@@ -37,6 +37,33 @@ describe("hydrateState", () => {
     expect(state.study.participantId).toBe("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
   });
 
+  it("keeps a local supplement note and does not require melatonin-only kinds", () => {
+    const state = hydrateState({
+      profile: {
+        onboardingComplete: true,
+        name: "x",
+        age: 19,
+        heightCm: 180,
+        weightKg: 75,
+        targetSleep: "23:30",
+        targetWake: "07:30",
+      },
+      reports: [
+        {
+          morningDate: "2026-08-27",
+          wokeAt: "07:30",
+          fellAsleepAt: "23:30",
+          rating: 3,
+          usedSupplement: true,
+          supplementKind: "antihistamine",
+          supplementNote: "should not need this for unisom-type",
+        },
+      ],
+    });
+    expect(state.reports[0]?.supplementKind).toBe("antihistamine");
+    expect(state.reports[0]?.supplementNote).toBe("should not need this for unisom-type");
+  });
+
   it("throws on garbage", () => {
     expect(() => hydrateState("nope")).toThrow(/Circadia/);
   });

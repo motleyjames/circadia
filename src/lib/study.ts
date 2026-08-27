@@ -159,6 +159,9 @@ export function anonymityViolations(pack: StudyPack, state: CircadiaState): stri
     for (const slice of distinctiveSlices(report.dream?.text ?? "")) {
       if (blob.includes(slice)) hits.push("dream");
     }
+    for (const slice of distinctiveSlices(report.supplementNote ?? "")) {
+      if (blob.includes(slice)) hits.push("supplement");
+    }
   }
 
   for (const session of state.sessions) {

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   LatencyBucket,
@@ -21,7 +22,7 @@ const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30
 
 export function CheckInFlow() {
   const router = useRouter();
-  const { state, addReport } = useCircadia();
+  const { state, addReport, removeLatestReport } = useCircadia();
   const today = todayIsoDate();
   const existing = state.reports.find((r) => r.morningDate === today);
   const usedWindDown = state.sessions.some((s) => s.startedAt.slice(0, 10) === previousIso(today) || s.startedAt.slice(0, 10) === today);
@@ -38,7 +39,8 @@ export function CheckInFlow() {
   const [wokeInNight, setWokeInNight] = useState<boolean | undefined>(existing?.wokeInNight);
   const [nightWakingMinutes, setNightWakingMinutes] = useState<NightWakingDuration>(existing?.nightWakingMinutes ?? 25);
   const [usedSupplement, setUsedSupplement] = useState<boolean | undefined>(existing?.usedSupplement);
-  const [supplementKind, setSupplementKind] = useState<SupplementKind>(existing?.supplementKind ?? "melatonin");
+  const [supplementKind, setSupplementKind] = useState<SupplementKind | undefined>(existing?.supplementKind);
+  const [supplementNote, setSupplementNote] = useState(existing?.supplementNote ?? "");
   const [windDownHelped, setWindDownHelped] = useState<WindDownHelp | undefined>(
     existing?.windDownHelped ?? (usedWindDown ? undefined : "did_not_use"),
   );
@@ -74,7 +76,11 @@ export function CheckInFlow() {
       case "stay":
         return wokeInNight !== undefined;
       case "supp":
-        return usedSupplement !== undefined;
+        if (usedSupplement === undefined) return false;
+        if (!usedSupplement) return true;
+        if (!supplementKind) return false;
+        if (supplementKind === "other" && !supplementNote.trim()) return false;
+        return true;
       case "wind":
         return windDownHelped !== undefined;
       case "dream":
@@ -94,6 +100,8 @@ export function CheckInFlow() {
       sleepLatencyMinutes === undefined ||
       wokeInNight === undefined ||
       usedSupplement === undefined ||
+      (usedSupplement && !supplementKind) ||
+      (usedSupplement && supplementKind === "other" && !supplementNote.trim()) ||
       windDownHelped === undefined ||
       (drank && (drinkCount === undefined || spins === undefined))
     ) {
@@ -117,6 +125,9 @@ export function CheckInFlow() {
       payload.spins = spins;
     }
     if (usedSupplement) payload.supplementKind = supplementKind;
+    if (usedSupplement && supplementKind === "other" && supplementNote.trim()) {
+      payload.supplementNote = supplementNote.trim().slice(0, 80);
+    }
     if (includeDream && dreamText.trim()) {
       payload.dream = { text: dreamText.trim(), wantMeaning };
     }
@@ -130,8 +141,35 @@ export function CheckInFlow() {
       <h1 className="font-heading mt-1 text-2xl text-zinc-50">Forty seconds. Honest bubbles.</h1>
       <p className="mt-1 text-xs text-zinc-500">
         {today}
-        {existing ? " · you can overwrite today’s log" : ""}
+        {existing ? " · this morning is already logged" : ""}
       </p>
+      {existing || state.reports.length > 0 ? (
+        <button
+          type="button"
+          className="mt-3 text-left text-[13px] text-zinc-400 underline-offset-4 hover:text-zinc-200 hover:underline"
+          onClick={() => {
+            if (!window.confirm("Erase the latest morning so you can fill it out again?")) return;
+            removeLatestReport();
+            setStep(0);
+            setRating(undefined);
+            setDrank(undefined);
+            setDrinkCount(undefined);
+            setSpins(undefined);
+            setScreenOffMinutes(undefined);
+            setSleepLatencyMinutes(undefined);
+            setWokeInNight(undefined);
+            setUsedSupplement(undefined);
+            setSupplementKind(undefined);
+            setSupplementNote("");
+            setWindDownHelped(usedWindDown ? undefined : "did_not_use");
+            setIncludeDream(false);
+            setDreamText("");
+            setWantMeaning(false);
+          }}
+        >
+          Erase the latest morning and start over
+        </button>
+      ) : null}
 
       <div className="mt-6 mb-4 flex gap-1">
         {steps.map((key, i) => (
@@ -297,12 +335,19 @@ export function CheckInFlow() {
         ) : null}
 
         {current === "supp" ? (
-          <Block title="Melatonin or magnesium last night?" hint="Only if you took it for this night.">
+          <Block
+            title="Did you take any supplements last night to help you sleep?"
+            hint="Anything you took for this night — a gummy, magnesium, Unisom. Not a daytime vitamin."
+          >
             <YesNo
               value={usedSupplement}
               onChange={(v) => {
                 setUsedSupplement(v);
-                if (!v) advance();
+                if (!v) {
+                  setSupplementKind(undefined);
+                  setSupplementNote("");
+                  advance();
+                }
               }}
             />
             {usedSupplement ? (
@@ -312,15 +357,30 @@ export function CheckInFlow() {
                   value={supplementKind}
                   onChange={(v) => {
                     setSupplementKind(v);
-                    advance();
+                    if (v !== "other") {
+                      setSupplementNote("");
+                      advance();
+                    }
                   }}
                   options={[
                     { value: "melatonin" as SupplementKind, label: "Melatonin" },
                     { value: "magnesium" as SupplementKind, label: "Magnesium" },
-                    { value: "both" as SupplementKind, label: "Both" },
-                    { value: "other" as SupplementKind, label: "Other" },
+                    { value: "both" as SupplementKind, label: "Both of those" },
+                    { value: "antihistamine" as SupplementKind, label: "Unisom-type" },
+                    { value: "other" as SupplementKind, label: "Something else" },
                   ]}
                 />
+                {supplementKind === "other" ? (
+                  <label className="mt-4 block">
+                    <span className="text-xs text-zinc-400">What was it?</span>
+                    <Input
+                      value={supplementNote}
+                      onChange={(e) => setSupplementNote(e.target.value.slice(0, 80))}
+                      placeholder="Name is fine. Stays on this computer."
+                      className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-zinc-50"
+                    />
+                  </label>
+                ) : null}
               </div>
             ) : null}
           </Block>

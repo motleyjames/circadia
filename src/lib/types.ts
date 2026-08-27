@@ -8,7 +8,7 @@ export type Units = "imperial" | "metric";
 
 export type SleepRating = 1 | 2 | 3 | 4 | 5;
 
-export type SupplementKind = "melatonin" | "magnesium" | "both" | "other";
+export type SupplementKind = "melatonin" | "magnesium" | "both" | "antihistamine" | "other";
 
 export type ScreenOffMinutes = 0 | 15 | 30 | 45 | 60;
 
@@ -60,6 +60,8 @@ export type MorningReport = {
   nightWakingMinutes: NightWakingDuration;
   usedSupplement: boolean;
   supplementKind?: SupplementKind;
+  /** Local only. Never copied into a study pack. */
+  supplementNote?: string;
   windDownHelped: WindDownHelp;
   dream?: DreamReport;
   createdAt: string;
