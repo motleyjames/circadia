@@ -23,6 +23,9 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Circadia",
   },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: "/icon.svg",
     apple: "/icon.svg",

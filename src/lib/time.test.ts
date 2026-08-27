@@ -6,7 +6,9 @@ import {
   minutesToClock,
   overnightDuration,
   screenOffClock,
+  sleepFromWake,
   sleepNeedHours,
+  targetDurationMinutes,
 } from "./time";
 
 describe("time", () => {
@@ -36,5 +38,13 @@ describe("time", () => {
     expect(sleepNeedHours(16).min).toBe(8);
     expect(sleepNeedHours(19).min).toBe(7);
     expect(sleepNeedHours(19).max).toBe(9);
+  });
+
+  it("computes asleep-by from a defended wake", () => {
+    expect(targetDurationMinutes(19)).toBe(8 * 60);
+    expect(targetDurationMinutes(16)).toBe(9 * 60);
+    expect(sleepFromWake("07:00", 8 * 60)).toBe("23:00");
+    expect(sleepFromWake("07:30", 8 * 60)).toBe("23:30");
+    expect(sleepFromWake("06:00", 9 * 60)).toBe("21:00");
   });
 });

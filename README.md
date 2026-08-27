@@ -4,6 +4,8 @@ A phone-first sleep companion for people who **cannot fall asleep, cannot stay a
 
 Circadia is local-first. Profile, mornings, dreams, and chat live in this browser. There is no account. There is no cloud model. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
 
+**This is already the phone app.** Add to Home Screen (Safari or Chrome → Share → Add to Home Screen). Full screen, same data. A native store wrap does not fix a cheap first ten seconds — the opening is the product, and that is what this repo ships.
+
 ## What you do
 
 1. **You** — age, height, weight, activity, medications, supplements, target sleep/wake.
@@ -39,4 +41,4 @@ Dream “meaning” is theme-tagging plus physiology (alcohol and REM rebound, m
 
 ## Why this way
 
-A remote model would be more fluent and less honest. Sleep data is intimate; the first slice keeps it on-device and makes every note point at a library article or a number you typed. Native iOS/Android wrap (Capacitor) is the later packaging of this same app — see `docs/BLUEPRINT.md`.
+A remote model would be more fluent and less honest. Sleep data is intimate; the first slice keeps it on-device and makes every note point at a library article or a number you typed. Capacitor / App Store is later packaging (push that survives a killed tab). It is not what makes this feel like software. See `docs/BLUEPRINT.md`.
