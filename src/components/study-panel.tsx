@@ -2,13 +2,10 @@
 
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
-import { hasContact } from "@/lib/contact";
 
 export function StudyPanel() {
   const { state, joinStudy, leaveStudy, sendStudyNow } = useCircadia();
   const study = state.study;
-  const profile = state.profile;
-  const missingContact = Boolean(profile && !hasContact(profile.email, profile.phone));
 
   return (
     <section className="rounded-3xl border border-white/8 bg-white/[0.03] px-5 py-5">
@@ -33,11 +30,6 @@ export function StudyPanel() {
           <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
             Nights and faults leave after each morning. No Send button. Dreams and chat stay here.
           </p>
-          {missingContact ? (
-            <p className="mt-2 text-[13px] text-amber-200/90">
-              Add an email or phone above so this file can be found.
-            </p>
-          ) : null}
           <p className="mt-3 text-[12px] text-zinc-600">
             {study.lastStatus === "sent" && study.lastSentAt
               ? `Last reached James ${new Date(study.lastSentAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`

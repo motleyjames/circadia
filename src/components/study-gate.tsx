@@ -20,8 +20,9 @@ export function StudyGate() {
         stripped night log leaves on its own. If the app faults, that leaves too.
       </p>
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        James also gets a roster card once: your name, email or phone, age, height, weight, and
-        clocks. That is so a wiped laptop is not a lost tester. It is not a backup of your dreams.
+        James also gets a roster card once: your name, age, height, weight, and clocks. That is how
+        testers show up in the inbox — not a phone number, not a way to message you. Circadia will
+        not email or text you. It is not a backup of your dreams.
       </p>
       <ul className="mt-8 max-w-[42ch] space-y-2 text-[13px] leading-relaxed text-zinc-500">
         <li>Night packs never carry dream text, chat, or the bottle you typed — only a class.</li>

@@ -5,6 +5,8 @@ import { medicationClasses } from "./metrics";
 import type { CircadiaState, MorningReport, Profile } from "./types";
 
 const hostileProfile: Profile = {
+  firstName: "James",
+  lastName: "",
   name: "James",
   age: 19,
   sex: "male",

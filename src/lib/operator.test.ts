@@ -7,6 +7,8 @@ import { anonymityViolations, buildStudyPack } from "./study";
 import type { CircadiaState, Profile } from "./types";
 
 const profile: Profile = {
+  firstName: "James",
+  lastName: "Motley",
   name: "James Motley",
   age: 19,
   sex: "male",
@@ -52,13 +54,13 @@ describe("contact", () => {
 });
 
 describe("roster vs night pack", () => {
-  it("puts contact on the roster and keeps it out of the night pack", () => {
+  it("puts a name on the roster and keeps login identifiers out of both packs", () => {
     const s = state();
     const roster = buildRoster(s);
     const pack = buildStudyPack(s);
     expect(validateRoster(roster).ok).toBe(true);
-    expect(roster.email).toBe("james@colorado.edu");
-    expect(roster.phone).toBe("303-555-0142");
+    expect(roster.email).toBeNull();
+    expect(roster.phone).toBeNull();
     expect(roster.name).toBe("James Motley");
     expect(JSON.stringify(pack)).not.toMatch(/colorado\.edu/i);
     expect(JSON.stringify(pack)).not.toMatch(/303-555-0142/);

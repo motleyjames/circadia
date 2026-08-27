@@ -38,11 +38,11 @@ describe("hydrateState", () => {
     expect(state.study.rosterSentAt).toBeNull();
   });
 
-  it("keeps email and phone on the local file", () => {
+  it("keeps email and phone on the local file and splits a display name", () => {
     const state = hydrateState({
       profile: {
         onboardingComplete: true,
-        name: "James",
+        name: "James Motley",
         age: 19,
         heightCm: 180,
         weightKg: 75,
@@ -54,6 +54,23 @@ describe("hydrateState", () => {
     });
     expect(state.profile?.email).toBe("james@colorado.edu");
     expect(state.profile?.phone).toBe("3035550142");
+    expect(state.profile?.firstName).toBe("James");
+    expect(state.profile?.lastName).toBe("Motley");
+  });
+
+  it("keeps an incomplete identity profile so sleep intake can finish after signup", () => {
+    const state = hydrateState({
+      profile: {
+        onboardingComplete: false,
+        firstName: "Ada",
+        lastName: "Lovelace",
+        email: "ada@example.com",
+      },
+    });
+    expect(state.profile?.onboardingComplete).toBe(false);
+    expect(state.profile?.firstName).toBe("Ada");
+    expect(state.profile?.email).toBe("ada@example.com");
+    expect(state.profile?.name).toBe("Ada Lovelace");
   });
 
   it("keeps a local supplement note and does not require melatonin-only kinds", () => {

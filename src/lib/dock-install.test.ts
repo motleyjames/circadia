@@ -8,6 +8,7 @@ const launcher = readFileSync("electron/launcher.swift", "utf8");
 const main = readFileSync("electron/main.cjs", "utf8");
 const nextConfig = readFileSync("next.config.ts", "utf8");
 const onboarding = readFileSync("src/components/onboarding.tsx", "utf8");
+const authGate = readFileSync("src/components/auth-gate.tsx", "utf8");
 const checkIn = readFileSync("src/components/check-in-flow.tsx", "utf8");
 const serve = readFileSync("electron/serve-dock.cjs", "utf8");
 
@@ -43,8 +44,13 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/components/native-chrome.tsx", "utf8")).toContain("disarmNextOverlay");
   });
 
-  it("does not prefetch routes from the cover screen", () => {
+  it("does not prefetch routes from login or sleep intake", () => {
     expect(onboarding).not.toContain("useRouter");
+    expect(authGate).not.toContain("useRouter");
+    expect(authGate).toContain("Create file");
+    expect(authGate).toContain("Log in");
+    expect(onboarding).not.toContain("James can reach");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("AuthGate");
   });
 
   it("runs the operator as a second app on its own port, not a page in the diary", () => {
@@ -107,7 +113,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.5.4");
+    expect(APP_VERSION).toBe("0.6.0");
   });
 
   it("does not run diary views while compiling the operator", () => {

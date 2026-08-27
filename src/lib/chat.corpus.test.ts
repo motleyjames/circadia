@@ -5,6 +5,8 @@ import { isFollowUp, resolveQuestion } from "./chat-history";
 import type { ChatMessage, Profile } from "./types";
 
 const profile: Profile = {
+  firstName: "James",
+  lastName: "",
   name: "James",
   age: 19,
   sex: "male",

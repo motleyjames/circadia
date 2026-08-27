@@ -23,15 +23,18 @@ export type SoundscapeId = "brown" | "pink" | "rain" | "ocean";
 export type MeditationId = "478" | "body-scan" | "pmr";
 
 export type Profile = {
+  firstName: string;
+  lastName: string;
+  /** Display name: first + last. Operator roster uses this, not email or phone. */
   name: string;
   age: number;
   sex: Sex;
   heightCm: number;
   weightKg: number;
   activity: ActivityLevel;
-  /** Local + roster only. Never copied into a night pack. */
+  /** Local login identifier. Never copied into a night pack. Not a channel to the tester. */
   email: string;
-  /** Local + roster only. Never copied into a night pack. */
+  /** Local login identifier. Never copied into a night pack. Not a channel to the tester. */
   phone: string;
   medications: string[];
   supplements: string[];
@@ -154,6 +157,7 @@ export type RosterEvent = {
   participantId: string;
   appVersion: string;
   name: string;
+  /** Kept on the schema so old inbox files still parse. New cards send null. */
   email: string | null;
   phone: string | null;
   age: number;
