@@ -157,6 +157,25 @@
     radial-gradient(1px 1px at 82% 58%, rgba(125, 211, 252, 0.35), transparent),
     radial-gradient(1.5px 1.5px at 44% 40%, rgba(255, 255, 255, 0.2), transparent);
   opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Next.js 16 mounts a full-viewport portal for the N badge / error sheet.
+   Safari reports font fetches as TypeError: Load failed; the portal then
+   intercepts clicks across Tonight. This is a product window, not an IDE. */
+nextjs-portal {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+button,
+a,
+summary,
+label[for],
+select,
+[role="button"],
+[role="link"] {
+  cursor: pointer;
 }
 
 ::-webkit-scrollbar {

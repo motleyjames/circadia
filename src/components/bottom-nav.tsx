@@ -17,8 +17,9 @@ export function BottomNav() {
           <Link
             key={tab.href}
             href={tab.href}
+            prefetch={false}
             className={cn(
-              "flex flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] tracking-wide",
+              "flex cursor-pointer flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] tracking-wide",
               active ? "text-violet-200" : "text-zinc-500",
             )}
           >

@@ -128,7 +128,14 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     backing: .buffered,
     defer: false
   )
-  let web = WKWebView(frame: .zero)
+  let web: WKWebView = {
+    let config = WKWebViewConfiguration()
+    let js = "document.documentElement.classList.add('circadia-native');"
+    config.userContentController.addUserScript(
+      WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+    )
+    return WKWebView(frame: .zero, configuration: config)
+  }()
   let splash = NSTextField(labelWithString: "Starting the night clock…")
 
   func applicationDidFinishLaunching(_ notification: Notification) {

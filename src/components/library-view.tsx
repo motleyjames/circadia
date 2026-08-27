@@ -53,7 +53,7 @@ export function LibraryView() {
             <article key={article.id} className="rounded-3xl border border-white/8 bg-white/4">
               <button
                 type="button"
-                className="w-full px-4 py-3 text-left"
+                className="w-full px-4 py-3 text-left transition-colors hover:bg-white/6"
                 onClick={() => setOpenId(open ? null : article.id)}
               >
                 <p className="text-sm text-zinc-100">{article.title}</p>

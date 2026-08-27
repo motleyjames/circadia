@@ -78,7 +78,7 @@ export function WindDown() {
                 setMeditationId(m.id);
                 setMode("meditate");
               }}
-              className="rounded-3xl border border-white/10 bg-white/4 px-4 py-3 text-left"
+              className="rounded-3xl border border-white/10 bg-white/4 px-4 py-3 text-left transition-colors hover:border-white/20 hover:bg-white/8 active:bg-white/10"
             >
               <p className="text-sm text-zinc-100">{m.title}</p>
               <p className="text-xs text-zinc-500">
@@ -100,7 +100,7 @@ export function WindDown() {
                 setSoundId(s.id);
                 setMode("sound");
               }}
-              className="rounded-3xl border border-white/10 bg-white/4 px-4 py-3 text-left"
+              className="rounded-3xl border border-white/10 bg-white/4 px-4 py-3 text-left transition-colors hover:border-white/20 hover:bg-white/8 active:bg-white/10"
             >
               <p className="text-sm text-zinc-100">{s.title}</p>
               <p className="text-xs text-zinc-500">{s.blurb}</p>

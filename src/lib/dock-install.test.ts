@@ -34,6 +34,11 @@ describe("Dock install invariants", () => {
     expect(nextConfig).toContain("devIndicators: false");
   });
 
+  it("does not let the Next.js overlay steal clicks", () => {
+    expect(readFileSync("src/app/globals.css", "utf8")).toContain("nextjs-portal");
+    expect(readFileSync("src/components/native-chrome.tsx", "utf8")).toContain("disarmNextOverlay");
+  });
+
   it("does not prefetch routes from the cover screen", () => {
     expect(onboarding).not.toContain("useRouter");
   });
