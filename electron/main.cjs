@@ -53,6 +53,13 @@ function logLine(chunk) {
 }
 
 logLine(`\n--- electron ${new Date().toISOString()} ---\nexec ${process.execPath}\n`);
+try {
+  logLine(`dirname ${__dirname}\nresources ${String(process.resourcesPath)}\n`);
+  const early = readInstall();
+  logLine(early ? `install ${early.repo} :${early.port}\n` : "install MISSING\n");
+} catch (error) {
+  logLine(`early ${error}\n`);
+}
 
 function readInstall() {
   const candidates = [
@@ -267,7 +274,9 @@ function createShell() {
 }
 
 async function boot() {
+  logLine("boot\n");
   const win = createShell();
+  logLine("shell\n");
   await win.loadURL(dataUrl(splashHtml("Starting the night clock…")));
   try {
     await ensureUi();
@@ -309,6 +318,10 @@ process.on("uncaughtException", (error) => {
   logLine(`uncaught ${error.stack || error}\n`);
 });
 
+process.on("unhandledRejection", (error) => {
+  logLine(`unhandled ${error instanceof Error ? error.stack || error.message : String(error)}\n`);
+});
+
 try {
   app.setName(appTitle());
   app.setPath("userData", path.join(app.getPath("appData"), isOperator() ? "Circadia Operator" : "Circadia"));
@@ -317,6 +330,7 @@ try {
 }
 
 app.whenReady().then(() => {
+  logLine("whenReady\n");
   if (process.platform === "darwin" && app.dock) {
     app.dock.setIcon(appIcon());
   }
@@ -328,6 +342,8 @@ app.whenReady().then(() => {
   });
   installMenu();
   return boot();
+}).catch((error) => {
+  logLine(`whenReady ${error instanceof Error ? error.stack || error.message : String(error)}\n`);
 });
 
 app.on("activate", () => {

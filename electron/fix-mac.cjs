@@ -107,7 +107,24 @@ function repairDest(dest, kind, repo) {
   const check = JSON.parse(fs.readFileSync(path.join(appDir, "package.json"), "utf8"));
   if (check.main !== "main.cjs") throw new Error("package.json main is still " + check.main);
   if (!fs.existsSync(written.shim)) throw new Error("concatenation shim missing: " + written.shim);
+  resignBundle(dest);
   return true;
+}
+
+function resignBundle(dest) {
+  if (process.platform !== "darwin") return;
+  spawnSync("xattr", ["-cr", dest], { stdio: "ignore" });
+  const id = dest.includes("Operator") ? "app.circadia.operator" : "app.circadia.desktop";
+  const signed = spawnSync(
+    "codesign",
+    ["--force", "--deep", "--sign", "-", "--identifier", id, dest],
+    { encoding: "utf8" },
+  );
+  if (signed.status !== 0) {
+    console.warn("codesign failed:", (signed.stderr || signed.stdout || "").trim());
+  } else {
+    console.log("Re-signed", dest);
+  }
 }
 
 function candidates() {
@@ -153,6 +170,7 @@ module.exports = {
   packagedMainPath,
   writeBundle,
   repairDest,
+  resignBundle,
   repairAll,
   candidates,
 };
