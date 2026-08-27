@@ -4,17 +4,6 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 
-const root = process.env.CIRCADIA_STATIC_ROOT;
-const inbox = process.env.CIRCADIA_DATA_DIR;
-const port = Number(process.env.PORT) || 43147;
-const ingest = (process.env.STUDY_INGEST_URL || "").trim();
-const ingestToken = (process.env.STUDY_INGEST_TOKEN || "").trim();
-
-if (!root || !inbox) {
-  console.error("CIRCADIA_STATIC_ROOT and CIRCADIA_DATA_DIR are required.");
-  process.exit(1);
-}
-
 const MIME = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -30,21 +19,21 @@ const MIME = {
   ".woff2": "font/woff2",
 };
 
-function insideRoot(abs) {
+function insideRoot(root, abs) {
   const rel = path.relative(root, abs);
   return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
-function fileFor(urlPath) {
+function fileFor(root, urlPath) {
   const clean = decodeURIComponent(String(urlPath || "/").split("?")[0].split("#")[0]);
   const rel = clean === "/" ? "index.html" : clean.replace(/^\/+/, "");
   const abs = path.normalize(path.join(root, rel));
-  if (!insideRoot(abs)) return null;
+  if (!insideRoot(root, abs)) return null;
   if (fs.existsSync(abs) && fs.statSync(abs).isFile()) return abs;
   const indexed = path.join(abs, "index.html");
-  if (insideRoot(indexed) && fs.existsSync(indexed)) return indexed;
+  if (insideRoot(root, indexed) && fs.existsSync(indexed)) return indexed;
   const html = `${abs}.html`;
-  if (insideRoot(html) && fs.existsSync(html)) return html;
+  if (insideRoot(root, html) && fs.existsSync(html)) return html;
   const fallback = path.join(root, "index.html");
   return fs.existsSync(fallback) ? fallback : null;
 }
@@ -72,7 +61,7 @@ function readBody(req) {
   });
 }
 
-async function handleStudy(req, res) {
+async function handleStudy(req, res, inbox, ingest, ingestToken) {
   let raw;
   try {
     raw = JSON.parse(await readBody(req));
@@ -117,31 +106,68 @@ async function handleStudy(req, res) {
   });
 }
 
-const server = http.createServer((req, res) => {
-  const url = req.url || "/";
-  if (req.method === "POST" && url.split("?")[0] === "/api/study") {
-    handleStudy(req, res).catch(() => {
-      send(res, 500, JSON.stringify({ ok: false, error: "Could not store pack." }), {
-        "content-type": "application/json",
-      });
-    });
-    return;
-  }
-  if (req.method !== "GET" && req.method !== "HEAD") {
-    send(res, 405, "Method not allowed");
-    return;
-  }
-  const file = fileFor(url);
-  if (!file) {
-    send(res, 404, "Not found");
-    return;
-  }
-  const data = fs.readFileSync(file);
-  send(res, 200, req.method === "HEAD" ? undefined : data, {
-    "content-type": MIME[path.extname(file)] || "application/octet-stream",
-  });
-});
+function createServer(options) {
+  const root = options.root;
+  const inbox = options.inbox;
+  const ingest = (options.ingest || "").trim();
+  const ingestToken = (options.ingestToken || "").trim();
+  if (!root || !inbox) throw new Error("static server needs root and inbox");
 
-server.listen(port, "127.0.0.1", () => {
-  console.log(`Circadia UI on http://127.0.0.1:${port}`);
-});
+  return http.createServer((req, res) => {
+    const url = req.url || "/";
+    if (req.method === "POST" && url.split("?")[0] === "/api/study") {
+      handleStudy(req, res, inbox, ingest, ingestToken).catch(() => {
+        send(res, 500, JSON.stringify({ ok: false, error: "Could not store pack." }), {
+          "content-type": "application/json",
+        });
+      });
+      return;
+    }
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      send(res, 405, "Method not allowed");
+      return;
+    }
+    const file = fileFor(root, url);
+    if (!file) {
+      send(res, 404, "Not found");
+      return;
+    }
+    const data = fs.readFileSync(file);
+    send(res, 200, req.method === "HEAD" ? undefined : data, {
+      "content-type": MIME[path.extname(file)] || "application/octet-stream",
+    });
+  });
+}
+
+function listen(options) {
+  const requested = Number(options.port);
+  const port = Number.isFinite(requested) && requested > 0 ? requested : 0;
+  const server = createServer(options);
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, "127.0.0.1", () => {
+      const address = server.address();
+      const bound = typeof address === "object" && address ? address.port : port;
+      resolve({ server, port: bound, url: `http://127.0.0.1:${bound}` });
+    });
+  });
+}
+
+module.exports = { createServer, listen, fileFor };
+
+if (require.main === module) {
+  listen({
+    root: process.env.CIRCADIA_STATIC_ROOT,
+    inbox: process.env.CIRCADIA_DATA_DIR,
+    port: process.env.PORT,
+    ingest: process.env.STUDY_INGEST_URL,
+    ingestToken: process.env.STUDY_INGEST_TOKEN,
+  })
+    .then(({ url }) => {
+      console.log(`Circadia UI on ${url}`);
+    })
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}

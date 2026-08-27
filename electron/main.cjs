@@ -1,177 +1,126 @@
 "use strict";
 
-const { app, BrowserWindow, dialog, Menu, shell, utilityProcess } = require("electron");
+const { app, BrowserWindow, Menu, shell } = require("electron");
 const fs = require("node:fs");
 const http = require("node:http");
-const net = require("node:net");
 const path = require("node:path");
+const { listen } = require("./static-server.cjs");
 
-const PREFERRED_PORT = Number(process.env.CIRCADIA_PORT) || 43147;
+const DEV_URL = "http://127.0.0.1:43147";
 const ICON = path.join(__dirname, "icon.png");
 
-/** @type {Electron.UtilityProcess | null} */
-let server = null;
+/** @type {import('node:http').Server | null} */
+let httpServer = null;
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
 let isQuitting = false;
-let appUrl = `http://127.0.0.1:${PREFERRED_PORT}`;
+let appUrl = DEV_URL;
 
-function logPath() {
-  return path.join(app.getPath("userData"), "server.log");
+function failureHtml(message) {
+  const safe = String(message)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Circadia</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; background: #07060f; color: #e4e4e7; font: 15px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; }
+      main { max-width: 36rem; padding: 4rem 2rem; }
+      h1 { font-weight: 560; letter-spacing: -0.03em; }
+      p { color: #a1a1aa; }
+      pre { white-space: pre-wrap; color: #c4b5fd; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Circadia could not open the diary.</h1>
+      <p>The window is up. The UI is not. Quit with Cmd+Q, then from the rest-ai folder run <code>npm run dock</code> again.</p>
+      <pre>${safe}</pre>
+    </main>
+  </body>
+</html>`;
 }
 
-function logLine(chunk) {
-  try {
-    fs.appendFileSync(logPath(), chunk);
-  } catch {
-    /* ignore */
-  }
-}
-
-function probe(url, timeoutMs = 600) {
+function probe(url) {
   return new Promise((resolve) => {
     const req = http.get(url, (res) => {
       res.resume();
       resolve(true);
     });
     req.on("error", () => resolve(false));
-    req.setTimeout(timeoutMs, () => {
+    req.setTimeout(500, () => {
       req.destroy();
       resolve(false);
     });
   });
 }
 
-function waitForServer(url, timeoutMs = 45_000) {
+function waitForUrl(url, timeoutMs) {
   const started = Date.now();
   return new Promise((resolve, reject) => {
     const tick = () => {
-      probe(url, 400).then((up) => {
+      probe(url).then((up) => {
         if (up) {
           resolve(undefined);
           return;
         }
         if (Date.now() - started > timeoutMs) {
-          reject(new Error("Circadia’s local server did not start."));
+          reject(new Error(`Nothing answered at ${url}`));
           return;
         }
-        setTimeout(tick, 250);
+        setTimeout(tick, 200);
       });
     };
     tick();
   });
 }
 
-function pickPort(preferred) {
-  return new Promise((resolve, reject) => {
-    const tryListen = (port) => {
-      const srv = net.createServer();
-      srv.unref();
-      srv.on("error", () => {
-        if (port === preferred) tryListen(0);
-        else reject(new Error("No free port"));
-      });
-      srv.listen(port, "127.0.0.1", () => {
-        const address = srv.address();
-        const taken = typeof address === "object" && address ? address.port : preferred;
-        srv.close(() => resolve(taken));
-      });
-    };
-    tryListen(preferred);
-  });
-}
-
-function envForServer(port, inbox, uiRoot) {
-  const raw = {
-    PATH: process.env.PATH,
-    HOME: process.env.HOME,
-    TMPDIR: process.env.TMPDIR,
-    USER: process.env.USER,
-    LANG: process.env.LANG,
-    NODE_ENV: "production",
-    PORT: String(port),
-    CIRCADIA_DATA_DIR: inbox,
-    CIRCADIA_STATIC_ROOT: uiRoot,
-    STUDY_INGEST_URL: process.env.STUDY_INGEST_URL,
-    STUDY_INGEST_TOKEN: process.env.STUDY_INGEST_TOKEN,
-  };
-  return Object.fromEntries(Object.entries(raw).filter(([, value]) => typeof value === "string"));
-}
-
-function startPackagedServer(port) {
-  if (server) return;
+async function startPackagedUi() {
   const uiRoot = path.join(process.resourcesPath, "ui");
-  const serverJs = path.join(process.resourcesPath, "static-server.cjs");
-  if (!fs.existsSync(serverJs) || !fs.existsSync(path.join(uiRoot, "index.html"))) {
-    throw new Error(`Missing packaged UI at ${uiRoot}`);
+  const index = path.join(uiRoot, "index.html");
+  if (!fs.existsSync(index)) {
+    throw new Error(`Packaged UI missing: ${index}`);
   }
   const inbox = path.join(app.getPath("userData"), "study-inbox");
   fs.mkdirSync(inbox, { recursive: true });
-  logLine(`\n--- start ${new Date().toISOString()} port ${port} ---\n`);
-
-  server = utilityProcess.fork(serverJs, [], {
-    stdio: "pipe",
-    serviceName: "circadia-web",
-    env: envForServer(port, inbox, uiRoot),
+  const started = await listen({
+    root: uiRoot,
+    inbox,
+    port: 0,
+    ingest: process.env.STUDY_INGEST_URL,
+    ingestToken: process.env.STUDY_INGEST_TOKEN,
   });
-
-  server.stdout?.on("data", (data) => logLine(String(data)));
-  server.stderr?.on("data", (data) => logLine(String(data)));
-  server.on("exit", (code) => {
-    server = null;
-    if (isQuitting) return;
-    void (async () => {
-      if (await probe(appUrl)) return;
-      logLine(`server exit ${code}\n`);
-      if (!mainWindow || mainWindow.isDestroyed()) return;
-      dialog.showErrorBox(
-        "Circadia",
-        "The local server closed. Quit with Cmd+Q and open Circadia again. If this keeps happening, quit any old npm run app session first.",
-      );
-    })();
-  });
+  httpServer = started.server;
+  appUrl = started.url;
 }
 
-async function ensureServer() {
-  if (await probe(appUrl)) return;
-  if (!app.isPackaged) {
-    await waitForServer(appUrl, 8_000);
+async function ensureUi() {
+  if (app.isPackaged) {
+    await startPackagedUi();
     return;
   }
-  const port = await pickPort(PREFERRED_PORT);
-  appUrl = `http://127.0.0.1:${port}`;
-  startPackagedServer(port);
-  await waitForServer(appUrl, 45_000);
+  appUrl = DEV_URL;
+  await waitForUrl(DEV_URL, 20_000);
 }
 
-async function createWindow() {
+function openWindow(url) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.show();
     mainWindow.focus();
-    return;
-  }
-
-  try {
-    await ensureServer();
-  } catch {
-    dialog.showErrorBox(
-      "Circadia",
-      app.isPackaged
-        ? `Could not start. Details: ${logPath()}`
-        : "This Dock icon is leftover from Terminal. Run npm run dock in rest-ai to install Circadia.app.",
-    );
-    app.quit();
-    return;
+    return mainWindow;
   }
 
   const win = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 1024,
-    minHeight: 700,
+    minWidth: 960,
+    minHeight: 640,
     backgroundColor: "#05040a",
     title: "Circadia",
-    show: false,
+    show: true,
     autoHideMenuBar: true,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     trafficLightPosition: { x: 16, y: 18 },
@@ -192,14 +141,29 @@ async function createWindow() {
     }
   });
 
-  win.once("ready-to-show", () => win.show());
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith(appUrl)) return { action: "allow" };
-    shell.openExternal(url);
+  win.webContents.setWindowOpenHandler(({ url: target }) => {
+    if (target.startsWith(appUrl)) return { action: "allow" };
+    shell.openExternal(target);
     return { action: "deny" };
   });
 
-  await win.loadURL(appUrl);
+  win.webContents.on("did-fail-load", (_event, code, desc, failedUrl) => {
+    if (code === -3) return;
+    void win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(failureHtml(`${desc} (${code}) ${failedUrl || ""}`))}`);
+  });
+
+  void win.loadURL(url);
+  return win;
+}
+
+async function boot() {
+  try {
+    await ensureUi();
+    openWindow(appUrl);
+  } catch (error) {
+    const message = error instanceof Error ? error.stack || error.message : String(error);
+    openWindow(`data:text/html;charset=utf-8,${encodeURIComponent(failureHtml(message))}`);
+  }
 }
 
 function installMenu() {
@@ -238,7 +202,7 @@ if (!locked) {
       mainWindow.focus();
     }
   });
-  app.whenReady().then(async () => {
+  app.whenReady().then(() => {
     app.setName("Circadia");
     if (process.platform === "darwin" && app.dock) {
       app.dock.setIcon(ICON);
@@ -249,21 +213,25 @@ if (!locked) {
       copyright: "Local sleep companion. Not medical care.",
     });
     installMenu();
-    await createWindow();
+    return boot();
   });
   app.on("activate", () => {
-    void createWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      return;
+    }
+    void boot();
   });
 }
 
 app.on("before-quit", () => {
   isQuitting = true;
-  if (server) server.kill();
+  if (httpServer) httpServer.close();
 });
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    if (server) server.kill();
+    if (httpServer) httpServer.close();
     app.quit();
   }
 });

@@ -6,10 +6,7 @@ Circadia is local-first. Profile, mornings, dreams, and chat live on this comput
 
 ## Put it on the Dock (Mac)
 
-`npm run app` is a **session**. Closing the window used to quit that session, so the leftover Dock icon had nothing to reopen. That is fixed in two layers:
-
-1. The red traffic-light **hides** Circadia. Click the Dock icon to bring it back. **Cmd+Q** is a real quit.
-2. Install a real app you can reopen after quit:
+The packaged Mac app is **one process**. It serves the UI itself. There is no second Circadia, no Next.js runtime inside the `.app`.
 
 ```bash
 cd rest-ai
