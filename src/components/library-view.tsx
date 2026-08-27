@@ -37,7 +37,7 @@ export function LibraryView() {
   }
 
   return (
-    <div className="px-5 pt-8 pb-8">
+    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-8">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Library</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">What we are willing to say.</h1>
       <p className="mt-2 text-sm leading-relaxed text-zinc-400">

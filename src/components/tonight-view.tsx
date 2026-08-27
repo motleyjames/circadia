@@ -38,7 +38,7 @@ export function TonightView() {
   const headline = notes.find((n) => n.kind === "alert" || n.kind === "lever" || n.kind === "steady");
 
   return (
-    <div className="px-5 pt-8 pb-6">
+    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-6">
       <header className="mb-6">
         <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">Circadia</p>
         <h1 className="font-heading mt-1 text-3xl text-zinc-50">
