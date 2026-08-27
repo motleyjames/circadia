@@ -5,6 +5,8 @@ export type ResearchArticle = {
   body: string;
   tags: string[];
   source: string;
+  /** Extra match keys for chat — brand names, street names, spellings. */
+  aliases?: string[];
 };
 
 /**
@@ -139,22 +141,128 @@ export const RESEARCH: ResearchArticle[] = [
     tags: ["naps", "weekend", "sleep in", "catch up", "wake", "schedule"],
     source: "CBT-I sleep restriction and stimulus-control practice; AASM insomnia guideline",
   },
+  {
+    id: "otc-antihistamines",
+    title: "Unisom, Benadryl, and other aisle sleep aids",
+    summary:
+      "They are old allergy medicines sold for sleep. They can knock you out. They are not good sleep, and they are not a nightly plan.",
+    body: "Unisom SleepTabs are usually doxylamine. Some Unisom gels, ZzzQuil, Tylenol PM, Advil PM, and Benadryl use diphenhydramine. Both are first-generation antihistamines. They make you drowsy by blocking a wake signal, not by fixing the clock or sleep pressure. Lab and clinic reviews: next-day fog is common, the effect fades if you take them often, and the sleep you get is often lighter and more broken. Sleep clinics do not recommend them as ongoing insomnia treatment. Rare backup for a one-off night is a different question than a habit. Do not mix with alcohol. Older adults, glaucoma, urinary retention, and other drowsy meds raise the risk — that is a pharmacist or doctor, not an aisle. Circadia will not tell you to start these.",
+    tags: ["unisom", "benadryl", "zzzquil", "doxylamine", "diphenhydramine", "otc", "sleep aid"],
+    aliases: [
+      "unisom",
+      "benadryl",
+      "zzzquil",
+      "zzquil",
+      "doxylamine",
+      "diphenhydramine",
+      "nyquil",
+      "nytol",
+      "tylenol pm",
+      "advil pm",
+      "simply sleep",
+      "sleep aid",
+      "sleeping pill",
+      "sleeping pills",
+    ],
+    source: "AASM 2017 insomnia guideline (antihistamines not recommended for chronic insomnia); first-generation antihistamine sleep and hangover literature; Beers criteria for older adults",
+  },
+  {
+    id: "prescription-hypnotics",
+    title: "Prescription sleep drugs",
+    summary:
+      "Ambien and similar drugs can help you fall asleep. They do not replace a wake-time plan, and an app will never change your dose.",
+    body: "Zolpidem (Ambien), eszopiclone (Lunesta), zaleplon (Sonata), and some benzodiazepines are prescription hypnotics. Trazodone and hydroxyzine are often used off-label for sleep. They can shorten the time it takes to fall asleep. They can also cause next-day grogginess, odd nighttime behavior (especially zolpidem), and worse sleep for a few nights if you stop suddenly. Sleep clinics still treat a stable wake time and 'bed is for sleep' as the long-term plan, with or without a pill. Circadia will never tell you to start, stop, or change a prescribed drug. That is your prescriber.",
+    tags: ["ambien", "zolpidem", "lunesta", "trazodone", "prescription", "hypnotic"],
+    aliases: [
+      "ambien",
+      "zolpidem",
+      "lunesta",
+      "eszopiclone",
+      "sonata",
+      "zaleplon",
+      "trazodone",
+      "desyrel",
+      "hydroxyzine",
+      "atarax",
+      "vistaril",
+      "restoril",
+      "temazepam",
+      "silenor",
+      "doxepin",
+    ],
+    source: "FDA labels for zolpidem and eszopiclone; AASM pharmacologic insomnia guideline; clinical reviews of off-label trazodone for sleep",
+  },
+  {
+    id: "cannabis-sleep",
+    title: "THC, CBD, and sleep",
+    summary:
+      "THC can make you sleepy and then steal REM. CBD is mixed. Neither is a clean insomnia treatment.",
+    body: "THC is sedating for many people on the way in, then it suppresses REM. When it wears off you can get vivid or restless nights — similar in shape to alcohol, not identical. CBD evidence for insomnia is small and mixed; high doses can be alerting for some people. Edibles last longer than smoke and are easier to overshoot. If sleep is the goal, nightly THC is a trade: easier onset, worse architecture. Circadia will not tell you to start or stop cannabis; it will treat it as a confounder on the diary if you say you use it.",
+    tags: ["thc", "cbd", "cannabis", "weed", "rem"],
+    aliases: ["thc", "cbd", "cannabis", "weed", "marijuana", "edible", "edibles", "gummies"],
+    source: "Cannabinoids and sleep architecture reviews; REM suppression with THC; mixed CBD insomnia trials",
+  },
 ];
 
 export function researchById(id: string): ResearchArticle | undefined {
   return RESEARCH.find((article) => article.id === id);
 }
 
+const STOP = new Set([
+  "tell",
+  "me",
+  "about",
+  "what",
+  "whats",
+  "is",
+  "are",
+  "a",
+  "an",
+  "the",
+  "does",
+  "do",
+  "can",
+  "i",
+  "my",
+  "your",
+  "how",
+  "for",
+  "with",
+  "and",
+  "or",
+  "to",
+  "of",
+  "on",
+  "in",
+  "it",
+  "this",
+  "that",
+  "should",
+  "please",
+]);
+
 export function searchResearch(query: string): ResearchArticle[] {
   const q = query.toLowerCase().trim();
   if (!q) return RESEARCH;
-  const tokens = q.split(/\s+/).filter((t) => t.length > 2);
+  const tokens = q.split(/\s+/).filter((t) => t.length > 2 && !STOP.has(t));
   return RESEARCH.map((article) => {
-    const hay = `${article.title} ${article.summary} ${article.body} ${article.tags.join(" ")}`.toLowerCase();
-    const score = tokens.reduce((acc, token) => acc + (hay.includes(token) ? 1 : 0), 0);
+    const aliases = (article.aliases ?? []).join(" ");
+    const hay = `${article.title} ${article.summary} ${article.body} ${article.tags.join(" ")} ${aliases}`.toLowerCase();
+    let score = tokens.reduce((acc, token) => acc + (hay.includes(token) ? 1 : 0), 0);
+    if ((article.aliases ?? []).some((alias) => q.includes(alias))) score += 5;
     return { article, score };
   })
     .filter((row) => row.score > 0)
     .sort((a, b) => b.score - a.score)
     .map((row) => row.article);
+}
+
+/** First library hit that actually matches the question — not a stopword-shaped guess. */
+export function matchResearch(query: string): ResearchArticle | undefined {
+  const q = query.toLowerCase();
+  const aliasHit = RESEARCH.find((article) => (article.aliases ?? []).some((alias) => q.includes(alias)));
+  if (aliasHit) return aliasHit;
+  const tokens = q.split(/\s+/).filter((t) => t.length > 2 && !STOP.has(t) && t !== "sleep" && t !== "asleep");
+  if (tokens.length === 0) return undefined;
+  return searchResearch(query)[0];
 }

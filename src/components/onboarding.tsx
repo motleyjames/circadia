@@ -173,7 +173,7 @@ export function Onboarding() {
               What is actually broken.
             </h1>
             <p className="mt-3 max-w-[34ch] text-[15px] leading-relaxed text-zinc-400">
-              Falling asleep and staying asleep are different physiology. We do not treat them as
+              Falling asleep and staying asleep are different problems. We do not treat them as
               one complaint.
             </p>
             <ul className="mt-8 space-y-2">
@@ -193,11 +193,11 @@ export function Onboarding() {
         {step === 1 && (
           <section className="mt-5">
             <h1 className="max-w-[16ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
-              Age sets the need band.
+              How much sleep you need.
             </h1>
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-              Teens 8–10 hours. Young adults 7–9. Not a personality. Height and weight live in You
-              if a note ever needs them.
+              Teens usually need 8–10 hours. Young adults 7–9. Height and weight live in You if a
+              note ever needs them.
             </p>
             <label className="mt-10 block">
               <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
@@ -220,8 +220,8 @@ export function Onboarding() {
               The morning is the anchor.
             </h1>
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-              Not bedtime. AASM and CBT-I both start here: a wake time you protect even after a
-              bad night. Asleep-by is computed from that.
+              Not bedtime. The time you get up trains the clock — even after a bad night. Asleep-by
+              is figured from that.
             </p>
             <ul className="mt-8 space-y-2">
               {PHASES.map((c) => (
