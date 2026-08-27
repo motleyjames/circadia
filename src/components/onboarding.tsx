@@ -1,11 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BrandStage } from "@/components/brand-stage";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { hasContact, normalizeEmail, normalizePhone } from "@/lib/contact";
 import { ensureNotificationPermission } from "@/lib/notifications";
 import {
   DEFAULT_HEIGHT_CM,
@@ -68,7 +66,7 @@ const PHASES: { id: Phase; title: string; body: string }[] = [
 ];
 
 const INTAKE = [
-  { kicker: "01", title: "Your file" },
+  { kicker: "01", title: "Body" },
   { kicker: "02", title: "The problem" },
   { kicker: "03", title: "Wake time" },
   { kicker: "04", title: "What you take" },
@@ -76,17 +74,13 @@ const INTAKE = [
 ] as const;
 
 export function Onboarding() {
-  const { saveProfile } = useCircadia();
-  const [cover, setCover] = useState(true);
+  const { saveProfile, state } = useCircadia();
+  const existing = state.profile;
   const [step, setStep] = useState(0);
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("19");
+  const [age, setAge] = useState(existing?.age ? String(existing.age) : "19");
   const [feet, setFeet] = useState("5");
   const [inches, setInches] = useState("10");
   const [pounds, setPounds] = useState("145");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [fileHint, setFileHint] = useState<string | null>(null);
   const [problem, setProblem] = useState<Problem>("falling");
   const [phase, setPhase] = useState<Phase>("neither");
   const [wakeTime, setWakeTime] = useState(PHASE_WAKE.neither);
@@ -102,10 +96,7 @@ export function Onboarding() {
     [wakeTime, duration],
   );
   const offClock = screenOffClock(targetSleep);
-  const fileReady =
-    name.trim().length >= 2 &&
-    Number(age) >= 13 &&
-    hasContact(email, phone);
+  const bodyReady = Number(age) >= 13;
 
   function pickPhase(next: Phase) {
     setPhase(next);
@@ -129,16 +120,18 @@ export function Onboarding() {
     const struggles: Struggle[] = problem === "both" ? ["falling", "staying"] : [problem];
     const med = stimulant.trim();
     const profile: Profile = {
-      name: name.trim(),
+      firstName: existing?.firstName ?? "",
+      lastName: existing?.lastName ?? "",
+      name: existing?.name ?? "you",
       age: ageNum,
-      sex: "unspecified",
+      sex: existing?.sex ?? "unspecified",
       heightCm: heightCm(),
       weightKg: weightKg(),
-      email: normalizeEmail(email),
-      phone: normalizePhone(phone),
-      activity: "light",
+      email: existing?.email ?? "",
+      phone: existing?.phone ?? "",
+      activity: existing?.activity ?? "light",
       medications: med ? [med] : [],
-      supplements: [],
+      supplements: existing?.supplements ?? [],
       struggles,
       targetSleep,
       targetWake: normalizeClock(wakeTime || "07:00"),
@@ -147,22 +140,6 @@ export function Onboarding() {
       onboardingComplete: true,
     };
     saveProfile(profile);
-  }
-
-  if (cover) {
-    return (
-      <BrandStage
-        cta={
-          <button
-            type="button"
-            onClick={() => setCover(false)}
-            className="h-14 w-full cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium tracking-tight text-zinc-950 transition-opacity hover:opacity-90"
-          >
-            Begin
-          </button>
-        }
-      />
-    );
   }
 
   return (
@@ -194,26 +171,13 @@ export function Onboarding() {
         {step === 0 && (
           <section className="mt-5">
             <h1 className="max-w-[16ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
-              A diary needs a name.
+              Age, height, weight.
             </h1>
             <p className="mt-3 max-w-[38ch] text-[15px] leading-relaxed text-zinc-400">
-              Nights live on this computer. Email or phone is so the file can be found if this
-              machine is wiped — not a login, not a newsletter.
+              Circadia uses this when it writes notes. It will not change a medication for you.
             </p>
 
-            <label className="mt-8 block">
-              <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
-                Name
-              </span>
-              <Input
-                value={name}
-                onChange={(e) => setName(e.target.value.slice(0, 80))}
-                placeholder="What we should call you"
-                className="mt-3 h-14 rounded-2xl border-white/10 bg-white/4 px-5 text-lg text-zinc-50"
-              />
-            </label>
-
-            <div className="mt-5 grid grid-cols-4 gap-2">
+            <div className="mt-8 grid grid-cols-4 gap-2">
               <FileField label="Age" value={age} onChange={(v) => setAge(v.replace(/[^\d]/g, "").slice(0, 2))} />
               <FileField label="ft" value={feet} onChange={(v) => setFeet(v.replace(/[^\d]/g, "").slice(0, 1))} />
               <FileField label="in" value={inches} onChange={(v) => setInches(v.replace(/[^\d]/g, "").slice(0, 2))} />
@@ -224,34 +188,6 @@ export function Onboarding() {
               />
             </div>
             <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">{need.label}.</p>
-
-            <label className="mt-6 block">
-              <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
-                Email
-              </span>
-              <Input
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="one of these is enough"
-                className="mt-3 h-12 rounded-2xl border-white/10 bg-white/4 px-5 text-zinc-50"
-              />
-            </label>
-            <label className="mt-4 block">
-              <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
-                Phone
-              </span>
-              <Input
-                type="tel"
-                autoComplete="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="or a number James can reach"
-                className="mt-3 h-12 rounded-2xl border-white/10 bg-white/4 px-5 text-zinc-50"
-              />
-            </label>
-            {fileHint ? <p className="mt-4 text-[13px] text-amber-200/90">{fileHint}</p> : null}
           </section>
         )}
 
@@ -353,25 +289,20 @@ export function Onboarding() {
       </div>
 
       <footer className="mt-auto flex gap-3 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-        <button
-          type="button"
-          onClick={() => {
-            if (step === 0) setCover(true);
-            else setStep((s) => s - 1);
-          }}
-          className="h-14 min-w-24 cursor-pointer rounded-full border border-white/12 px-6 text-[15px] font-medium text-zinc-200"
-        >
-          Back
-        </button>
+        {step > 0 ? (
+          <button
+            type="button"
+            onClick={() => setStep((s) => s - 1)}
+            className="h-14 min-w-24 cursor-pointer rounded-full border border-white/12 px-6 text-[15px] font-medium text-zinc-200"
+          >
+            Back
+          </button>
+        ) : null}
         {step < 4 ? (
           <button
             type="button"
             onClick={() => {
-              if (step === 0 && !fileReady) {
-                setFileHint("Name, age, and an email or a phone. Height and weight can wait.");
-                return;
-              }
-              setFileHint(null);
+              if (step === 0 && !bodyReady) return;
               setStep((s) => s + 1);
             }}
             className="h-14 flex-1 cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950"

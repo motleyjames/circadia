@@ -1,4 +1,4 @@
-import { contactOrNull, isEmail, isPhone } from "@/lib/contact";
+import { isEmail, isPhone } from "@/lib/contact";
 import type { CircadiaState, FaultEvent, RosterEvent } from "@/lib/types";
 import { APP_VERSION } from "@/lib/version";
 
@@ -21,15 +21,14 @@ export function buildRoster(state: CircadiaState): RosterEvent {
   const participantId = state.study.participantId;
   if (!profile) throw new Error("No profile.");
   if (!participantId) throw new Error("No participant number.");
-  const contact = contactOrNull(profile.email, profile.phone);
   return {
     schema: ROSTER_SCHEMA,
     at: new Date().toISOString(),
     participantId,
     appVersion: APP_VERSION,
     name: profile.name.trim() || "you",
-    email: contact.email,
-    phone: contact.phone,
+    email: null,
+    phone: null,
     age: profile.age,
     heightCm: profile.heightCm,
     weightKg: profile.weightKg,

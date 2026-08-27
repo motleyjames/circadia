@@ -162,9 +162,6 @@ export default function ModeratorPage() {
                     {person.participantId.slice(0, 8)}
                   </p>
                 </div>
-                <p className="mt-1 text-[13px] text-zinc-400">
-                  {[person.email, person.phone].filter(Boolean).join(" · ") || "No contact yet"}
-                </p>
                 <p className="mt-2 text-[13px] text-zinc-500">
                   {person.age ?? "—"} yrs
                   {person.activity ? ` · ${person.activity}` : ""}

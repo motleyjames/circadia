@@ -1,6 +1,7 @@
 "use client";
 
 import { CircadiaProvider, useCircadia } from "@/context/circadia-store";
+import { AuthGate } from "@/components/auth-gate";
 import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
 import { ChatBar } from "@/components/chat-bar";
@@ -36,14 +37,22 @@ function Stage({
 }
 
 function ShellInner({ children }: { children: React.ReactNode }) {
-  const { ready, state } = useCircadia();
-  const onboarded = Boolean(ready && state.profile?.onboardingComplete);
+  const { ready, state, session } = useCircadia();
+  const onboarded = Boolean(ready && session && state.profile?.onboardingComplete);
   const inApp = onboarded && state.study.asked;
 
   if (!ready) {
     return (
       <Stage>
         <BrandStage />
+      </Stage>
+    );
+  }
+
+  if (!session) {
+    return (
+      <Stage>
+        <AuthGate />
       </Stage>
     );
   }

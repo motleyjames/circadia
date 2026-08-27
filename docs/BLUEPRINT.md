@@ -124,9 +124,9 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 
 **Shape:** a Next.js desktop app, also packaged as an Electron Mac window (`npm run app`, `npm run dist` → `Circadia.app`). Full window, left sidebar, consult as a right rail (dock on narrower screens). Phone / Capacitor is later.
 
-**State:** `localStorage` key `circadia:v1`. Export/import JSON. Schema-hydrate on the way in. No auth.
+**State:** `localStorage` vault `circadia:v1:files` keyed by email or phone, plus `circadia:v1:session` for which file is open. Legacy `circadia:v1` migrates once. Export/import JSON. Schema-hydrate on the way in. Local login, no server account, no password.
 
-**Study:** optional, consent-gated at the start. Yes turns the pipeline on — no Send button. Three schemas hit `POST /api/study` on the diary. `circadia-roster-v1` (name + email/phone + body), `circadia-study-v1` (stripped nights), `circadia-fault-v1` (app errors). James reads them in Circadia Operator.app (`npm run dock:mod`, gold clock) or `npm run mod` on port 43149, gated by `CIRCADIA_MOD_KEY`. The diary 404s `/mod`. Write to `data/study-inbox/` (gitignored). Optional forward via `STUDY_INGEST_URL`. Do not store request IP. Never auto-send a loaded sample week.
+**Study:** optional, consent-gated after sleep intake. Yes turns the pipeline on — no Send button. Three schemas hit `POST /api/study` on the diary. `circadia-roster-v1` (name + body; email/phone fields exist for old files but new cards send null), `circadia-study-v1` (stripped nights), `circadia-fault-v1` (app errors). James reads them in Circadia Operator.app (`npm run dock:mod`, gold clock) or `npm run mod` on port 43149, gated by `CIRCADIA_MOD_KEY`. The diary 404s `/mod`. Write to `data/study-inbox/` (gitignored). Optional forward via `STUDY_INGEST_URL`. Do not store request IP. Never auto-send a loaded sample week.
 
 **Audio:** Web Audio procedural noise. Unlock on a **user gesture** or devices stay silent. No MP3 licensing. Meditations are a visual field + optional `speechSynthesis`.
 
@@ -136,7 +136,7 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 electron/         Mac window (main process, preload, icon)
 src/lib/          engine (pure, tested) — advisor, chat, research, corpus, study
 src/context/      CircadiaProvider, persistence, study send
-src/components/   cover, intake, study gate, Tonight, interview, wind-down, You
+src/components/   login, intake, study gate, Tonight, interview, wind-down, You
 src/app/          diary: /  /check-in  /insights  /library  /you  /api/study
                   operator: npm run dock:mod → Circadia Operator.app  /  npm run mod → :43149
 ```

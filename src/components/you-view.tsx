@@ -7,22 +7,23 @@ import { StudyPanel } from "@/components/study-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ensureNotificationPermission } from "@/lib/notifications";
-import { normalizeEmail, normalizePhone } from "@/lib/contact";
+import { displayName, formatLoginForDisplay } from "@/lib/login";
 import { bmiKgM, cmToFeetInches, feetInchesToCm, formatClock, kgToLb, lbToKg } from "@/lib/time";
 import type { ActivityLevel, Profile } from "@/lib/types";
 import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
 
 export function YouView() {
-  const { state, saveProfile, resetAll, loadSampleWeek } = useCircadia();
+  const { state, saveProfile, resetAll, loadSampleWeek, session, logOut, attachLogin, canLogOut } = useCircadia();
   const profile = state.profile;
   const imperial = cmToFeetInches(profile?.heightCm ?? 170);
   const [feet, setFeet] = useState(String(imperial.feet));
   const [inches, setInches] = useState(String(imperial.inches));
   const [pounds, setPounds] = useState(String(Math.round(kgToLb(profile?.weightKg ?? 70))));
   const [age, setAge] = useState(String(profile?.age ?? 18));
-  const [name, setName] = useState(profile?.name ?? "");
-  const [email, setEmail] = useState(profile?.email ?? "");
-  const [phone, setPhone] = useState(profile?.phone ?? "");
+  const [firstName, setFirstName] = useState(profile?.firstName ?? "");
+  const [lastName, setLastName] = useState(profile?.lastName ?? "");
+  const [loginDraft, setLoginDraft] = useState("");
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [medDraft, setMedDraft] = useState("");
   const [supDraft, setSupDraft] = useState("");
 
@@ -50,28 +51,79 @@ export function YouView() {
         </p>
 
         <Section kicker="File" title="Who this diary belongs to">
-          <Field
-            label="Name"
-            value={name}
-            onChange={setName}
-            onBlur={() => persist({ name: name.trim() || profile.name })}
-          />
           <div className="grid grid-cols-2 gap-2">
             <Field
-              label="Email"
-              type="email"
-              value={email}
-              onChange={setEmail}
-              onBlur={() => persist({ email: normalizeEmail(email) })}
+              label="First name"
+              value={firstName}
+              onChange={setFirstName}
+              onBlur={() =>
+                persist({
+                  firstName: firstName.trim(),
+                  lastName: lastName.trim(),
+                  name: displayName(firstName, lastName),
+                })
+              }
             />
             <Field
-              label="Phone"
-              type="tel"
-              value={phone}
-              onChange={setPhone}
-              onBlur={() => persist({ phone: normalizePhone(phone) })}
+              label="Last name"
+              value={lastName}
+              onChange={setLastName}
+              onBlur={() =>
+                persist({
+                  firstName: firstName.trim(),
+                  lastName: lastName.trim(),
+                  name: displayName(firstName, lastName),
+                })
+              }
             />
           </div>
+          {!canLogOut ? (
+            <div>
+              <p className="text-xs text-zinc-400">Save a login</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
+                An email or phone lets you sign out and open this file again. Circadia will not
+                contact you.
+              </p>
+              <Input
+                value={loginDraft}
+                onChange={(e) => setLoginDraft(e.target.value)}
+                placeholder="you@school.edu or a phone number"
+                className="mt-3 h-11 rounded-2xl border-white/10 bg-white/5"
+              />
+              {loginError ? <p className="mt-2 text-[13px] text-amber-200/90">{loginError}</p> : null}
+              <Button
+                type="button"
+                className="mt-3 h-11 w-full cursor-pointer rounded-full bg-zinc-50 text-zinc-950"
+                onClick={() => {
+                  const result = attachLogin(loginDraft);
+                  if (!result.ok) setLoginError(result.error);
+                  else setLoginError(null);
+                }}
+              >
+                Save login
+              </Button>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs text-zinc-400">How you log in</p>
+              <p className="mt-1 font-heading text-lg text-zinc-50">{formatLoginForDisplay(session)}</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
+                This stays on this computer. Circadia will not email or text you. There is no
+                password — anyone at this laptop who knows this identifier can open the file.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4 h-11 w-full cursor-pointer rounded-full border-white/15"
+                onClick={logOut}
+              >
+                Log out
+              </Button>
+              <p className="mt-2 text-[12px] leading-relaxed text-zinc-600">
+                This computer still has your file. The same email or phone opens it.
+              </p>
+            </div>
+          )}
         </Section>
 
         <Section kicker="Body" title="What the notes are allowed to know">

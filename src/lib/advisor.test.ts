@@ -6,6 +6,8 @@ import { buildRecommendations, NIGHTS_NEEDED } from "./recommendations";
 import type { MorningReport, Profile } from "./types";
 
 const profile: Profile = {
+  firstName: "James",
+  lastName: "",
   name: "James",
   age: 19,
   sex: "male",

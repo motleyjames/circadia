@@ -11,6 +11,8 @@ function isoDaysAgo(days: number): string {
 }
 
 const SAMPLE_PROFILE: Profile = {
+  firstName: "James",
+  lastName: "",
   name: "James",
   age: 19,
   sex: "male",

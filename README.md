@@ -2,7 +2,7 @@
 
 A desktop sleep companion for people who **cannot fall asleep, cannot stay asleep, or both**. The job is a healthy, repeatable schedule — not a shop of powders.
 
-Circadia is local-first. Profile, mornings, dreams, and chat live on this computer. There is no account. There is no cloud model. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
+Circadia is local-first. Profile, mornings, dreams, and chat live on this computer. Create a file with your name and an email or phone — that identifier is how you log back in on this laptop, not a cloud account and not a way for James to reach you. There is no password. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
 
 ## Put it on the Dock (Mac)
 
@@ -36,13 +36,14 @@ Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again.
 
 ## What you do
 
-1. **Signup** — name, age, height, weight, and an email or phone so the file can be found if this computer is wiped.
-2. **Study gate** — yes turns the pipeline on. No Send button after that.
-3. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise.
-4. **Morning interview** — tap bubbles. Yes/no. Dropdowns only when the answer is yes.
-5. **Notes** — Circadia writes on the breakdown. After **seven** logged mornings it may discuss melatonin or magnesium.
-6. **You** — the file. Clocks, meds, contact. Not a JSON dump. Not a second copy of chat.
-7. **Library** — conservative research. Import/export your data.
+1. **Create file / Log in** — first and last name, then email or phone. That is how you open Circadia on this computer if you log out. Circadia will not email or text you.
+2. **Sleep intake** — age, height, weight, the problem, wake time, meds, alerts.
+3. **Study gate** — yes turns the pipeline on. No Send button after that.
+4. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise.
+5. **Morning interview** — tap bubbles. Yes/no. Dropdowns only when the answer is yes.
+6. **Notes** — Circadia writes on the breakdown. After **seven** logged mornings it may discuss melatonin or magnesium.
+7. **You** — the file. Clocks, meds, log out. Not a JSON dump. Not a second copy of chat.
+8. **Library** — conservative research. Import/export your data.
 
 ## Paid testers and the pipeline
 
@@ -50,7 +51,7 @@ If you are paying people to use Circadia, payment happens **outside** the app.
 
 After signup they choose once:
 
-- **Join the study** — that is the send. A roster card leaves immediately (name, email or phone, age, height, weight, clocks). After each real morning, a stripped night pack leaves on its own. If the app throws, a fault leaves too.
+- **Join the study** — that is the send. A roster card leaves immediately (name, age, height, weight, clocks — not email or phone). After each real morning, a stripped night pack leaves on its own. If the app throws, a fault leaves too.
 - **Keep everything on this computer** — the app is unchanged. Nothing is sent.
 
 There is no Send now. Testers do not see JSON.
@@ -59,7 +60,7 @@ There is no Send now. Testers do not see JSON.
 
 **Night packs never contain:** name, email, phone, dream text, chat text, medication/supplement strings, height/weight, calendar dates, report ids, IP.
 
-**Roster cards contain** the contact so a wiped laptop is not a lost tester. That is not a cloud backup of the diary. Dreams still live only on their machine.
+**Roster cards contain** the name and body so testers show up in the inbox. Email and phone stay on their computer as the login identifier. That is not a cloud backup of the diary, and it is not a number James can call. Dreams still live only on their machine.
 
 Packs land in `data/study-inbox/` on the machine running Circadia. Testers on *their* computers only reach you if that app can POST to a host you control — set `STUDY_INGEST_URL` (and optional `STUDY_INGEST_TOKEN`) on their install, pointing at yours.
 
@@ -106,4 +107,4 @@ Dream “meaning” is theme-tagging plus physiology (alcohol and REM rebound, m
 
 ## Why this way
 
-A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped; contact lives on a separate roster James reads in the operator app (`npm run mod`). The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.
+A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped; the roster is a name and body, not a contact list. James reads packs in the operator app (`npm run mod`). The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.

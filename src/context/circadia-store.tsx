@@ -15,14 +15,30 @@ import { sampleWeekState } from "@/lib/demo";
 import { installFaultReporter } from "@/lib/fault-reporter";
 import { startScreenOffWatcher } from "@/lib/notifications";
 import { buildFault, buildRoster } from "@/lib/operator";
-import { emptyState, importStateJson, loadState, saveState } from "@/lib/storage";
+import { sessionAllowsLogout } from "@/lib/login";
+import {
+  attachLoginToCurrent,
+  closeFile,
+  createFile,
+  emptyState,
+  eraseCurrentFile,
+  getSessionLogin,
+  importStateJson,
+  loadState,
+  openFile,
+  saveState,
+} from "@/lib/storage";
 import { anonymityViolations, buildStudyPack } from "@/lib/study";
 import { postInbox } from "@/lib/study-client";
 import type { CircadiaState, MorningReport, Profile, WindDownSession } from "@/lib/types";
 import { newId } from "@/lib/time";
 
+export type AuthResult = { ok: true } | { ok: false; error: string };
+
 const listeners = new Set<() => void>();
 let memory: CircadiaState | null = null;
+/** undefined = not read from disk yet. */
+let sessionMemory: string | null | undefined = undefined;
 
 function emit() {
   listeners.forEach((listener) => listener());
@@ -34,14 +50,27 @@ function subscribe(listener: () => void) {
 }
 
 function snapshot(): CircadiaState {
+  if (sessionMemory === undefined) {
+    sessionMemory = typeof window === "undefined" ? null : getSessionLogin();
+  }
   if (!memory) memory = loadState();
   return memory;
 }
 
+function currentSession(): string | null {
+  snapshot();
+  return sessionMemory ?? null;
+}
+
 const SERVER_STATE = emptyState();
+const SERVER_SESSION: string | null = null;
 
 function serverSnapshot(): CircadiaState {
   return SERVER_STATE;
+}
+
+function serverSession(): string | null {
+  return SERVER_SESSION;
 }
 
 function write(next: CircadiaState) {
@@ -117,6 +146,12 @@ async function transmitFault(message: string, extra?: { stack?: string | null; h
 type CircadiaContextValue = {
   ready: boolean;
   state: CircadiaState;
+  session: string | null;
+  canLogOut: boolean;
+  signUp: (input: { firstName: string; lastName: string; contact: string }) => AuthResult;
+  logIn: (contact: string) => AuthResult;
+  logOut: () => void;
+  attachLogin: (contact: string) => AuthResult;
   saveProfile: (profile: Profile) => void;
   addReport: (report: Omit<MorningReport, "id" | "createdAt">) => void;
   removeLatestReport: () => void;
@@ -141,6 +176,7 @@ function noopSubscribe() {
 
 export function CircadiaProvider({ children }: { children: ReactNode }) {
   const state = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
+  const session = useSyncExternalStore(subscribe, currentSession, serverSession);
   const ready = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const rosterCatchUp = useRef(false);
 
@@ -247,8 +283,45 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     patch((prev) => sampleWeekState(prev));
   }, []);
 
+  const signUp = useCallback((input: { firstName: string; lastName: string; contact: string }): AuthResult => {
+    const result = createFile(input);
+    if (!result.ok) return result;
+    sessionMemory = result.login;
+    memory = result.state;
+    emit();
+    return { ok: true };
+  }, []);
+
+  const logIn = useCallback((contact: string): AuthResult => {
+    const result = openFile(contact);
+    if (!result.ok) return result;
+    sessionMemory = result.login;
+    memory = result.state;
+    emit();
+    return { ok: true };
+  }, []);
+
+  const logOut = useCallback(() => {
+    closeFile();
+    sessionMemory = null;
+    memory = emptyState();
+    emit();
+  }, []);
+
+  const attachLogin = useCallback((contact: string): AuthResult => {
+    const result = attachLoginToCurrent(contact);
+    if (!result.ok) return result;
+    sessionMemory = result.login;
+    memory = result.state;
+    emit();
+    return { ok: true };
+  }, []);
+
   const resetAll = useCallback(() => {
-    write(emptyState());
+    eraseCurrentFile();
+    sessionMemory = null;
+    memory = emptyState();
+    emit();
   }, []);
 
   const joinStudy = useCallback(() => {
@@ -302,6 +375,12 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       state,
+      session,
+      canLogOut: sessionAllowsLogout(session),
+      signUp,
+      logIn,
+      logOut,
+      attachLogin,
       saveProfile,
       addReport,
       removeLatestReport,
@@ -320,6 +399,11 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     [
       ready,
       state,
+      session,
+      signUp,
+      logIn,
+      logOut,
+      attachLogin,
       saveProfile,
       addReport,
       removeLatestReport,
@@ -350,6 +434,12 @@ export function useCircadia() {
     return {
       ready: false,
       state: SERVER_STATE,
+      session: null,
+      canLogOut: false,
+      signUp: () => ({ ok: false as const, error: "Not in the browser." }),
+      logIn: () => ({ ok: false as const, error: "Not in the browser." }),
+      logOut: noop,
+      attachLogin: () => ({ ok: false as const, error: "Not in the browser." }),
       saveProfile: noop,
       addReport: noop,
       removeLatestReport: noop,
