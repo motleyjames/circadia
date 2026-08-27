@@ -18,13 +18,21 @@ npm install
 npm run dock
 ```
 
-That writes `~/Applications/Circadia.app` and opens it. Drag **that** icon to the Dock. Remove any old generic Electron icon first (right-click → Options → Remove from Dock).
+That writes **`/Applications/Circadia.app`** (the Applications folder in Finder’s sidebar) and jumps Finder to the file. Drag that icon to the Dock. Remove any old generic Electron icon first (right-click → Options → Remove from Dock).
+
+If you already ran `npm run dock` and still cannot see it, it may be in your *home* Applications, not the sidebar one:
+
+```bash
+open -R ~/Applications/Circadia.app
+```
+
+Or in Finder: **Go → Go to Folder…** (Shift-Command-G) and paste `/Applications` then look for Circadia. If it is empty, `npm run dock` has not finished yet — it builds for a few minutes.
 
 First launch: if macOS says the app is from an unidentified developer, right-click Circadia → **Open**.
 
 Do not Keep-in-Dock the window that came from `npm run app`. That icon is Electron, not Circadia.
 
-Testers you pay: dish `~/Applications/Circadia.app` after `npm run dock`. Study packs stay on **their** Mac unless you set `STUDY_INGEST_URL` to a host you control, or they Download JSON in You and send you the file.
+Testers you pay: dish `/Applications/Circadia.app` after `npm run dock`. Study packs stay on **their** Mac unless you set `STUDY_INGEST_URL` to a host you control, or they Download JSON in You and send you the file.
 
 ## What you do
 
