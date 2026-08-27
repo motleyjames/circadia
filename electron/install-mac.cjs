@@ -25,6 +25,24 @@ function reveal(dest) {
   spawnSync("open", ["-R", dest], { stdio: "inherit" });
 }
 
+function aliasOnDesktop(dest) {
+  if (!operator) return;
+  const desktop = path.join(os.homedir(), "Desktop");
+  if (!fs.existsSync(desktop)) return;
+  const script = `
+tell application "Finder"
+  set theApp to POSIX file ${JSON.stringify(dest)}
+  set theDesk to POSIX file ${JSON.stringify(desktop)}
+  try
+    delete file ${JSON.stringify(APP_DISPLAY)} of folder theDesk
+  end try
+  make alias file to theApp at theDesk
+end tell
+`;
+  spawnSync("osascript", ["-e", script], { stdio: "ignore" });
+  console.log(`Desktop alias: ${path.join(desktop, APP_DISPLAY)}`);
+}
+
 if (process.argv.includes("--reveal")) {
   const existing = findInstalled();
   if (!existing) {
@@ -254,10 +272,12 @@ console.log(dest);
 console.log(`Node: ${process.execPath}`);
 console.log(`Repo: ${root}`);
 if (operator) {
-  console.log("A window should appear. Drag THIS Circadia Operator to the Dock — gold clock, not the ice one.");
+  console.log("A window should appear. Gold clock — not the ice Circadia icon.");
+  console.log("Look on your Desktop for Circadia Operator, or in /Applications.");
 } else {
   console.log("A window should appear. Drag THIS Circadia to the Dock. Remove any icon named Electron.");
   console.log("Operator app (gold clock): npm run dock:mod");
 }
 reveal(dest);
+aliasOnDesktop(dest);
 spawnSync("open", [dest], { stdio: "inherit" });

@@ -63,6 +63,8 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
     expect(pkg.scripts["dock:mod"]).toBe("node electron/install-mac.cjs --operator");
+    expect(pkg.scripts["reveal:mod"]).toBe("node electron/install-mac.cjs --operator --reveal");
+    expect(install).toContain("aliasOnDesktop");
     expect(install).toContain("--operator");
     expect(install).toContain("Circadia Operator.app");
     expect(install).toContain("app.circadia.operator");
