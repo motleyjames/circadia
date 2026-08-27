@@ -20,7 +20,7 @@ Same content. Two registers. If they drift, the mouth is wrong.
 
 Not “everyone who wants to optimize.” They already failed at sleep. They need:
 
-- an **opening that feels like software**, not a website that got bookmarked
+- an **opening that feels like software** on a computer — sidebar, consult rail, not a phone bezel in a browser
 - a **short morning interview** they will actually finish (bubbles, not essays)
 - an **evening gate** (screens down 60 minutes before the sleep window)
 - notes that name the real lever (alcohol, drifting wake time, lying in bed awake) before they name a bottle
@@ -59,7 +59,7 @@ Walker-style overclaim is banned. If the literature is mixed, the UI says **low 
 ## 3. Product loops
 
 ```
-first open:  cover → intake (problem, age, wake, meds, one ping) → Tonight
+first open:  cover → intake → study gate (join or keep local) → Tonight
 evening:     countdown disc → screens-down ping → wind-down
 night:       (user is offline on purpose)
 morning:     bubble interview → optional dream
@@ -68,7 +68,7 @@ week 1:      behavioral notes only
 week 2+:     supplement discussion unlocked, still second to behavior
 ```
 
-Open Circadia **always lands on Tonight**, not whatever route was underneath the overlay.
+Open Circadia **always lands on Tonight** after the study gate, not whatever route was underneath the overlay.
 
 ### Intake (door)
 
@@ -122,19 +122,21 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 
 ## 5. Software architecture
 
-**Shape:** a Next.js app that *is* the phone app. PWA / Add to Home Screen. Desktop is a phone-width night shell so the product does not grow a dashboard personality. The first ten seconds *are* the product. Capacitor is later packaging (push that survives a killed tab), not a rewrite, not what makes this feel expensive.
+**Shape:** a Next.js **desktop** app. Full window, left sidebar, consult as a right rail (dock on narrower screens). Phone / Capacitor is later packaging — not what this slice is for, not what testers get this week.
 
-**State:** `localStorage` key `circadia:v1`. Export/import JSON. Schema-hydrate on the way in. No auth. Sleep diaries are intimate; a backend is a liability until there is a reason.
+**State:** `localStorage` key `circadia:v1`. Export/import JSON. Schema-hydrate on the way in. No auth.
 
-**Audio:** Web Audio procedural noise. Unlock on a **user gesture** or phones stay silent. No MP3 licensing. Meditations are a visual field + optional `speechSynthesis`.
+**Study packs:** optional, consent-gated. `buildStudyPack` in `src/lib/study.ts` emits `circadia-study-v1`. Schema-validate on `POST /api/study`. Write to `data/study-inbox/` (gitignored). Optional forward via `STUDY_INGEST_URL`. Do not store request IP on the pack. Auto-send after a real morning if consented; never auto-send a loaded sample week. Fail closed if the pack still contains a local secret.
+
+**Audio:** Web Audio procedural noise. Unlock on a **user gesture** or devices stay silent. No MP3 licensing. Meditations are a visual field + optional `speechSynthesis`.
 
 **Notifications:** Notification API, permission only from a tap (intake / You). Honest limit: browsers ping unreliably in the background. The countdown is the reliable gate. Native push is the Capacitor milestone.
 
 ```
-src/lib/          engine (pure, tested) — advisor, chat, research, corpus
-src/context/      CircadiaProvider, persistence
-src/components/   cover, intake, Tonight, interview, wind-down, You
-src/app/          /  /check-in  /insights  /library  /you
+src/lib/          engine (pure, tested) — advisor, chat, research, corpus, study
+src/context/      CircadiaProvider, persistence, study send
+src/components/   cover, intake, study gate, Tonight, interview, wind-down, You
+src/app/          /  /check-in  /insights  /library  /you  /api/study
 ```
 
 ---
@@ -151,14 +153,17 @@ src/app/          /  /check-in  /insights  /library  /you
 - Consult engine + follow-ups + You thread + corpus tests
 - Research library (clock, alcohol, aisle, Rx, THC, nicotine, shift, jet lag, pregnancy, reflux, …)
 - JSON import/export; sample week labeled, confirm-before-overwrite
+- Desktop shell (sidebar + consult rail)
+- Anonymous study packs, consent gate, inspectable JSON, local inbox
 
 **Next, still this repo**
 
 - Apple Health / CSV import if we can keep it local
-- Quiet hours / Capacitor push
+- Quiet hours / Capacitor push; phone wrap after the desktop loop is stable
 - Confirm body metrics before BMI/OSA notes treat them as measured
 - Optional hosted model behind an explicit key, grounded on the same notes object
 - Clinical red-flag copy (Epworth, STOP-BANG) as *questions*, not scores that pretend to diagnose
+- Electron packaging if testers need a dock icon instead of a URL
 
 **Not on the roadmap**
 
@@ -178,5 +183,6 @@ src/app/          /  /check-in  /insights  /library  /you
 - Chat: answer the question first. Diary context is optional and only when it belongs. Unknown withholds.
 - Sample data cannot silently become “your” data without the user tapping it.
 - Scanned-in JSON is untrusted input: schema-check it.
+- Study packs are untrusted input on the way in (schema + allowlist). Identity never keys a night. Payment never lives in the app.
 
 That is the same instinct as a scanner that withholds on ungrounded model output: **safe failure beats confident theater.**

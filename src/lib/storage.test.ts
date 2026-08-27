@@ -12,6 +12,29 @@ describe("hydrateState", () => {
     expect(state.reports).toHaveLength(1);
     expect(state.researchNotes).toBe("");
     expect(state.demoWeek).toBe(false);
+    expect(state.study.asked).toBe(false);
+    expect(state.study.consented).toBe(false);
+  });
+
+  it("keeps a study participant number across hydrate", () => {
+    const state = hydrateState({
+      profile: {
+        onboardingComplete: true,
+        name: "x",
+        age: 19,
+        heightCm: 180,
+        weightKg: 75,
+        targetSleep: "23:30",
+        targetWake: "07:30",
+      },
+      study: {
+        asked: true,
+        consented: true,
+        participantId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      },
+    });
+    expect(state.study.consented).toBe(true);
+    expect(state.study.participantId).toBe("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
   });
 
   it("throws on garbage", () => {

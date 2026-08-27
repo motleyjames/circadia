@@ -1,4 +1,4 @@
-import type { MorningReport, NightMetrics, Profile, WeekBreakdown } from "@/lib/types";
+import type { MedicationClass, MorningReport, NightMetrics, Profile, WeekBreakdown } from "@/lib/types";
 import {
   bmiKgM,
   circularMeanMinutes,
@@ -64,34 +64,41 @@ export type MedicationFlag = {
   note: string;
 };
 
-const DISRUPTOR_PATTERNS: Array<{ pattern: RegExp; note: string }> = [
+const DISRUPTOR_PATTERNS: Array<{ pattern: RegExp; note: string; class: Exclude<MedicationClass, "other"> }> = [
   {
     pattern: /adderall|vyvanse|lisdexamfetamine|ritalin|concerta|methylphenidate|focalin|modafinil|armodafinil|provigil|nuvigil/,
     note: "Stimulant-class. Timing and late doses are a common insomnia cause. Ask your prescriber about last-dose clock time — do not change it from here.",
+    class: "stimulant",
   },
   {
     pattern: /wellbutrin|bupropion|contrave/,
     note: "Bupropion is activating for many people. Morning dosing is typical; evening dosing collides with sleep.",
+    class: "bupropion",
   },
   {
     pattern: /prozac|fluoxetine|zoloft|sertraline|lexapro|escitalopram|paxil|paroxetine|celexa|citalopram|ssri|snri|effexor|venlafaxine|cymbalta|duloxetine/,
     note: "Many antidepressants change sleep architecture and can cause insomnia or vivid dreams. That is a clinician conversation, not a supplement problem.",
+    class: "antidepressant",
   },
   {
     pattern: /prednisone|prednisolone|methylprednisolone|dexamethasone|steroid/,
     note: "Systemic steroids are notorious for wired nights. Flag this on the nights you take them.",
+    class: "steroid",
   },
   {
     pattern: /pseudoephedrine|sudafed|phenylephrine/,
     note: "Decongestants are stimulants in disguise. Avoid after mid-afternoon if sleep is the priority.",
+    class: "decongestant",
   },
   {
     pattern: /propranolol|metoprolol|atenolol|beta.?block/,
     note: "Some beta blockers suppress melatonin and are linked to nightmares. Worth mentioning to the prescriber if dreams or sleep tanked after starting.",
+    class: "beta-blocker",
   },
   {
     pattern: /benadryl|diphenhydramine|unisom|doxylamine|nyquil|pm\b/,
     note: "Antihistamine 'PM' drugs sedate you and often worsen sleep quality. They are not a sleep system.",
+    class: "antihistamine",
   },
 ];
 
@@ -108,6 +115,24 @@ export function flagMedications(names: string[]): MedicationFlag[] {
     }
   }
   return flags;
+}
+
+/** Class labels only — never the string the person typed. */
+export function medicationClasses(names: string[]): MedicationClass[] {
+  const found = new Set<MedicationClass>();
+  for (const name of names) {
+    const trimmed = name.trim().toLowerCase();
+    if (!trimmed) continue;
+    let hit: MedicationClass | null = null;
+    for (const row of DISRUPTOR_PATTERNS) {
+      if (row.pattern.test(trimmed)) {
+        hit = row.class;
+        break;
+      }
+    }
+    found.add(hit ?? "other");
+  }
+  return [...found];
 }
 
 export function delayedClock(reports: MorningReport[], targetSleep: string): boolean {

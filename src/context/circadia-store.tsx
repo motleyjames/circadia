@@ -13,6 +13,8 @@ import { answerQuestion, makeChatMessage } from "@/lib/chat";
 import { sampleWeekState } from "@/lib/demo";
 import { startScreenOffWatcher } from "@/lib/notifications";
 import { emptyState, importStateJson, loadState, saveState } from "@/lib/storage";
+import { anonymityViolations, buildStudyPack } from "@/lib/study";
+import { postStudyPack } from "@/lib/study-client";
 import type { CircadiaState, MorningReport, Profile, WindDownSession } from "@/lib/types";
 import { newId } from "@/lib/time";
 
@@ -49,6 +51,45 @@ function patch(updater: (prev: CircadiaState) => CircadiaState) {
   write(updater(snapshot()));
 }
 
+async function transmitStudy() {
+  const current = snapshot();
+  if (!current.study.consented || !current.study.participantId) return;
+  try {
+    const pack = buildStudyPack(current);
+    const leaks = anonymityViolations(pack, current);
+    if (leaks.length) {
+      patch((prev) => ({
+        ...prev,
+        study: {
+          ...prev.study,
+          lastStatus: "blocked",
+          lastError: "Pack failed the anonymity check. Nothing left this computer.",
+        },
+      }));
+      return;
+    }
+    const result = await postStudyPack(pack);
+    patch((prev) => ({
+      ...prev,
+      study: {
+        ...prev.study,
+        lastSentAt: result.ok ? new Date().toISOString() : prev.study.lastSentAt,
+        lastStatus: result.ok ? "sent" : "error",
+        lastError: result.ok ? null : (result.error ?? "Send failed."),
+      },
+    }));
+  } catch {
+    patch((prev) => ({
+      ...prev,
+      study: {
+        ...prev.study,
+        lastStatus: "error",
+        lastError: "Could not build a pack from this diary.",
+      },
+    }));
+  }
+}
+
 type CircadiaContextValue = {
   ready: boolean;
   state: CircadiaState;
@@ -61,6 +102,10 @@ type CircadiaContextValue = {
   importJson: (raw: string) => void;
   loadSampleWeek: () => void;
   resetAll: () => void;
+  joinStudy: () => void;
+  declineStudy: () => void;
+  leaveStudy: () => void;
+  sendStudyNow: () => Promise<void>;
 };
 
 const CircadiaContext = createContext<CircadiaContextValue | null>(null);
@@ -88,13 +133,18 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       id: newId(),
       createdAt: new Date().toISOString(),
     };
-    patch((prev) => ({
-      ...prev,
-      demoWeek: false,
-      reports: [...prev.reports.filter((r) => r.morningDate !== full.morningDate), full].sort((a, b) =>
-        a.morningDate.localeCompare(b.morningDate),
-      ),
-    }));
+    let shouldSend = false;
+    patch((prev) => {
+      shouldSend = Boolean(prev.study.consented && !prev.demoWeek);
+      return {
+        ...prev,
+        demoWeek: false,
+        reports: [...prev.reports.filter((r) => r.morningDate !== full.morningDate), full].sort((a, b) =>
+          a.morningDate.localeCompare(b.morningDate),
+        ),
+      };
+    });
+    if (shouldSend) void transmitStudy();
   }, []);
 
   const addSession = useCallback((session: Omit<WindDownSession, "id">) => {
@@ -135,6 +185,48 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     write(emptyState());
   }, []);
 
+  const joinStudy = useCallback(() => {
+    patch((prev) => ({
+      ...prev,
+      study: {
+        ...prev.study,
+        asked: true,
+        consented: true,
+        participantId: prev.study.participantId ?? crypto.randomUUID(),
+        lastError: null,
+      },
+    }));
+  }, []);
+
+  const declineStudy = useCallback(() => {
+    patch((prev) => ({
+      ...prev,
+      study: {
+        ...prev.study,
+        asked: true,
+        consented: false,
+        participantId: prev.study.participantId,
+        lastError: null,
+      },
+    }));
+  }, []);
+
+  const leaveStudy = useCallback(() => {
+    patch((prev) => ({
+      ...prev,
+      study: {
+        ...prev.study,
+        asked: true,
+        consented: false,
+        lastError: null,
+      },
+    }));
+  }, []);
+
+  const sendStudyNow = useCallback(async () => {
+    await transmitStudy();
+  }, []);
+
   const value = useMemo(
     () => ({
       ready,
@@ -148,8 +240,28 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       importJson,
       loadSampleWeek,
       resetAll,
+      joinStudy,
+      declineStudy,
+      leaveStudy,
+      sendStudyNow,
     }),
-    [ready, state, saveProfile, addReport, addSession, sendChat, clearChat, setResearchNotes, importJson, loadSampleWeek, resetAll],
+    [
+      ready,
+      state,
+      saveProfile,
+      addReport,
+      addSession,
+      sendChat,
+      clearChat,
+      setResearchNotes,
+      importJson,
+      loadSampleWeek,
+      resetAll,
+      joinStudy,
+      declineStudy,
+      leaveStudy,
+      sendStudyNow,
+    ],
   );
 
   return <CircadiaContext.Provider value={value}>{children}</CircadiaContext.Provider>;

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
+import { StudyPanel } from "@/components/study-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ensureNotificationPermission } from "@/lib/notifications";
@@ -31,7 +32,7 @@ export function YouView() {
   const bmi = bmiKgM(profile.weightKg, profile.heightCm);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-8">
+    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-8 xl:px-10">
       <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">You</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">{profile.name}</h1>
       <p className="mt-1 text-sm text-zinc-400">
@@ -39,11 +40,12 @@ export function YouView() {
         {formatClock(profile.targetSleep, profile.units)}–{formatClock(profile.targetWake, profile.units)}
       </p>
       <p className="mt-3 text-xs leading-relaxed text-zinc-500">
-        Everything lives in this browser. Circadia uses these fields when it writes notes. It will not
-        change a medication for you.
+        Everything lives in this browser until you join the study. Circadia uses these fields when it
+        writes notes. It will not change a medication for you.
       </p>
 
-      <ChatHistory />
+      <div className="xl:grid xl:grid-cols-2 xl:gap-12">
+        <div>
 
       <section className="mt-6 space-y-4">
         <Field
@@ -142,6 +144,12 @@ export function YouView() {
           />
         </div>
       </section>
+        </div>
+        <div>
+          <StudyPanel />
+          <ChatHistory />
+        </div>
+      </div>
 
       <section className="mt-10 space-y-2">
         <Button
@@ -200,7 +208,7 @@ function ChatHistory() {
       </div>
       {chat.length === 0 ? (
         <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">
-          Nothing here yet. Ask from the bar on any screen. It stays on this phone.
+          Nothing here yet. Ask from the consult rail. It stays on this computer unless you join the study.
         </p>
       ) : (
         <ol className="mt-4 space-y-3">

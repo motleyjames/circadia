@@ -83,7 +83,7 @@ export function LibraryView() {
       <section className="mt-8 space-y-2">
         <h2 className="text-sm text-zinc-200">Sleep data</h2>
         <p className="text-xs text-zinc-500">
-          Export everything on this phone. Import a previous Circadia file. No account.
+          Export everything on this computer. Import a previous Circadia file. No account.
         </p>
         <div className="flex gap-2">
           <Button className="rounded-full bg-white/10 text-zinc-100" onClick={download}>

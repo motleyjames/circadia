@@ -27,7 +27,7 @@ export function InstallHint() {
   return (
     <div className="mt-6 border-t border-white/8 pt-5">
       <p className="text-[13px] leading-relaxed text-zinc-400">
-        Share → Add to Home Screen. Same data. No account. The product is already this.
+        Bookmark this. Circadia is a computer app first. Same data. No account. Phone wrap is later.
       </p>
       <button
         type="button"

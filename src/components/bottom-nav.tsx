@@ -2,22 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, MoonStar, Sparkles, SunMedium, User } from "lucide-react";
+import { TABS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
-
-const TABS = [
-  { href: "/", label: "Tonight", icon: MoonStar },
-  { href: "/check-in", label: "Morning", icon: SunMedium },
-  { href: "/insights", label: "Notes", icon: Sparkles },
-  { href: "/library", label: "Library", icon: BookOpen },
-  { href: "/you", label: "You", icon: User },
-] as const;
 
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="grid grid-cols-5 border-t border-white/8 bg-[#0b0914]/90 px-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl">
+    <nav className="grid grid-cols-5 border-t border-white/8 bg-[#0b0914]/90 px-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl md:hidden">
       {TABS.map((tab) => {
         const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
         const Icon = tab.icon;
