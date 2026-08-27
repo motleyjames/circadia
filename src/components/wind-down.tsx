@@ -65,7 +65,7 @@ export function WindDown() {
       <section>
         <p className="text-[11px] tracking-[0.22em] text-violet-300/80 uppercase">Visual meditations</p>
         <p className="mt-1 text-xs text-zinc-500">
-          A breathing field on this phone — not a YouTube tab. Voice is optional. Rate it in the morning.
+          A breathing field in this window — not a YouTube tab. Voice is optional. Rate it in the morning.
         </p>
         <div className="mt-3 grid gap-2">
           {MEDITATIONS.map((m) => (
