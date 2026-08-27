@@ -51,8 +51,10 @@ describe("Dock install invariants", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
     expect(pkg.scripts.dev).toContain("43147");
     expect(pkg.scripts.dev).not.toContain("CIRCADIA_SURFACE=mod");
-    expect(pkg.scripts.mod).toContain("43149");
-    expect(pkg.scripts.mod).toContain("CIRCADIA_SURFACE=mod");
+    expect(pkg.scripts.mod).toBe("node electron/run-mod.cjs");
+    const launcher = readFileSync("electron/run-mod.cjs", "utf8");
+    expect(launcher).toContain("43149");
+    expect(launcher).toContain('CIRCADIA_SURFACE = "mod"');
     expect(readFileSync("next.config.ts", "utf8")).toContain(".next-mod");
     const mw = readFileSync("src/middleware.ts", "utf8");
     expect(mw).toContain('CIRCADIA_SURFACE === "mod"');

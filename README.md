@@ -66,6 +66,12 @@ A second app. Not a page inside the diary.
 npm run mod
 ```
 
+If npm says `Missing script: "mod"`, this copy of rest-ai is old. Get the files that include `electron/run-mod.cjs`, then from `rest-ai`:
+
+```bash
+node electron/run-mod.cjs
+```
+
 Then open `http://127.0.0.1:43149`. Passphrase `circadia-local` until you set `CIRCADIA_MOD_KEY`.
 
 The diary stays at `http://127.0.0.1:43147`. Testers cannot reach this inbox from there.
