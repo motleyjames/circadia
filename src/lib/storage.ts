@@ -110,6 +110,19 @@ function coerceProfile(value: CircadiaState["profile"] | unknown): Profile | nul
   };
 }
 
+function coerceSupplementKind(value: unknown): MorningReport["supplementKind"] {
+  if (
+    value === "melatonin" ||
+    value === "magnesium" ||
+    value === "both" ||
+    value === "antihistamine" ||
+    value === "other"
+  ) {
+    return value;
+  }
+  return undefined;
+}
+
 function coerceReport(value: unknown): MorningReport | null {
   if (!value || typeof value !== "object") return null;
   const r = value as Partial<MorningReport>;
@@ -130,7 +143,11 @@ function coerceReport(value: unknown): MorningReport | null {
     wokeInNight: Boolean(r.wokeInNight),
     nightWakingMinutes: (r.nightWakingMinutes as MorningReport["nightWakingMinutes"]) ?? 0,
     usedSupplement: Boolean(r.usedSupplement),
-    supplementKind: r.supplementKind,
+    supplementKind: coerceSupplementKind(r.supplementKind),
+    supplementNote:
+      typeof r.supplementNote === "string" && r.supplementNote.trim()
+        ? r.supplementNote.trim().slice(0, 80)
+        : undefined,
     windDownHelped: r.windDownHelped ?? "did_not_use",
     dream:
       r.dream && typeof r.dream.text === "string"

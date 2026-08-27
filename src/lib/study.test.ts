@@ -36,6 +36,7 @@ function hostileState(): CircadiaState {
     wokeInNight: true,
     nightWakingMinutes: 45,
     usedSupplement: false,
+    supplementNote: "Ashwagandha Night gummies James bought",
     windDownHelped: "did_not_use",
     dream: {
       text: "Late to an exam, then the hallway flooded. Couldn't find the room.",
@@ -121,7 +122,8 @@ describe("buildStudyPack", () => {
     expect(blob).not.toMatch(/2026-08-20/);
     expect(blob).not.toMatch(/rep-james/);
     expect(blob).not.toMatch(/sess-hidden/);
-    expect(blob).not.toContain("gels last night");
+    expect(blob).not.toMatch(/Ashwagandha/i);
+    expect(blob).not.toMatch(/gummies James/i);
 
     expect(anonymityViolations(pack, state)).toEqual([]);
     expect(validateStudyPack(pack).ok).toBe(true);

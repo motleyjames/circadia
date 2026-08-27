@@ -95,6 +95,7 @@ type CircadiaContextValue = {
   state: CircadiaState;
   saveProfile: (profile: Profile) => void;
   addReport: (report: Omit<MorningReport, "id" | "createdAt">) => void;
+  removeLatestReport: () => void;
   addSession: (session: Omit<WindDownSession, "id">) => void;
   sendChat: (text: string) => void;
   clearChat: () => void;
@@ -145,6 +146,18 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       };
     });
     if (shouldSend) void transmitStudy();
+  }, []);
+
+  const removeLatestReport = useCallback(() => {
+    patch((prev) => {
+      if (!prev.reports.length) return prev;
+      const latest = [...prev.reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate)).at(-1);
+      if (!latest) return prev;
+      return {
+        ...prev,
+        reports: prev.reports.filter((r) => r.id !== latest.id),
+      };
+    });
   }, []);
 
   const addSession = useCallback((session: Omit<WindDownSession, "id">) => {
@@ -233,6 +246,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       state,
       saveProfile,
       addReport,
+      removeLatestReport,
       addSession,
       sendChat,
       clearChat,
@@ -250,6 +264,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       state,
       saveProfile,
       addReport,
+      removeLatestReport,
       addSession,
       sendChat,
       clearChat,

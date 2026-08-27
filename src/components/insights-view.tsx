@@ -13,7 +13,7 @@ import { formatClock, formatDuration, minutesToClock } from "@/lib/time";
 import type { SleepNote } from "@/lib/types";
 
 export function InsightsView() {
-  const { state, loadSampleWeek } = useCircadia();
+  const { state, loadSampleWeek, removeLatestReport } = useCircadia();
   const profile = state.profile!;
   const recs = useMemo(
     () => buildRecommendations(profile, state.reports),
@@ -92,6 +92,16 @@ export function InsightsView() {
               ))}
             </div>
           </div>
+          <button
+            type="button"
+            className="mt-3 text-[13px] text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
+            onClick={() => {
+              if (!window.confirm("Erase the latest morning so you can fill it out again?")) return;
+              removeLatestReport();
+            }}
+          >
+            Erase the latest morning
+          </button>
         </>
       )}
 
