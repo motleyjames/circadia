@@ -62,7 +62,7 @@ const root = path.join(__dirname, "..");
 const swift = path.join(__dirname, "launcher.swift");
 const png = path.join(__dirname, operator ? "operator-icon.png" : "icon.png");
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
-const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.0";
+const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.1";
 
 spawnSync("killall", [EXEC_NAME], { stdio: "ignore" });
 freePort(DOCK_PORT);
@@ -198,10 +198,22 @@ function installNative(dest) {
   finishBundle(dest, EXEC_NAME);
 }
 
+function isNativeBundle(dest) {
+  if (!dest || !fs.existsSync(dest)) return false;
+  const exe = path.join(dest, "Contents", "MacOS", EXEC_NAME);
+  const electronBin = path.join(dest, "Contents", "MacOS", "Electron");
+  const electronPkg = path.join(dest, "Contents", "Resources", "app", "package.json");
+  return fs.existsSync(exe) && !fs.existsSync(electronBin) && !fs.existsSync(electronPkg);
+}
+
 function installElectronFallback(dest) {
   const electronApp = path.join(root, "node_modules", "electron", "dist", "Electron.app");
+  const stub = path.join(__dirname, "bundle-main.cjs");
   if (!fs.existsSync(electronApp)) {
     throw new Error("Electron.app is missing. Run npm install inside rest-ai first.");
+  }
+  if (!fs.existsSync(stub)) {
+    throw new Error("electron/bundle-main.cjs is missing.");
   }
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.rmSync(dest, { recursive: true, force: true });
@@ -214,10 +226,12 @@ function installElectronFallback(dest) {
 
   const appDir = path.join(dest, "Contents", "Resources", "app");
   fs.mkdirSync(appDir, { recursive: true });
+  // Electron treats "main" as relative to this folder. Never write an absolute path.
   fs.writeFileSync(
     path.join(appDir, "package.json"),
-    JSON.stringify({ name: operator ? "circadia-operator" : "circadia", version: APP_VERSION, main: path.join(root, "electron", "main.cjs") }, null, 2),
+    JSON.stringify({ name: operator ? "circadia-operator" : "circadia", version: APP_VERSION, main: "main.cjs" }, null, 2),
   );
+  fs.copyFileSync(stub, path.join(appDir, "main.cjs"));
   fs.writeFileSync(path.join(appDir, "install.json"), JSON.stringify(installPayload(), null, 2));
   if (fs.existsSync(png)) {
     fs.copyFileSync(png, path.join(dest, "Contents", "Resources", "icon.png"));
@@ -261,13 +275,27 @@ try {
 } catch (error) {
   console.warn("Native launcher did not compile (install Xcode Command Line Tools with: xcode-select --install).");
   console.warn(String(error));
-  console.warn("Falling back to this Mac's Electron — executable stays named Electron.");
-  mode = "electron-fallback";
-  dest = place(installElectronFallback);
+  const existing = findInstalled();
+  if (existing && isNativeBundle(existing)) {
+    console.warn("Leaving the existing native app in place instead of replacing it with Electron.");
+    finishBundle(existing, EXEC_NAME);
+    dest = existing;
+    mode = "native-kept";
+  } else {
+    console.warn("Falling back to this Mac's Electron — executable stays named Electron.");
+    mode = "electron-fallback";
+    dest = place(installElectronFallback);
+  }
 }
 
 console.log("");
-console.log(mode === "native" ? `Installed a native ${APP_DISPLAY} window (not a packaged Chromium).` : `Installed ${APP_DISPLAY} using this Mac's Electron (binary not renamed).`);
+console.log(
+  mode === "native"
+    ? `Installed a native ${APP_DISPLAY} window (not a packaged Chromium).`
+    : mode === "native-kept"
+      ? `Kept the native ${APP_DISPLAY} window and refreshed its pointer. Swift did not compile this time.`
+      : `Installed ${APP_DISPLAY} using this Mac's Electron (binary not renamed).`,
+);
 console.log(dest);
 console.log(`Node: ${process.execPath}`);
 console.log(`Repo: ${root}`);

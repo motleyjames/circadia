@@ -20,11 +20,28 @@ let mainWindow = null;
 let isQuitting = false;
 let appUrl = DEV_URL;
 
+function isOperator() {
+  const install = readInstall();
+  return Boolean(install && install.surface === "mod");
+}
+
+function appTitle() {
+  return isOperator() ? "Circadia Operator" : "Circadia";
+}
+
+function appIcon() {
+  const operatorIcon = path.join(__dirname, "operator-icon.png");
+  if (isOperator() && fs.existsSync(operatorIcon)) return operatorIcon;
+  return ICON;
+}
+
 function logFile() {
   const home = process.env.HOME || app.getPath("home");
   const dir = path.join(home, "Library", "Logs");
   fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, "Circadia.log");
+  const install = readInstall();
+  const name = install && typeof install.logFile === "string" && install.logFile ? install.logFile : "Circadia.log";
+  return path.join(dir, name);
 }
 
 function logLine(chunk) {
@@ -59,7 +76,7 @@ function splashHtml(subtitle) {
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Circadia</title>
+    <title>${appTitle()}</title>
     <style>
       html, body { margin: 0; height: 100%; background: #07060f; color: #e4e4e7; font: 15px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; }
       body { display: flex; align-items: center; justify-content: center; }
@@ -71,7 +88,7 @@ function splashHtml(subtitle) {
   <body>
     <div style="text-align:center">
       <div class="mark"></div>
-      <h1>Circadia</h1>
+      <h1>${appTitle()}</h1>
       <p>${subtitle}</p>
     </div>
   </body>
@@ -87,7 +104,7 @@ function failureHtml(message) {
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Circadia</title>
+    <title>${appTitle()}</title>
     <style>
       html, body { margin: 0; min-height: 100%; background: #07060f; color: #e4e4e7; font: 15px/1.5 -apple-system, BlinkMacSystemFont, sans-serif; }
       main { max-width: 38rem; padding: 4rem 2rem; }
@@ -98,8 +115,8 @@ function failureHtml(message) {
   </head>
   <body>
     <main>
-      <h1>Circadia is running. The diary is not.</h1>
-      <p>Quit with Cmd+Q. Open <code>~/Library/Logs/Circadia.log</code> if this repeats.</p>
+      <h1>${appTitle()} is running. The diary is not.</h1>
+      <p>Quit with Cmd+Q. Open <code>${logFile()}</code> if this repeats.</p>
       <pre>${safe}</pre>
     </main>
   </body>
@@ -152,14 +169,19 @@ function startNext(install) {
   if (!fs.existsSync(node) || !fs.existsSync(serve)) {
     throw new Error(`Node or serve-dock missing.\nnode: ${node}\nserve: ${serve}`);
   }
-  logLine(`serve-dock :${bound}\n${node}\n${repo}\n`);
+  logLine(`serve-dock :${bound}\n${node}\n${repo}\nsurface ${install.surface || "diary"}\n`);
   const nodeDir = path.dirname(node);
+  const surfaceEnv =
+    install.surface === "mod"
+      ? { CIRCADIA_SURFACE: "mod", NEXT_PUBLIC_CIRCADIA_SURFACE: "mod" }
+      : {};
   nextChild = spawn(node, [serve], {
     cwd: repo,
     env: {
       ...process.env,
       PATH: `${nodeDir}:${install.path || ""}:${process.env.PATH || ""}`,
       CIRCADIA_DOCK_PORT: String(bound),
+      ...surfaceEnv,
     },
   });
   nextChild.stdout?.on("data", (data) => logLine(String(data)));
@@ -185,7 +207,7 @@ async function ensureUi() {
   const install = readInstall();
   if (install) {
     const bound = Number(install.port) > 0 ? Number(install.port) : DOCK_PORT;
-    const url = `http://127.0.0.1:${bound}/?v=${install.version || "0.4.4"}`;
+    const url = `http://127.0.0.1:${bound}/?v=${install.version || "0.5.1"}`;
     startNext(install);
     await waitForUrl(url, 180_000);
     appUrl = url;
@@ -216,12 +238,12 @@ function createShell() {
     minWidth: 960,
     minHeight: 640,
     backgroundColor: "#05040a",
-    title: "Circadia",
+    title: appTitle(),
     show: true,
     autoHideMenuBar: true,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     trafficLightPosition: { x: 16, y: 18 },
-    icon: ICON,
+    icon: appIcon(),
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -288,19 +310,20 @@ process.on("uncaughtException", (error) => {
 });
 
 try {
-  app.setName("Circadia");
-  app.setPath("userData", path.join(app.getPath("appData"), "Circadia"));
+  app.setName(appTitle());
+  app.setPath("userData", path.join(app.getPath("appData"), isOperator() ? "Circadia Operator" : "Circadia"));
 } catch (error) {
   logLine(`setName ${error}\n`);
 }
 
 app.whenReady().then(() => {
   if (process.platform === "darwin" && app.dock) {
-    app.dock.setIcon(ICON);
+    app.dock.setIcon(appIcon());
   }
+  const install = readInstall();
   app.setAboutPanelOptions({
-    applicationName: "Circadia",
-    applicationVersion: "0.4.4",
+    applicationName: appTitle(),
+    applicationVersion: (install && install.version) || "0.5.1",
     copyright: "Local sleep companion. Not medical care.",
   });
   installMenu();
