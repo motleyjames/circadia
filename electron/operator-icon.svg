@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Circadia Operator">
+  <rect width="1024" height="1024" rx="230" fill="#07060f"/>
+  <circle cx="512" cy="512" r="360" fill="#0c0a16"/>
+  <circle cx="512" cy="512" r="352" fill="none" stroke="#e8b86d" stroke-width="3" opacity="0.55"/>
+  <g transform="translate(512 512)" stroke="#d4d4d8" stroke-linecap="round">
+    <g stroke-width="10">
+      <line y1="-328" y2="-292" transform="rotate(30)"/>
+      <line y1="-328" y2="-292" transform="rotate(60)"/>
+      <line y1="-328" y2="-292" transform="rotate(120)"/>
+      <line y1="-328" y2="-292" transform="rotate(150)"/>
+      <line y1="-328" y2="-292" transform="rotate(210)"/>
+      <line y1="-328" y2="-292" transform="rotate(240)"/>
+      <line y1="-328" y2="-292" transform="rotate(300)"/>
+      <line y1="-328" y2="-292" transform="rotate(330)"/>
+    </g>
+    <g stroke="#f4f4f5" stroke-width="14">
+      <line y1="-336" y2="-280" transform="rotate(90)"/>
+      <line y1="-336" y2="-280" transform="rotate(180)"/>
+      <line y1="-336" y2="-280" transform="rotate(270)"/>
+    </g>
+  </g>
+  <path transform="translate(780 300)" d="M0-28c18 8 30 26 30 48 0 28-22 52-52 52-8 0-16-2-22-5 18 6 40-4 48-24 8-20-2-40-22-48 6-8 14-16 18-23z" fill="#e8b86d"/>
+  <g transform="translate(512 512)">
+    <rect x="-8" y="-248" width="16" height="268" rx="8" fill="#e4e4e7" transform="rotate(50)"/>
+    <rect x="-10" y="-176" width="20" height="196" rx="10" fill="#c4b5fd" transform="rotate(130)"/>
+    <circle r="22" fill="#e8b86d"/>
+    <circle r="8" fill="#07060f"/>
+  </g>
+</svg>

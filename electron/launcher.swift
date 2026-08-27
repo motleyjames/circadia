@@ -11,6 +11,10 @@ struct Install: Decodable {
   let path: String?
   let port: Int?
   let version: String?
+  let title: String?
+  let logFile: String?
+  let serve: String?
+  let surface: String?
 }
 
 let defaultPort = 43148
@@ -25,12 +29,13 @@ func makeDiaryURL(_ install: Install?) -> URL {
   let stamp = install?.version ?? "0.4.4"
   return URL(string: "http://127.0.0.1:\(installPort(install))/?v=\(stamp)")!
 }
-let logURL: URL = {
+let logsDir: URL = {
   let logs = FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent("Library/Logs", isDirectory: true)
   try? FileManager.default.createDirectory(at: logs, withIntermediateDirectories: true)
-  return logs.appendingPathComponent("Circadia.log")
+  return logs
 }()
+var logURL = logsDir.appendingPathComponent("Circadia.log")
 
 func logLine(_ message: String) {
   let line = "\(ISO8601DateFormatter().string(from: Date())) \(message)\n"
@@ -73,7 +78,8 @@ func diaryIsUp(_ url: URL = activeURL) -> Bool {
 }
 
 func startNext(_ install: Install) throws {
-  let serve = (install.repo as NSString).appendingPathComponent("electron/serve-dock.cjs")
+  let serveRel = install.serve ?? "electron/serve-dock.cjs"
+  let serve = (install.repo as NSString).appendingPathComponent(serveRel)
   guard FileManager.default.isExecutableFile(atPath: install.node) else {
     throw NSError(domain: "Circadia", code: 1, userInfo: [
       NSLocalizedDescriptionKey: "Node is gone.\n\(install.node)\nRun npm run dock from rest-ai again.",
@@ -81,7 +87,7 @@ func startNext(_ install: Install) throws {
   }
   guard FileManager.default.fileExists(atPath: serve) else {
     throw NSError(domain: "Circadia", code: 2, userInfo: [
-      NSLocalizedDescriptionKey: "This Circadia.app is stale. From rest-ai run:\nnpm run dock",
+      NSLocalizedDescriptionKey: "This app is stale. From rest-ai run:\nnpm run dock   or   npm run dock:mod",
     ])
   }
 
@@ -95,6 +101,10 @@ func startNext(_ install: Install) throws {
   let captured = install.path ?? ""
   env["PATH"] = "\(nodeDir):\(captured):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
   env["CIRCADIA_DOCK_PORT"] = String(bound)
+  if let surface = install.surface, surface == "mod" {
+    env["CIRCADIA_SURFACE"] = "mod"
+    env["NEXT_PUBLIC_CIRCADIA_SURFACE"] = "mod"
+  }
   proc.environment = env
 
   if !FileManager.default.fileExists(atPath: logURL.path) {
@@ -134,8 +144,24 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     return WKWebView(frame: .zero, configuration: config)
   }()
   let splash = NSTextField(labelWithString: "Starting the night clock…")
+  var appTitle = "Circadia"
+  var operatorApp = false
+
+  func applyIdentity(_ install: Install?) {
+    if let name = install?.logFile, !name.isEmpty {
+      logURL = logsDir.appendingPathComponent(name)
+    }
+    appTitle = install?.title ?? "Circadia"
+    operatorApp = install?.surface == "mod"
+    window.title = appTitle
+    if operatorApp {
+      splash.stringValue = "Opening the inbox…"
+    }
+  }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
+    let install = readInstall()
+    applyIdentity(install)
     logLine("native launcher started")
     NSApp.setActivationPolicy(.regular)
     if let png = Bundle.main.url(forResource: "icon", withExtension: "png"),
@@ -143,7 +169,6 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
       NSApp.applicationIconImage = image
     }
 
-    window.title = "Circadia"
     window.minSize = NSSize(width: 960, height: 640)
     window.titlebarAppearsTransparent = true
     window.titleVisibility = .hidden
@@ -182,15 +207,14 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     NSApp.activate(ignoringOtherApps: true)
 
     DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-      self?.boot()
+      self?.boot(install)
     }
   }
 
-  func boot() {
-    let install = readInstall()
+  func boot(_ install: Install?) {
     activeURL = makeDiaryURL(install)
     guard let install else {
-      fail("This Circadia.app has no project pointer.\nFrom the rest-ai folder run:\nnpm run dock")
+      fail("This \(appTitle).app has no project pointer.\nFrom the rest-ai folder run:\nnpm run dock   or   npm run dock:mod")
       return
     }
     if !FileManager.default.fileExists(atPath: install.repo) {
@@ -207,13 +231,13 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
       loadDiary()
       return
     }
-    fail("The diary did not start on port \(installPort(install)).\nRead ~/Library/Logs/Circadia.log")
+    fail("\(appTitle) did not start on port \(installPort(install)).\nRead \(logURL.path)")
   }
 
   func loadDiary() {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
-      self.splash.stringValue = "Opening Tonight…"
+      self.splash.stringValue = self.operatorApp ? "Opening the inbox…" : "Opening Tonight…"
       self.web.load(URLRequest(url: activeURL))
     }
   }
@@ -223,7 +247,9 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     DispatchQueue.main.async { [weak self] in
       self?.splash.stringValue = message
       let alert = NSAlert()
-      alert.messageText = "Circadia is running. The diary is not."
+      alert.messageText = operatorApp
+        ? "Circadia Operator is running. The inbox is not."
+        : "Circadia is running. The diary is not."
       alert.informativeText = message
       alert.alertStyle = .warning
       alert.runModal()
@@ -271,7 +297,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
 
   func installMenu() {
     let mainMenu = NSMenu()
-    let appName = "Circadia"
+    let appName = appTitle
     let appMenu = NSMenu()
     appMenu.addItem(withTitle: "About \(appName)", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
     appMenu.addItem(NSMenuItem.separator())

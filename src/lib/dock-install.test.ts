@@ -52,9 +52,9 @@ describe("Dock install invariants", () => {
     expect(pkg.scripts.dev).toContain("43147");
     expect(pkg.scripts.dev).not.toContain("CIRCADIA_SURFACE=mod");
     expect(pkg.scripts.mod).toBe("node electron/run-mod.cjs");
-    const launcher = readFileSync("electron/run-mod.cjs", "utf8");
-    expect(launcher).toContain("43149");
-    expect(launcher).toContain('CIRCADIA_SURFACE = "mod"');
+    const runMod = readFileSync("electron/run-mod.cjs", "utf8");
+    expect(runMod).toContain("43149");
+    expect(runMod).toContain('CIRCADIA_SURFACE = "mod"');
     expect(readFileSync("next.config.ts", "utf8")).toContain(".next-mod");
     const mw = readFileSync("src/middleware.ts", "utf8");
     expect(mw).toContain('CIRCADIA_SURFACE === "mod"');
@@ -62,6 +62,14 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("isOperatorSurface");
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
+    expect(pkg.scripts["dock:mod"]).toBe("node electron/install-mac.cjs --operator");
+    expect(install).toContain("--operator");
+    expect(install).toContain("Circadia Operator.app");
+    expect(install).toContain("app.circadia.operator");
+    expect(install).toContain("operator-icon.png");
+    expect(install).toContain("CircadiaOperator");
+    expect(launcher).toContain("let surface");
+    expect(readFileSync("eslint.config.mjs", "utf8")).toContain(".next-mod");
   });
 });
 
