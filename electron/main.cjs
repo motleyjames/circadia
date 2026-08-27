@@ -8,6 +8,7 @@ const { spawn } = require("node:child_process");
 const { listen } = require("./static-server.cjs");
 
 const DEV_URL = "http://127.0.0.1:43147";
+const DOCK_PORT = 43148;
 const ICON = path.join(__dirname, "icon.png");
 
 /** @type {import('node:http').Server | null} */
@@ -147,12 +148,17 @@ function startNext(install) {
   const node = install.node;
   const repo = install.repo;
   const nextBin = path.join(repo, "node_modules", "next", "dist", "bin", "next");
+  const bound = Number(install.port) > 0 ? Number(install.port) : DOCK_PORT;
   if (!fs.existsSync(node) || !fs.existsSync(nextBin)) {
     throw new Error(`Node or Next missing.\nnode: ${node}\nnext: ${nextBin}`);
   }
-  logLine(`next ${node}\n${repo}\n`);
+  const buildId = path.join(repo, ".next", "BUILD_ID");
+  if (!fs.existsSync(buildId)) {
+    throw new Error("Circadia has not been compiled. From rest-ai run: npm run dock");
+  }
+  logLine(`next start :${bound}\n${node}\n${repo}\n`);
   const nodeDir = path.dirname(node);
-  nextChild = spawn(node, [nextBin, "dev", "--port", "43147", "--hostname", "127.0.0.1"], {
+  nextChild = spawn(node, [nextBin, "start", "--port", String(bound), "--hostname", "127.0.0.1"], {
     cwd: repo,
     env: {
       ...process.env,
@@ -179,15 +185,19 @@ async function startEmbeddedUi() {
 }
 
 async function ensureUi() {
-  if (await probe(DEV_URL)) {
-    appUrl = DEV_URL;
-    return;
-  }
   const install = readInstall();
   if (install) {
-    startNext(install);
+    const bound = Number(install.port) > 0 ? Number(install.port) : DOCK_PORT;
+    const url = `http://127.0.0.1:${bound}`;
+    if (!(await probe(url))) {
+      startNext(install);
+      await waitForUrl(url, 90_000);
+    }
+    appUrl = url;
+    return;
+  }
+  if (await probe(DEV_URL)) {
     appUrl = DEV_URL;
-    await waitForUrl(DEV_URL, 90_000);
     return;
   }
   if (app.isPackaged) {
@@ -295,7 +305,7 @@ app.whenReady().then(() => {
   }
   app.setAboutPanelOptions({
     applicationName: "Circadia",
-    applicationVersion: "0.4.0",
+    applicationVersion: "0.4.1",
     copyright: "Local sleep companion. Not medical care.",
   });
   installMenu();

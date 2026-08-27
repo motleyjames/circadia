@@ -7,6 +7,7 @@ const path = require("node:path");
 
 const SYSTEM = "/Applications/Circadia.app";
 const HOME = path.join(os.homedir(), "Applications", "Circadia.app");
+const DOCK_PORT = 43148;
 
 function findInstalled() {
   if (fs.existsSync(SYSTEM)) return SYSTEM;
@@ -39,12 +40,37 @@ const swift = path.join(__dirname, "launcher.swift");
 const png = path.join(__dirname, "icon.png");
 
 spawnSync("killall", ["Circadia"], { stdio: "ignore" });
+freePort(DOCK_PORT);
+
+function freePort(port) {
+  const listed = spawnSync("lsof", ["-tiTCP:" + port, "-sTCP:LISTEN"], { encoding: "utf8" });
+  const pids = (listed.stdout || "").trim().split(/\s+/).filter(Boolean);
+  for (const pid of pids) spawnSync("kill", [pid], { stdio: "ignore" });
+}
+
+function buildDiary() {
+  const nextBin = path.join(root, "node_modules", "next", "dist", "bin", "next");
+  if (!fs.existsSync(nextBin)) {
+    console.error("Next is missing. Run npm install inside rest-ai first.");
+    process.exit(1);
+  }
+  console.log("Compiling Circadia once for the Dock window (not a live-reload server)…");
+  const env = { ...process.env };
+  delete env.CIRCADIA_ELECTRON;
+  const result = spawnSync(process.execPath, [nextBin, "build"], { cwd: root, stdio: "inherit", env });
+  if (result.status !== 0) {
+    console.error("next build failed. Circadia.app was not replaced.");
+    process.exit(1);
+  }
+}
 
 function installPayload() {
   return {
     node: process.execPath,
     repo: root,
     path: process.env.PATH || "",
+    port: DOCK_PORT,
+    mode: "start",
     installedAt: new Date().toISOString(),
   };
 }
@@ -82,8 +108,8 @@ function writePlist(plist, executable) {
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundleName</key><string>Circadia</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.4.0</string>
-  <key>CFBundleVersion</key><string>0.4.0</string>
+  <key>CFBundleShortVersionString</key><string>0.4.1</string>
+  <key>CFBundleVersion</key><string>0.4.1</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
@@ -150,7 +176,7 @@ function installElectronFallback(dest) {
   fs.mkdirSync(appDir, { recursive: true });
   fs.writeFileSync(
     path.join(appDir, "package.json"),
-    JSON.stringify({ name: "circadia", version: "0.4.0", main: path.join(root, "electron", "main.cjs") }, null, 2),
+    JSON.stringify({ name: "circadia", version: "0.4.1", main: path.join(root, "electron", "main.cjs") }, null, 2),
   );
   fs.writeFileSync(path.join(appDir, "install.json"), JSON.stringify(installPayload(), null, 2));
   if (fs.existsSync(png)) {
@@ -189,6 +215,7 @@ function place(installFn) {
 
 let dest;
 let mode = "native";
+buildDiary();
 try {
   dest = place(installNative);
 } catch (error) {

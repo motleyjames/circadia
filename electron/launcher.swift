@@ -2,18 +2,27 @@ import AppKit
 import Foundation
 import WebKit
 
-/// Native Dock shell. Chromium packaging is what kept bouncing; this is a
-/// WKWebView around the same Next server `npm run app` already starts.
+/// Native Dock shell. Production `next start` on 43148 — never `next dev`.
+/// Turbopack's overlay was covering Tonight with Safari's "Load failed".
 
 struct Install: Decodable {
   let node: String
   let repo: String
   let path: String?
+  let port: Int?
 }
 
-let port = 43147
-let diaryURL = URL(string: "http://127.0.0.1:43147/")!
+let defaultPort = 43148
+var activeURL = URL(string: "http://127.0.0.1:43148/")!
 var nextProcess: Process?
+
+func installPort(_ install: Install?) -> Int {
+  install?.port ?? defaultPort
+}
+
+func makeDiaryURL(_ install: Install?) -> URL {
+  URL(string: "http://127.0.0.1:\(installPort(install))/")!
+}
 let logURL: URL = {
   let logs = FileManager.default.homeDirectoryForCurrentUser
     .appendingPathComponent("Library/Logs", isDirectory: true)
@@ -48,10 +57,10 @@ func readInstall() -> Install? {
   }
 }
 
-func diaryIsUp() -> Bool {
+func diaryIsUp(_ url: URL = activeURL) -> Bool {
   var up = false
   let sem = DispatchSemaphore(value: 0)
-  var request = URLRequest(url: diaryURL)
+  var request = URLRequest(url: url)
   request.timeoutInterval = 0.6
   URLSession.shared.dataTask(with: request) { _, response, error in
     up = error == nil && response != nil
@@ -73,10 +82,17 @@ func startNext(_ install: Install) throws {
       NSLocalizedDescriptionKey: "Next is missing. Run npm install inside rest-ai.",
     ])
   }
+  let buildId = (install.repo as NSString).appendingPathComponent(".next/BUILD_ID")
+  guard FileManager.default.fileExists(atPath: buildId) else {
+    throw NSError(domain: "Circadia", code: 3, userInfo: [
+      NSLocalizedDescriptionKey: "Circadia has not been compiled. From rest-ai run:\nnpm run dock",
+    ])
+  }
 
+  let bound = installPort(install)
   let proc = Process()
   proc.executableURL = URL(fileURLWithPath: install.node)
-  proc.arguments = [nextBin, "dev", "--port", String(port), "--hostname", "127.0.0.1"]
+  proc.arguments = [nextBin, "start", "--port", String(bound), "--hostname", "127.0.0.1"]
   proc.currentDirectoryURL = URL(fileURLWithPath: install.repo)
   var env = ProcessInfo.processInfo.environment
   let nodeDir = URL(fileURLWithPath: install.node).deletingLastPathComponent().path
@@ -91,7 +107,7 @@ func startNext(_ install: Install) throws {
   handle.seekToEndOfFile()
   proc.standardOutput = handle
   proc.standardError = handle
-  logLine("starting next\n  node \(install.node)\n  repo \(install.repo)")
+  logLine("starting next start :\(bound)\n  node \(install.node)\n  repo \(install.repo)")
   try proc.run()
   nextProcess = proc
 }
@@ -168,8 +184,9 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
 
   func boot() {
     let install = readInstall()
-    if diaryIsUp() {
-      logLine("diary already listening")
+    activeURL = makeDiaryURL(install)
+    if diaryIsUp(activeURL) {
+      logLine("diary already listening \(activeURL.absoluteString)")
       loadDiary()
       return
     }
@@ -191,14 +208,14 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
       loadDiary()
       return
     }
-    fail("The diary did not start on port 43147.\nRead ~/Library/Logs/Circadia.log")
+    fail("The diary did not start on port \(installPort(install)).\nRead ~/Library/Logs/Circadia.log")
   }
 
   func loadDiary() {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
       self.splash.stringValue = "Opening Tonight…"
-      self.web.load(URLRequest(url: diaryURL))
+      self.web.load(URLRequest(url: activeURL))
     }
   }
 
@@ -221,14 +238,14 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
   func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
     logLine("nav fail \(error.localizedDescription)")
     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-      self?.web.load(URLRequest(url: diaryURL))
+      self?.web.load(URLRequest(url: activeURL))
     }
   }
 
   func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
     logLine("provisional fail \(error.localizedDescription)")
     DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-      if diaryIsUp() { self?.web.load(URLRequest(url: diaryURL)) }
+      if diaryIsUp(activeURL) { self?.web.load(URLRequest(url: activeURL)) }
     }
   }
 
