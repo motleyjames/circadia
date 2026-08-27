@@ -44,6 +44,25 @@ function verifyPackagedApp(appDir) {
   return resolved;
 }
 
+/** File Electron looks for when package.json main is still an absolute rest-ai path. */
+function writeConcatenationShim(appDir, repo) {
+  if (typeof repo !== "string" || !repo.startsWith("/")) return null;
+  const dest = packagedMainPath(appDir, path.join(repo, "electron", RELATIVE_MAIN));
+  const main = path.join(appDir, RELATIVE_MAIN);
+  if (!fs.existsSync(main)) throw new Error("cannot shim missing " + main);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(main, dest);
+  return dest;
+}
+
+function isElectronApp(dest) {
+  if (!dest || !fs.existsSync(dest)) return false;
+  return (
+    fs.existsSync(path.join(dest, "Contents", "MacOS", "Electron")) ||
+    fs.existsSync(path.join(dest, "Contents", "Resources", "app", "package.json"))
+  );
+}
+
 function writePackagedApp(appDir, opts) {
   const electronDir = opts.electronDir;
   const payload = opts.payload;
@@ -65,7 +84,9 @@ function writePackagedApp(appDir, opts) {
     if (fs.existsSync(src)) fs.copyFileSync(src, path.join(appDir, icon));
   }
   fs.writeFileSync(path.join(appDir, "install.json"), JSON.stringify(payload, null, 2));
-  return verifyPackagedApp(appDir);
+  const resolved = verifyPackagedApp(appDir);
+  writeConcatenationShim(appDir, payload && payload.repo);
+  return resolved;
 }
 
 module.exports = {
@@ -73,5 +94,7 @@ module.exports = {
   packagedMainPath,
   assertSafeMain,
   verifyPackagedApp,
+  writeConcatenationShim,
+  isElectronApp,
   writePackagedApp,
 };

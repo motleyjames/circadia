@@ -12,8 +12,11 @@ This is not a packaged Chromium app. Those kept dying on launch. `npm run dock` 
 cd rest-ai
 git pull
 npm install
+npm run repair
 npm run dock
 ```
+
+`npm run repair` patches `/Applications/Circadia.app` **without compiling**. Use it when the app throws `Cannot find module …/Resources/app/Users/…/electron/main.cjs`. Then `npm run dock` for the two production builds.
 
 The compile takes a couple of minutes (two apps). You should get **Circadia** (ice-blue clock) and **Circadia Operator** (gold clock). Operator also lands an alias on the Desktop. Drag both to the Dock.
 
@@ -25,11 +28,11 @@ If macOS says the app is from an unidentified developer: right-click Circadia �
 
 If the window never appears, send the last 40 lines of `~/Library/Logs/Circadia.log`. That file is the diagnosis.
 
-Need Command Line Tools once (`xcode-select --install`) so `swiftc` can build the window. Without them, dock falls back to this Mac's Electron **without renaming its binary**. Electron's `main` is a file copied *into* the app bundle (`Contents/Resources/app/main.cjs`). An absolute path into `rest-ai` is concatenated onto that folder and crashes as `…/app/Users/…/electron/main.cjs`. If a native Circadia.app already exists, a failed Swift compile leaves it alone instead of replacing it with Chromium.
+Need Command Line Tools once (`xcode-select --install`) so `swiftc` can build the window. Without them, dock falls back to this Mac's Electron **without renaming its binary**. Electron's `main` is a file copied *into* the app bundle (`Contents/Resources/app/main.cjs`). An absolute path into `rest-ai` is concatenated onto that folder and crashes as `…/app/Users/…/electron/main.cjs`. Repair also drops a copy of `main.cjs` at that concatenated path so a stale `package.json` still boots. If a native Circadia.app already exists, a failed Swift compile leaves it alone instead of replacing it with Chromium.
 
 The Next.js line `The "middleware" file convention is deprecated` is a warning from `next build`. It is not the crash. Leave `src/middleware.ts` until we migrate operator routing on purpose.
 
-If a previous Dock install threw that module error **or** died on `Export encountered an error on /insights`: Cmd+Q the dialog, then `git pull` and `npm run dock` again. The insights failure was the operator compile prerendering diary pages without a provider — dock never reached replacing Circadia.app.
+If a previous Dock install threw that module error **or** died on `/insights` or `/check-in` (`useCircadia must be used inside CircadiaProvider`): Cmd+Q the dialog, `git pull`, then `npm run repair` **before** `npm run dock`. Operator compile used to prerender diary pages without a provider and abort before replacing the app. Repair does not wait on that compile.
 
 ## What you do
 
