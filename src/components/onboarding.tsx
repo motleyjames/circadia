@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BrandStage } from "@/components/brand-stage";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
@@ -71,6 +72,7 @@ const INTAKE = [
 ] as const;
 
 export function Onboarding() {
+  const router = useRouter();
   const { saveProfile } = useCircadia();
   const [cover, setCover] = useState(true);
   const [step, setStep] = useState(0);
@@ -120,6 +122,7 @@ export function Onboarding() {
       onboardingComplete: true,
     };
     saveProfile(profile);
+    router.replace("/");
   }
 
   if (cover) {
