@@ -6,7 +6,7 @@ Circadia is local-first. Profile, mornings, dreams, and chat live on this comput
 
 ## Put it on the Dock (Mac)
 
-This is not a packaged Chromium app. Those kept dying on launch (renamed Electron helpers, Gatekeeper on unsigned copies, a leftover Electron process swallowing the Dock click). `npm run dock` now compiles a tiny native window and points it at this clone.
+This is not a packaged Chromium app. Those kept dying on launch. `npm run dock` compiles a tiny native window and a **production** Circadia server on port 43148. It does not wrap `next dev` — that is what put the Next.js error overlay over Begin.
 
 ```bash
 cd rest-ai
@@ -15,7 +15,9 @@ npm install
 npm run dock
 ```
 
-Wait for a Circadia window (splash, then Tonight). Drag **that** icon to the Dock. Right-click any leftover **Electron** icon → Options → Remove from Dock. Do not click Electron.
+The compile takes a minute. Wait for a Circadia window (splash, then Begin — **no** Next.js `N` badge). Drag **that** icon to the Dock. Right-click any leftover **Electron** icon → Options → Remove from Dock.
+
+Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again. Chrome on http://127.0.0.1:43147 is still `npm run dev` for hacking; the Dock app is the product window.
 
 Keep the `rest-ai` folder where it is. The app is a pointer to this project. If you move the folder, run `npm run dock` again.
 
