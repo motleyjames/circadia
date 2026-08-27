@@ -12,6 +12,7 @@
     "dock": "node electron/install-mac.cjs",
     "dock:mod": "node electron/install-mac.cjs --operator",
     "reveal": "node electron/install-mac.cjs --reveal",
+    "reveal:mod": "node electron/install-mac.cjs --operator --reveal",
     "dist": "node electron/build-ui.cjs && electron-builder --mac dir zip --publish never",
     "lint": "eslint",
     "test": "vitest run",
