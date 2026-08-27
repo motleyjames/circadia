@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
 import { TABS } from "@/lib/nav";
+import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
 export function SidebarNav() {
@@ -18,7 +19,7 @@ export function SidebarNav() {
         <Mark className="size-6" />
         <div>
           <p className="font-heading text-lg leading-none text-zinc-50">Circadia</p>
-          <p className="mt-1 text-[10px] tracking-[0.2em] text-zinc-600 uppercase">Desktop</p>
+          <p className="mt-1 text-[10px] tracking-[0.2em] text-zinc-600 uppercase">v{APP_VERSION}</p>
         </div>
       </div>
       <nav className="flex flex-1 flex-col gap-1 px-3">

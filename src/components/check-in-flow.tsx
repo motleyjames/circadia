@@ -16,6 +16,8 @@ import type {
   WindDownHelp,
 } from "@/lib/types";
 import { clockFromDate, formatClock, todayIsoDate } from "@/lib/time";
+import { SLEEP_AID_QUESTION } from "@/lib/intake";
+import { APP_VERSION } from "@/lib/version";
 
 const SLEEP_TIMES = ["21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00"];
 const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00"];
@@ -140,7 +142,7 @@ export function CheckInFlow() {
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Morning interview</p>
       <h1 className="font-heading mt-1 text-2xl text-zinc-50">Forty seconds. Honest bubbles.</h1>
       <p className="mt-1 text-xs text-zinc-500">
-        {today}
+        {today} · v{APP_VERSION}
         {existing ? " · this morning is already logged" : ""}
       </p>
       {existing || state.reports.length > 0 ? (
@@ -336,7 +338,7 @@ export function CheckInFlow() {
 
         {current === "supp" ? (
           <Block
-            title="Did you take any supplements last night to help you sleep?"
+            title={SLEEP_AID_QUESTION}
             hint="Anything you took for this night — a gummy, magnesium, Unisom. Not a daytime vitamin."
           >
             <YesNo

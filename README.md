@@ -15,7 +15,7 @@ npm install
 npm run dock
 ```
 
-The compile takes a minute. Wait for a Circadia window (splash, then Begin — **no** Next.js `N` badge). Drag **that** icon to the Dock. Right-click any leftover **Electron** icon → Options → Remove from Dock.
+The compile takes a minute. Wait for a Circadia window. The sidebar should say **v0.4.4**. Morning should ask *Did you take any supplements last night to help you sleep?* — **no** red Next.js `N`. If you still see `N` or “Melatonin or magnesium last night?”, that window is the old process: Cmd+Q, then `npm run dock` again.
 
 Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again. Chrome on http://127.0.0.1:43147 is still `npm run dev` for hacking; the Dock app is the product window.
 

@@ -71,6 +71,7 @@ function installPayload() {
     path: process.env.PATH || "",
     port: DOCK_PORT,
     mode: "start",
+    version: "0.4.4",
     installedAt: new Date().toISOString(),
   };
 }
@@ -108,8 +109,8 @@ function writePlist(plist, executable) {
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundleName</key><string>Circadia</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.4.2</string>
-  <key>CFBundleVersion</key><string>0.4.2</string>
+  <key>CFBundleShortVersionString</key><string>0.4.4</string>
+  <key>CFBundleVersion</key><string>0.4.4</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
@@ -176,7 +177,7 @@ function installElectronFallback(dest) {
   fs.mkdirSync(appDir, { recursive: true });
   fs.writeFileSync(
     path.join(appDir, "package.json"),
-    JSON.stringify({ name: "circadia", version: "0.4.2", main: path.join(root, "electron", "main.cjs") }, null, 2),
+    JSON.stringify({ name: "circadia", version: "0.4.4", main: path.join(root, "electron", "main.cjs") }, null, 2),
   );
   fs.writeFileSync(path.join(appDir, "install.json"), JSON.stringify(installPayload(), null, 2));
   if (fs.existsSync(png)) {
