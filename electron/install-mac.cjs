@@ -248,7 +248,10 @@ function installElectronFallback(dest) {
   const lsEnv = JSON.stringify({ PATH: `${path.dirname(process.execPath)}:${process.env.PATH || ""}` });
   spawnSync("plutil", ["-replace", "LSEnvironment", "-json", lsEnv, plist], { stdio: "inherit" });
   spawnSync("xattr", ["-cr", dest], { stdio: "ignore" });
-  spawnSync("codesign", ["--force", "--deep", "--sign", "-", dest], { stdio: "ignore" });
+  spawnSync("codesign", ["--force", "--sign", "-", path.join(dest, "Contents", "MacOS", "Electron")], {
+    stdio: "ignore",
+  });
+  spawnSync("codesign", ["--force", "--sign", "-", dest], { stdio: "ignore" });
 }
 
 function place(installFn) {

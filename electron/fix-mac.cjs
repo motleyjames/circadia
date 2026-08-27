@@ -114,12 +114,12 @@ function repairDest(dest, kind, repo) {
 function resignBundle(dest) {
   if (process.platform !== "darwin") return;
   spawnSync("xattr", ["-cr", dest], { stdio: "ignore" });
-  const id = dest.includes("Operator") ? "app.circadia.operator" : "app.circadia.desktop";
-  const signed = spawnSync(
-    "codesign",
-    ["--force", "--deep", "--sign", "-", "--identifier", id, dest],
-    { encoding: "utf8" },
-  );
+  // Never deep-sign: Electron Framework.framework then reports "unsealed contents".
+  const electronBin = path.join(dest, "Contents", "MacOS", "Electron");
+  if (fs.existsSync(electronBin)) {
+    spawnSync("codesign", ["--force", "--sign", "-", electronBin], { stdio: "ignore" });
+  }
+  const signed = spawnSync("codesign", ["--force", "--sign", "-", dest], { encoding: "utf8" });
   if (signed.status !== 0) {
     console.warn("codesign failed:", (signed.stderr || signed.stdout || "").trim());
   } else {
