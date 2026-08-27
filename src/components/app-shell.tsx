@@ -88,13 +88,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (isOperatorSurface()) {
     const operatorPage = pathname === "/mod" || pathname.startsWith("/mod/");
     return (
-      <>
+      <CircadiaProvider>
         <NativeChrome />
         <div className="night-sky min-h-dvh">
           <div className="native-drag" aria-hidden />
           {operatorPage ? children : null}
         </div>
-      </>
+      </CircadiaProvider>
     );
   }
 

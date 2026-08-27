@@ -64,6 +64,8 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/app/layout.tsx", "utf8")).toContain('force-dynamic');
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
+    expect(pkg.scripts.dock).toContain("repair-app.cjs");
+    expect(pkg.scripts.repair).toBe("node electron/repair-app.cjs");
     expect(pkg.scripts.dock).toContain("--operator");
     expect(pkg.scripts["reveal:mod"]).toBe("node electron/install-mac.cjs --operator --reveal");
     expect(install).toContain("aliasOnDesktop");
@@ -85,6 +87,7 @@ describe("Dock install invariants", () => {
     expect(pack).toContain("packagedMainPath");
     expect(pack).not.toMatch(/main:\s*path\.join/);
     expect(install).toContain("isNativeBundle");
+    expect(install).toContain("repairAll");
     expect(install).toContain("Leaving the existing native app");
     expect(main).toContain("CIRCADIA_SURFACE");
     expect(main).toContain("NEXT_PUBLIC_CIRCADIA_SURFACE");
@@ -97,6 +100,19 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.5.2");
+    expect(APP_VERSION).toBe("0.5.3");
+  });
+
+  it("does not run diary views while compiling the operator", () => {
+    for (const file of [
+      "src/app/page.tsx",
+      "src/app/check-in/page.tsx",
+      "src/app/insights/page.tsx",
+      "src/app/you/page.tsx",
+      "src/app/library/page.tsx",
+    ]) {
+      expect(readFileSync(file, "utf8")).toContain("DiarySurface");
+    }
+    expect(readFileSync("src/components/diary-surface.tsx", "utf8")).toContain("isOperatorSurface");
   });
 });

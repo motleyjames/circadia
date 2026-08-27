@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { writePackagedApp } = require("./pack-app.cjs");
+const { repairAll } = require("./repair-app.cjs");
 
 const operator = process.argv.includes("--operator");
 const APP_DISPLAY = operator ? "Circadia Operator" : "Circadia";
@@ -63,10 +64,11 @@ const root = path.join(__dirname, "..");
 const swift = path.join(__dirname, "launcher.swift");
 const png = path.join(__dirname, operator ? "operator-icon.png" : "icon.png");
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
-const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.2";
+const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.3";
 
 spawnSync("killall", [EXEC_NAME], { stdio: "ignore" });
 freePort(DOCK_PORT);
+repairAll();
 
 function freePort(port) {
   const listed = spawnSync("lsof", ["-tiTCP:" + port, "-sTCP:LISTEN"], { encoding: "utf8" });

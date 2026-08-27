@@ -1,7 +1,12 @@
 "use client";
 
+import { DiarySurface } from "@/components/diary-surface";
 import { YouView } from "@/components/you-view";
 
 export default function YouPage() {
-  return <YouView />;
+  return (
+    <DiarySurface>
+      <YouView />
+    </DiarySurface>
+  );
 }
