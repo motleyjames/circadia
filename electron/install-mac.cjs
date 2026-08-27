@@ -4,6 +4,7 @@ const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { writePackagedApp } = require("./pack-app.cjs");
 
 const operator = process.argv.includes("--operator");
 const APP_DISPLAY = operator ? "Circadia Operator" : "Circadia";
@@ -62,7 +63,7 @@ const root = path.join(__dirname, "..");
 const swift = path.join(__dirname, "launcher.swift");
 const png = path.join(__dirname, operator ? "operator-icon.png" : "icon.png");
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
-const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.1";
+const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.2";
 
 spawnSync("killall", [EXEC_NAME], { stdio: "ignore" });
 freePort(DOCK_PORT);
@@ -208,12 +209,8 @@ function isNativeBundle(dest) {
 
 function installElectronFallback(dest) {
   const electronApp = path.join(root, "node_modules", "electron", "dist", "Electron.app");
-  const stub = path.join(__dirname, "bundle-main.cjs");
   if (!fs.existsSync(electronApp)) {
     throw new Error("Electron.app is missing. Run npm install inside rest-ai first.");
-  }
-  if (!fs.existsSync(stub)) {
-    throw new Error("electron/bundle-main.cjs is missing.");
   }
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.rmSync(dest, { recursive: true, force: true });
@@ -225,14 +222,12 @@ function installElectronFallback(dest) {
   }
 
   const appDir = path.join(dest, "Contents", "Resources", "app");
-  fs.mkdirSync(appDir, { recursive: true });
-  // Electron treats "main" as relative to this folder. Never write an absolute path.
-  fs.writeFileSync(
-    path.join(appDir, "package.json"),
-    JSON.stringify({ name: operator ? "circadia-operator" : "circadia", version: APP_VERSION, main: "main.cjs" }, null, 2),
-  );
-  fs.copyFileSync(stub, path.join(appDir, "main.cjs"));
-  fs.writeFileSync(path.join(appDir, "install.json"), JSON.stringify(installPayload(), null, 2));
+  writePackagedApp(appDir, {
+    electronDir: __dirname,
+    payload: installPayload(),
+    name: operator ? "circadia-operator" : "circadia",
+    version: APP_VERSION,
+  });
   if (fs.existsSync(png)) {
     fs.copyFileSync(png, path.join(dest, "Contents", "Resources", "icon.png"));
     makeIcns(path.join(dest, "Contents", "Resources", "AppIcon.icns"));

@@ -43,6 +43,9 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/** Local app. Diary pages need CircadiaProvider; operator must not prerender them. */
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`dark ${outfit.variable} ${fraunces.variable} h-full antialiased`}>

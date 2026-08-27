@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { CircadiaProvider, useCircadia } from "@/context/circadia-store";
 import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
@@ -83,13 +84,15 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   if (isOperatorSurface()) {
+    const operatorPage = pathname === "/mod" || pathname.startsWith("/mod/");
     return (
       <>
         <NativeChrome />
         <div className="night-sky min-h-dvh">
           <div className="native-drag" aria-hidden />
-          {children}
+          {operatorPage ? children : null}
         </div>
       </>
     );

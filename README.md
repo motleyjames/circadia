@@ -25,11 +25,11 @@ If macOS says the app is from an unidentified developer: right-click Circadia �
 
 If the window never appears, send the last 40 lines of `~/Library/Logs/Circadia.log`. That file is the diagnosis.
 
-Need Command Line Tools once (`xcode-select --install`) so `swiftc` can build the window. Without them, dock falls back to this Mac's Electron **without renaming its binary**. Electron's `main` is a file *inside* the app bundle (`main.cjs`), not an absolute path into `rest-ai` — that concatenation is what produced `Cannot find module …/Resources/app/Users/…/electron/main.cjs`. If a native Circadia.app already exists, a failed Swift compile leaves it alone instead of replacing it with Chromium.
+Need Command Line Tools once (`xcode-select --install`) so `swiftc` can build the window. Without them, dock falls back to this Mac's Electron **without renaming its binary**. Electron's `main` is a file copied *into* the app bundle (`Contents/Resources/app/main.cjs`). An absolute path into `rest-ai` is concatenated onto that folder and crashes as `…/app/Users/…/electron/main.cjs`. If a native Circadia.app already exists, a failed Swift compile leaves it alone instead of replacing it with Chromium.
 
 The Next.js line `The "middleware" file convention is deprecated` is a warning from `next build`. It is not the crash. Leave `src/middleware.ts` until we migrate operator routing on purpose.
 
-If a previous Dock install threw that module error: Cmd+Q the dialog, then `git pull` and `npm run dock` again.
+If a previous Dock install threw that module error **or** died on `Export encountered an error on /insights`: Cmd+Q the dialog, then `git pull` and `npm run dock` again. The insights failure was the operator compile prerendering diary pages without a provider — dock never reached replacing Circadia.app.
 
 ## What you do
 

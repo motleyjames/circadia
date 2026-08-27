@@ -60,6 +60,8 @@ describe("Dock install invariants", () => {
     expect(mw).toContain('CIRCADIA_SURFACE === "mod"');
     expect(mw).toContain("/api/moderator");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("isOperatorSurface");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("operatorPage");
+    expect(readFileSync("src/app/layout.tsx", "utf8")).toContain('force-dynamic');
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
     expect(pkg.scripts.dock).toContain("--operator");
@@ -75,14 +77,13 @@ describe("Dock install invariants", () => {
   });
 
   it("does not put an absolute repo path in Electron's package.json main", () => {
-    const stub = readFileSync("electron/bundle-main.cjs", "utf8");
-    expect(install).toContain("bundle-main.cjs");
-    expect(install).toMatch(/main:\s*"main\.cjs"/);
+    const pack = readFileSync("electron/pack-app.cjs", "utf8");
+    expect(install).toContain("pack-app.cjs");
+    expect(install).toContain("writePackagedApp");
     expect(install).not.toMatch(/main:\s*path\.join\(root/);
-    expect(stub).toContain("install.json");
-    expect(stub).toContain('"electron"');
-    expect(stub).toContain('"main.cjs"');
-    expect(stub).not.toContain("/Users/");
+    expect(pack).toContain('RELATIVE_MAIN = "main.cjs"');
+    expect(pack).toContain("packagedMainPath");
+    expect(pack).not.toMatch(/main:\s*path\.join/);
     expect(install).toContain("isNativeBundle");
     expect(install).toContain("Leaving the existing native app");
     expect(main).toContain("CIRCADIA_SURFACE");
@@ -96,6 +97,6 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.5.1");
+    expect(APP_VERSION).toBe("0.5.2");
   });
 });
