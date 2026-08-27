@@ -5,6 +5,30 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
+const SYSTEM = "/Applications/Circadia.app";
+const HOME = path.join(os.homedir(), "Applications", "Circadia.app");
+
+function findInstalled() {
+  if (fs.existsSync(SYSTEM)) return SYSTEM;
+  if (fs.existsSync(HOME)) return HOME;
+  return null;
+}
+
+function reveal(dest) {
+  console.log(dest);
+  spawnSync("open", ["-R", dest], { stdio: "inherit" });
+}
+
+if (process.argv.includes("--reveal")) {
+  const existing = findInstalled();
+  if (!existing) {
+    console.error("Circadia.app is not installed yet. From the rest-ai folder run: npm run dock");
+    process.exit(1);
+  }
+  reveal(existing);
+  process.exit(0);
+}
+
 if (process.platform !== "darwin") {
   console.error("npm run dock only works on a Mac.");
   process.exit(1);
@@ -33,12 +57,24 @@ if (!built) {
   process.exit(1);
 }
 
-const destDir = path.join(os.homedir(), "Applications");
-fs.mkdirSync(destDir, { recursive: true });
-const dest = path.join(destDir, "Circadia.app");
-fs.rmSync(dest, { recursive: true, force: true });
-fs.cpSync(built, dest, { recursive: true });
+function copyApp(dest) {
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.rmSync(dest, { recursive: true, force: true });
+  fs.cpSync(built, dest, { recursive: true });
+}
 
-console.log(`Installed ${dest}`);
-console.log("First open: if macOS blocks it, right-click Circadia → Open.");
+let dest = SYSTEM;
+try {
+  copyApp(SYSTEM);
+} catch {
+  copyApp(HOME);
+  dest = HOME;
+}
+
+console.log("");
+console.log("Installed to:");
+console.log(dest);
+console.log("Finder will now jump to that file. Drag it to the Dock.");
+console.log("If macOS blocks it: right-click Circadia → Open.");
+reveal(dest);
 spawnSync("open", [dest], { stdio: "inherit" });
