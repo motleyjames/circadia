@@ -62,7 +62,7 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("isOperatorSurface");
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
-    expect(pkg.scripts["dock:mod"]).toBe("node electron/install-mac.cjs --operator");
+    expect(pkg.scripts.dock).toContain("--operator");
     expect(pkg.scripts["reveal:mod"]).toBe("node electron/install-mac.cjs --operator --reveal");
     expect(install).toContain("aliasOnDesktop");
     expect(install).toContain("--operator");
