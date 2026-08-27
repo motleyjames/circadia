@@ -38,7 +38,7 @@ export function BubbleGroup<T extends string | number>({
             type="button"
             onClick={() => onChange(option.value)}
             className={cn(
-              "rounded-full border px-3 py-3 text-sm transition-all",
+              "min-h-11 rounded-full border px-3 py-3 text-sm transition-all",
               selected
                 ? "border-violet-300/70 bg-violet-400/20 text-violet-50 shadow-[0_0_24px_-8px_rgba(167,139,250,0.9)]"
                 : "border-white/10 bg-white/4 text-zinc-300 hover:border-white/20 hover:bg-white/8",

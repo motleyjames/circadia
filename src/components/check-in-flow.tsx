@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   LatencyBucket,
@@ -83,6 +82,10 @@ export function CheckInFlow() {
     }
   }
 
+  function advance() {
+    setStep((s) => Math.min(s + 1, steps.length - 1));
+  }
+
   function save() {
     if (
       rating === undefined ||
@@ -121,7 +124,7 @@ export function CheckInFlow() {
   }
 
   return (
-    <div className="flex flex-1 flex-col px-5 pt-8 pb-6">
+    <div className="flex min-h-0 flex-1 flex-col px-5 pt-8 pb-3">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Morning interview</p>
       <h1 className="font-heading mt-1 text-2xl text-zinc-50">Forty seconds. Honest bubbles.</h1>
       <p className="mt-1 text-xs text-zinc-500">
@@ -138,12 +141,15 @@ export function CheckInFlow() {
         ))}
       </div>
 
-      <div className="flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-4">
         {current === "wake" ? (
           <Block title="When did you wake up?" hint="About is fine.">
             <BubbleGroup
               value={wokeAt}
-              onChange={setWokeAt}
+              onChange={(v) => {
+                setWokeAt(v);
+                advance();
+              }}
               columns={3}
               options={WAKE_TIMES.map((t) => ({ value: t, label: formatClock(t, units) }))}
             />
@@ -154,7 +160,10 @@ export function CheckInFlow() {
           <Block title="About when did you fall asleep?" hint="Not when you got into bed — when you actually dropped.">
             <BubbleGroup
               value={fellAsleepAt}
-              onChange={setFellAsleepAt}
+              onChange={(v) => {
+                setFellAsleepAt(v);
+                advance();
+              }}
               columns={3}
               options={SLEEP_TIMES.map((t) => ({ value: t, label: formatClock(t, units) }))}
             />
@@ -165,7 +174,10 @@ export function CheckInFlow() {
           <Block title="How did the night feel?" hint="1 wrecked · 5 restored">
             <BubbleGroup
               value={rating}
-              onChange={setRating}
+              onChange={(v) => {
+                setRating(v);
+                advance();
+              }}
               columns={5}
               options={[1, 2, 3, 4, 5].map((n) => ({
                 value: n as SleepRating,
@@ -176,8 +188,17 @@ export function CheckInFlow() {
         ) : null}
 
         {current === "drink" ? (
-          <Block title="Did you drink last night?" hint="Alcohol. Not water.">
-            <YesNo value={drank} onChange={setDrank} />
+          <Block title="Did you drink last night?" hint="Alcohol. Not water. Follow-ups only if yes.">
+            <YesNo
+              value={drank}
+              onChange={(v) => {
+                setDrank(v);
+                if (!v) {
+                  setSpins(undefined);
+                  advance();
+                }
+              }}
+            />
             {drank ? (
               <div className="mt-5 space-y-4">
                 <p className="text-xs text-zinc-400">How many?</p>
@@ -191,7 +212,13 @@ export function CheckInFlow() {
                   }))}
                 />
                 <p className="text-xs text-zinc-400">Spins?</p>
-                <YesNo value={spins} onChange={setSpins} />
+                <YesNo
+                  value={spins}
+                  onChange={(v) => {
+                    setSpins(v);
+                    advance();
+                  }}
+                />
               </div>
             ) : null}
           </Block>
@@ -201,7 +228,10 @@ export function CheckInFlow() {
           <Block title="How long were you off screens before bed?" hint="About.">
             <BubbleGroup
               value={screenOffMinutes}
-              onChange={setScreenOffMinutes}
+              onChange={(v) => {
+                setScreenOffMinutes(v);
+                advance();
+              }}
               options={[
                 { value: 0 as ScreenOffMinutes, label: "None", hint: "in bed with it" },
                 { value: 15 as ScreenOffMinutes, label: "~15m" },
@@ -217,7 +247,10 @@ export function CheckInFlow() {
           <Block title="How long did you lie awake before sleeping?" hint="About.">
             <BubbleGroup
               value={sleepLatencyMinutes}
-              onChange={setSleepLatencyMinutes}
+              onChange={(v) => {
+                setSleepLatencyMinutes(v);
+                advance();
+              }}
               options={[
                 { value: 5 as LatencyBucket, label: "<10m" },
                 { value: 15 as LatencyBucket, label: "10–20" },
@@ -231,13 +264,22 @@ export function CheckInFlow() {
 
         {current === "stay" ? (
           <Block title="Did you wake in the night and struggle to fall back?" hint="Staying asleep, not a bathroom trip that was easy.">
-            <YesNo value={wokeInNight} onChange={setWokeInNight} />
+            <YesNo
+              value={wokeInNight}
+              onChange={(v) => {
+                setWokeInNight(v);
+                if (!v) advance();
+              }}
+            />
             {wokeInNight ? (
               <div className="mt-5">
                 <p className="mb-2 text-xs text-zinc-400">About how long were you up?</p>
                 <BubbleGroup
                   value={nightWakingMinutes}
-                  onChange={setNightWakingMinutes}
+                  onChange={(v) => {
+                    setNightWakingMinutes(v);
+                    advance();
+                  }}
                   options={[
                     { value: 10 as NightWakingDuration, label: "~10m" },
                     { value: 25 as NightWakingDuration, label: "~25m" },
@@ -252,13 +294,22 @@ export function CheckInFlow() {
 
         {current === "supp" ? (
           <Block title="Melatonin or magnesium last night?" hint="Only if you took it for this night.">
-            <YesNo value={usedSupplement} onChange={setUsedSupplement} />
+            <YesNo
+              value={usedSupplement}
+              onChange={(v) => {
+                setUsedSupplement(v);
+                if (!v) advance();
+              }}
+            />
             {usedSupplement ? (
               <div className="mt-5">
                 <p className="mb-2 text-xs text-zinc-400">Which?</p>
                 <BubbleGroup
                   value={supplementKind}
-                  onChange={setSupplementKind}
+                  onChange={(v) => {
+                    setSupplementKind(v);
+                    advance();
+                  }}
                   options={[
                     { value: "melatonin" as SupplementKind, label: "Melatonin" },
                     { value: "magnesium" as SupplementKind, label: "Magnesium" },
@@ -275,7 +326,10 @@ export function CheckInFlow() {
           <Block title="Did last night’s wind-down help?" hint="Meditation, noise, or neither.">
             <BubbleGroup
               value={windDownHelped}
-              onChange={setWindDownHelped}
+              onChange={(v) => {
+                setWindDownHelped(v);
+                advance();
+              }}
               options={[
                 { value: "yes" as WindDownHelp, label: "Yes" },
                 { value: "a_bit" as WindDownHelp, label: "A bit" },
@@ -307,27 +361,32 @@ export function CheckInFlow() {
         ) : null}
       </div>
 
-      <div className="mt-6 flex justify-between">
-        <Button
-          variant="ghost"
-          className="rounded-full text-zinc-400"
+      <div className="flex shrink-0 items-center justify-between border-t border-white/5 pt-3">
+        <button
+          type="button"
+          className="rounded-full px-4 py-2 text-sm text-zinc-400 disabled:opacity-30"
           disabled={step === 0}
           onClick={() => setStep((s) => Math.max(0, s - 1))}
         >
           Back
-        </Button>
+        </button>
         {step < steps.length - 1 ? (
-          <Button
-            className="rounded-full bg-sky-300 px-5 text-zinc-950 hover:bg-sky-200"
+          <button
+            type="button"
+            className="rounded-full bg-sky-300 px-5 py-2.5 text-sm font-medium text-zinc-950 disabled:opacity-40"
             disabled={!canAdvance()}
-            onClick={() => setStep((s) => s + 1)}
+            onClick={advance}
           >
             Next
-          </Button>
+          </button>
         ) : (
-          <Button className="rounded-full bg-sky-300 px-5 text-zinc-950 hover:bg-sky-200" onClick={save}>
+          <button
+            type="button"
+            className="rounded-full bg-sky-300 px-5 py-2.5 text-sm font-medium text-zinc-950"
+            onClick={save}
+          >
             Save night
-          </Button>
+          </button>
         )}
       </div>
     </div>

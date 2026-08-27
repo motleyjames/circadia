@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Send } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
@@ -8,18 +9,21 @@ import { cn } from "@/lib/utils";
 
 export function ChatBar() {
   const { state, sendChat } = useCircadia();
-  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+  const [openFor, setOpenFor] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const open = openFor === pathname;
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!open) return;
+    endRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [state.chat.length, open]);
 
   function submit() {
     sendChat(draft);
     setDraft("");
-    setOpen(true);
+    setOpenFor(pathname);
   }
 
   return (
@@ -61,20 +65,21 @@ export function ChatBar() {
         <button
           type="button"
           className="text-[10px] tracking-[0.18em] text-zinc-500 uppercase"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpenFor((current) => (current === pathname ? null : pathname))}
         >
           {open ? "Hide" : "Ask"}
         </button>
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onFocus={() => setOpen(true)}
+          onFocus={() => setOpenFor(pathname)}
           placeholder="Ask Circadia…"
           className="h-10 flex-1 rounded-full border border-white/10 bg-white/5 px-4 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-violet-300/40"
         />
         <Button
           type="submit"
           size="icon"
+          nativeButton
           className="size-10 rounded-full bg-violet-400/90 text-zinc-950 hover:bg-violet-300"
         >
           <Send className="size-4" />

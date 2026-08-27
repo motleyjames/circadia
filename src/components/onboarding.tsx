@@ -80,7 +80,7 @@ export function Onboarding() {
   }
 
   return (
-    <div className="flex flex-1 flex-col px-5 pt-10 pb-8">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-10 pb-8">
       <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">Circadia</p>
       <h1 className="font-heading mt-2 text-3xl text-zinc-50">
         {step === 0 && "A clock you can actually train."}

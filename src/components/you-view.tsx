@@ -27,7 +27,7 @@ export function YouView() {
   const bmi = bmiKgM(profile.weightKg, profile.heightCm);
 
   return (
-    <div className="px-5 pt-8 pb-8">
+    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-8">
       <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">You</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">{profile.name}</h1>
       <p className="mt-1 text-sm text-zinc-400">
