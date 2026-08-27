@@ -91,6 +91,7 @@ describe("Dock install invariants", () => {
     expect(install).toContain("isNativeBundle");
     expect(readFileSync("electron/fix-mac.cjs", "utf8")).toContain("codesign");
     expect(readFileSync("electron/fix-mac.cjs", "utf8")).toContain("xattr");
+    expect(readFileSync("electron/fix-mac.cjs", "utf8")).not.toContain("--deep");
     expect(install).toContain("electron-repaired");
     expect(install).toContain("Leaving the existing native app");
     expect(main).toContain("CIRCADIA_SURFACE");
