@@ -73,6 +73,21 @@ describe("Dock install invariants", () => {
     expect(launcher).toContain("let surface");
     expect(readFileSync("eslint.config.mjs", "utf8")).toContain(".next-mod");
   });
+
+  it("does not put an absolute repo path in Electron's package.json main", () => {
+    const stub = readFileSync("electron/bundle-main.cjs", "utf8");
+    expect(install).toContain("bundle-main.cjs");
+    expect(install).toMatch(/main:\s*"main\.cjs"/);
+    expect(install).not.toMatch(/main:\s*path\.join\(root/);
+    expect(stub).toContain("install.json");
+    expect(stub).toContain('"electron"');
+    expect(stub).toContain('"main.cjs"');
+    expect(stub).not.toContain("/Users/");
+    expect(install).toContain("isNativeBundle");
+    expect(install).toContain("Leaving the existing native app");
+    expect(main).toContain("CIRCADIA_SURFACE");
+    expect(main).toContain("NEXT_PUBLIC_CIRCADIA_SURFACE");
+  });
 });
 
 describe("morning sleep-aid question", () => {
@@ -81,6 +96,6 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.5.0");
+    expect(APP_VERSION).toBe("0.5.1");
   });
 });
