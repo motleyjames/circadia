@@ -52,14 +52,14 @@ export default function ModeratorPage() {
         <p className="mt-8 text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">
           Operator
         </p>
-        <h1 className="font-heading mt-3 text-[2.2rem] leading-none tracking-tight text-zinc-50">
-          Circadia does not live here.
-        </h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-zinc-400">
-          This is the reading room. Testers never see it. Local default is{" "}
-          <span className="text-zinc-200">{DEFAULT_MOD_KEY}</span> until you set{" "}
-          <span className="text-zinc-200">CIRCADIA_MOD_KEY</span>.
-        </p>
+          <h1 className="font-heading mt-3 text-[2.2rem] leading-none tracking-tight text-zinc-50">
+            Circadia does not live here.
+          </h1>
+          <p className="mt-4 text-[15px] leading-relaxed text-zinc-400">
+            This is the operator. The diary is a different app, on a different port. Local default is{" "}
+            <span className="text-zinc-200">{DEFAULT_MOD_KEY}</span> until you set{" "}
+            <span className="text-zinc-200">CIRCADIA_MOD_KEY</span>.
+          </p>
         <form
           className="mt-8"
           onSubmit={(e) => {

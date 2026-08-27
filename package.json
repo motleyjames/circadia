@@ -5,6 +5,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "next dev --port 43147 --hostname 127.0.0.1",
+    "mod": "CIRCADIA_SURFACE=mod NEXT_PUBLIC_CIRCADIA_SURFACE=mod next dev --port 43149 --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start --port 43147 --hostname 127.0.0.1",
     "app": "node electron/dev.cjs",

@@ -58,17 +58,17 @@ Packs land in `data/study-inbox/` on the machine running Circadia. Testers on *t
 
 Erase this device mints a new participant number. Pause and rejoin keeps the same number so nights still stitch.
 
-## Operator console (James only)
+## Operator (James only)
 
-`/mod` is not in the sidebar. Testers should never be sent there.
+A second app. Not a page inside the diary.
 
+```bash
+npm run mod
 ```
-http://127.0.0.1:43147/mod
-```
 
-Passphrase is `CIRCADIA_MOD_KEY`, default `circadia-local` on a machine with no env. Change it. The page shows people (user count), night packs, and faults — cards, not a JSON theater.
+Then open `http://127.0.0.1:43149`. Passphrase `circadia-local` until you set `CIRCADIA_MOD_KEY`.
 
-This is a local reading room, not an accounts system. Anyone who can open Circadia on this computer and knows the key can read the inbox.
+The diary stays at `http://127.0.0.1:43147`. Testers cannot reach this inbox from there.
 
 ## Browser only
 
@@ -97,4 +97,4 @@ Dream “meaning” is theme-tagging plus physiology (alcohol and REM rebound, m
 
 ## Why this way
 
-A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped; contact lives on a separate roster James reads at `/mod`. The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.
+A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped; contact lives on a separate roster James reads in the operator app (`npm run mod`). The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.

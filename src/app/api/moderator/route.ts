@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { isOperatorSurface } from "@/lib/surface";
 import { moderatorKeyOk } from "@/lib/mod-key";
 import { summarizeInbox } from "@/lib/moderator";
 import { studyInboxDir } from "@/lib/study-inbox";
@@ -12,6 +13,9 @@ function providedKey(request: Request): string {
 }
 
 export async function GET(request: Request) {
+  if (!isOperatorSurface()) {
+    return new NextResponse("Not found.", { status: 404 });
+  }
   if (!moderatorKeyOk(providedKey(request))) {
     return NextResponse.json({ ok: false, error: "No." }, { status: 401 });
   }

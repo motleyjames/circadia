@@ -15,6 +15,7 @@
 
 # next.js
 /.next/
+/.next-mod/
 /out/
 
 # production
