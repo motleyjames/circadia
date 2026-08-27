@@ -1,6 +1,6 @@
 {
   "name": "circadia",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "private": true,
   "main": "electron/main.cjs",
   "scripts": {
@@ -9,9 +9,11 @@
     "build": "next build",
     "start": "next start --port 43147 --hostname 127.0.0.1",
     "app": "node electron/dev.cjs",
-    "dock": "node electron/repair-app.cjs && node electron/install-mac.cjs && node electron/install-mac.cjs --operator",
+    "dock": "node electron/fix-mac.cjs && node electron/install-mac.cjs",
     "dock:mod": "node electron/install-mac.cjs --operator",
-    "repair": "node electron/repair-app.cjs",
+    "dock:all": "node electron/fix-mac.cjs && node electron/install-mac.cjs && node electron/install-mac.cjs --operator",
+    "fix-mac": "node electron/fix-mac.cjs",
+    "repair": "node electron/fix-mac.cjs",
     "reveal": "node electron/install-mac.cjs --reveal",
     "reveal:mod": "node electron/install-mac.cjs --operator --reveal",
     "dist": "node electron/build-ui.cjs && electron-builder --mac dir zip --publish never",

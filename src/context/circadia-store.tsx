@@ -342,6 +342,29 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
 
 export function useCircadia() {
   const ctx = useContext(CircadiaContext);
-  if (!ctx) throw new Error("useCircadia must be used inside CircadiaProvider");
-  return ctx;
+  if (ctx) return ctx;
+  // Next still prerenders diary pages while compiling the operator (no layout).
+  // Browser stays strict: a missing provider is a real bug.
+  if (typeof window === "undefined") {
+    const noop = () => undefined;
+    return {
+      ready: false,
+      state: SERVER_STATE,
+      saveProfile: noop,
+      addReport: noop,
+      removeLatestReport: noop,
+      addSession: noop,
+      sendChat: noop,
+      clearChat: noop,
+      setResearchNotes: noop,
+      importJson: noop,
+      loadSampleWeek: noop,
+      resetAll: noop,
+      joinStudy: noop,
+      declineStudy: noop,
+      leaveStudy: noop,
+      sendStudyNow: async () => undefined,
+    };
+  }
+  throw new Error("useCircadia must be used inside CircadiaProvider");
 }

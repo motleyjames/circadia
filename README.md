@@ -6,33 +6,33 @@ Circadia is local-first. Profile, mornings, dreams, and chat live on this comput
 
 ## Put it on the Dock (Mac)
 
-This is not a packaged Chromium app. Those kept dying on launch. `npm run dock` compiles a tiny native window and a **production** Circadia server on port 43148. It does not wrap `next dev` — that is what put the Next.js error overlay over Begin.
+Circadia is a native WKWebView window, not Electron. Electron fallback is what produced `Cannot find module …/app/Users/…/electron/main.cjs`.
+
+If that dialog is on screen **right now**, do not run `npm run dock`. That command, on an old rest-ai tree, rebuilds Operator, dies on `/check-in`, and leaves the broken Electron app in place.
 
 ```bash
-cd rest-ai
-git pull
-npm install
-npm run repair
+cd ~/rest-ai
+# Cmd+Q the error dialog first
+node electron/fix-mac.cjs
+```
+
+If `electron/fix-mac.cjs` is not in that folder, this session’s commits are not on that clone. Paste the fixer from the agent thread, or copy `electron/fix-mac.cjs` in by hand. Then:
+
+```bash
+npm run dev
+```
+
+Diary: http://127.0.0.1:43147. Operator inbox (James): `npm run mod` → http://127.0.0.1:43149. Passphrase `circadia-local`.
+
+Native Dock, once Command Line Tools are installed (`xcode-select --install`):
+
+```bash
 npm run dock
 ```
 
-`npm run repair` patches `/Applications/Circadia.app` **without compiling**. Use it when the app throws `Cannot find module …/Resources/app/Users/…/electron/main.cjs`. Then `npm run dock` for the two production builds.
+That installs **Circadia only**. Operator Dock is separate: `npm run dock:mod`. `npm run dock` used to chain both; the Operator compile aborting is why ice Circadia never got replaced.
 
-The compile takes a couple of minutes (two apps). You should get **Circadia** (ice-blue clock) and **Circadia Operator** (gold clock). Operator also lands an alias on the Desktop. Drag both to the Dock.
-
-Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again. Chrome on http://127.0.0.1:43147 is still `npm run dev` for hacking; the Dock app is the product window.
-
-Keep the `rest-ai` folder where it is. The app is a pointer to this project. If you move the folder, run `npm run dock` again.
-
-If macOS says the app is from an unidentified developer: right-click Circadia → **Open**.
-
-If the window never appears, send the last 40 lines of `~/Library/Logs/Circadia.log`. That file is the diagnosis.
-
-Need Command Line Tools once (`xcode-select --install`) so `swiftc` can build the window. Without them, dock falls back to this Mac's Electron **without renaming its binary**. Electron's `main` is a file copied *into* the app bundle (`Contents/Resources/app/main.cjs`). An absolute path into `rest-ai` is concatenated onto that folder and crashes as `…/app/Users/…/electron/main.cjs`. Repair also drops a copy of `main.cjs` at that concatenated path so a stale `package.json` still boots. If a native Circadia.app already exists, a failed Swift compile leaves it alone instead of replacing it with Chromium.
-
-The Next.js line `The "middleware" file convention is deprecated` is a warning from `next build`. It is not the crash. Leave `src/middleware.ts` until we migrate operator routing on purpose.
-
-If a previous Dock install threw that module error **or** died on `/insights` or `/check-in` (`useCircadia must be used inside CircadiaProvider`): Cmd+Q the dialog, `git pull`, then `npm run repair` **before** `npm run dock`. Operator compile used to prerender diary pages without a provider and abort before replacing the app. Repair does not wait on that compile.
+Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again. If macOS says unidentified developer: right-click Circadia → **Open**. Logs: `~/Library/Logs/Circadia.log`.
 
 ## What you do
 

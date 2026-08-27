@@ -207,7 +207,7 @@ async function ensureUi() {
   const install = readInstall();
   if (install) {
     const bound = Number(install.port) > 0 ? Number(install.port) : DOCK_PORT;
-    const url = `http://127.0.0.1:${bound}/?v=${install.version || "0.5.3"}`;
+    const url = `http://127.0.0.1:${bound}/?v=${install.version || "0.5.4"}`;
     startNext(install);
     await waitForUrl(url, 180_000);
     appUrl = url;
@@ -323,7 +323,7 @@ app.whenReady().then(() => {
   const install = readInstall();
   app.setAboutPanelOptions({
     applicationName: appTitle(),
-    applicationVersion: (install && install.version) || "0.5.3",
+    applicationVersion: (install && install.version) || "0.5.4",
     copyright: "Local sleep companion. Not medical care.",
   });
   installMenu();
