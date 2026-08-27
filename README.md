@@ -15,7 +15,7 @@ npm install
 npm run dock
 ```
 
-The compile takes a minute. Wait for a Circadia window. The sidebar should say **v0.5.0**. Morning should ask *Did you take any supplements last night to help you sleep?* — **no** red Next.js `N`. If you still see `N` or “Melatonin or magnesium last night?”, that window is the old process: Cmd+Q, then `npm run dock` again.
+The compile takes a couple of minutes (two apps). You should get **Circadia** (ice-blue clock) and **Circadia Operator** (gold clock). Operator also lands an alias on the Desktop. Drag both to the Dock.
 
 Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again. Chrome on http://127.0.0.1:43147 is still `npm run dev` for hacking; the Dock app is the product window.
 

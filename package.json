@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start --port 43147 --hostname 127.0.0.1",
     "app": "node electron/dev.cjs",
-    "dock": "node electron/install-mac.cjs",
+    "dock": "node electron/install-mac.cjs && node electron/install-mac.cjs --operator",
     "dock:mod": "node electron/install-mac.cjs --operator",
     "reveal": "node electron/install-mac.cjs --reveal",
     "reveal:mod": "node electron/install-mac.cjs --operator --reveal",
