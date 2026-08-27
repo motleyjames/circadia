@@ -155,10 +155,10 @@ export function newId(): string {
 }
 
 export function sleepNeedHours(age: number): { min: number; max: number; label: string } {
-  if (age < 18) return { min: 8, max: 10, label: "8–10 hours (teen)" };
-  if (age <= 25) return { min: 7, max: 9, label: "7–9 hours (young adult)" };
-  if (age <= 64) return { min: 7, max: 9, label: "7–9 hours (adult)" };
-  return { min: 7, max: 8, label: "7–8 hours (older adult)" };
+  if (age < 18) return { min: 8, max: 10, label: "Most people your age need 8–10 hours" };
+  if (age <= 25) return { min: 7, max: 9, label: "Most people your age need 7–9 hours" };
+  if (age <= 64) return { min: 7, max: 9, label: "Most people your age need 7–9 hours" };
+  return { min: 7, max: 8, label: "Most people your age need 7–8 hours" };
 }
 
 /** Midpoint of the NSF/AASM band — used to compute asleep-by from a defended wake. */

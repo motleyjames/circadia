@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Send } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
@@ -35,8 +36,8 @@ export function ChatBar() {
           {state.chat.length === 0 ? (
             <div>
               <p className="text-xs leading-relaxed text-zinc-400">
-                I am looking at your log the way a sleep clinic looks at a diary. Ask the actual
-                problem — onset, 3 a.m., alcohol, the clock. I will not invent a diagnosis.
+                Ask the actual problem — falling asleep, 3 a.m., a bottle on the aisle, the clock. I
+                answer from your diary and the library. I will not invent a diagnosis.
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {CLINIC_PROMPTS.map((prompt) => (
@@ -75,6 +76,9 @@ export function ChatBar() {
                 </div>
               ))}
               <div ref={endRef} />
+              <Link href="/you" className="pt-1 text-[10px] text-zinc-500 underline-offset-4 hover:underline">
+                Full chat is in You
+              </Link>
             </div>
           )}
         </div>
@@ -97,20 +101,19 @@ export function ChatBar() {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onFocus={() => setOpenFor(pathname)}
-          placeholder="Ask like you would in clinic…"
+          placeholder="Ask about sleep…"
           className="h-10 flex-1 rounded-full border border-white/10 bg-white/5 px-4 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-violet-300/40"
         />
         <Button
           type="submit"
           size="icon"
-          nativeButton
           className="size-10 rounded-full bg-violet-400/90 text-zinc-950 hover:bg-violet-300"
         >
           <Send className="size-4" />
         </Button>
       </form>
       <p className="mt-1.5 px-1 text-[10px] leading-relaxed text-zinc-600">
-        Education from your diary and AASM/CBT-I consensus. Not a prescription.
+        From your diary and the sleep library. Not a prescription.
       </p>
     </div>
   );

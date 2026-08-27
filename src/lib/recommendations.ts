@@ -75,7 +75,7 @@ export function buildRecommendations(profile: Profile, reports: MorningReport[])
       body: alcoholDominant || alcoholConfound
         ? "Drinks (or spins) showed up in this week. That fragments REM and can look like a delayed clock. Melatonin or magnesium would be noise on top of ethanol. Log two or more dry nights, then we can talk clock tools."
         : "Screens are still inside the last half hour and latency is high. A bottle of melatonin will not outrun a phone. Earn the hour off screens, then we can talk clock tools.",
-      notFirstLine: "CBT-I behaviors first. Supplements are adjuncts, and only after the obvious levers move.",
+      notFirstLine: "Wake time, screens, and drinks first. Supplements wait.",
       confidence: "high",
       sourceIds: alcoholDominant || alcoholConfound ? ["alcohol"] : ["light-screens", "melatonin"],
     });
@@ -85,7 +85,7 @@ export function buildRecommendations(profile: Profile, reports: MorningReport[])
         id: "melatonin",
         title: "Melatonin — discuss low-dose as a clock tool",
         body: "Your sleep onset sits late relative to the target. If a clinician agrees it is appropriate, the evidence-shaped use is roughly 0.3–1 mg, taken earlier than bedtime (often 1–3 hours before desired sleep), in dim light — not 10 mg at lights-out. Pair it with morning outdoor light and a fixed wake time. Skip this if you could be pregnant, are under 18, or take interacting meds, until a human says otherwise.",
-        notFirstLine: "Melatonin is not first-line chronic insomnia care. CBT-I and light timing still do most of the work.",
+        notFirstLine: "Melatonin is not the first treatment for chronic insomnia. Wake time and light still do most of the work.",
         confidence: "moderate",
         sourceIds: ["melatonin", "circadian-anchor"],
       });
@@ -112,7 +112,7 @@ export function buildRecommendations(profile: Profile, reports: MorningReport[])
         id: "magnesium",
         title: "Magnesium glycinate — optional, modest evidence",
         body: "Latency is stubborn and ratings are mediocre without alcohol dominating the picture. Magnesium is not a reliable hypnotic; reviews call the evidence mixed. If you and a clinician want a low-risk adjunct, glycinate 200–400 mg in the evening is the usual form people mean. Hard no in significant kidney disease. Track it in the morning interview so we can see if your nights actually change.",
-        notFirstLine: "Schedule, stimulus control, and screens still outrank this.",
+        notFirstLine: "Wake time, getting out of bed if you are awake, and screens still outrank this.",
         confidence: "low",
         sourceIds: ["magnesium"],
       });

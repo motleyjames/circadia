@@ -6,8 +6,10 @@ import { BubbleGroup, YesNo } from "@/components/bubbles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ensureNotificationPermission } from "@/lib/notifications";
+import { researchById } from "@/lib/research";
 import { bmiKgM, cmToFeetInches, feetInchesToCm, formatClock, kgToLb, lbToKg } from "@/lib/time";
 import type { ActivityLevel, Profile } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
 
 export function YouView() {
@@ -40,6 +42,8 @@ export function YouView() {
         Everything lives in this browser. Circadia uses these fields when it writes notes. It will not
         change a medication for you.
       </p>
+
+      <ChatHistory />
 
       <section className="mt-6 space-y-4">
         <Field
@@ -169,6 +173,72 @@ export function YouView() {
       </section>
     </div>
   );
+}
+
+function ChatHistory() {
+  const { state, clearChat } = useCircadia();
+  const chat = state.chat;
+
+  return (
+    <section className="mt-8">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase">Chat</p>
+          <h2 className="font-heading mt-1 text-xl text-zinc-50">The thread</h2>
+        </div>
+        {chat.length > 0 ? (
+          <button
+            type="button"
+            className="text-[11px] tracking-[0.16em] text-zinc-500 uppercase"
+            onClick={() => {
+              if (window.confirm("Clear this conversation on this device?")) clearChat();
+            }}
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+      {chat.length === 0 ? (
+        <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">
+          Nothing here yet. Ask from the bar on any screen. It stays on this phone.
+        </p>
+      ) : (
+        <ol className="mt-4 space-y-3">
+          {chat.map((msg) => (
+            <li key={msg.id} className="flex flex-col">
+              <p className="text-[10px] tracking-wide text-zinc-600">
+                {msg.role === "you" ? "You" : "Circadia"} · {when(msg.createdAt)}
+              </p>
+              <div
+                className={cn(
+                  "mt-1 max-w-[92%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed whitespace-pre-wrap",
+                  msg.role === "you"
+                    ? "ml-auto bg-violet-500/20 text-violet-50"
+                    : "bg-white/6 text-zinc-200",
+                )}
+              >
+                {msg.text}
+                {msg.role === "circadia" && msg.citations && msg.citations.length > 0 ? (
+                  <p className="mt-1.5 text-[10px] text-zinc-500">
+                    {msg.citations
+                      .map((id) => researchById(id)?.title)
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function when(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function Field({

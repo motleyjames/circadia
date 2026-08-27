@@ -41,8 +41,9 @@ export function LibraryView() {
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Library</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">What we are willing to say.</h1>
       <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-        Conservative sleep science. CBT-I and circadian timing outrank aisle supplements. Upload your own
-        notes or a Circadia JSON export — scanned into this device, not a cloud.
+        Conservative sleep science. A stable wake time and “bed is for sleep” outrank aisle
+        supplements. Upload your own notes or a Circadia JSON export — stays on this device, not a
+        cloud.
       </p>
 
       <div className="mt-6 space-y-2">

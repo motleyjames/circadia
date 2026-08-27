@@ -137,8 +137,8 @@ export function buildSleepNotes(profile: Profile, reports: MorningReport[]): Sle
     notes.push(
       note(
         "short",
-        "You are undershooting the need band for your age",
-        `Mean sleep is ${formatDuration(week.meanDurationMinutes)}. For age ${profile.age}, the consensus band is ${need.label}. Protect the wind-down hour and the wake time first — chasing more hours by going to bed earlier while still wired often backfires.`,
+        "You are getting less sleep than most people your age",
+        `Mean sleep is ${formatDuration(week.meanDurationMinutes)}. ${need.label}. Protect the wind-down hour and the wake time first — going to bed earlier while still wired often backfires.`,
         "high",
         ["duration-age", "circadian-anchor"],
         "lever",
@@ -149,7 +149,7 @@ export function buildSleepNotes(profile: Profile, reports: MorningReport[]): Sle
       note(
         "long-poor",
         "Long nights, low ratings — extra time in bed is not extra sleep",
-        `Mean time asleep is ${formatDuration(week.meanDurationMinutes)} with a ${week.meanRating.toFixed(1)} average rating. Stretching the window usually makes sleep lighter. A clinician doing CBT-I would shrink time in bed toward the sleep you actually get. Do not DIY aggressive restriction if you have bipolar spectrum history, untreated apnea, or you drive for a living — that needs a human.`,
+        `Mean time asleep is ${formatDuration(week.meanDurationMinutes)} with a ${week.meanRating.toFixed(1)} average rating. Stretching the window usually makes sleep lighter. A clinician would shrink time in bed toward the sleep you actually get. Do not aggressively cut time in bed on your own if you have bipolar spectrum history, untreated apnea, or you drive for a living — that needs a human.`,
         "moderate",
         ["duration-age", "sleep-pressure"],
         "lever",
