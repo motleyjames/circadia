@@ -102,7 +102,8 @@ src/app/          routes: /  /check-in  /insights  /library  /you
 
 **Shipped**
 
-- Onboarding + profile (body, activity, meds/supps, window, screen ping)
+- Opening: brand cover → clinical intake (problem, age, wake, meds, one ping) → first Tonight as a countdown, not a dashboard
+- Profile refinements (body, activity, window) live in You
 - Tonight countdown + wind-down (3 meditations, 4 soundscapes)
 - Morning bubble interview including dream option
 - Grounded notes + 7-night supplement gate

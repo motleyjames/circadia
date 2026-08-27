@@ -108,17 +108,38 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
   html {
     @apply font-sans;
+    color-scheme: dark;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
   .font-heading {
     font-family: var(--font-heading), ui-serif, Georgia, serif;
     font-variation-settings: "SOFT" 50, "WONK" 0.4;
     letter-spacing: -0.03em;
   }
+}
+
+@keyframes brand-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.88;
+  }
+  50% {
+    transform: scale(1.035);
+    opacity: 1;
+  }
+}
+
+.brand-breathe {
+  animation: brand-breathe 4.8s ease-in-out infinite;
 }
 
 .night-sky {

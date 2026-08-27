@@ -1,0 +1,44 @@
+"use client";
+
+import { useState, useSyncExternalStore } from "react";
+
+function standalone(): boolean {
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia("(display-mode: standalone)").matches || Boolean(nav.standalone);
+}
+
+const KEY = "circadia:install-hint";
+
+function subscribe() {
+  return () => undefined;
+}
+
+function clientEligible(): boolean {
+  if (standalone()) return false;
+  return window.sessionStorage.getItem(KEY) !== "1";
+}
+
+export function InstallHint() {
+  const eligible = useSyncExternalStore(subscribe, clientEligible, () => false);
+  const [dismissed, setDismissed] = useState(false);
+
+  if (!eligible || dismissed) return null;
+
+  return (
+    <div className="mt-6 border-t border-white/8 pt-5">
+      <p className="text-[13px] leading-relaxed text-zinc-400">
+        Share → Add to Home Screen. Same data. No account. The product is already this.
+      </p>
+      <button
+        type="button"
+        className="mt-2 text-[11px] font-medium tracking-[0.16em] text-zinc-600 uppercase"
+        onClick={() => {
+          window.sessionStorage.setItem(KEY, "1");
+          setDismissed(true);
+        }}
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}

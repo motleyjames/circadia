@@ -160,3 +160,14 @@ export function sleepNeedHours(age: number): { min: number; max: number; label: 
   if (age <= 64) return { min: 7, max: 9, label: "7–9 hours (adult)" };
   return { min: 7, max: 8, label: "7–8 hours (older adult)" };
 }
+
+/** Midpoint of the NSF/AASM band — used to compute asleep-by from a defended wake. */
+export function targetDurationMinutes(age: number): number {
+  const need = sleepNeedHours(age);
+  return Math.round(((need.min + need.max) / 2) * 60);
+}
+
+/** Asleep-by clock: wake minus duration, wrapping midnight. */
+export function sleepFromWake(wakeClock: string, durationMinutes: number): string {
+  return minutesToClock(clockToMinutes(wakeClock) - durationMinutes);
+}

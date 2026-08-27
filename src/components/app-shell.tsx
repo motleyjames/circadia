@@ -2,6 +2,7 @@
 
 import { CircadiaProvider, useCircadia } from "@/context/circadia-store";
 import { BottomNav } from "@/components/bottom-nav";
+import { BrandStage } from "@/components/brand-stage";
 import { ChatBar } from "@/components/chat-bar";
 import { Onboarding } from "@/components/onboarding";
 
@@ -14,9 +15,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
         <div className="pointer-events-none absolute inset-0 glow-veil" />
         <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           {!ready ? (
-            <div className="flex flex-1 items-center justify-center text-sm text-zinc-400">
-              Opening Circadia…
-            </div>
+            <BrandStage />
           ) : !state.profile?.onboardingComplete ? (
             <Onboarding />
           ) : (
