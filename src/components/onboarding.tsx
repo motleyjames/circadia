@@ -8,20 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ensureNotificationPermission } from "@/lib/notifications";
 import type { ActivityLevel, Profile, Sex, Struggle } from "@/lib/types";
 import { cmToFeetInches, feetInchesToCm, kgToLb, lbToKg } from "@/lib/time";
-
-const TIMES = [
-  "21:00",
-  "21:30",
-  "22:00",
-  "22:30",
-  "23:00",
-  "23:30",
-  "00:00",
-  "00:30",
-  "01:00",
-];
-
-const WAKES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00"];
+import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
 
 export function Onboarding() {
   const { saveProfile } = useCircadia();
@@ -58,7 +45,10 @@ export function Onboarding() {
     const struggles: Struggle[] = [];
     if (falling) struggles.push("falling");
     if (staying) struggles.push("staying");
-    if (notify) await ensureNotificationPermission();
+    let granted = false;
+    if (notify) {
+      granted = await ensureNotificationPermission();
+    }
 
     const profile: Profile = {
       name: name.trim() || "you",
@@ -73,7 +63,7 @@ export function Onboarding() {
       targetSleep,
       targetWake,
       units: "imperial",
-      notificationsEnabled: notify,
+      notificationsEnabled: granted,
       onboardingComplete: true,
     };
     saveProfile(profile);
@@ -211,7 +201,7 @@ export function Onboarding() {
                 value={targetSleep}
                 onChange={setTargetSleep}
                 columns={3}
-                options={TIMES.map((t) => ({ value: t, label: pretty(t) }))}
+                options={SLEEP_TARGET_OPTIONS.map((t) => ({ value: t, label: pretty(t) }))}
               />
             </div>
             <div>
@@ -220,7 +210,7 @@ export function Onboarding() {
                 value={targetWake}
                 onChange={setTargetWake}
                 columns={3}
-                options={WAKES.map((t) => ({ value: t, label: pretty(t) }))}
+                options={WAKE_TARGET_OPTIONS.map((t) => ({ value: t, label: pretty(t) }))}
               />
             </div>
           </>

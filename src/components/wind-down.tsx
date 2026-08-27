@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
-import { startSoundscape, type SoundscapeId } from "@/lib/audio";
-import { beatAt, hushVoice, MEDITATIONS, meditationById, speak } from "@/lib/meditations";
+import { startSoundscape, stopAllSoundscapes, unlockAudio, type SoundscapeId } from "@/lib/audio";
+import { beatAt, hushVoice, MEDITATIONS, meditationById, speak, unlockVoice } from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,19 +21,23 @@ export function WindDown() {
   const [meditationId, setMeditationId] = useState<MeditationId>("478");
   const [soundId, setSoundId] = useState<SoundscapeId>("brown");
 
+  function logSession(session: Parameters<typeof addSession>[0]) {
+    addSession(session);
+    setMode("pick");
+  }
+
   if (mode === "meditate") {
     return (
       <MeditationPlayer
         id={meditationId}
         onExit={(elapsed, completed) => {
-          addSession({
+          logSession({
             startedAt: new Date().toISOString(),
             kind: "meditation",
             meditationId,
             durationSeconds: elapsed,
             completed,
           });
-          setMode("pick");
         }}
       />
     );
@@ -44,14 +48,13 @@ export function WindDown() {
       <SoundPlayer
         id={soundId}
         onExit={(elapsed) => {
-          addSession({
+          logSession({
             startedAt: new Date().toISOString(),
             kind: "soundscape",
             soundscapeId: soundId,
             durationSeconds: elapsed,
             completed: elapsed >= 60,
           });
-          setMode("pick");
         }}
       />
     );
@@ -60,9 +63,9 @@ export function WindDown() {
   return (
     <div className="space-y-6">
       <section>
-        <p className="text-[11px] tracking-[0.22em] text-violet-300/80 uppercase">Video meditations</p>
+        <p className="text-[11px] tracking-[0.22em] text-violet-300/80 uppercase">Visual meditations</p>
         <p className="mt-1 text-xs text-zinc-500">
-          A breathing field, not a YouTube tab. Voice is optional. Rate it in the morning interview.
+          A breathing field on this phone — not a YouTube tab. Voice is optional. Rate it in the morning.
         </p>
         <div className="mt-3 grid gap-2">
           {MEDITATIONS.map((m) => (
@@ -70,6 +73,8 @@ export function WindDown() {
               key={m.id}
               type="button"
               onClick={() => {
+                unlockVoice();
+                void unlockAudio();
                 setMeditationId(m.id);
                 setMode("meditate");
               }}
@@ -91,6 +96,7 @@ export function WindDown() {
               key={s.id}
               type="button"
               onClick={() => {
+                void unlockAudio();
                 setSoundId(s.id);
                 setMode("sound");
               }}
@@ -117,48 +123,80 @@ function MeditationPlayer({
   const [elapsed, setElapsed] = useState(0);
   const [voice, setVoice] = useState(true);
   const [running, setRunning] = useState(true);
+  const elapsedRef = useRef(0);
+  const logged = useRef(false);
   const beat = useMemo(() => beatAt(script, elapsed), [script, elapsed]);
+  const done = elapsed >= script.durationSeconds;
+
+  function finish(fromUnmount = false) {
+    if (logged.current) return;
+    if (fromUnmount && elapsedRef.current < 5) return;
+    logged.current = true;
+    hushVoice();
+    onExit(elapsedRef.current, elapsedRef.current >= script.durationSeconds);
+  }
 
   useEffect(() => {
-    if (!running) return;
+    elapsedRef.current = elapsed;
+  }, [elapsed]);
+
+  useEffect(() => {
+    if (!running || done) return;
     const timer = window.setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => window.clearInterval(timer);
-  }, [running]);
+  }, [running, done]);
 
   useEffect(() => {
-    if (voice && running) speak(beat.text);
-  }, [beat.text, voice, running]);
+    if (done) hushVoice();
+  }, [done]);
 
-  useEffect(() => () => hushVoice(), []);
+  useEffect(() => {
+    if (voice && running && !done) speak(beat.text);
+  }, [beat.text, voice, running, done]);
 
-  const done = elapsed >= script.durationSeconds;
+  useEffect(
+    () => () => {
+      hushVoice();
+      finish(true);
+    },
+    // unmount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const scale =
-    beat.breath === "in" ? 1.18 : beat.breath === "hold" ? 1.18 : beat.breath === "out" ? 0.86 : 1;
+    beat.breath === "in" ? 1.22 : beat.breath === "hold" ? 1.22 : beat.breath === "out" ? 0.84 : 1;
 
   return (
     <div className="flex flex-col items-center">
       <div
         className={cn(
-          "relative mb-8 flex size-52 items-center justify-center rounded-full border border-violet-300/30 bg-[radial-gradient(circle_at_center,rgba(167,139,250,0.35),rgba(14,12,28,0.2)_70%)] transition-transform duration-[4000ms] ease-in-out",
+          "relative mb-8 flex aspect-square w-full max-w-72 items-center justify-center rounded-full border border-violet-300/30 bg-[radial-gradient(circle_at_center,rgba(167,139,250,0.4),rgba(14,12,28,0.15)_68%)] shadow-[0_0_80px_-10px_rgba(125,211,252,0.45)] transition-transform duration-[4000ms] ease-in-out",
         )}
         style={{ transform: `scale(${scale})` }}
       >
-        <div className="absolute inset-6 rounded-full border border-sky-300/20" />
-        <p className="px-8 text-center text-sm leading-relaxed text-zinc-100">{beat.text}</p>
+        <div className="absolute inset-8 rounded-full border border-sky-300/15" />
+        <p className="relative px-8 text-center text-sm leading-relaxed text-zinc-100">{beat.text}</p>
       </div>
       <p className="text-xs text-zinc-500">
         {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} /{" "}
         {Math.floor(script.durationSeconds / 60)}:{String(script.durationSeconds % 60).padStart(2, "0")}
+        {done ? " · done" : ""}
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         <Button
+          type="button"
           variant="outline"
           className="rounded-full border-white/15"
-          onClick={() => setVoice((v) => !v)}
+          onClick={() => {
+            if (voice) hushVoice();
+            setVoice((v) => !v);
+          }}
         >
           Voice {voice ? "on" : "off"}
         </Button>
         <Button
+          type="button"
           variant="outline"
           className="rounded-full border-white/15"
           onClick={() => {
@@ -166,14 +204,12 @@ function MeditationPlayer({
             if (running) hushVoice();
           }}
         >
-          {running ? "Pause" : "Resume"}
+          {running && !done ? "Pause" : "Resume"}
         </Button>
         <Button
+          type="button"
           className="rounded-full bg-violet-400 text-zinc-950 hover:bg-violet-300"
-          onClick={() => {
-            hushVoice();
-            onExit(elapsed, done);
-          }}
+          onClick={() => finish()}
         >
           End
         </Button>
@@ -190,6 +226,20 @@ function SoundPlayer({
   onExit: (elapsed: number) => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
+  const elapsedRef = useRef(0);
+  const logged = useRef(false);
+
+  function finish(fromUnmount = false) {
+    if (logged.current) return;
+    if (fromUnmount && elapsedRef.current < 5) return;
+    logged.current = true;
+    stopAllSoundscapes();
+    onExit(elapsedRef.current);
+  }
+
+  useEffect(() => {
+    elapsedRef.current = elapsed;
+  }, [elapsed]);
 
   useEffect(() => {
     const handle = startSoundscape(id);
@@ -197,19 +247,23 @@ function SoundPlayer({
     return () => {
       handle.stop();
       window.clearInterval(timer);
+      finish(true);
     };
+    // unmount-only logging; id change remounts this player
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   return (
     <div className="flex flex-col items-center py-6">
-      <div className="mb-6 size-40 animate-pulse rounded-full bg-[radial-gradient(circle_at_center,rgba(125,211,252,0.35),transparent_70%)]" />
+      <div className="mb-6 size-44 animate-pulse rounded-full bg-[radial-gradient(circle_at_center,rgba(125,211,252,0.4),transparent_70%)]" />
       <p className="text-sm text-zinc-200">{SOUNDSCAPES.find((s) => s.id === id)?.title}</p>
       <p className="mt-1 text-xs text-zinc-500">
         {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} · keep the phone face down
       </p>
       <Button
+        type="button"
         className="mt-6 rounded-full bg-sky-300 text-zinc-950 hover:bg-sky-200"
-        onClick={() => onExit(elapsed)}
+        onClick={() => finish()}
       >
         Stop
       </Button>

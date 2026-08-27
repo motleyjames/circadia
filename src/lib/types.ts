@@ -91,6 +91,7 @@ export type CircadiaState = {
   sessions: WindDownSession[];
   chat: ChatMessage[];
   researchNotes: string;
+  demoWeek: boolean;
 };
 
 export type NoteConfidence = "high" | "moderate" | "low";

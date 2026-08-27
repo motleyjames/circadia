@@ -31,7 +31,7 @@ export function CheckInFlow() {
   const [fellAsleepAt, setFellAsleepAt] = useState(existing?.fellAsleepAt ?? state.profile?.targetSleep ?? "23:30");
   const [rating, setRating] = useState<SleepRating | undefined>(existing?.rating);
   const [drank, setDrank] = useState<boolean | undefined>(existing?.drank);
-  const [drinkCount, setDrinkCount] = useState(existing?.drinkCount ?? 2);
+  const [drinkCount, setDrinkCount] = useState<number | undefined>(existing?.drinkCount);
   const [spins, setSpins] = useState<boolean | undefined>(existing?.spins);
   const [screenOffMinutes, setScreenOffMinutes] = useState<ScreenOffMinutes | undefined>(existing?.screenOffMinutes);
   const [sleepLatencyMinutes, setSleepLatencyMinutes] = useState<LatencyBucket | undefined>(existing?.sleepLatencyMinutes);
@@ -65,7 +65,7 @@ export function CheckInFlow() {
         return rating !== undefined;
       case "drink":
         if (drank === undefined) return false;
-        if (drank && spins === undefined) return false;
+        if (drank && (spins === undefined || drinkCount === undefined)) return false;
         return true;
       case "screens":
         return screenOffMinutes !== undefined;
@@ -94,7 +94,8 @@ export function CheckInFlow() {
       sleepLatencyMinutes === undefined ||
       wokeInNight === undefined ||
       usedSupplement === undefined ||
-      windDownHelped === undefined
+      windDownHelped === undefined ||
+      (drank && (drinkCount === undefined || spins === undefined))
     ) {
       return;
     }
@@ -204,7 +205,10 @@ export function CheckInFlow() {
                 <p className="text-xs text-zinc-400">How many?</p>
                 <BubbleGroup
                   value={drinkCount}
-                  onChange={setDrinkCount}
+                  onChange={(n) => {
+                    setDrinkCount(n);
+                    if (spins !== undefined) advance();
+                  }}
                   columns={5}
                   options={[1, 2, 3, 4, 5].map((n) => ({
                     value: n,
@@ -216,7 +220,7 @@ export function CheckInFlow() {
                   value={spins}
                   onChange={(v) => {
                     setSpins(v);
-                    advance();
+                    if (drinkCount !== undefined) advance();
                   }}
                 />
               </div>

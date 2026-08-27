@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCircadia } from "@/context/circadia-store";
 import { WindDown } from "@/components/wind-down";
-import { Button } from "@/components/ui/button";
 import { buildSleepNotes } from "@/lib/advisor";
 import { shouldBeOffScreens } from "@/lib/notifications";
 import {
   clockFromDate,
   formatClock,
   formatCountdown,
+  formatDuration,
   minutesUntilClock,
   overnightDuration,
   screenOffClock,
@@ -46,7 +46,7 @@ export function TonightView() {
         </h1>
         <p className="mt-1 text-sm text-zinc-400">
           {formatClock(clockFromDate(now), profile.units)} · window {formatClock(profile.targetSleep, profile.units)}–
-          {formatClock(profile.targetWake, profile.units)} ({Math.round(windowMin / 60)}h)
+          {formatClock(profile.targetWake, profile.units)} ({formatDuration(windowMin)})
         </p>
       </header>
 
@@ -94,12 +94,18 @@ export function TonightView() {
       </div>
 
       <div className="mt-8 flex gap-2">
-        <Button render={<Link href="/check-in" />} className="flex-1 rounded-full bg-white/10 text-zinc-100 hover:bg-white/15">
+        <Link
+          href="/check-in"
+          className="flex flex-1 items-center justify-center rounded-full bg-white/10 py-2.5 text-sm text-zinc-100 hover:bg-white/15"
+        >
           Morning interview
-        </Button>
-        <Button render={<Link href="/insights" />} variant="outline" className="flex-1 rounded-full border-white/15">
+        </Link>
+        <Link
+          href="/insights"
+          className="flex flex-1 items-center justify-center rounded-full border border-white/15 py-2.5 text-sm text-zinc-200"
+        >
           Notes
-        </Button>
+        </Link>
       </div>
     </div>
   );

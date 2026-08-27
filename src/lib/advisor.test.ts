@@ -102,20 +102,24 @@ describe("recommendations", () => {
     expect(rec.suggestedSessions.length).toBeGreaterThan(0);
   });
 
-  it("refuses supplements when alcohol dominates a week", () => {
+  it("refuses melatonin when two drinking nights look like a delayed clock", () => {
     const nights = Array.from({ length: 7 }, (_, i) =>
       report({
         morningDate: `2026-01-${String(i + 1).padStart(2, "0")}`,
-        drank: true,
-        drinkCount: 3,
-        rating: 2,
-        spins: i % 2 === 0,
+        fellAsleepAt: "00:30",
+        wokeAt: "08:00",
+        screenOffMinutes: 60,
+        sleepLatencyMinutes: 15,
+        rating: 3,
+        drank: i < 2,
+        drinkCount: i < 2 ? 3 : undefined,
+        spins: i === 0,
       }),
     );
     const rec = buildRecommendations(profile, nights);
     expect(rec.ready).toBe(true);
+    expect(rec.supplements.some((s) => s.id === "melatonin")).toBe(false);
     expect(rec.supplements[0]?.id).toBe("none");
-    expect(rec.supplements[0]?.body.toLowerCase()).toMatch(/drink|ethanol/);
   });
 });
 

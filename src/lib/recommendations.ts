@@ -60,22 +60,24 @@ export function buildRecommendations(profile: Profile, reports: MorningReport[])
   }
 
   const supplements: SupplementRec[] = [];
+  const spinsNights = reports.filter((r) => r.spins).length;
+  const alcoholConfound = week.alcoholNights >= 2 || spinsNights > 0;
   const alcoholDominant = week.alcoholNights / nightsLogged >= 0.45;
   const screenDominant = week.meanScreenOffMinutes < 30 && week.meanLatencyMinutes >= 25;
   const delayed = delayedClock(reports, profile.targetSleep);
   const alreadyOnMelatonin = profile.supplements.some((s) => /melatonin/i.test(s));
   const alreadyOnMagnesium = profile.supplements.some((s) => /magnesium/i.test(s));
 
-  if (alcoholDominant || screenDominant) {
+  if (alcoholDominant || alcoholConfound || screenDominant) {
     supplements.push({
       id: "none",
       title: "Not a supplement week",
-      body: alcoholDominant
-        ? "Drinks show up often enough that melatonin or magnesium would be noise. Run two or more drink-free nights and keep logging. The first-line chemical here is ethanol — remove it before adding anything."
+      body: alcoholDominant || alcoholConfound
+        ? "Drinks (or spins) showed up in this week. That fragments REM and can look like a delayed clock. Melatonin or magnesium would be noise on top of ethanol. Log two or more dry nights, then we can talk clock tools."
         : "Screens are still inside the last half hour and latency is high. A bottle of melatonin will not outrun a phone. Earn the hour off screens, then we can talk clock tools.",
       notFirstLine: "CBT-I behaviors first. Supplements are adjuncts, and only after the obvious levers move.",
       confidence: "high",
-      sourceIds: alcoholDominant ? ["alcohol"] : ["light-screens", "melatonin"],
+      sourceIds: alcoholDominant || alcoholConfound ? ["alcohol"] : ["light-screens", "melatonin"],
     });
   } else {
     if (delayed && !alreadyOnMelatonin) {
@@ -102,6 +104,7 @@ export function buildRecommendations(profile: Profile, reports: MorningReport[])
       week.meanLatencyMinutes >= 30 &&
       week.meanRating <= 3.4 &&
       !alcoholDominant &&
+      !alcoholConfound &&
       (profile.activity === "high" || profile.struggles.includes("falling"));
 
     if (magnesiumCandidate && !alreadyOnMagnesium) {

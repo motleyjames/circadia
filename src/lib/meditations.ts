@@ -120,6 +120,15 @@ export function speak(text: string) {
   window.speechSynthesis.speak(utterance);
 }
 
+/** Call from a tap so iOS will allow later utterances. */
+export function unlockVoice() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  const unlock = new SpeechSynthesisUtterance(" ");
+  unlock.volume = 0;
+  window.speechSynthesis.speak(unlock);
+  window.speechSynthesis.cancel();
+}
+
 export function hushVoice() {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();

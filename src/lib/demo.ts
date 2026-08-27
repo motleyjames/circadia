@@ -149,5 +149,6 @@ export function sampleWeekState(existing: CircadiaState): CircadiaState {
     ...existing,
     profile: existing.profile ?? SAMPLE_PROFILE,
     reports,
+    demoWeek: true,
   };
 }
