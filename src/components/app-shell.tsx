@@ -4,9 +4,35 @@ import { CircadiaProvider, useCircadia } from "@/context/circadia-store";
 import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
 import { ChatBar } from "@/components/chat-bar";
+import { NativeChrome } from "@/components/native-chrome";
 import { Onboarding } from "@/components/onboarding";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { StudyGate } from "@/components/study-gate";
+
+function Stage({
+  children,
+  wide = false,
+}: {
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
+  if (wide) {
+    return (
+      <div className="night-sky flex min-h-dvh flex-col">
+        <div className="native-drag" aria-hidden />
+        <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="night-sky relative flex min-h-dvh flex-col">
+      <div className="pointer-events-none absolute inset-0 glow-veil" />
+      <div className="native-drag relative z-10" aria-hidden />
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col">{children}</div>
+    </div>
+  );
+}
 
 function ShellInner({ children }: { children: React.ReactNode }) {
   const { ready, state } = useCircadia();
@@ -15,41 +41,32 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return (
-      <div className="night-sky relative flex min-h-dvh">
-        <div className="pointer-events-none absolute inset-0 glow-veil" />
-        <div className="relative mx-auto flex min-h-dvh w-full max-w-xl flex-col">
-          <BrandStage />
-        </div>
-      </div>
+      <Stage>
+        <BrandStage />
+      </Stage>
     );
   }
 
   if (!state.profile?.onboardingComplete) {
     return (
-      <div className="night-sky relative flex min-h-dvh">
-        <div className="pointer-events-none absolute inset-0 glow-veil" />
-        <div className="relative mx-auto flex min-h-dvh w-full max-w-xl flex-col">
-          <Onboarding />
-        </div>
-      </div>
+      <Stage>
+        <Onboarding />
+      </Stage>
     );
   }
 
   if (!state.study.asked) {
     return (
-      <div className="night-sky relative flex min-h-dvh">
-        <div className="pointer-events-none absolute inset-0 glow-veil" />
-        <div className="relative mx-auto flex min-h-dvh w-full max-w-xl flex-col">
-          <StudyGate />
-        </div>
-      </div>
+      <Stage>
+        <StudyGate />
+      </Stage>
     );
   }
 
   return (
-    <div className="night-sky flex min-h-dvh">
+    <Stage wide>
       <SidebarNav />
-      <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1">
           <main className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="pointer-events-none absolute inset-0 glow-veil" />
@@ -60,13 +77,14 @@ function ShellInner({ children }: { children: React.ReactNode }) {
         {inApp ? <ChatBar variant="dock" /> : null}
         {inApp ? <BottomNav /> : null}
       </div>
-    </div>
+    </Stage>
   );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <CircadiaProvider>
+      <NativeChrome />
       <ShellInner>{children}</ShellInner>
     </CircadiaProvider>
   );

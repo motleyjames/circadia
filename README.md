@@ -2,9 +2,30 @@
 
 A desktop sleep companion for people who **cannot fall asleep, cannot stay asleep, or both**. The job is a healthy, repeatable schedule — not a shop of powders.
 
-Circadia is local-first. Profile, mornings, dreams, and chat live in this browser. There is no account. There is no cloud model. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
+Circadia is local-first. Profile, mornings, dreams, and chat live on this computer. There is no account. There is no cloud model. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
 
-**This is a computer app first.** Open it in a browser, bookmark it, dish the URL to testers. A phone wrap (Capacitor / store) is later packaging. Do not wait on a native shell to iterate.
+## Put it on the Dock (Mac)
+
+The Cursor preview is a website. Finder will not show Circadia until you run the Mac app **on your Mac**.
+
+From this repo:
+
+```bash
+npm install
+npm run app
+```
+
+A Circadia window opens. It appears in the Dock while it is running. **Right-click the icon → Options → Keep in Dock.**
+
+To get a real `Circadia.app` you can drag into **Applications** (and from there onto the Dock), run this **on your Mac** — not on a Linux cloud box:
+
+```bash
+npm run dist
+```
+
+Then open `dist/mac/Circadia.app` (Apple Silicon) or `dist/mac-arm64/Circadia.app`. First open: right-click the app → Open. It is unsigned until we pay Apple for a developer id.
+
+Testers you pay: dish the `.app` (or this repo + `npm run app`). Study packs stay on **their** Mac unless you set `STUDY_INGEST_URL` to a host you control, or they Download JSON in You and send you the file.
 
 ## What you do
 
@@ -31,18 +52,18 @@ They can read the exact JSON in **You** before or after it leaves, download it, 
 
 **What never leaves:** name, dream text, chat text, medication/supplement strings, height/weight, calendar dates, report ids, IP.
 
-Packs land in `data/study-inbox/` (gitignored). Optionally set `STUDY_INGEST_URL` (and `STUDY_INGEST_TOKEN`) on the server to forward a copy. The inbox is the local fallback if ingest is down.
+Packs land in `data/study-inbox/` in the repo, or `~/Library/Application Support/Circadia/study-inbox` in the packaged app. Optionally set `STUDY_INGEST_URL` (and `STUDY_INGEST_TOKEN`) so the server forwards a copy to you. The inbox is the local fallback if ingest is down.
 
 Erase this device mints a new participant number. Pause and rejoin keeps the same number so nights still stitch.
 
-## Run it
+## Browser only
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:43147`.
+Open `http://127.0.0.1:43147`. This is still not a Finder app.
 
 ```bash
 npm test
@@ -62,4 +83,4 @@ Dream “meaning” is theme-tagging plus physiology (alcohol and REM rebound, m
 
 ## Why this way
 
-A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study, and even then the pack is inspectable and stripped. Fluent telemetry without consent is the opposite of this product. Electron / Capacitor are later packaging. See `docs/BLUEPRINT.md`.
+A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study, and even then the pack is inspectable and stripped. The Mac wrap is a window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.
