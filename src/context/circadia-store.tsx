@@ -33,8 +33,10 @@ function snapshot(): CircadiaState {
   return memory;
 }
 
+const SERVER_STATE = emptyState();
+
 function serverSnapshot(): CircadiaState {
-  return emptyState();
+  return SERVER_STATE;
 }
 
 function write(next: CircadiaState) {
