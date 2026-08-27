@@ -10,7 +10,7 @@
     "app": "node electron/dev.cjs",
     "dock": "node electron/install-mac.cjs",
     "reveal": "node electron/install-mac.cjs --reveal",
-    "dist": "npm run build && node electron/prepare-standalone.cjs && electron-builder --mac dir zip --publish never",
+    "dist": "node electron/build-ui.cjs && electron-builder --mac dir zip --publish never",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -49,8 +49,12 @@
     ],
     "extraResources": [
       {
-        "from": ".next/standalone",
-        "to": "server"
+        "from": "out",
+        "to": "ui"
+      },
+      {
+        "from": "electron/static-server.cjs",
+        "to": "static-server.cjs"
       }
     ],
     "directories": {
