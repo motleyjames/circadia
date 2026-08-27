@@ -127,7 +127,31 @@ describe("chat and dreams", () => {
   it("answers melatonin from the library without inventing a dose stack", () => {
     const reply = answerQuestion("should I take melatonin?", profile, []);
     expect(reply.citations).toContain("melatonin");
-    expect(reply.text.toLowerCase()).toMatch(/clock|not a sleeping pill|hypnotic/);
+    expect(reply.text.toLowerCase()).toMatch(/cbt-i|clock|hypnotic/);
+    expect(reply.text.toLowerCase()).not.toMatch(/10 mg at lights-out is fine/);
+  });
+
+  it("treats sleeping in as clock training, with a safety exception", () => {
+    const reply = answerQuestion("should I sleep in tomorrow?", profile, []);
+    expect(reply.citations).toContain("naps");
+    expect(reply.text.toLowerCase()).toMatch(/wake time|social jet lag|20 min/);
+    expect(reply.text.toLowerCase()).toMatch(/drive/);
+  });
+
+  it("explains 3am wakings with stimulus control, not a heavier pill", () => {
+    const reply = answerQuestion(
+      "I keep waking at 3",
+      profile,
+      [report({ morningDate: "2026-01-02", wokeInNight: true, drank: true, drinkCount: 3, rating: 2 })],
+    );
+    expect(reply.text.toLowerCase()).toMatch(/stimulus control|20 minutes|alcohol/);
+  });
+
+  it("names Adderall as a timing problem, never a stop-the-drug order", () => {
+    const reply = answerQuestion("is my Adderall wrecking sleep?", profile, []);
+    expect(reply.citations).toContain("medications");
+    expect(reply.text.toLowerCase()).toMatch(/adderall/);
+    expect(reply.text.toLowerCase()).not.toMatch(/stop taking/);
   });
 
   it("reads a dream through alcohol physiology when drinks were logged", () => {

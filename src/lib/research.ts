@@ -121,6 +121,24 @@ export const RESEARCH: ResearchArticle[] = [
     tags: ["wind-down", "meditation", "sound", "latency"],
     source: "CBT-I relaxation component; noise-masking sleep studies; PMR literature",
   },
+  {
+    id: "caffeine",
+    title: "Caffeine is an adenosine blocker",
+    summary:
+      "It does not just 'give energy.' It occupies the receptor that tells the brain you have been awake long enough to sleep.",
+    body: "Adenosine accumulates with hours awake and promotes sleepiness. Caffeine is an adenosine-receptor antagonist. Typical half-life is about 5–6 hours; it is longer in pregnancy, with oral contraceptives, and in slow CYP1A2 metabolizers. A 3 pm coffee can still be pharmacologically present at 11. Elite practice: if sleep-onset is the complaint, last caffeine before early afternoon, and do not use it to paper over a late wake time. Circadia does not yet log caffeine in the morning interview — if it is in your life, say so in chat so the note can include it.",
+    tags: ["caffeine", "coffee", "adenosine", "latency", "falling"],
+    source: "Adenosine/caffeine pharmacology; sleep-onset and caffeine timing literature",
+  },
+  {
+    id: "naps",
+    title: "Catch-up sleep vs protecting the clock",
+    summary:
+      "A late morning after a short night feels kind and trains a later clock. CBT-I protects wake time; safety still comes first if you drive.",
+    body: "Homeostatic pressure and circadian timing are two systems. Sleeping until noon after a 3 am night discharges pressure at the wrong clock time and delays tonight. In CBT-I, the wake time stays put even after a poor night; recovery is a brief nap (about 20 minutes, before mid-afternoon) or an earlier bedtime only once sleepy — not more hours in bed hoping. Exception: if you might drive, operate machinery, or cannot stay awake, sleep is a safety intervention, not a willpower test. Tell a clinician if sleepiness is that severe — that can be apnea, narcolepsy, or severe restriction, not 'bad habits.'",
+    tags: ["naps", "weekend", "sleep in", "catch up", "wake", "schedule"],
+    source: "CBT-I sleep restriction and stimulus-control practice; AASM insomnia guideline",
+  },
 ];
 
 export function researchById(id: string): ResearchArticle | undefined {
