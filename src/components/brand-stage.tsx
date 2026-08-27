@@ -13,7 +13,7 @@ export function BrandStage({ cta }: { cta?: ReactNode }) {
         <h1 className="font-heading mt-10 text-[2.85rem] leading-none tracking-tight text-zinc-50">
           Circadia
         </h1>
-        <p className="mt-5 max-w-[16.5rem] text-[15px] leading-relaxed text-zinc-400">
+        <p className="mt-5 max-w-[22rem] text-[15px] leading-relaxed text-zinc-400">
           For falling asleep. For staying asleep. For a clock that holds.
         </p>
       </div>

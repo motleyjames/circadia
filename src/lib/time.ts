@@ -121,6 +121,10 @@ export function circularMeanMinutes(clocks: string[]): number {
   return (angle / (2 * Math.PI)) * 24 * 60;
 }
 
+/** Intake placeholders. BMI notes must treat these as unmeasured until You is edited. */
+export const DEFAULT_HEIGHT_CM = 175;
+export const DEFAULT_WEIGHT_KG = 70;
+
 export function bmiKgM(weightKg: number, heightCm: number): number {
   const m = heightCm / 100;
   if (m <= 0) return 0;

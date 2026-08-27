@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# anonymous study packs land here locally — never commit them
+/data/study-inbox/*
+!/data/study-inbox/.gitkeep

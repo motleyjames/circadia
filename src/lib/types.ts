@@ -85,6 +85,18 @@ export type ChatMessage = {
   citations?: string[];
 };
 
+export type StudyStatus = "sent" | "error" | "blocked";
+
+export type StudyState = {
+  asked: boolean;
+  consented: boolean;
+  /** Local UUID. Stitches nights if they pause. Not a name. */
+  participantId: string | null;
+  lastSentAt: string | null;
+  lastStatus: StudyStatus | null;
+  lastError: string | null;
+};
+
 export type CircadiaState = {
   profile: Profile | null;
   reports: MorningReport[];
@@ -92,6 +104,69 @@ export type CircadiaState = {
   chat: ChatMessage[];
   researchNotes: string;
   demoWeek: boolean;
+  study: StudyState;
+};
+
+export type AgeBand = "13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55-64" | "65+";
+
+export type BmiBand = "unconfirmed" | "underweight" | "healthy" | "overweight" | "obesity-1" | "obesity-2";
+
+export type MedicationClass =
+  | "stimulant"
+  | "bupropion"
+  | "antidepressant"
+  | "steroid"
+  | "decongestant"
+  | "beta-blocker"
+  | "antihistamine"
+  | "other";
+
+export type StudyNight = {
+  nightIndex: number;
+  fellAsleepAt: string;
+  wokeAt: string;
+  durationMinutes: number;
+  rating: SleepRating;
+  drank: boolean;
+  drinkCount?: number;
+  spins?: boolean;
+  screenOffMinutes: ScreenOffMinutes;
+  sleepLatencyMinutes: LatencyBucket;
+  wokeInNight: boolean;
+  nightWakingMinutes: NightWakingDuration;
+  usedSupplement: boolean;
+  supplementKind?: SupplementKind;
+  windDownHelped: WindDownHelp;
+  hadDream: boolean;
+};
+
+export type StudyPack = {
+  schema: "circadia-study-v1";
+  participantId: string;
+  appVersion: string;
+  surface: "desktop";
+  demoWeek: boolean;
+  profile: {
+    ageBand: AgeBand;
+    sex: Sex;
+    struggles: Struggle[];
+    activity: ActivityLevel;
+    bmiBand: BmiBand;
+    medicationClasses: MedicationClass[];
+    supplementCount: number;
+    targetSleep: string;
+    targetWake: string;
+  };
+  nights: StudyNight[];
+  sessions: {
+    meditation: number;
+    soundscape: number;
+    completed: number;
+  };
+  chat: {
+    turns: number;
+    topics: string[];
+  };
 };
 
 export type NoteConfidence = "high" | "moderate" | "low";

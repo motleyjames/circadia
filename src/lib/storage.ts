@@ -1,7 +1,16 @@
-import type { CircadiaState, MorningReport, Profile } from "@/lib/types";
+import type { CircadiaState, MorningReport, Profile, StudyState, StudyStatus } from "@/lib/types";
 import { isClock, normalizeClock } from "@/lib/windows";
 
 export const STORAGE_KEY = "circadia:v1";
+
+export const emptyStudy = (): StudyState => ({
+  asked: false,
+  consented: false,
+  participantId: null,
+  lastSentAt: null,
+  lastStatus: null,
+  lastError: null,
+});
 
 export const emptyState = (): CircadiaState => ({
   profile: null,
@@ -10,6 +19,7 @@ export const emptyState = (): CircadiaState => ({
   chat: [],
   researchNotes: "",
   demoWeek: false,
+  study: emptyStudy(),
 });
 
 export function loadState(): CircadiaState {
@@ -49,6 +59,24 @@ export function hydrateState(parsed: unknown): CircadiaState {
     chat: Array.isArray(raw.chat) ? raw.chat : [],
     researchNotes: typeof raw.researchNotes === "string" ? raw.researchNotes : "",
     demoWeek: Boolean(raw.demoWeek),
+    study: coerceStudy(raw.study),
+  };
+}
+
+function coerceStudy(value: unknown): StudyState {
+  if (!value || typeof value !== "object") return emptyStudy();
+  const s = value as Partial<StudyState>;
+  const lastStatus: StudyStatus | null =
+    s.lastStatus === "sent" || s.lastStatus === "error" || s.lastStatus === "blocked" ? s.lastStatus : null;
+  const participantId =
+    typeof s.participantId === "string" && s.participantId.length >= 8 ? s.participantId : null;
+  return {
+    asked: Boolean(s.asked),
+    consented: Boolean(s.consented) && Boolean(participantId),
+    participantId,
+    lastSentAt: typeof s.lastSentAt === "string" ? s.lastSentAt : null,
+    lastStatus,
+    lastError: typeof s.lastError === "string" ? s.lastError : null,
   };
 }
 

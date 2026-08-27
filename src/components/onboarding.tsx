@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { ensureNotificationPermission } from "@/lib/notifications";
 import {
+  DEFAULT_HEIGHT_CM,
+  DEFAULT_WEIGHT_KG,
   formatClock,
   screenOffClock,
   sleepFromWake,
@@ -109,8 +111,8 @@ export function Onboarding() {
       name: "you",
       age: ageNum,
       sex: "unspecified",
-      heightCm: 175,
-      weightKg: 70,
+      heightCm: DEFAULT_HEIGHT_CM,
+      weightKg: DEFAULT_WEIGHT_KG,
       activity: "light",
       medications: med ? [med] : [],
       supplements: [],
@@ -283,8 +285,8 @@ export function Onboarding() {
               countdown on Tonight still runs either way.
             </p>
             <p className="mt-8 border-t border-white/8 pt-6 text-[13px] leading-relaxed text-zinc-500">
-              Local only. Nothing leaves this phone. After this: Safari or Chrome, Share, Add to
-              Home Screen — if you want the chrome of an app. The product is already this.
+              Diary stays on this computer unless you join the study next. Payment, if any, happens
+              outside Circadia. A phone wrap is later.
             </p>
             {error ? <p className="mt-4 text-[13px] text-red-300">{error}</p> : null}
           </section>

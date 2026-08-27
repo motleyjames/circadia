@@ -46,7 +46,7 @@ export function TonightView() {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-8">
       <header className="flex items-center justify-between">
-        <Mark className="size-5" />
+        <Mark className="size-5 md:opacity-0" />
         <p className="text-[11px] font-medium tracking-[0.2em] text-zinc-500 uppercase">
           {formatClock(clockFromDate(now), profile.units)}
         </p>
@@ -131,7 +131,7 @@ function CountdownHero({
 
   return (
     <div className="mt-10 flex flex-col items-center">
-      <div className="relative size-[17.5rem]">
+      <div className="relative size-[17.5rem] lg:size-[22rem]">
         <div
           className="absolute inset-0 rounded-full opacity-90"
           style={{
