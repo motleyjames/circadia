@@ -42,8 +42,7 @@ function run(command, args) {
   if (result.status) process.exit(result.status ?? 1);
 }
 
-run("npm", ["run", "build"]);
-run(process.execPath, [path.join(root, "electron", "prepare-standalone.cjs")]);
+run(process.execPath, [path.join(root, "electron", "build-ui.cjs")]);
 run(path.join(root, "node_modules", ".bin", "electron-builder"), ["--mac", "dir", "--publish", "never"]);
 
 const built = [
@@ -75,6 +74,6 @@ console.log("");
 console.log("Installed to:");
 console.log(dest);
 console.log("Finder will now jump to that file. Drag it to the Dock.");
-console.log("If macOS blocks it: right-click Circadia → Open.");
+spawnSync("xattr", ["-cr", dest], { stdio: "ignore" });
 reveal(dest);
 spawnSync("open", [dest], { stdio: "inherit" });

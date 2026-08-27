@@ -81,7 +81,7 @@ function pickPort(preferred) {
   });
 }
 
-function envForServer(port, inbox, serverRoot) {
+function envForServer(port, inbox, uiRoot) {
   const raw = {
     PATH: process.env.PATH,
     HOME: process.env.HOME,
@@ -90,29 +90,29 @@ function envForServer(port, inbox, serverRoot) {
     LANG: process.env.LANG,
     NODE_ENV: "production",
     PORT: String(port),
-    HOSTNAME: "127.0.0.1",
     CIRCADIA_DATA_DIR: inbox,
-    CIRCADIA_SERVER_ROOT: serverRoot,
+    CIRCADIA_STATIC_ROOT: uiRoot,
+    STUDY_INGEST_URL: process.env.STUDY_INGEST_URL,
+    STUDY_INGEST_TOKEN: process.env.STUDY_INGEST_TOKEN,
   };
   return Object.fromEntries(Object.entries(raw).filter(([, value]) => typeof value === "string"));
 }
 
 function startPackagedServer(port) {
   if (server) return;
-  const serverRoot = path.join(process.resourcesPath, "server");
-  const serverJs = path.join(serverRoot, "server.js");
-  if (!fs.existsSync(serverJs)) {
-    throw new Error(`Missing server at ${serverJs}`);
+  const uiRoot = path.join(process.resourcesPath, "ui");
+  const serverJs = path.join(process.resourcesPath, "static-server.cjs");
+  if (!fs.existsSync(serverJs) || !fs.existsSync(path.join(uiRoot, "index.html"))) {
+    throw new Error(`Missing packaged UI at ${uiRoot}`);
   }
   const inbox = path.join(app.getPath("userData"), "study-inbox");
   fs.mkdirSync(inbox, { recursive: true });
   logLine(`\n--- start ${new Date().toISOString()} port ${port} ---\n`);
 
-  const boot = path.join(__dirname, "server-boot.cjs");
-  server = utilityProcess.fork(boot, [], {
+  server = utilityProcess.fork(serverJs, [], {
     stdio: "pipe",
     serviceName: "circadia-web",
-    env: envForServer(port, inbox, serverRoot),
+    env: envForServer(port, inbox, uiRoot),
   });
 
   server.stdout?.on("data", (data) => logLine(String(data)));
