@@ -233,5 +233,6 @@ console.log(dest);
 console.log(`Node: ${process.execPath}`);
 console.log(`Repo: ${root}`);
 console.log("A window should appear. Drag THIS Circadia to the Dock. Remove any icon named Electron.");
+console.log("Operator (separate app): npm run mod  →  http://127.0.0.1:43149");
 reveal(dest);
 spawnSync("open", [dest], { stdio: "inherit" });
