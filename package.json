@@ -1,6 +1,6 @@
 {
   "name": "circadia",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "main": "electron/main.cjs",
   "scripts": {
@@ -51,10 +51,6 @@
       {
         "from": "out",
         "to": "ui"
-      },
-      {
-        "from": "electron/static-server.cjs",
-        "to": "static-server.cjs"
       }
     ],
     "directories": {

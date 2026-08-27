@@ -56,6 +56,8 @@ if (!built) {
   process.exit(1);
 }
 
+spawnSync("killall", ["Circadia"], { stdio: "ignore" });
+
 function copyApp(dest) {
   fs.mkdirSync(path.dirname(dest), { recursive: true });
   fs.rmSync(dest, { recursive: true, force: true });
@@ -73,7 +75,7 @@ try {
 console.log("");
 console.log("Installed to:");
 console.log(dest);
-console.log("Finder will now jump to that file. Drag it to the Dock.");
+console.log("Opening Circadia. If macOS asks, choose Open.");
 spawnSync("xattr", ["-cr", dest], { stdio: "ignore" });
 reveal(dest);
 spawnSync("open", [dest], { stdio: "inherit" });
