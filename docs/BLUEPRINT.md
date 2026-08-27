@@ -122,11 +122,11 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 
 ## 5. Software architecture
 
-**Shape:** a Next.js **desktop** app. Full window, left sidebar, consult as a right rail (dock on narrower screens). Phone / Capacitor is later packaging — not what this slice is for, not what testers get this week.
+**Shape:** a Next.js desktop app, also packaged as an Electron Mac window (`npm run app`, `npm run dist` → `Circadia.app`). Full window, left sidebar, consult as a right rail (dock on narrower screens). Phone / Capacitor is later.
 
 **State:** `localStorage` key `circadia:v1`. Export/import JSON. Schema-hydrate on the way in. No auth.
 
-**Study packs:** optional, consent-gated. `buildStudyPack` in `src/lib/study.ts` emits `circadia-study-v1`. Schema-validate on `POST /api/study`. Write to `data/study-inbox/` (gitignored). Optional forward via `STUDY_INGEST_URL`. Do not store request IP on the pack. Auto-send after a real morning if consented; never auto-send a loaded sample week. Fail closed if the pack still contains a local secret.
+**Study packs:** optional, consent-gated. `buildStudyPack` in `src/lib/study.ts` emits `circadia-study-v1`. Schema-validate on `POST /api/study`. Write to `data/study-inbox/` (gitignored), or `CIRCADIA_DATA_DIR` in the packaged app (`~/Library/Application Support/Circadia/study-inbox`). Optional forward via `STUDY_INGEST_URL`. Do not store request IP on the pack. Auto-send after a real morning if consented; never auto-send a loaded sample week. Fail closed if the pack still contains a local secret.
 
 **Audio:** Web Audio procedural noise. Unlock on a **user gesture** or devices stay silent. No MP3 licensing. Meditations are a visual field + optional `speechSynthesis`.
 
@@ -155,6 +155,7 @@ src/app/          /  /check-in  /insights  /library  /you  /api/study
 - JSON import/export; sample week labeled, confirm-before-overwrite
 - Desktop shell (sidebar + consult rail)
 - Anonymous study packs, consent gate, inspectable JSON, local inbox
+- Mac app window (`npm run app`) and `Circadia.app` package (`npm run dist` on a Mac)
 
 **Next, still this repo**
 
@@ -163,7 +164,7 @@ src/app/          /  /check-in  /insights  /library  /you  /api/study
 - Confirm body metrics before BMI/OSA notes treat them as measured
 - Optional hosted model behind an explicit key, grounded on the same notes object
 - Clinical red-flag copy (Epworth, STOP-BANG) as *questions*, not scores that pretend to diagnose
-- Electron packaging if testers need a dock icon instead of a URL
+- Apple Developer signing so testers skip Gatekeeper
 
 **Not on the roadmap**
 

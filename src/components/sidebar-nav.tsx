@@ -14,7 +14,7 @@ export function SidebarNav() {
 
   return (
     <aside className="relative hidden w-56 shrink-0 flex-col border-r border-white/8 bg-[#080712]/90 md:flex">
-      <div className="flex items-center gap-3 px-5 pt-7 pb-8">
+      <div className="flex items-center gap-3 px-5 pt-5 pb-8">
         <Mark className="size-6" />
         <div>
           <p className="font-heading text-lg leading-none text-zinc-50">Circadia</p>

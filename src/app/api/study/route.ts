@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
+import { studyInboxDir } from "@/lib/study-inbox";
 import { validateStudyPack } from "@/lib/study";
 
 export const runtime = "nodejs";
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   const pack = parsed.value;
-  const dir = path.join(process.cwd(), "data", "study-inbox");
+  const dir = studyInboxDir();
   await mkdir(dir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const file = path.join(dir, `${pack.participantId.slice(0, 8)}-${stamp}.json`);
