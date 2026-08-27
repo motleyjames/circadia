@@ -1,0 +1,153 @@
+import type { CircadiaState, MorningReport, Profile } from "@/lib/types";
+import { newId } from "@/lib/time";
+
+function isoDaysAgo(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+const SAMPLE_PROFILE: Profile = {
+  name: "James",
+  age: 19,
+  sex: "male",
+  heightCm: 180,
+  weightKg: 75,
+  activity: "light",
+  medications: [],
+  supplements: [],
+  struggles: ["falling", "staying"],
+  targetSleep: "23:30",
+  targetWake: "07:30",
+  units: "imperial",
+  notificationsEnabled: false,
+  onboardingComplete: true,
+};
+
+/** A plausible messy student week — not a miracle recovery arc. */
+export function sampleWeekState(existing: CircadiaState): CircadiaState {
+  const reports: MorningReport[] = [
+    {
+      id: newId(),
+      morningDate: isoDaysAgo(6),
+      wokeAt: "09:10",
+      fellAsleepAt: "01:40",
+      rating: 2,
+      drank: true,
+      drinkCount: 4,
+      spins: true,
+      screenOffMinutes: 0,
+      sleepLatencyMinutes: 50,
+      wokeInNight: true,
+      nightWakingMinutes: 45,
+      usedSupplement: false,
+      windDownHelped: "did_not_use",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: newId(),
+      morningDate: isoDaysAgo(5),
+      wokeAt: "08:05",
+      fellAsleepAt: "00:50",
+      rating: 3,
+      drank: false,
+      screenOffMinutes: 15,
+      sleepLatencyMinutes: 50,
+      wokeInNight: false,
+      nightWakingMinutes: 0,
+      usedSupplement: false,
+      windDownHelped: "did_not_use",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: newId(),
+      morningDate: isoDaysAgo(4),
+      wokeAt: "07:40",
+      fellAsleepAt: "00:20",
+      rating: 3,
+      drank: false,
+      screenOffMinutes: 30,
+      sleepLatencyMinutes: 30,
+      wokeInNight: true,
+      nightWakingMinutes: 25,
+      usedSupplement: false,
+      windDownHelped: "a_bit",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: newId(),
+      morningDate: isoDaysAgo(3),
+      wokeAt: "07:35",
+      fellAsleepAt: "23:55",
+      rating: 4,
+      drank: false,
+      screenOffMinutes: 60,
+      sleepLatencyMinutes: 15,
+      wokeInNight: false,
+      nightWakingMinutes: 0,
+      usedSupplement: false,
+      windDownHelped: "yes",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: newId(),
+      morningDate: isoDaysAgo(2),
+      wokeAt: "11:20",
+      fellAsleepAt: "02:10",
+      rating: 2,
+      drank: true,
+      drinkCount: 3,
+      spins: false,
+      screenOffMinutes: 0,
+      sleepLatencyMinutes: 30,
+      wokeInNight: true,
+      nightWakingMinutes: 45,
+      usedSupplement: false,
+      windDownHelped: "did_not_use",
+      dream: {
+        text: "Late to an exam, then the hallway flooded. Couldn't find the room.",
+        wantMeaning: true,
+      },
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: newId(),
+      morningDate: isoDaysAgo(1),
+      wokeAt: "07:30",
+      fellAsleepAt: "23:45",
+      rating: 4,
+      drank: false,
+      screenOffMinutes: 60,
+      sleepLatencyMinutes: 15,
+      wokeInNight: false,
+      nightWakingMinutes: 0,
+      usedSupplement: false,
+      windDownHelped: "yes",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: newId(),
+      morningDate: isoDaysAgo(0),
+      wokeAt: "07:28",
+      fellAsleepAt: "23:40",
+      rating: 4,
+      drank: false,
+      screenOffMinutes: 45,
+      sleepLatencyMinutes: 15,
+      wokeInNight: false,
+      nightWakingMinutes: 0,
+      usedSupplement: false,
+      windDownHelped: "yes",
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
+  return {
+    ...existing,
+    profile: existing.profile ?? SAMPLE_PROFILE,
+    reports,
+  };
+}
