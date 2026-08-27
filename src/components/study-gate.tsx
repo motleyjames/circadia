@@ -31,14 +31,14 @@ export function StudyGate() {
         <button
           type="button"
           onClick={joinStudy}
-          className="h-14 rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950"
+          className="h-14 rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 transition-opacity hover:opacity-90"
         >
           Join the study
         </button>
         <button
           type="button"
           onClick={declineStudy}
-          className="h-14 rounded-full border border-white/12 text-[15px] font-medium text-zinc-200"
+          className="h-14 rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 transition-colors hover:bg-white/6"
         >
           Keep everything on this computer
         </button>

@@ -48,7 +48,7 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
               <button
                 key={prompt}
                 type="button"
-                className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] text-zinc-300"
+                className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] text-zinc-300 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-zinc-100"
                 onClick={() => submit(prompt)}
               >
                 {prompt}
@@ -131,7 +131,7 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
 
   if (rail) {
     return (
-      <aside className="hidden w-[22rem] shrink-0 flex-col border-l border-white/8 bg-[#0d0b18]/95 px-4 pt-6 pb-4 xl:flex">
+      <aside className="relative z-20 hidden w-[22rem] shrink-0 flex-col border-l border-white/8 bg-[#0d0b18]/95 px-4 pt-6 pb-4 xl:flex">
         <p className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase">Consult</p>
         <h2 className="font-heading mt-1 mb-4 text-xl text-zinc-50">Ask Circadia</h2>
         {thread}

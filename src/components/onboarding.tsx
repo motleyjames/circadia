@@ -131,7 +131,7 @@ export function Onboarding() {
           <button
             type="button"
             onClick={() => setCover(false)}
-            className="h-14 w-full rounded-full bg-zinc-50 text-[15px] font-medium tracking-tight text-zinc-950"
+            className="h-14 w-full rounded-full bg-zinc-50 text-[15px] font-medium tracking-tight text-zinc-950 transition-opacity hover:opacity-90"
           >
             Begin
           </button>

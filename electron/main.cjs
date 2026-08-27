@@ -305,7 +305,7 @@ app.whenReady().then(() => {
   }
   app.setAboutPanelOptions({
     applicationName: "Circadia",
-    applicationVersion: "0.4.1",
+    applicationVersion: "0.4.2",
     copyright: "Local sleep companion. Not medical care.",
   });
   installMenu();

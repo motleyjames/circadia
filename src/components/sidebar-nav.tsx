@@ -13,7 +13,7 @@ export function SidebarNav() {
   const study = state.study;
 
   return (
-    <aside className="relative hidden w-56 shrink-0 flex-col border-r border-white/8 bg-[#080712]/90 md:flex">
+    <aside className="relative z-20 hidden w-56 shrink-0 flex-col border-r border-white/8 bg-[#080712]/90 md:flex">
       <div className="flex items-center gap-3 px-5 pt-5 pb-8">
         <Mark className="size-6" />
         <div>
@@ -29,8 +29,9 @@ export function SidebarNav() {
             <Link
               key={tab.href}
               href={tab.href}
+              prefetch={false}
               className={cn(
-                "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] tracking-wide",
+                "flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] tracking-wide transition-colors",
                 active ? "bg-white/7 text-violet-100" : "text-zinc-500 hover:bg-white/4 hover:text-zinc-300",
               )}
             >
