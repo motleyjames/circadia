@@ -6,26 +6,25 @@ Circadia is local-first. Profile, mornings, dreams, and chat live on this comput
 
 ## Put it on the Dock (Mac)
 
-The Cursor preview is a website. Finder will not show Circadia until you run the Mac app **on your Mac**.
+`npm run app` is a **session**. Closing the window used to quit that session, so the leftover Dock icon had nothing to reopen. That is fixed in two layers:
 
-From this repo:
+1. The red traffic-light **hides** Circadia. Click the Dock icon to bring it back. **Cmd+Q** is a real quit.
+2. Install a real app you can reopen after quit:
 
 ```bash
+cd rest-ai
+git pull
 npm install
-npm run app
+npm run dock
 ```
 
-A Circadia window opens. It appears in the Dock while it is running. **Right-click the icon → Options → Keep in Dock.**
+That writes `~/Applications/Circadia.app` and opens it. Drag **that** icon to the Dock. Remove any old generic Electron icon first (right-click → Options → Remove from Dock).
 
-To get a real `Circadia.app` you can drag into **Applications** (and from there onto the Dock), run this **on your Mac** — not on a Linux cloud box:
+First launch: if macOS says the app is from an unidentified developer, right-click Circadia → **Open**.
 
-```bash
-npm run dist
-```
+Do not Keep-in-Dock the window that came from `npm run app`. That icon is Electron, not Circadia.
 
-Then open `dist/mac/Circadia.app` (Apple Silicon) or `dist/mac-arm64/Circadia.app`. First open: right-click the app → Open. It is unsigned until we pay Apple for a developer id.
-
-Testers you pay: dish the `.app` (or this repo + `npm run app`). Study packs stay on **their** Mac unless you set `STUDY_INGEST_URL` to a host you control, or they Download JSON in You and send you the file.
+Testers you pay: dish `~/Applications/Circadia.app` after `npm run dock`. Study packs stay on **their** Mac unless you set `STUDY_INGEST_URL` to a host you control, or they Download JSON in You and send you the file.
 
 ## What you do
 

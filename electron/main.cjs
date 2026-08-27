@@ -1,17 +1,20 @@
 "use strict";
 
-const { app, BrowserWindow, dialog, shell } = require("electron");
+const { app, BrowserWindow, dialog, Menu, shell } = require("electron");
 const http = require("node:http");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
 const PORT = Number(process.env.CIRCADIA_PORT) || 43147;
 const URL = `http://127.0.0.1:${PORT}`;
+const ICON = path.join(__dirname, "icon.png");
 
 /** @type {import('node:child_process').ChildProcess | null} */
 let server = null;
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
+let isQuitting = false;
+let serverStarted = false;
 
 function waitForServer(timeoutMs = 45_000) {
   const started = Date.now();
@@ -34,6 +37,8 @@ function waitForServer(timeoutMs = 45_000) {
 }
 
 function startPackagedServer() {
+  if (serverStarted) return;
+  serverStarted = true;
   const serverRoot = path.join(process.resourcesPath, "server");
   const serverJs = path.join(serverRoot, "server.js");
   const inbox = path.join(app.getPath("userData"), "study-inbox");
@@ -50,29 +55,37 @@ function startPackagedServer() {
     stdio: "inherit",
   });
   server.on("exit", (code) => {
-    if (code && code !== 0 && mainWindow && !mainWindow.isDestroyed()) {
+    serverStarted = false;
+    if (code && code !== 0 && !isQuitting) {
       dialog.showErrorBox("Circadia", "The local sleep server stopped unexpectedly.");
     }
   });
 }
 
-async function createWindow() {
-  if (app.isPackaged) {
-    startPackagedServer();
-  }
-
+async function ensureServer() {
+  if (app.isPackaged) startPackagedServer();
   try {
-    await waitForServer(app.isPackaged ? 45_000 : 60_000);
+    await waitForServer(app.isPackaged ? 45_000 : 8_000);
   } catch {
     dialog.showErrorBox(
       "Circadia",
       app.isPackaged
-        ? "Could not start the local server. Close any other Circadia window and try again."
-        : "The Next.js dev server is not running. Use npm run app from the repo.",
+        ? "Could not start the local server. Quit any other Circadia window (Cmd+Q) and try again."
+        : "This Dock icon is a leftover from a terminal session. Run npm run dock in the Circadia folder to install a real Circadia.app.",
     );
     app.quit();
+    throw new Error("server");
+  }
+}
+
+async function createWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
     return;
   }
+
+  await ensureServer();
 
   const win = new BrowserWindow({
     width: 1440,
@@ -85,7 +98,7 @@ async function createWindow() {
     autoHideMenuBar: true,
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     trafficLightPosition: { x: 16, y: 18 },
-    icon: path.join(__dirname, "icon.png"),
+    icon: ICON,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
@@ -95,16 +108,47 @@ async function createWindow() {
   });
   mainWindow = win;
 
+  win.on("close", (event) => {
+    if (process.platform === "darwin" && !isQuitting) {
+      event.preventDefault();
+      win.hide();
+    }
+  });
+
   win.once("ready-to-show", () => win.show());
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("http://127.0.0.1") || url.startsWith("https://")) {
-      if (url.startsWith(URL)) return { action: "allow" };
-    }
+    if (url.startsWith(URL)) return { action: "allow" };
     shell.openExternal(url);
     return { action: "deny" };
   });
 
   await win.loadURL(URL);
+}
+
+function installMenu() {
+  const isMac = process.platform === "darwin";
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      ...(isMac
+        ? [
+            {
+              label: app.name,
+              submenu: [
+                { role: "about" },
+                { type: "separator" },
+                { role: "hide" },
+                { role: "hideOthers" },
+                { role: "unhide" },
+                { type: "separator" },
+                { role: "quit" },
+              ],
+            },
+          ]
+        : []),
+      { role: "editMenu" },
+      { role: "windowMenu" },
+    ]),
+  );
 }
 
 const locked = app.requestSingleInstanceLock();
@@ -113,20 +157,36 @@ if (!locked) {
 } else {
   app.on("second-instance", () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
       mainWindow.focus();
     }
   });
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
     app.setName("Circadia");
-    return createWindow();
+    if (process.platform === "darwin" && app.dock) {
+      app.dock.setIcon(ICON);
+    }
+    app.setAboutPanelOptions({
+      applicationName: "Circadia",
+      applicationVersion: app.getVersion(),
+      copyright: "Local sleep companion. Not medical care.",
+    });
+    installMenu();
+    await createWindow();
   });
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) void createWindow();
+    void createWindow();
   });
 }
 
-app.on("window-all-closed", () => {
+app.on("before-quit", () => {
+  isQuitting = true;
   if (server && !server.killed) server.kill();
-  app.quit();
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    if (server && !server.killed) server.kill();
+    app.quit();
+  }
 });
