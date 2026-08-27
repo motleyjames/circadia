@@ -15,9 +15,12 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Circadia",
-  description: "A local sleep companion for falling asleep, staying asleep, and holding a schedule.",
-  applicationName: "Circadia",
+  title: process.env.CIRCADIA_SURFACE === "mod" ? "Circadia Operator" : "Circadia",
+  description:
+    process.env.CIRCADIA_SURFACE === "mod"
+      ? "James-only inbox. Not the diary."
+      : "A local sleep companion for falling asleep, staying asleep, and holding a schedule.",
+  applicationName: process.env.CIRCADIA_SURFACE === "mod" ? "Circadia Operator" : "Circadia",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

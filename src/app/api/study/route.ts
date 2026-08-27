@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 import { inboxParticipantId, parseInboxPayload } from "@/lib/inbox-payload";
+import { isOperatorSurface } from "@/lib/surface";
 import { studyInboxDir } from "@/lib/study-inbox";
 
 export const runtime = "nodejs";
@@ -25,6 +26,10 @@ async function forward(body: unknown): Promise<boolean> {
 }
 
 export async function POST(request: Request) {
+  if (isOperatorSurface()) {
+    return NextResponse.json({ ok: false, error: "This is the operator." }, { status: 404 });
+  }
+
   let raw: unknown;
   try {
     raw = await request.json();

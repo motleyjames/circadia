@@ -47,7 +47,17 @@ describe("Dock install invariants", () => {
     expect(onboarding).not.toContain("useRouter");
   });
 
-  it("does not put the operator console in the tester nav", () => {
+  it("runs the operator as a second app on its own port, not a page in the diary", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+    expect(pkg.scripts.dev).toContain("43147");
+    expect(pkg.scripts.dev).not.toContain("CIRCADIA_SURFACE=mod");
+    expect(pkg.scripts.mod).toContain("43149");
+    expect(pkg.scripts.mod).toContain("CIRCADIA_SURFACE=mod");
+    expect(readFileSync("next.config.ts", "utf8")).toContain(".next-mod");
+    const mw = readFileSync("src/middleware.ts", "utf8");
+    expect(mw).toContain('CIRCADIA_SURFACE === "mod"');
+    expect(mw).toContain("/api/moderator");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("isOperatorSurface");
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
   });

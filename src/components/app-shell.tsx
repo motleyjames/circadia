@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { CircadiaProvider, useCircadia } from "@/context/circadia-store";
 import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
@@ -9,6 +8,7 @@ import { NativeChrome } from "@/components/native-chrome";
 import { Onboarding } from "@/components/onboarding";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { StudyGate } from "@/components/study-gate";
+import { isOperatorSurface } from "@/lib/surface";
 
 function Stage({
   children,
@@ -36,19 +36,9 @@ function Stage({
 }
 
 function ShellInner({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const { ready, state } = useCircadia();
   const onboarded = Boolean(ready && state.profile?.onboardingComplete);
   const inApp = onboarded && state.study.asked;
-
-  if (pathname.startsWith("/mod")) {
-    return (
-      <div className="night-sky min-h-dvh">
-        <div className="native-drag" aria-hidden />
-        {children}
-      </div>
-    );
-  }
 
   if (!ready) {
     return (
@@ -93,6 +83,18 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  if (isOperatorSurface()) {
+    return (
+      <>
+        <NativeChrome />
+        <div className="night-sky min-h-dvh">
+          <div className="native-drag" aria-hidden />
+          {children}
+        </div>
+      </>
+    );
+  }
+
   return (
     <CircadiaProvider>
       <NativeChrome />

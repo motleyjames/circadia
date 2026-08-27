@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
 const electron = process.env.CIRCADIA_ELECTRON === "1";
+const operator = process.env.CIRCADIA_SURFACE === "mod";
 
 const nextConfig: NextConfig = {
+  distDir: operator ? ".next-mod" : ".next",
   output: electron ? "export" : "standalone",
   images: electron ? { unoptimized: true } : undefined,
   devIndicators: false,
