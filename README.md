@@ -6,7 +6,7 @@ Circadia is local-first. Profile, mornings, dreams, and chat live on this comput
 
 ## Put it on the Dock (Mac)
 
-The packaged Mac app is **one process**. It serves the UI itself. There is no second Circadia, no Next.js runtime inside the `.app`.
+This is not a packaged Chromium app. Those kept dying on launch (renamed Electron helpers, Gatekeeper on unsigned copies, a leftover Electron process swallowing the Dock click). `npm run dock` now compiles a tiny native window and points it at this clone.
 
 ```bash
 cd rest-ai
@@ -15,21 +15,15 @@ npm install
 npm run dock
 ```
 
-That writes **`/Applications/Circadia.app`** (the Applications folder in Finder’s sidebar) and jumps Finder to the file. Drag that icon to the Dock. Remove any old generic Electron icon first (right-click → Options → Remove from Dock).
+Wait for a Circadia window (splash, then Tonight). Drag **that** icon to the Dock. Right-click any leftover **Electron** icon → Options → Remove from Dock. Do not click Electron.
 
-If you already ran `npm run dock` and still cannot see it, it may be in your *home* Applications, not the sidebar one:
+Keep the `rest-ai` folder where it is. The app is a pointer to this project. If you move the folder, run `npm run dock` again.
 
-```bash
-open -R ~/Applications/Circadia.app
-```
+If macOS says the app is from an unidentified developer: right-click Circadia → **Open**.
 
-Or in Finder: **Go → Go to Folder…** (Shift-Command-G) and paste `/Applications` then look for Circadia. If it is empty, `npm run dock` has not finished yet — it builds for a few minutes.
+If the window never appears, send the last 40 lines of `~/Library/Logs/Circadia.log`. That file is the diagnosis.
 
-First launch: if macOS says the app is from an unidentified developer, right-click Circadia → **Open**.
-
-Do not Keep-in-Dock the window that came from `npm run app`. That icon is Electron, not Circadia.
-
-Testers you pay: dish `/Applications/Circadia.app` after `npm run dock`. Study packs stay on **their** Mac unless you set `STUDY_INGEST_URL` to a host you control, or they Download JSON in You and send you the file.
+Need Command Line Tools once (`xcode-select --install`) so `swiftc` can build the window. Without them, dock falls back to this Mac's Electron **without renaming its binary**.
 
 ## What you do
 
@@ -56,7 +50,7 @@ They can read the exact JSON in **You** before or after it leaves, download it, 
 
 **What never leaves:** name, dream text, chat text, medication/supplement strings, height/weight, calendar dates, report ids, IP.
 
-Packs land in `data/study-inbox/` in the repo, or `~/Library/Application Support/Circadia/study-inbox` in the packaged app. Optionally set `STUDY_INGEST_URL` (and `STUDY_INGEST_TOKEN`) so the server forwards a copy to you. The inbox is the local fallback if ingest is down.
+Packs land in `data/study-inbox/` in the repo. Optionally set `STUDY_INGEST_URL` (and `STUDY_INGEST_TOKEN`) so the server forwards a copy to you.
 
 Erase this device mints a new participant number. Pause and rejoin keeps the same number so nights still stitch.
 
@@ -67,7 +61,7 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:43147`. This is still not a Finder app.
+Open `http://127.0.0.1:43147`.
 
 ```bash
 npm test
@@ -75,7 +69,7 @@ npx tsc --noEmit
 npm run build
 ```
 
-`npm test` includes a generated consult corpus — thousands of paraphrases plus follow-ups (`what about the gels?` after Unisom). It checks routing and safety, not frozen essays. The library in `src/lib/research.ts` is the source of truth. Study tests prove a diary with a name, Adderall, a dream essay, and a Unisom chat cannot leak those strings into a pack.
+`npm test` includes a generated consult corpus — thousands of paraphrases plus follow-ups. It checks routing and safety, not frozen essays. The library in `src/lib/research.ts` is the source of truth.
 
 ## What this is not
 
@@ -87,4 +81,4 @@ Dream “meaning” is theme-tagging plus physiology (alcohol and REM rebound, m
 
 ## Why this way
 
-A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study, and even then the pack is inspectable and stripped. The Mac wrap is a window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.
+A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study, and even then the pack is inspectable and stripped. The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.
