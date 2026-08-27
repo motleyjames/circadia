@@ -10,6 +10,7 @@ export const emptyStudy = (): StudyState => ({
   lastSentAt: null,
   lastStatus: null,
   lastError: null,
+  rosterSentAt: null,
 });
 
 export const emptyState = (): CircadiaState => ({
@@ -77,6 +78,7 @@ function coerceStudy(value: unknown): StudyState {
     lastSentAt: typeof s.lastSentAt === "string" ? s.lastSentAt : null,
     lastStatus,
     lastError: typeof s.lastError === "string" ? s.lastError : null,
+    rosterSentAt: typeof s.rosterSentAt === "string" ? s.rosterSentAt : null,
   };
 }
 
@@ -95,6 +97,8 @@ function coerceProfile(value: CircadiaState["profile"] | unknown): Profile | nul
     sex: p.sex === "female" || p.sex === "male" || p.sex === "other" ? p.sex : "unspecified",
     heightCm,
     weightKg,
+    email: typeof p.email === "string" ? p.email.trim().slice(0, 120) : "",
+    phone: typeof p.phone === "string" ? p.phone.trim().slice(0, 24) : "",
     activity:
       p.activity === "sedentary" || p.activity === "moderate" || p.activity === "high" ? p.activity : "light",
     medications: Array.isArray(p.medications) ? p.medications.filter((x) => typeof x === "string") : [],

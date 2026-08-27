@@ -35,6 +35,25 @@ describe("hydrateState", () => {
     });
     expect(state.study.consented).toBe(true);
     expect(state.study.participantId).toBe("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
+    expect(state.study.rosterSentAt).toBeNull();
+  });
+
+  it("keeps email and phone on the local file", () => {
+    const state = hydrateState({
+      profile: {
+        onboardingComplete: true,
+        name: "James",
+        age: 19,
+        heightCm: 180,
+        weightKg: 75,
+        targetSleep: "23:30",
+        targetWake: "07:30",
+        email: "james@colorado.edu",
+        phone: "3035550142",
+      },
+    });
+    expect(state.profile?.email).toBe("james@colorado.edu");
+    expect(state.profile?.phone).toBe("3035550142");
   });
 
   it("keeps a local supplement note and does not require melatonin-only kinds", () => {

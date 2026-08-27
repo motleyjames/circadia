@@ -9,36 +9,37 @@ export function StudyGate() {
   return (
     <div className="flex min-h-0 flex-1 flex-col px-8 pt-16 pb-10">
       <Mark className="size-7" />
-      <p className="mt-10 text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">Optional study</p>
+      <p className="mt-10 text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">
+        Optional study
+      </p>
       <h1 className="font-heading mt-3 max-w-[16ch] text-[2.4rem] leading-[1.05] tracking-tight text-zinc-50">
-        Nights can come back. You do not.
+        Yes is the only send.
       </h1>
       <p className="mt-5 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        Circadia is being rebuilt from real diaries. If you join, this computer sends a stripped night
-        log after each morning — age band, clocks, ratings, medication <em>class</em>. Not your name.
-        Not dream text. Not chat. Not the bottle you typed.
+        If you join, this computer starts a pipeline. You will not press Send. After each morning, a
+        stripped night log leaves on its own. If the app faults, that leaves too.
       </p>
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        If you are being paid to use this, payment happens outside Circadia. We never ask who you are
-        or how you get paid.
+        James also gets a roster card once: your name, email or phone, age, height, weight, and
+        clocks. That is so a wiped laptop is not a lost tester. It is not a backup of your dreams.
       </p>
       <ul className="mt-8 max-w-[42ch] space-y-2 text-[13px] leading-relaxed text-zinc-500">
-        <li>You can read the exact JSON in You before or after it leaves.</li>
-        <li>A random participant number stays here so nights stitch if you pause. Erase this device starts a new number.</li>
-        <li>Keep everything on this computer and the app is unchanged. Nothing is sent.</li>
+        <li>Night packs never carry dream text, chat, or the bottle you typed — only a class.</li>
+        <li>A random participant number stitches nights if you pause. Erase this device starts a new one.</li>
+        <li>Keep everything here and the app is unchanged. Nothing is sent.</li>
       </ul>
       <div className="mt-auto flex flex-col gap-3 pt-10">
         <button
           type="button"
           onClick={joinStudy}
-          className="h-14 rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 transition-opacity hover:opacity-90"
+          className="h-14 cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 transition-opacity hover:opacity-90"
         >
           Join the study
         </button>
         <button
           type="button"
           onClick={declineStudy}
-          className="h-14 rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 transition-colors hover:bg-white/6"
+          className="h-14 cursor-pointer rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 transition-colors hover:bg-white/6"
         >
           Keep everything on this computer
         </button>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Send } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
@@ -80,11 +79,6 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
             </div>
           ))}
           <div ref={endRef} />
-          {rail ? null : (
-            <Link href="/you" className="pt-1 text-[10px] text-zinc-500 underline-offset-4 hover:underline">
-              Full chat is in You
-            </Link>
-          )}
         </div>
       )}
     </div>

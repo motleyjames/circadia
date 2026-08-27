@@ -15,7 +15,7 @@ npm install
 npm run dock
 ```
 
-The compile takes a minute. Wait for a Circadia window. The sidebar should say **v0.4.4**. Morning should ask *Did you take any supplements last night to help you sleep?* — **no** red Next.js `N`. If you still see `N` or “Melatonin or magnesium last night?”, that window is the old process: Cmd+Q, then `npm run dock` again.
+The compile takes a minute. Wait for a Circadia window. The sidebar should say **v0.5.0**. Morning should ask *Did you take any supplements last night to help you sleep?* — **no** red Next.js `N`. If you still see `N` or “Melatonin or magnesium last night?”, that window is the old process: Cmd+Q, then `npm run dock` again.
 
 Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again. Chrome on http://127.0.0.1:43147 is still `npm run dev` for hacking; the Dock app is the product window.
 
@@ -29,32 +29,46 @@ Need Command Line Tools once (`xcode-select --install`) so `swiftc` can build th
 
 ## What you do
 
-1. **You** — age, height, weight, activity, medications, supplements, target sleep/wake, study opt-in.
-2. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise.
-3. **Morning interview** — tap bubbles. Yes/no. Dropdowns only when the answer is yes (drinks → how many / spins; supplements → which; night waking → about how long). Optional dream report, including “any meaning behind this?”
-4. **Notes** — Circadia writes on the breakdown. After **seven** logged mornings it may discuss melatonin or magnesium. It will say when the first lever is alcohol or screens instead.
-5. **Library** — conservative research you can actually stand behind. Import/export your data.
+1. **Signup** — name, age, height, weight, and an email or phone so the file can be found if this computer is wiped.
+2. **Study gate** — yes turns the pipeline on. No Send button after that.
+3. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise.
+4. **Morning interview** — tap bubbles. Yes/no. Dropdowns only when the answer is yes.
+5. **Notes** — Circadia writes on the breakdown. After **seven** logged mornings it may discuss melatonin or magnesium.
+6. **You** — the file. Clocks, meds, contact. Not a JSON dump. Not a second copy of chat.
+7. **Library** — conservative research. Import/export your data.
 
-Ask Circadia in the consult rail. It only answers from your logs, your profile, and the library.
+## Paid testers and the pipeline
 
-## Paid testers and anonymous nights
+If you are paying people to use Circadia, payment happens **outside** the app.
 
-If you are paying people to use Circadia, payment happens **outside** the app. Circadia never asks who they are or how they get paid.
+After signup they choose once:
 
-After intake they choose:
-
-- **Join the study** — a random participant number is minted on this computer. After each real morning (not a loaded sample week), a stripped pack is POSTed to `/api/study`.
+- **Join the study** — that is the send. A roster card leaves immediately (name, email or phone, age, height, weight, clocks). After each real morning, a stripped night pack leaves on its own. If the app throws, a fault leaves too.
 - **Keep everything on this computer** — the app is unchanged. Nothing is sent.
 
-They can read the exact JSON in **You** before or after it leaves, download it, send now, or leave.
+There is no Send now. Testers do not see JSON.
 
-**What the pack contains:** age band, BMI band (or `unconfirmed` if body was never edited), struggle, activity, medication *classes* (stimulant, antihistamine, …), clocks, ratings, drink flags, session counts, chat *topic ids* and turn count.
+**Night packs contain:** age band, BMI band (or `unconfirmed` if body was never edited), struggle, activity, medication *classes*, clocks, ratings, drink flags, session counts, chat *topic ids* and turn count.
 
-**What never leaves:** name, dream text, chat text, medication/supplement strings, height/weight, calendar dates, report ids, IP.
+**Night packs never contain:** name, email, phone, dream text, chat text, medication/supplement strings, height/weight, calendar dates, report ids, IP.
 
-Packs land in `data/study-inbox/` in the repo. Optionally set `STUDY_INGEST_URL` (and `STUDY_INGEST_TOKEN`) so the server forwards a copy to you.
+**Roster cards contain** the contact so a wiped laptop is not a lost tester. That is not a cloud backup of the diary. Dreams still live only on their machine.
+
+Packs land in `data/study-inbox/` on the machine running Circadia. Testers on *their* computers only reach you if that app can POST to a host you control — set `STUDY_INGEST_URL` (and optional `STUDY_INGEST_TOKEN`) on their install, pointing at yours.
 
 Erase this device mints a new participant number. Pause and rejoin keeps the same number so nights still stitch.
+
+## Operator console (James only)
+
+`/mod` is not in the sidebar. Testers should never be sent there.
+
+```
+http://127.0.0.1:43147/mod
+```
+
+Passphrase is `CIRCADIA_MOD_KEY`, default `circadia-local` on a machine with no env. Change it. The page shows people (user count), night packs, and faults — cards, not a JSON theater.
+
+This is a local reading room, not an accounts system. Anyone who can open Circadia on this computer and knows the key can read the inbox.
 
 ## Browser only
 
@@ -83,4 +97,4 @@ Dream “meaning” is theme-tagging plus physiology (alcohol and REM rebound, m
 
 ## Why this way
 
-A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study, and even then the pack is inspectable and stripped. The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.
+A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped; contact lives on a separate roster James reads at `/mod`. The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.

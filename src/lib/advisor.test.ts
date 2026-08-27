@@ -20,6 +20,8 @@ const profile: Profile = {
   units: "imperial",
   notificationsEnabled: false,
   onboardingComplete: true,
+  email: "",
+  phone: "",
 };
 
 function report(partial: Partial<MorningReport> & Pick<MorningReport, "morningDate">): MorningReport {

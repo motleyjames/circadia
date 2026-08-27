@@ -6,15 +6,18 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
 import { answerQuestion, makeChatMessage } from "@/lib/chat";
 import { sampleWeekState } from "@/lib/demo";
+import { installFaultReporter } from "@/lib/fault-reporter";
 import { startScreenOffWatcher } from "@/lib/notifications";
+import { buildFault, buildRoster } from "@/lib/operator";
 import { emptyState, importStateJson, loadState, saveState } from "@/lib/storage";
 import { anonymityViolations, buildStudyPack } from "@/lib/study";
-import { postStudyPack } from "@/lib/study-client";
+import { postInbox } from "@/lib/study-client";
 import type { CircadiaState, MorningReport, Profile, WindDownSession } from "@/lib/types";
 import { newId } from "@/lib/time";
 
@@ -51,6 +54,32 @@ function patch(updater: (prev: CircadiaState) => CircadiaState) {
   write(updater(snapshot()));
 }
 
+function markSend(ok: boolean, error: string | null, extra?: { rosterSentAt?: string }) {
+  patch((prev) => ({
+    ...prev,
+    study: {
+      ...prev.study,
+      lastSentAt: ok ? new Date().toISOString() : prev.study.lastSentAt,
+      lastStatus: ok ? "sent" : "error",
+      lastError: ok ? null : (error ?? "Send failed."),
+      rosterSentAt: extra?.rosterSentAt ?? prev.study.rosterSentAt,
+    },
+  }));
+}
+
+async function transmitRoster() {
+  const current = snapshot();
+  if (!current.study.consented || !current.study.participantId || !current.profile) return;
+  try {
+    const result = await postInbox(buildRoster(current));
+    markSend(result.ok, result.error ?? null, {
+      rosterSentAt: result.ok ? new Date().toISOString() : undefined,
+    });
+  } catch {
+    markSend(false, "Could not send the roster card.");
+  }
+}
+
 async function transmitStudy() {
   const current = snapshot();
   if (!current.study.consented || !current.study.participantId) return;
@@ -68,25 +97,20 @@ async function transmitStudy() {
       }));
       return;
     }
-    const result = await postStudyPack(pack);
-    patch((prev) => ({
-      ...prev,
-      study: {
-        ...prev.study,
-        lastSentAt: result.ok ? new Date().toISOString() : prev.study.lastSentAt,
-        lastStatus: result.ok ? "sent" : "error",
-        lastError: result.ok ? null : (result.error ?? "Send failed."),
-      },
-    }));
+    const result = await postInbox(pack);
+    markSend(result.ok, result.error ?? null);
   } catch {
-    patch((prev) => ({
-      ...prev,
-      study: {
-        ...prev.study,
-        lastStatus: "error",
-        lastError: "Could not build a pack from this diary.",
-      },
-    }));
+    markSend(false, "Could not build a pack from this diary.");
+  }
+}
+
+async function transmitFault(message: string, extra?: { stack?: string | null; href?: string | null }) {
+  const current = snapshot();
+  if (!current.study.consented || !current.study.participantId) return;
+  try {
+    await postInbox(buildFault(current, message, extra));
+  } catch {
+    // faults are best-effort
   }
 }
 
@@ -118,14 +142,40 @@ function noopSubscribe() {
 export function CircadiaProvider({ children }: { children: ReactNode }) {
   const state = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
   const ready = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const rosterCatchUp = useRef(false);
 
   useEffect(() => {
     if (!state.profile?.notificationsEnabled || !state.profile.targetSleep) return;
     return startScreenOffWatcher(state.profile.targetSleep, true);
   }, [state.profile?.notificationsEnabled, state.profile?.targetSleep]);
 
+  useEffect(() => {
+    return installFaultReporter((message, extra) => {
+      void transmitFault(message, extra);
+    }, () => snapshot().study.consented);
+  }, []);
+
+  useEffect(() => {
+    if (!ready || rosterCatchUp.current) return;
+    if (state.study.consented && !state.study.rosterSentAt && state.profile) {
+      rosterCatchUp.current = true;
+      void transmitRoster();
+    }
+  }, [ready, state.study.consented, state.study.rosterSentAt, state.profile]);
+
   const saveProfile = useCallback((profile: Profile) => {
-    patch((prev) => ({ ...prev, profile }));
+    const prev = snapshot();
+    const contactChanged =
+      prev.profile?.email !== profile.email ||
+      prev.profile?.phone !== profile.phone ||
+      prev.profile?.name !== profile.name ||
+      prev.profile?.age !== profile.age ||
+      prev.profile?.heightCm !== profile.heightCm ||
+      prev.profile?.weightKg !== profile.weightKg;
+    patch((s) => ({ ...s, profile }));
+    if (prev.study.consented && (contactChanged || !prev.study.rosterSentAt)) {
+      void transmitRoster();
+    }
   }, []);
 
   const addReport = useCallback((report: Omit<MorningReport, "id" | "createdAt">) => {
@@ -145,7 +195,10 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
         ),
       };
     });
-    if (shouldSend) void transmitStudy();
+    if (shouldSend) {
+      if (!snapshot().study.rosterSentAt) void transmitRoster();
+      void transmitStudy();
+    }
   }, []);
 
   const removeLatestReport = useCallback(() => {
@@ -207,8 +260,11 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
         consented: true,
         participantId: prev.study.participantId ?? crypto.randomUUID(),
         lastError: null,
+        rosterSentAt: null,
       },
     }));
+    void transmitRoster();
+    if (snapshot().reports.length) void transmitStudy();
   }, []);
 
   const declineStudy = useCallback(() => {
@@ -232,11 +288,13 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
         asked: true,
         consented: false,
         lastError: null,
+        rosterSentAt: null,
       },
     }));
   }, []);
 
   const sendStudyNow = useCallback(async () => {
+    await transmitRoster();
     await transmitStudy();
   }, []);
 

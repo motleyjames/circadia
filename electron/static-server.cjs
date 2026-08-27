@@ -71,13 +71,22 @@ async function handleStudy(req, res, inbox, ingest, ingestToken) {
     });
     return;
   }
-  if (!raw || typeof raw !== "object" || Array.isArray(raw) || raw.schema !== "circadia-study-v1") {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     send(res, 400, JSON.stringify({ ok: false, error: "Unknown schema." }), {
       "content-type": "application/json",
     });
     return;
   }
-  if ("name" in raw || "dream" in raw) {
+  const schema = raw.schema;
+  const allowed =
+    schema === "circadia-study-v1" || schema === "circadia-roster-v1" || schema === "circadia-fault-v1";
+  if (!allowed) {
+    send(res, 400, JSON.stringify({ ok: false, error: "Unknown schema." }), {
+      "content-type": "application/json",
+    });
+    return;
+  }
+  if (schema === "circadia-study-v1" && ("name" in raw || "dream" in raw || "email" in raw || "phone" in raw)) {
     send(res, 400, JSON.stringify({ ok: false, error: "Pack contains identity fields." }), {
       "content-type": "application/json",
     });

@@ -141,6 +141,11 @@ export function anonymityViolations(pack: StudyPack, state: CircadiaState): stri
     hits.push("name");
   }
 
+  const email = state.profile?.email?.trim().toLowerCase() ?? "";
+  if (email.length >= 6 && blob.includes(email)) hits.push("email");
+  const phoneDigits = (state.profile?.phone ?? "").replace(/\D/g, "");
+  if (phoneDigits.length >= 7 && blob.includes(phoneDigits)) hits.push("phone");
+
   for (const med of state.profile?.medications ?? []) {
     const m = med.trim().toLowerCase();
     if (m.length >= 4 && blob.includes(m)) hits.push("medication");
