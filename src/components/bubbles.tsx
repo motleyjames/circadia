@@ -36,6 +36,7 @@ export function BubbleGroup<T extends string | number>({
           <button
             key={String(option.value)}
             type="button"
+            aria-pressed={selected}
             onClick={() => onChange(option.value)}
             className={cn(
               "min-h-11 rounded-full border px-3 py-3 text-sm transition-all",

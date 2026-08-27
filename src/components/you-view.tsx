@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ensureNotificationPermission } from "@/lib/notifications";
 import { bmiKgM, cmToFeetInches, feetInchesToCm, formatClock, kgToLb, lbToKg } from "@/lib/time";
 import type { ActivityLevel, Profile } from "@/lib/types";
+import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
 
 export function YouView() {
   const { state, saveProfile, resetAll, loadSampleWeek } = useCircadia();
@@ -17,6 +18,7 @@ export function YouView() {
   const [inches, setInches] = useState(String(imperial.inches));
   const [pounds, setPounds] = useState(String(Math.round(kgToLb(profile.weightKg))));
   const [age, setAge] = useState(String(profile.age));
+  const [name, setName] = useState(profile.name);
   const [medDraft, setMedDraft] = useState("");
   const [supDraft, setSupDraft] = useState("");
 
@@ -40,6 +42,12 @@ export function YouView() {
       </p>
 
       <section className="mt-6 space-y-4">
+        <Field
+          label="Name"
+          value={name}
+          onChange={setName}
+          onBlur={() => persist({ name: name.trim() || profile.name })}
+        />
         <div className="grid grid-cols-3 gap-2">
           <Field label="Age" value={age} onChange={setAge} onBlur={() => persist({ age: Number(age) || profile.age })} />
           <Field label="ft" value={feet} onChange={setFeet} onBlur={() => persist({ heightCm: feetInchesToCm(Number(feet) || 0, Number(inches) || 0) })} />
@@ -94,12 +102,36 @@ export function YouView() {
         />
 
         <div>
+          <p className="mb-2 text-xs text-zinc-400">Asleep-by</p>
+          <BubbleGroup
+            value={profile.targetSleep}
+            onChange={(targetSleep) => persist({ targetSleep })}
+            columns={3}
+            options={SLEEP_TARGET_OPTIONS.map((t) => ({ value: t, label: formatClock(t, profile.units) }))}
+          />
+        </div>
+        <div>
+          <p className="mb-2 text-xs text-zinc-400">Wake</p>
+          <BubbleGroup
+            value={profile.targetWake}
+            onChange={(targetWake) => persist({ targetWake })}
+            columns={3}
+            options={WAKE_TARGET_OPTIONS.map((t) => ({ value: t, label: formatClock(t, profile.units) }))}
+          />
+        </div>
+
+        <div>
           <p className="mb-2 text-xs text-zinc-400">Screen-off notifications</p>
           <YesNo
             value={profile.notificationsEnabled}
-            onChange={(notificationsEnabled) => {
-              persist({ notificationsEnabled });
-              if (notificationsEnabled) void ensureNotificationPermission();
+            onChange={(on) => {
+              void (async () => {
+                if (!on) {
+                  persist({ notificationsEnabled: false });
+                  return;
+                }
+                persist({ notificationsEnabled: await ensureNotificationPermission() });
+              })();
             }}
             yesLabel="On"
             noLabel="Off"
@@ -108,7 +140,17 @@ export function YouView() {
       </section>
 
       <section className="mt-10 space-y-2">
-        <Button variant="outline" className="w-full rounded-full border-white/15" onClick={loadSampleWeek}>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full rounded-full border-white/15"
+          onClick={() => {
+            if (state.reports.length > 0 && !window.confirm("Replace your mornings with a labeled sample week?")) {
+              return;
+            }
+            loadSampleWeek();
+          }}
+        >
           Load sample week
         </Button>
         <Button

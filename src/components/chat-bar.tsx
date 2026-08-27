@@ -85,6 +85,9 @@ export function ChatBar() {
           <Send className="size-4" />
         </Button>
       </form>
+      <p className="mt-1.5 px-1 text-[10px] leading-relaxed text-zinc-600">
+        Educational, not a doctor. Grounded in your logs and the library.
+      </p>
     </div>
   );
 }

@@ -32,6 +32,12 @@ export function InsightsView() {
         scientist, not a horoscope. Confidence is labeled because guessing is how these apps get people hurt.
       </p>
 
+      {state.demoWeek ? (
+        <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
+          Sample week is loaded so you can see the seven-night gate. It is not your sleep. Log a real morning to replace it.
+        </p>
+      ) : null}
+
       {state.reports.length === 0 ? (
         <div className="mt-6 rounded-3xl border border-white/10 bg-white/4 p-4">
           <p className="text-sm text-zinc-200">No mornings yet.</p>
@@ -40,10 +46,26 @@ export function InsightsView() {
             sample student week — it is clearly fake data.
           </p>
           <div className="mt-3 flex gap-2">
-            <Button render={<Link href="/check-in" />} className="rounded-full bg-sky-300 text-zinc-950 hover:bg-sky-200">
+            <Link
+              href="/check-in"
+              className="inline-flex items-center rounded-full bg-sky-300 px-4 py-2 text-sm text-zinc-950"
+            >
               Morning interview
-            </Button>
-            <Button variant="outline" className="rounded-full border-white/15" onClick={loadSampleWeek}>
+            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full border-white/15"
+              onClick={() => {
+                if (
+                  state.reports.length > 0 &&
+                  !window.confirm("Replace your mornings with a labeled sample week?")
+                ) {
+                  return;
+                }
+                loadSampleWeek();
+              }}
+            >
               Load sample week
             </Button>
           </div>
@@ -103,9 +125,12 @@ export function InsightsView() {
                   <span className="text-zinc-100">{labelSession(s.id)}</span> — {s.why}
                 </p>
               ))}
-              <Button render={<Link href="/" />} className="mt-3 rounded-full bg-white/10 text-zinc-100">
+              <Link
+                href="/"
+                className="mt-3 inline-flex rounded-full bg-white/10 px-4 py-2 text-xs text-zinc-100"
+              >
                 Open wind-down
-              </Button>
+              </Link>
             </div>
           </div>
         ) : (

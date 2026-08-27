@@ -20,10 +20,9 @@ export function pingScreenOff() {
   try {
     new Notification(NOTIFY_TITLE, {
       body: "Screens down. One hour to the sleep window. Dim the room.",
-      silent: false,
     });
   } catch {
-    /* some browsers require a service worker for notifications */
+    /* some browsers require a service worker */
   }
 }
 
@@ -42,32 +41,39 @@ export function msUntilScreenOff(targetSleep: string, now = new Date()): number 
   const current = now.getHours() * 60 + now.getMinutes();
   let delta = off - current;
   if (delta < 0) delta += 24 * 60;
-  const seconds = now.getSeconds();
-  return (delta * 60 - seconds) * 1000;
+  return (delta * 60 - now.getSeconds()) * 1000;
 }
 
+/**
+ * Arm a one-shot ping. Does not prompt — permission is only requested from You / onboarding.
+ * `cancelled` closes the race where unmount happens while a timeout is being set.
+ */
 export function startScreenOffWatcher(targetSleep: string, enabled: boolean): () => void {
   if (!enabled || typeof window === "undefined") return () => undefined;
+  if (!("Notification" in window) || Notification.permission !== "granted") {
+    return () => undefined;
+  }
 
+  let cancelled = false;
   let timer: number | undefined;
 
   const arm = () => {
+    if (cancelled) return;
     if (shouldBeOffScreens(targetSleep)) {
       pingScreenOff();
       return;
     }
     const wait = Math.min(msUntilScreenOff(targetSleep), 6 * 60 * 60 * 1000);
     timer = window.setTimeout(() => {
+      if (cancelled) return;
       if (shouldBeOffScreens(targetSleep)) pingScreenOff();
     }, Math.max(1000, wait));
   };
 
-  void (async () => {
-    const ok = await ensureNotificationPermission();
-    if (ok) arm();
-  })();
+  arm();
 
   return () => {
-    if (timer) window.clearTimeout(timer);
+    cancelled = true;
+    if (timer !== undefined) window.clearTimeout(timer);
   };
 }

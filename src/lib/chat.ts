@@ -11,9 +11,6 @@ export type ChatReply = {
   citations: string[];
 };
 
-const DISCLAIMER =
-  "Educational, not a diagnosis or a prescription. If sleep is collapsing, you snore/gasp, or mood is unsafe, talk to a clinician — Circadia is a log and a coach, not a doctor.";
-
 export function answerQuestion(
   question: string,
   profile: Profile | null,
@@ -21,7 +18,7 @@ export function answerQuestion(
 ): ChatReply {
   const q = question.trim();
   if (!q) {
-    return { text: "Ask anything about tonight, last night, or the levers. Short questions are fine.", citations: [] };
+    return { text: "Ask about tonight, last night, or a lever. Short questions.", citations: [] };
   }
 
   const lower = q.toLowerCase();
@@ -31,19 +28,19 @@ export function answerQuestion(
     if (lastDream?.dream) {
       const read = readDream(lastDream.dream.text, lastDream, profile);
       return {
-        text: `${read.physiology}\n\n${read.meaning}\n\n${read.caution}`,
+        text: `${read.physiology} ${read.meaning}`,
         citations: ["dreams", "alcohol"],
       };
     }
     return {
-      text: "Log a dream in the morning interview (optional) and toggle “any meaning behind this?” I will stay on sleep physiology and themes you actually wrote — no dream dictionary.",
+      text: "Log a dream in the morning interview and toggle “any meaning?” I will stay on physiology and the words you wrote — no dictionary.",
       citations: ["dreams"],
     };
   }
 
   if (!profile) {
     return {
-      text: "Finish the profile first so I can use age, meds, activity, and your target window. Then ask again.",
+      text: "Finish the profile first so I can use age, meds, activity, and your window.",
       citations: [],
     };
   }
@@ -57,24 +54,19 @@ export function answerQuestion(
     const rec = recs.ready ? recs.supplements.find((s) => s.id === "melatonin") : undefined;
     const article = RESEARCH.find((a) => a.id === "melatonin")!;
     return {
-      text: [
-        article.summary,
-        rec ? rec.body : `I wait for about ${recs.nightsNeeded} mornings before recommending it. You have ${recs.nightsLogged}. ${article.body.split("Circadia")[0].trim()}`,
-        DISCLAIMER,
-      ].join("\n\n"),
+      text: rec
+        ? rec.body
+        : `${article.summary} I wait for about ${recs.nightsNeeded} mornings (${recs.nightsLogged} so far). It is a clock signal, not a sleeping pill.`,
       citations: ["melatonin"],
     };
   }
 
   if (/magnesium/.test(lower)) {
     const rec = recs.ready ? recs.supplements.find((s) => s.id === "magnesium") : undefined;
-    const article = RESEARCH.find((a) => a.id === "magnesium")!;
     return {
-      text: [
-        article.summary,
-        rec ? rec.body : `Magnesium is a maybe, not a protocol. After ${recs.nightsNeeded} nights I will say whether your pattern even fits the weak evidence. Logged: ${recs.nightsLogged}.`,
-        DISCLAIMER,
-      ].join("\n\n"),
+      text: rec
+        ? rec.body
+        : `Magnesium is mixed evidence, not a protocol. After ${recs.nightsNeeded} nights I will say whether your pattern even fits. Logged: ${recs.nightsLogged}.`,
       citations: ["magnesium"],
     };
   }
@@ -82,26 +74,18 @@ export function answerQuestion(
   if (/alcohol|drink|drunk|spins/.test(lower)) {
     const n = week.alcoholNights;
     return {
-      text: [
-        RESEARCH.find((a) => a.id === "alcohol")!.summary,
-        reports.length
-          ? `In your log: ${n} of ${reports.length} nights had drinks.`
-          : "Once you log mornings with the drink bubbles, I can compare those nights to the dry ones.",
-        DISCLAIMER,
-      ].join("\n\n"),
+      text: reports.length
+        ? `Alcohol shortens latency then fragments the second half, including REM. Your log: ${n} of ${reports.length} nights had drinks.`
+        : "Alcohol shortens latency then fragments the second half of the night, including REM. Log the drink bubbles and I will compare those nights to the dry ones.",
       citations: ["alcohol"],
     };
   }
 
   if (/screen|phone|blue light|blue-light/.test(lower)) {
     return {
-      text: [
-        RESEARCH.find((a) => a.id === "light-screens")!.body,
-        reports.length
-          ? `Your average screen-off window is about ${Math.round(week.meanScreenOffMinutes)} minutes.`
-          : "The rule in Circadia is one hour. The notification is that rule, not a gadget.",
-        DISCLAIMER,
-      ].join("\n\n"),
+      text: reports.length
+        ? `The hour is a behavioral gate — content is usually more alerting than the LED. Your average screen-off window is about ${Math.round(week.meanScreenOffMinutes)} minutes.`
+        : "Circadia’s rule is one hour off screens. The ping is that rule, not a blue-light gadget. Morning outdoor light is the other half.",
       citations: ["light-screens"],
     };
   }
@@ -109,26 +93,21 @@ export function answerQuestion(
   if (/schedule|wake time|bedtime|circadian|tonight/.test(lower)) {
     return {
       text: [
-        `Your target is ${formatClock(profile.targetSleep, profile.units)} to ${formatClock(profile.targetWake, profile.units)}. Screens down at one hour before sleep.`,
-        RESEARCH.find((a) => a.id === "circadian-anchor")!.body,
+        `Target ${formatClock(profile.targetSleep, profile.units)}–${formatClock(profile.targetWake, profile.units)}. Wake time is the anchor.`,
         week.nights.length
           ? `Mean sleep ${formatDuration(week.meanDurationMinutes)}, wake spread ~${Math.round(week.wakeSpreadMinutes)} min.`
-          : "",
-        DISCLAIMER,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
+          : "Log a few mornings and I will score the spread.",
+      ].join(" "),
       citations: ["circadian-anchor"],
     };
   }
 
   if (/how.*(doing|sleeping)|am i ok|is my sleep|tips|advice|help me/.test(lower)) {
-    const top = notes.filter((n) => n.kind !== "context").slice(0, 3);
+    const top = notes.filter((n) => n.kind !== "context").slice(0, 2);
     return {
-      text: [
-        top.map((n) => `• ${n.title}: ${n.body}`).join("\n\n") || "Log a morning and I will have a breakdown instead of generic tips.",
-        DISCLAIMER,
-      ].join("\n\n"),
+      text:
+        top.map((n) => `${n.title}: ${n.body}`).join(" ") ||
+        "Log a morning and I will have a breakdown instead of generic tips.",
       citations: top.flatMap((n) => n.sourceIds).slice(0, 4),
     };
   }
@@ -137,18 +116,16 @@ export function answerQuestion(
     const article = retrieved[0];
     const personal = notes.find((n) => n.sourceIds.includes(article.id));
     return {
-      text: [article.body, personal ? `On your logs: ${personal.body}` : "", DISCLAIMER].filter(Boolean).join("\n\n"),
+      text: [article.summary, personal ? `On your logs: ${personal.title}.` : ""].filter(Boolean).join(" "),
       citations: [article.id],
     };
   }
 
   const top = notes.filter((n) => n.kind !== "context").slice(0, 2);
   return {
-    text: [
-      top.map((n) => `${n.title}. ${n.body}`).join("\n\n") ||
-        "I answer from your logs, your profile, and Circadia's sleep library. Try asking about screens, alcohol, melatonin, dreams, or your schedule.",
-      DISCLAIMER,
-    ].join("\n\n"),
+    text:
+      top.map((n) => `${n.title}. ${n.body}`).join(" ") ||
+      "I answer from your logs, your profile, and the library. Try screens, alcohol, melatonin, dreams, or the schedule.",
     citations: top.flatMap((n) => n.sourceIds).slice(0, 3),
   };
 }

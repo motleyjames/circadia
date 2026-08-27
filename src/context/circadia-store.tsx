@@ -87,6 +87,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     };
     patch((prev) => ({
       ...prev,
+      demoWeek: false,
       reports: [...prev.reports.filter((r) => r.morningDate !== full.morningDate), full].sort((a, b) =>
         a.morningDate.localeCompare(b.morningDate),
       ),
