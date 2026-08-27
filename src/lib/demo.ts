@@ -25,6 +25,8 @@ const SAMPLE_PROFILE: Profile = {
   units: "imperial",
   notificationsEnabled: false,
   onboardingComplete: true,
+  email: "",
+  phone: "",
 };
 
 /** A plausible messy student week — not a miracle recovery arc. */

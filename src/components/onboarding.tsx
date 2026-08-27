@@ -5,11 +5,14 @@ import { BrandStage } from "@/components/brand-stage";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { hasContact, normalizeEmail, normalizePhone } from "@/lib/contact";
 import { ensureNotificationPermission } from "@/lib/notifications";
 import {
   DEFAULT_HEIGHT_CM,
   DEFAULT_WEIGHT_KG,
+  feetInchesToCm,
   formatClock,
+  lbToKg,
   screenOffClock,
   sleepFromWake,
   sleepNeedHours,
@@ -65,8 +68,8 @@ const PHASES: { id: Phase; title: string; body: string }[] = [
 ];
 
 const INTAKE = [
-  { kicker: "01", title: "The problem" },
-  { kicker: "02", title: "Age" },
+  { kicker: "01", title: "Your file" },
+  { kicker: "02", title: "The problem" },
   { kicker: "03", title: "Wake time" },
   { kicker: "04", title: "What you take" },
   { kicker: "05", title: "Alerts" },
@@ -76,8 +79,15 @@ export function Onboarding() {
   const { saveProfile } = useCircadia();
   const [cover, setCover] = useState(true);
   const [step, setStep] = useState(0);
-  const [problem, setProblem] = useState<Problem>("falling");
+  const [name, setName] = useState("");
   const [age, setAge] = useState("19");
+  const [feet, setFeet] = useState("5");
+  const [inches, setInches] = useState("10");
+  const [pounds, setPounds] = useState("145");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [fileHint, setFileHint] = useState<string | null>(null);
+  const [problem, setProblem] = useState<Problem>("falling");
   const [phase, setPhase] = useState<Phase>("neither");
   const [wakeTime, setWakeTime] = useState(PHASE_WAKE.neither);
   const [stimulant, setStimulant] = useState("");
@@ -92,25 +102,40 @@ export function Onboarding() {
     [wakeTime, duration],
   );
   const offClock = screenOffClock(targetSleep);
+  const fileReady =
+    name.trim().length >= 2 &&
+    Number(age) >= 13 &&
+    hasContact(email, phone);
 
   function pickPhase(next: Phase) {
     setPhase(next);
     setWakeTime(PHASE_WAKE[next]);
   }
 
+  function heightCm(): number {
+    const cm = feetInchesToCm(Number(feet) || 0, Number(inches) || 0);
+    return cm >= 100 ? cm : DEFAULT_HEIGHT_CM;
+  }
+
+  function weightKg(): number {
+    const kg = lbToKg(Number(pounds) || 0);
+    return kg >= 30 ? kg : DEFAULT_WEIGHT_KG;
+  }
+
   async function finish() {
     setBusy(true);
     setError(null);
     const granted = await ensureNotificationPermission();
-    const struggles: Struggle[] =
-      problem === "both" ? ["falling", "staying"] : [problem];
+    const struggles: Struggle[] = problem === "both" ? ["falling", "staying"] : [problem];
     const med = stimulant.trim();
     const profile: Profile = {
-      name: "you",
+      name: name.trim(),
       age: ageNum,
       sex: "unspecified",
-      heightCm: DEFAULT_HEIGHT_CM,
-      weightKg: DEFAULT_WEIGHT_KG,
+      heightCm: heightCm(),
+      weightKg: weightKg(),
+      email: normalizeEmail(email),
+      phone: normalizePhone(phone),
       activity: "light",
       medications: med ? [med] : [],
       supplements: [],
@@ -131,7 +156,7 @@ export function Onboarding() {
           <button
             type="button"
             onClick={() => setCover(false)}
-            className="h-14 w-full rounded-full bg-zinc-50 text-[15px] font-medium tracking-tight text-zinc-950 transition-opacity hover:opacity-90"
+            className="h-14 w-full cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium tracking-tight text-zinc-950 transition-opacity hover:opacity-90"
           >
             Begin
           </button>
@@ -155,10 +180,7 @@ export function Onboarding() {
           {INTAKE.map((_, i) => (
             <span
               key={i}
-              className={cn(
-                "h-px flex-1 rounded-full",
-                i <= step ? "bg-zinc-100" : "bg-white/12",
-              )}
+              className={cn("h-px flex-1 rounded-full", i <= step ? "bg-zinc-100" : "bg-white/12")}
             />
           ))}
         </div>
@@ -171,12 +193,76 @@ export function Onboarding() {
 
         {step === 0 && (
           <section className="mt-5">
+            <h1 className="max-w-[16ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
+              A diary needs a name.
+            </h1>
+            <p className="mt-3 max-w-[38ch] text-[15px] leading-relaxed text-zinc-400">
+              Nights live on this computer. Email or phone is so the file can be found if this
+              machine is wiped — not a login, not a newsletter.
+            </p>
+
+            <label className="mt-8 block">
+              <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
+                Name
+              </span>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value.slice(0, 80))}
+                placeholder="What we should call you"
+                className="mt-3 h-14 rounded-2xl border-white/10 bg-white/4 px-5 text-lg text-zinc-50"
+              />
+            </label>
+
+            <div className="mt-5 grid grid-cols-4 gap-2">
+              <FileField label="Age" value={age} onChange={(v) => setAge(v.replace(/[^\d]/g, "").slice(0, 2))} />
+              <FileField label="ft" value={feet} onChange={(v) => setFeet(v.replace(/[^\d]/g, "").slice(0, 1))} />
+              <FileField label="in" value={inches} onChange={(v) => setInches(v.replace(/[^\d]/g, "").slice(0, 2))} />
+              <FileField
+                label="lb"
+                value={pounds}
+                onChange={(v) => setPounds(v.replace(/[^\d]/g, "").slice(0, 3))}
+              />
+            </div>
+            <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">{need.label}.</p>
+
+            <label className="mt-6 block">
+              <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
+                Email
+              </span>
+              <Input
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="one of these is enough"
+                className="mt-3 h-12 rounded-2xl border-white/10 bg-white/4 px-5 text-zinc-50"
+              />
+            </label>
+            <label className="mt-4 block">
+              <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
+                Phone
+              </span>
+              <Input
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="or a number James can reach"
+                className="mt-3 h-12 rounded-2xl border-white/10 bg-white/4 px-5 text-zinc-50"
+              />
+            </label>
+            {fileHint ? <p className="mt-4 text-[13px] text-amber-200/90">{fileHint}</p> : null}
+          </section>
+        )}
+
+        {step === 1 && (
+          <section className="mt-5">
             <h1 className="max-w-[18ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
               What is actually broken.
             </h1>
             <p className="mt-3 max-w-[34ch] text-[15px] leading-relaxed text-zinc-400">
-              Falling asleep and staying asleep are different problems. We do not treat them as
-              one complaint.
+              Falling asleep and staying asleep are different problems. We do not treat them as one
+              complaint.
             </p>
             <ul className="mt-8 space-y-2">
               {PROBLEMS.map((s) => (
@@ -189,30 +275,6 @@ export function Onboarding() {
                 />
               ))}
             </ul>
-          </section>
-        )}
-
-        {step === 1 && (
-          <section className="mt-5">
-            <h1 className="max-w-[16ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
-              How much sleep you need.
-            </h1>
-            <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-              Teens usually need 8–10 hours. Young adults 7–9. Height and weight live in You if a
-              note ever needs them.
-            </p>
-            <label className="mt-10 block">
-              <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
-                Age
-              </span>
-              <Input
-                inputMode="numeric"
-                value={age}
-                onChange={(e) => setAge(e.target.value.replace(/[^\d]/g, "").slice(0, 2))}
-                className="mt-3 h-16 rounded-2xl border-white/10 bg-white/4 px-5 font-heading text-3xl text-zinc-50"
-              />
-            </label>
-            <p className="mt-5 text-[13px] leading-relaxed text-zinc-500">{need.label}.</p>
           </section>
         )}
 
@@ -282,8 +344,8 @@ export function Onboarding() {
               countdown on Tonight still runs either way.
             </p>
             <p className="mt-8 border-t border-white/8 pt-6 text-[13px] leading-relaxed text-zinc-500">
-              Diary stays on this computer unless you join the study next. Payment, if any, happens
-              outside Circadia. A phone wrap is later.
+              Next you choose whether nights can leave this computer. The diary itself stays here
+              either way.
             </p>
             {error ? <p className="mt-4 text-[13px] text-red-300">{error}</p> : null}
           </section>
@@ -297,15 +359,22 @@ export function Onboarding() {
             if (step === 0) setCover(true);
             else setStep((s) => s - 1);
           }}
-          className="h-14 min-w-24 rounded-full border border-white/12 px-6 text-[15px] font-medium text-zinc-200"
+          className="h-14 min-w-24 cursor-pointer rounded-full border border-white/12 px-6 text-[15px] font-medium text-zinc-200"
         >
           Back
         </button>
         {step < 4 ? (
           <button
             type="button"
-            onClick={() => setStep((s) => s + 1)}
-            className="h-14 flex-1 rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950"
+            onClick={() => {
+              if (step === 0 && !fileReady) {
+                setFileHint("Name, age, and an email or a phone. Height and weight can wait.");
+                return;
+              }
+              setFileHint(null);
+              setStep((s) => s + 1);
+            }}
+            className="h-14 flex-1 cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950"
           >
             Continue
           </button>
@@ -319,13 +388,35 @@ export function Onboarding() {
                 setBusy(false);
               })
             }
-            className="h-14 flex-1 rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 disabled:opacity-50"
+            className="h-14 flex-1 cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 disabled:opacity-50"
           >
             {busy ? "Opening…" : "Open Circadia"}
           </button>
         )}
       </footer>
     </div>
+  );
+}
+
+function FileField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <label className="text-[11px] font-medium tracking-[0.14em] text-zinc-500 uppercase">
+      {label}
+      <Input
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-3 text-center font-heading text-xl text-zinc-50"
+      />
+    </label>
   );
 }
 
@@ -346,7 +437,7 @@ function Choice({
         type="button"
         onClick={onSelect}
         className={cn(
-          "w-full rounded-2xl border px-4 py-4 text-left transition-colors",
+          "w-full cursor-pointer rounded-2xl border px-4 py-4 text-left transition-colors",
           selected ? "border-white/20 bg-white/6" : "border-transparent bg-white/[0.03]",
         )}
       >

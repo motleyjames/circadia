@@ -47,6 +47,18 @@ describe("static server", () => {
       body: JSON.stringify({ schema: "circadia-study-v1", name: "James" }),
     });
     expect(blocked.status).toBe(400);
+
+    const roster = await fetch(`${url}/api/study`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        schema: "circadia-roster-v1",
+        participantId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        name: "James",
+      }),
+    });
+    expect((await roster.json()).ok).toBe(true);
+    expect(fs.readdirSync(inbox).length).toBe(2);
   });
 
   afterAll(() => {

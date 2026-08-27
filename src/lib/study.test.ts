@@ -19,6 +19,8 @@ const hostileProfile: Profile = {
   units: "imperial",
   notificationsEnabled: false,
   onboardingComplete: true,
+  email: "james@example.com",
+  phone: "3035550100",
 };
 
 function hostileState(): CircadiaState {
@@ -83,6 +85,7 @@ function hostileState(): CircadiaState {
       lastSentAt: null,
       lastStatus: null,
       lastError: null,
+      rosterSentAt: null,
     },
   };
 }
@@ -113,6 +116,8 @@ describe("buildStudyPack", () => {
     expect(pack.chat.topics).toEqual(["otc-antihistamines"]);
     expect(pack.sessions.completed).toBe(1);
 
+    expect(blob).not.toMatch(/james@example.com/i);
+    expect(blob).not.toMatch(/3035550100/);
     expect(blob).not.toMatch(/James/i);
     expect(blob).not.toMatch(/Adderall/i);
     expect(blob).not.toMatch(/Nature Made/i);

@@ -19,6 +19,8 @@ const profile: Profile = {
   units: "imperial",
   notificationsEnabled: false,
   onboardingComplete: true,
+  email: "",
+  phone: "",
 };
 
 const corpus = buildCorpus();

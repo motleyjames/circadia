@@ -46,6 +46,11 @@ describe("Dock install invariants", () => {
   it("does not prefetch routes from the cover screen", () => {
     expect(onboarding).not.toContain("useRouter");
   });
+
+  it("does not put the operator console in the tester nav", () => {
+    expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
+    expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
+  });
 });
 
 describe("morning sleep-aid question", () => {
@@ -54,6 +59,6 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.4.4");
+    expect(APP_VERSION).toBe("0.5.0");
   });
 });

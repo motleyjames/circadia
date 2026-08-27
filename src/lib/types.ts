@@ -29,6 +29,10 @@ export type Profile = {
   heightCm: number;
   weightKg: number;
   activity: ActivityLevel;
+  /** Local + roster only. Never copied into a night pack. */
+  email: string;
+  /** Local + roster only. Never copied into a night pack. */
+  phone: string;
   medications: string[];
   supplements: string[];
   struggles: Struggle[];
@@ -97,6 +101,8 @@ export type StudyState = {
   lastSentAt: string | null;
   lastStatus: StudyStatus | null;
   lastError: string | null;
+  /** When the roster card last reached the inbox. */
+  rosterSentAt: string | null;
 };
 
 export type CircadiaState = {
@@ -140,6 +146,33 @@ export type StudyNight = {
   supplementKind?: SupplementKind;
   windDownHelped: WindDownHelp;
   hadDream: boolean;
+};
+
+export type RosterEvent = {
+  schema: "circadia-roster-v1";
+  at: string;
+  participantId: string;
+  appVersion: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  age: number;
+  heightCm: number;
+  weightKg: number;
+  activity: ActivityLevel;
+  struggles: Struggle[];
+  targetSleep: string;
+  targetWake: string;
+};
+
+export type FaultEvent = {
+  schema: "circadia-fault-v1";
+  at: string;
+  participantId: string;
+  appVersion: string;
+  message: string;
+  stack: string | null;
+  href: string | null;
 };
 
 export type StudyPack = {

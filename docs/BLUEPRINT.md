@@ -63,7 +63,7 @@ first open:  cover → intake → study gate (join or keep local) → Tonight
 evening:     countdown disc → screens-down ping → wind-down
 night:       (user is offline on purpose)
 morning:     bubble interview → optional dream
-anytime:     chat bar (follow-ups allowed) → full thread in You
+anytime:     chat bar (follow-ups allowed) — the rail is the thread
 week 1:      behavioral notes only
 week 2+:     supplement discussion unlocked, still second to behavior
 ```
@@ -114,7 +114,7 @@ The corpus is generated paraphrases + follow-ups (thousands per `npm test`). It 
 
 **Library** (`src/lib/research.ts`) is the answer key. Chat (`chat.ts`, `consult-extra.ts`) is the mouth. `chat-history.ts` is the follow-up fold. Matching uses word boundaries (`dating` must not hit `sedating`).
 
-Full thread lives in **You**. The bar shows the last few turns.
+The consult rail is the thread. You is the file, not a second copy of the chat.
 
 A remote LLM may *narrate* these notes later, behind an explicit key. It must not *invent* the recommendation. Schema-validate. Drop ungrounded claims. Safe failure beats fluent theater.
 
@@ -126,7 +126,7 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 
 **State:** `localStorage` key `circadia:v1`. Export/import JSON. Schema-hydrate on the way in. No auth.
 
-**Study packs:** optional, consent-gated. `buildStudyPack` in `src/lib/study.ts` emits `circadia-study-v1`. Schema-validate on `POST /api/study`. Write to `data/study-inbox/` (gitignored), or `CIRCADIA_DATA_DIR` in the packaged app (`~/Library/Application Support/Circadia/study-inbox`). Optional forward via `STUDY_INGEST_URL`. Do not store request IP on the pack. Auto-send after a real morning if consented; never auto-send a loaded sample week. Fail closed if the pack still contains a local secret.
+**Study:** optional, consent-gated at the start. Yes turns the pipeline on — no Send button. Three schemas hit `POST /api/study`: `circadia-roster-v1` (name + email/phone + body, so testers can be found), `circadia-study-v1` (stripped nights), `circadia-fault-v1` (app errors). Night packs still fail closed if they contain a local secret. James reads them at `/mod` (not in the tester nav), gated by `CIRCADIA_MOD_KEY`. Write to `data/study-inbox/` (gitignored), or `CIRCADIA_DATA_DIR` in the packaged app. Optional forward via `STUDY_INGEST_URL`. Do not store request IP. Never auto-send a loaded sample week.
 
 **Audio:** Web Audio procedural noise. Unlock on a **user gesture** or devices stay silent. No MP3 licensing. Meditations are a visual field + optional `speechSynthesis`.
 
@@ -137,7 +137,7 @@ electron/         Mac window (main process, preload, icon)
 src/lib/          engine (pure, tested) — advisor, chat, research, corpus, study
 src/context/      CircadiaProvider, persistence, study send
 src/components/   cover, intake, study gate, Tonight, interview, wind-down, You
-src/app/          /  /check-in  /insights  /library  /you  /api/study
+src/app/          /  /check-in  /insights  /library  /you  /mod  /api/study  /api/moderator
 ```
 
 ---
