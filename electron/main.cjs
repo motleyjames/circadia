@@ -147,28 +147,25 @@ function waitForUrl(url, timeoutMs) {
 function startNext(install) {
   const node = install.node;
   const repo = install.repo;
-  const nextBin = path.join(repo, "node_modules", "next", "dist", "bin", "next");
+  const serve = path.join(repo, "electron", "serve-dock.cjs");
   const bound = Number(install.port) > 0 ? Number(install.port) : DOCK_PORT;
-  if (!fs.existsSync(node) || !fs.existsSync(nextBin)) {
-    throw new Error(`Node or Next missing.\nnode: ${node}\nnext: ${nextBin}`);
+  if (!fs.existsSync(node) || !fs.existsSync(serve)) {
+    throw new Error(`Node or serve-dock missing.\nnode: ${node}\nserve: ${serve}`);
   }
-  const buildId = path.join(repo, ".next", "BUILD_ID");
-  if (!fs.existsSync(buildId)) {
-    throw new Error("Circadia has not been compiled. From rest-ai run: npm run dock");
-  }
-  logLine(`next start :${bound}\n${node}\n${repo}\n`);
+  logLine(`serve-dock :${bound}\n${node}\n${repo}\n`);
   const nodeDir = path.dirname(node);
-  nextChild = spawn(node, [nextBin, "start", "--port", String(bound), "--hostname", "127.0.0.1"], {
+  nextChild = spawn(node, [serve], {
     cwd: repo,
     env: {
       ...process.env,
       PATH: `${nodeDir}:${install.path || ""}:${process.env.PATH || ""}`,
+      CIRCADIA_DOCK_PORT: String(bound),
     },
   });
   nextChild.stdout?.on("data", (data) => logLine(String(data)));
   nextChild.stderr?.on("data", (data) => logLine(String(data)));
   nextChild.on("exit", (code) => {
-    logLine(`next exit ${code}\n`);
+    logLine(`serve-dock exit ${code}\n`);
     nextChild = null;
   });
 }
@@ -188,11 +185,9 @@ async function ensureUi() {
   const install = readInstall();
   if (install) {
     const bound = Number(install.port) > 0 ? Number(install.port) : DOCK_PORT;
-    const url = `http://127.0.0.1:${bound}`;
-    if (!(await probe(url))) {
-      startNext(install);
-      await waitForUrl(url, 90_000);
-    }
+    const url = `http://127.0.0.1:${bound}/?v=${install.version || "0.4.4"}`;
+    startNext(install);
+    await waitForUrl(url, 180_000);
     appUrl = url;
     return;
   }
@@ -305,7 +300,7 @@ app.whenReady().then(() => {
   }
   app.setAboutPanelOptions({
     applicationName: "Circadia",
-    applicationVersion: "0.4.2",
+    applicationVersion: "0.4.4",
     copyright: "Local sleep companion. Not medical care.",
   });
   installMenu();

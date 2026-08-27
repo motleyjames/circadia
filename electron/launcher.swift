@@ -10,6 +10,7 @@ struct Install: Decodable {
   let repo: String
   let path: String?
   let port: Int?
+  let version: String?
 }
 
 let defaultPort = 43148
@@ -21,7 +22,8 @@ func installPort(_ install: Install?) -> Int {
 }
 
 func makeDiaryURL(_ install: Install?) -> URL {
-  URL(string: "http://127.0.0.1:\(installPort(install))/")!
+  let stamp = install?.version ?? "0.4.4"
+  return URL(string: "http://127.0.0.1:\(installPort(install))/?v=\(stamp)")!
 }
 let logURL: URL = {
   let logs = FileManager.default.homeDirectoryForCurrentUser
@@ -71,33 +73,28 @@ func diaryIsUp(_ url: URL = activeURL) -> Bool {
 }
 
 func startNext(_ install: Install) throws {
-  let nextBin = (install.repo as NSString).appendingPathComponent("node_modules/next/dist/bin/next")
+  let serve = (install.repo as NSString).appendingPathComponent("electron/serve-dock.cjs")
   guard FileManager.default.isExecutableFile(atPath: install.node) else {
     throw NSError(domain: "Circadia", code: 1, userInfo: [
       NSLocalizedDescriptionKey: "Node is gone.\n\(install.node)\nRun npm run dock from rest-ai again.",
     ])
   }
-  guard FileManager.default.fileExists(atPath: nextBin) else {
+  guard FileManager.default.fileExists(atPath: serve) else {
     throw NSError(domain: "Circadia", code: 2, userInfo: [
-      NSLocalizedDescriptionKey: "Next is missing. Run npm install inside rest-ai.",
-    ])
-  }
-  let buildId = (install.repo as NSString).appendingPathComponent(".next/BUILD_ID")
-  guard FileManager.default.fileExists(atPath: buildId) else {
-    throw NSError(domain: "Circadia", code: 3, userInfo: [
-      NSLocalizedDescriptionKey: "Circadia has not been compiled. From rest-ai run:\nnpm run dock",
+      NSLocalizedDescriptionKey: "This Circadia.app is stale. From rest-ai run:\nnpm run dock",
     ])
   }
 
   let bound = installPort(install)
   let proc = Process()
   proc.executableURL = URL(fileURLWithPath: install.node)
-  proc.arguments = [nextBin, "start", "--port", String(bound), "--hostname", "127.0.0.1"]
+  proc.arguments = [serve]
   proc.currentDirectoryURL = URL(fileURLWithPath: install.repo)
   var env = ProcessInfo.processInfo.environment
   let nodeDir = URL(fileURLWithPath: install.node).deletingLastPathComponent().path
   let captured = install.path ?? ""
   env["PATH"] = "\(nodeDir):\(captured):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+  env["CIRCADIA_DOCK_PORT"] = String(bound)
   proc.environment = env
 
   if !FileManager.default.fileExists(atPath: logURL.path) {
@@ -107,7 +104,7 @@ func startNext(_ install: Install) throws {
   handle.seekToEndOfFile()
   proc.standardOutput = handle
   proc.standardError = handle
-  logLine("starting next start :\(bound)\n  node \(install.node)\n  repo \(install.repo)")
+  logLine("starting serve-dock :\(bound)\n  node \(install.node)\n  repo \(install.repo)")
   try proc.run()
   nextProcess = proc
 }
@@ -192,11 +189,6 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
   func boot() {
     let install = readInstall()
     activeURL = makeDiaryURL(install)
-    if diaryIsUp(activeURL) {
-      logLine("diary already listening \(activeURL.absoluteString)")
-      loadDiary()
-      return
-    }
     guard let install else {
       fail("This Circadia.app has no project pointer.\nFrom the rest-ai folder run:\nnpm run dock")
       return
@@ -211,7 +203,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
       fail(error.localizedDescription)
       return
     }
-    if waitForDiary(timeout: 90) {
+    if waitForDiary(timeout: 180) {
       loadDiary()
       return
     }
