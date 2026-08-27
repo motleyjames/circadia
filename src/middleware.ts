@@ -19,7 +19,7 @@ export function middleware(request: NextRequest) {
     if (pathname === "/" || pathname === "") {
       const url = request.nextUrl.clone();
       url.pathname = "/mod";
-      return NextResponse.rewrite(url);
+      return NextResponse.redirect(url);
     }
     const allowed =
       pathname.startsWith("/_next") ||

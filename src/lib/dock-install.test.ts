@@ -59,8 +59,10 @@ describe("Dock install invariants", () => {
     const mw = readFileSync("src/middleware.ts", "utf8");
     expect(mw).toContain('CIRCADIA_SURFACE === "mod"');
     expect(mw).toContain("/api/moderator");
+    expect(mw).toContain("NextResponse.redirect");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("isOperatorSurface");
-    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("operatorPage");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).not.toContain("operatorPage");
+    expect(readFileSync("src/app/page.tsx", "utf8")).toContain("ModeratorPage");
     expect(readFileSync("src/app/layout.tsx", "utf8")).toContain('force-dynamic');
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
