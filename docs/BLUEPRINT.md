@@ -133,6 +133,7 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 **Notifications:** Notification API, permission only from a tap (intake / You). Honest limit: browsers ping unreliably in the background. The countdown is the reliable gate. Native push is the Capacitor milestone.
 
 ```
+electron/         Mac window (main process, preload, icon)
 src/lib/          engine (pure, tested) — advisor, chat, research, corpus, study
 src/context/      CircadiaProvider, persistence, study send
 src/components/   cover, intake, study gate, Tonight, interview, wind-down, You

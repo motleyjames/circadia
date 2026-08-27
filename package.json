@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start --port 43147 --hostname 127.0.0.1",
     "app": "node electron/dev.cjs",
+    "dock": "node electron/install-mac.cjs",
     "dist": "npm run build && node electron/prepare-standalone.cjs && electron-builder --mac dir zip --publish never",
     "lint": "eslint",
     "test": "vitest run",
@@ -60,6 +61,11 @@
       "identity": null,
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
+      "extendInfo": {
+        "CFBundleDisplayName": "Circadia",
+        "CFBundleName": "Circadia",
+        "NSHighResolutionCapable": true
+      },
       "target": [
         "dir",
         "zip"
