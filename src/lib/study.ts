@@ -1,3 +1,4 @@
+import { consultMessages } from "@/lib/consult-threads";
 import { medicationClasses } from "@/lib/metrics";
 import { bmiKgM, DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG, overnightDuration } from "@/lib/time";
 import type {
@@ -85,9 +86,10 @@ export function buildStudyPack(state: CircadiaState): StudyPack {
       return night;
     });
 
+  const allChat = consultMessages(state.chat, state.consultHistory);
   const topics = [
     ...new Set(
-      state.chat.flatMap((msg) => (msg.role === "circadia" && msg.citations ? msg.citations : [])),
+      allChat.flatMap((msg) => (msg.role === "circadia" && msg.citations ? msg.citations : [])),
     ),
   ].sort();
 
@@ -115,7 +117,7 @@ export function buildStudyPack(state: CircadiaState): StudyPack {
       completed: state.sessions.filter((s) => s.completed).length,
     },
     chat: {
-      turns: state.chat.length,
+      turns: Math.min(500, allChat.length),
       topics,
     },
   };
@@ -174,7 +176,7 @@ export function anonymityViolations(pack: StudyPack, state: CircadiaState): stri
     if (session.startedAt && blob.includes(session.startedAt.toLowerCase())) hits.push("session-time");
   }
 
-  for (const msg of state.chat) {
+  for (const msg of consultMessages(state.chat, state.consultHistory)) {
     for (const slice of distinctiveSlices(msg.text)) {
       if (blob.includes(slice)) hits.push("chat-text");
     }

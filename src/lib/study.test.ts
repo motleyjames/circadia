@@ -136,6 +136,39 @@ describe("buildStudyPack", () => {
     expect(validateStudyPack(pack).ok).toBe(true);
   });
 
+  it("counts filed consults in the pack without sending their text", () => {
+    const state = hostileState();
+    state.chat = [];
+    state.consultHistory = [
+      {
+        id: "thread-unisom-hist",
+        title: "What is Unisom?",
+        createdAt: "2026-08-20T08:00:00.000Z",
+        updatedAt: "2026-08-20T08:00:02.000Z",
+        messages: [
+          {
+            id: "h1",
+            role: "you",
+            text: "What is Unisom? I bought the gels last night.",
+            createdAt: "2026-08-20T08:00:00.000Z",
+          },
+          {
+            id: "h2",
+            role: "circadia",
+            text: "Unisom is an antihistamine. It knocks you out; it is not a sleep system.",
+            createdAt: "2026-08-20T08:00:02.000Z",
+            citations: ["otc-antihistamines"],
+          },
+        ],
+      },
+    ];
+    const pack = buildStudyPack(state);
+    expect(pack.chat.turns).toBe(2);
+    expect(pack.chat.topics).toEqual(["otc-antihistamines"]);
+    expect(JSON.stringify(pack)).not.toMatch(/Unisom/i);
+    expect(anonymityViolations(pack, state)).toEqual([]);
+  });
+
   it("marks default body metrics as unconfirmed", () => {
     const state = hostileState();
     state.profile = { ...hostileProfile, heightCm: 175, weightKg: 70, name: "you", medications: [] };

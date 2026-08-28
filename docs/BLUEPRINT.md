@@ -114,7 +114,9 @@ The corpus is generated paraphrases + follow-ups (thousands per `npm test`). It 
 
 **Library** (`src/lib/research.ts`) is the answer key. Chat (`chat.ts`, `consult-extra.ts`) is the mouth. `chat-history.ts` is the follow-up fold. Matching uses word boundaries (`dating` must not hit `sedating`).
 
-The consult rail is the thread. You is the file, not a second copy of the chat.
+The consult rail is the **live desk**. It opens empty. A question files a thread into dated history on this computer. Close the app and the desk resets; the thread is still in History, sorted by day, continuable, deletable. You is the file, not a second copy of the chat.
+
+`chat-history.ts` is the follow-up fold (Unisom → “the gels?”). `consult-threads.ts` is the archive. Different jobs.
 
 A remote LLM may *narrate* these notes later, behind an explicit key. It must not *invent* the recommendation. Schema-validate. Drop ungrounded claims. Safe failure beats fluent theater.
 
