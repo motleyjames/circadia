@@ -96,6 +96,10 @@ function run() {
 
   const installed = installKinds(kindKeys, binTmp);
   if (!process.argv.includes("--no-open")) openInstalled(installed);
+  console.log("");
+  console.log("Drag these onto the Dock (remove any tile named Electron):");
+  for (const item of installed) console.log("  " + item.dest);
+  console.log("");
   return installed;
 }
 

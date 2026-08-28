@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SLEEP_AID_QUESTION } from "./intake";
@@ -85,6 +86,10 @@ describe("Dock install invariants", () => {
     expect(pkg.scripts.dock).toBe("node electron/install-both-native.cjs");
     expect(pkg.scripts["dock:mod"]).toBe("node electron/install-both-native.cjs --operator");
     expect(pkg.scripts["dock:diary"]).toBe("node electron/install-both-native.cjs --diary");
+    expect(pkg.scripts["put-on-dock"]).toBe("bash scripts/put-on-dock.sh");
+    expect(readFileSync("scripts/put-on-dock.sh", "utf8")).toContain("0.6.5");
+    expect(readFileSync("scripts/put-on-dock.sh", "utf8")).toContain("npm run dock");
+    expect(readFileSync("electron/install-both-native.cjs", "utf8")).toContain("Drag these onto the Dock");
     expect(pkg.scripts["fix-mac"]).toBe("node electron/fix-mac.cjs");
     expect(pkg.scripts.repair).toBe("node electron/fix-mac.cjs");
     expect(pkg.scripts["reveal:mod"]).toBe("node electron/install-mac.cjs --operator --reveal");
@@ -155,5 +160,18 @@ describe("morning sleep-aid question", () => {
     expect(install).toContain("delete env.CIRCADIA_ELECTRON");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("CIRCADIA_PACK_STATIC");
     expect(readFileSync("electron/serve-dock.cjs", "utf8")).toContain("CIRCADIA_PACK_STATIC");
+  });
+});
+
+describe("put-on-dock script", () => {
+  it("refuses Linux and prints the 0.6.5 version gate", () => {
+    const run = spawnSync("bash", ["scripts/put-on-dock.sh"], { encoding: "utf8" });
+    expect(run.stdout).toContain("Circadia 0.6.5");
+    if (process.platform === "darwin") {
+      expect([0, 5]).toContain(run.status);
+    } else {
+      expect(run.status).toBe(4);
+      expect(run.stdout).toContain("macOS");
+    }
   });
 });
