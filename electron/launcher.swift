@@ -245,7 +245,8 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
   func fail(_ message: String) {
     logLine("boot failure \(message)")
     DispatchQueue.main.async { [weak self] in
-      self?.splash.stringValue = message
+      guard let self else { return }
+      self.splash.stringValue = message
       let alert = NSAlert()
       alert.messageText = self.operatorApp
         ? "Circadia Operator is running. The inbox is not."
