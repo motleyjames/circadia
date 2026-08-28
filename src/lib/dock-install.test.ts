@@ -22,9 +22,14 @@ describe("Dock install invariants", () => {
 
   it("runs production Next via serve-dock, never turbopack in the Dock window", () => {
     expect(launcher).toContain("WKWebView");
+    expect(launcher).toContain("guard let self else { return }");
     expect(launcher).toContain("self.operatorApp");
     expect(launcher).toContain("43148");
     expect(launcher).toContain("serve-dock.cjs");
+    expect(readFileSync("electron/dock-shell.swift", "utf8")).toContain("guard let self else { return }");
+    expect(readFileSync("electron/dock-shell.swift", "utf8")).toContain("makeKeyAndOrderFront");
+    expect(readFileSync("electron/dock-shell.swift", "utf8")).not.toContain("self.operatorApp");
+    expect(readFileSync("electron/install-home-native.cjs", "utf8")).toContain("CircadiaBin");
     expect(launcher).not.toContain('"dev"');
     expect(serve).toContain("next");
     expect(serve).toContain("start");
