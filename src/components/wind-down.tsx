@@ -11,7 +11,14 @@ import {
   unlockAudio,
   type SoundscapeId,
 } from "@/lib/audio";
-import { beatAt, MEDITATIONS, meditationById } from "@/lib/meditations";
+import {
+  beatAt,
+  hushVoice,
+  MEDITATIONS,
+  meditationById,
+  playGuide,
+  prefetchGuide,
+} from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +42,7 @@ export function WindDown() {
 
   useEffect(
     () => () => {
+      hushVoice();
       stopBreathBed();
       stopAllSoundscapes();
     },
@@ -78,10 +86,10 @@ export function WindDown() {
   return (
     <div className="space-y-6">
       <section>
-        <p className="text-[11px] tracking-[0.22em] text-sky-300/80 uppercase">Visual meditations</p>
+        <p className="text-[11px] tracking-[0.22em] text-sky-300/80 uppercase">Guided meditations</p>
         <p className="mt-1 text-xs text-zinc-500">
-          A breathing field in this window — not a YouTube tab. A low tone follows the orb, on the
-          same mixer as brown noise. No voice.
+          A quiet recorded guide over a low tone. Close your eyes — you do not have to read the
+          orb.
         </p>
         <div className="mt-3 grid gap-2">
           {MEDITATIONS.map((m) => (
@@ -90,6 +98,7 @@ export function WindDown() {
               type="button"
               onClick={() => {
                 void unlockAudio();
+                prefetchGuide(m.id);
                 setMeditationId(m.id);
                 setMode("meditate");
               }}
@@ -139,6 +148,7 @@ function MeditationPlayer({
   const [running, setRunning] = useState(true);
   const elapsedRef = useRef(0);
   const logged = useRef(false);
+  const spokenAt = useRef<number | null>(null);
   const bedRef = useRef<ReturnType<typeof startBreathBed> | null>(null);
   const beat = useMemo(() => beatAt(script, elapsed), [script, elapsed]);
   const done = elapsed >= script.durationSeconds;
@@ -147,6 +157,7 @@ function MeditationPlayer({
     if (logged.current) return;
     if (fromUnmount && elapsedRef.current < 5) return;
     logged.current = true;
+    hushVoice();
     bedRef.current?.stop();
     bedRef.current = null;
     onExit(elapsedRef.current, elapsedRef.current >= script.durationSeconds);
@@ -159,7 +170,10 @@ function MeditationPlayer({
   useEffect(() => {
     const bed = startBreathBed();
     bedRef.current = bed;
+    spokenAt.current = 0;
+    void playGuide(id, 0);
     return () => {
+      hushVoice();
       bed.stop();
       if (bedRef.current === bed) bedRef.current = null;
       finish(true);
@@ -170,11 +184,16 @@ function MeditationPlayer({
 
   useEffect(() => {
     if (!running || done) {
+      hushVoice();
+      spokenAt.current = null;
       bedRef.current?.setPhase("rest");
       return;
     }
     bedRef.current?.setPhase(beat.breath ?? "rest");
-  }, [beat.breath, running, done]);
+    if (spokenAt.current === beat.atSeconds) return;
+    spokenAt.current = beat.atSeconds;
+    void playGuide(id, beat.atSeconds);
+  }, [beat.atSeconds, beat.breath, running, done, id]);
 
   useEffect(() => {
     if (!running || done) return;
@@ -199,7 +218,7 @@ function MeditationPlayer({
       <p className="text-xs text-zinc-500">
         {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} /{" "}
         {Math.floor(script.durationSeconds / 60)}:{String(script.durationSeconds % 60).padStart(2, "0")}
-        {done ? " · done" : ""}
+        {done ? " · done" : " · eyes can close"}
       </p>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         <Button

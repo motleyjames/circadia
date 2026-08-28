@@ -33,24 +33,27 @@ describe("bedside voice picker", () => {
 });
 
 describe("meditation guide copy", () => {
-  it("does not speak the breath counts — the orb does that job", () => {
+  it("speaks every visual beat so the eyes can close", () => {
     for (const script of MEDITATIONS) {
       for (const beat of script.beats) {
-        if (beat.breath === "in" || beat.breath === "hold" || beat.breath === "out") {
-          expect(spokenLine(script.id, beat.atSeconds), `${script.id} @${beat.atSeconds}`).toBeNull();
-        }
+        expect(spokenLine(script.id, beat.atSeconds), `${script.id} @${beat.atSeconds}`).toBeTruthy();
       }
     }
   });
 
-  it("only speaks on a real visual beat, in full sentences, never a barked cue", () => {
+  it("only speaks on a real visual beat, in full phrases, never a barked cue", () => {
     for (const script of MEDITATIONS) {
       const visual = new Set(script.beats.map((b) => b.atSeconds));
+      const byAt = new Map(script.beats.map((b) => [b.atSeconds, b]));
       for (const row of spokenBeats(script.id)) {
         expect(visual.has(row.atSeconds), `${script.id} spoken @${row.atSeconds} has no orb beat`).toBe(
           true,
         );
-        expect(row.say.split(/\s+/).length).toBeGreaterThanOrEqual(6);
+        const breath = byAt.get(row.atSeconds)?.breath;
+        const minWords = breath === "in" || breath === "hold" || breath === "out" ? 4 : 6;
+        expect(row.say.split(/\s+/).length, `${script.id} @${row.atSeconds}`).toBeGreaterThanOrEqual(
+          minWords,
+        );
         expect(row.say).not.toMatch(BARK);
         expect(row.say).not.toMatch(BAN);
         expect(row.say).not.toMatch(/progressive muscle/i);

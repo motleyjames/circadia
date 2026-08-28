@@ -99,10 +99,10 @@ export type BreathBedHandle = {
 };
 
 const BREATH_LEVEL: Record<BreathPhase, number> = {
-  rest: 0.11,
-  in: 0.2,
-  hold: 0.2,
-  out: 0.08,
+  rest: 0.07,
+  in: 0.13,
+  hold: 0.13,
+  out: 0.05,
 };
 
 const BREATH_RAMP: Record<BreathPhase, number> = {
@@ -113,19 +113,30 @@ const BREATH_RAMP: Record<BreathPhase, number> = {
 };
 
 let activeBedStop: (() => void) | null = null;
+let bedDuck: GainNode | null = null;
 
 export function stopBreathBed() {
   activeBedStop?.();
   activeBedStop = null;
 }
 
+/** Sit the pad under a spoken line, then rise again when the clip ends. */
+export function duckBreathBed(factor: number, seconds = 0.28) {
+  if (!bedDuck) return;
+  const ctx = context();
+  const t = ctx.currentTime;
+  const to = Math.max(factor, 0.0001);
+  bedDuck.gain.cancelScheduledValues(t);
+  bedDuck.gain.setValueAtTime(Math.max(bedDuck.gain.value, 0.0001), t);
+  bedDuck.gain.linearRampToValueAtTime(to, t + seconds);
+}
+
 /**
- * Low pad on the same graph as brown noise. No speech, no MP3.
+ * Low pad on the same graph as brown noise. Keeps the mixer running so guide clips can start.
  * Start it from a useEffect after unlockAudio() in the tap — same pattern as soundscapes.
  */
 export function startBreathBed(): BreathBedHandle {
   stopBreathBed();
-  stopSample();
   const ctx = context();
   void ctx.resume();
 
@@ -143,11 +154,15 @@ export function startBreathBed(): BreathBedHandle {
 
   const gain = ctx.createGain();
   gain.gain.value = 0.0001;
+  const duck = ctx.createGain();
+  duck.gain.value = 1;
 
   a.connect(filter);
   b.connect(filter);
   filter.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(duck);
+  duck.connect(ctx.destination);
+  bedDuck = duck;
   a.start();
   b.start();
 
@@ -183,6 +198,7 @@ export function startBreathBed(): BreathBedHandle {
     if (stopped) return;
     stopped = true;
     if (activeBedStop === stop) activeBedStop = null;
+    if (bedDuck === duck) bedDuck = null;
     const t = ctx.currentTime;
     const from = Math.max(levelNow(t), 0.0001);
     gain.gain.cancelScheduledValues(t);
@@ -200,6 +216,7 @@ export function startBreathBed(): BreathBedHandle {
         b.disconnect();
         filter.disconnect();
         gain.disconnect();
+        duck.disconnect();
       } catch {
         /* context gone */
       }
@@ -343,12 +360,15 @@ export async function playSample(buffer: AudioBuffer, volume = 0.72): Promise<vo
   gain.gain.value = 0.0001;
   source.connect(gain);
   gain.connect(ctx.destination);
+  duckBreathBed(0.32);
   source.start();
-  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.05);
+  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.08);
   const mine = ++sampleGen;
+  const lift = () => duckBreathBed(1, 0.55);
   const stop = () => {
     if (sampleStop !== stop) return;
     sampleStop = null;
+    lift();
     const t = ctx.currentTime;
     gain.gain.cancelScheduledValues(t);
     gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), t);
@@ -369,7 +389,10 @@ export async function playSample(buffer: AudioBuffer, volume = 0.72): Promise<vo
   };
   sampleStop = stop;
   source.onended = () => {
-    if (sampleGen === mine && sampleStop === stop) sampleStop = null;
+    if (sampleGen === mine && sampleStop === stop) {
+      sampleStop = null;
+      lift();
+    }
   };
 }
 

@@ -114,7 +114,7 @@ export async function playGuide(id: MeditationId, atSeconds: number) {
   try {
     const buffer = await decodeUrl(url);
     if (mine !== guideGen) return;
-    await playSample(buffer, 0.78);
+    await playSample(buffer, 0.6);
   } catch {
     // Missed clip stays silent. A Mac novelty voice is worse than a missed line.
     if (mine !== guideGen) return;
