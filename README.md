@@ -6,33 +6,24 @@ Circadia is local-first. Profile, mornings, dreams, and chat live on this comput
 
 ## Put it on the Dock (Mac)
 
-Two apps. They are not the same window.
+Two native apps. Same Swift binary. Different `install.json`. Not Electron.
 
-- **Ice clock** — Circadia. Sign up / Log in, then the diary.
-- **Gold clock** — Circadia Operator. Your inbox. Testers never see this.
+- **Circadia** — ice clock, port 43148. Sign up / Log in, then the diary.
+- **Circadia Operator** — gold clock, port 43149. Your inbox. Testers never see this.
 
-`npm run dock` installs **both**, in that order: ice first, then gold. If Operator’s compile fails, the diary app is already in `/Applications` — run `npm run dock:mod` after.
-
-Run this from **this repo** (Sign up / Log in, version **0.6.4**). An older `rest-ai` clone that still says “A diary needs a name”, or that dies on `/insights` or `/check-in` during Operator compile, is not this tree.
-
-If either of these is already on screen:
-
-1. **`Cannot find module …/app/Users/…/electron/main.cjs`** — leftover Electron Circadia. Cmd+Q the dialog, then `node electron/fix-mac.cjs` from this folder.
-2. **`useCircadia must be used inside CircadiaProvider` on `/check-in`** — Operator was static-exporting diary pages. This tree refuses that. Do not keep compiling the old clone.
+`npm run dock` compiles Next for both surfaces, compiles `launcher.swift` once, then wraps two `.app` bundles. It will not copy `Electron.app`. If `swiftc` fails, nothing is replaced.
 
 ```bash
-xcode-select --install   # once, if Swift never compiled
-cd /path/to/this-circadia
+xcode-select --install   # once
 npm install
-node electron/fix-mac.cjs
 npm run dock
 ```
 
-That writes `/Applications/Circadia.app` and `/Applications/Circadia Operator.app`, puts an alias for each on the Desktop, and opens them. Drag **both** to the Dock. Remove any tile named Electron. The gold clock is **Circadia Operator**, not the ice Circadia tile.
+That writes `Circadia.app` and `Circadia Operator.app` ( `/Applications` if writable, otherwise `~/Applications` ), then opens both. Drag both to the Dock. Remove any tile named Electron.
 
-Operator-only: `npm run dock:mod`. Browser inbox without Dock: `npm run mod` → http://127.0.0.1:43149, passphrase `circadia-local`.
+Operator-only: `npm run dock:mod`. Diary-only: `npm run dock:diary`. Browser inbox: `npm run mod` → http://127.0.0.1:43149, passphrase `circadia-local`.
 
-Keep this folder where it is. If you move it, run `npm run dock` again. Unidentified developer: right-click the app → **Open**. Logs: `~/Library/Logs/Circadia.log` and `~/Library/Logs/Circadia-Operator.log`.
+Keep this folder where it is. If you move it, run `npm run dock` again. Unidentified developer: right-click → **Open**. Logs: `~/Library/Logs/Circadia.log` and `~/Library/Logs/Circadia-Operator.log`.
 
 ## What you do
 
@@ -68,7 +59,7 @@ Erase this device mints a new participant number. Pause and rejoin keeps the sam
 
 ## Operator (James only)
 
-A second app. Gold clock, not the ice one. Not a page inside Circadia. `npm run dock` installs it after the diary. Operator-only rebuild:
+A second app. Gold clock, not the ice one. Not a page inside Circadia. `npm run dock` installs both apps from one Swift compile. Operator-only:
 
 ```bash
 npm run dock:mod

@@ -26,10 +26,10 @@ describe("Dock install invariants", () => {
     expect(launcher).toContain("self.operatorApp");
     expect(launcher).toContain("43148");
     expect(launcher).toContain("serve-dock.cjs");
-    expect(readFileSync("electron/dock-shell.swift", "utf8")).toContain("guard let self else { return }");
-    expect(readFileSync("electron/dock-shell.swift", "utf8")).toContain("makeKeyAndOrderFront");
-    expect(readFileSync("electron/dock-shell.swift", "utf8")).not.toContain("self.operatorApp");
-    expect(readFileSync("electron/install-home-native.cjs", "utf8")).toContain("CircadiaBin");
+    expect(readFileSync("electron/native-bundle.cjs", "utf8")).toContain("Circadia Operator.app");
+    expect(readFileSync("electron/native-bundle.cjs", "utf8")).toContain("43149");
+    expect(readFileSync("electron/install-both-native.cjs", "utf8")).toContain("launcher.swift");
+    expect(readFileSync("electron/install-both-native.cjs", "utf8")).not.toContain("Electron.app");
     expect(launcher).not.toContain('"dev"');
     expect(serve).toContain("next");
     expect(serve).toContain("start");
@@ -82,9 +82,9 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/app/layout.tsx", "utf8")).toContain('force-dynamic');
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
-    expect(pkg.scripts.dock).toContain("fix-mac.cjs");
-    expect(pkg.scripts.dock).toContain("install-mac.cjs --operator");
-    expect(pkg.scripts["dock:mod"]).toContain("--operator");
+    expect(pkg.scripts.dock).toBe("node electron/install-both-native.cjs");
+    expect(pkg.scripts["dock:mod"]).toBe("node electron/install-both-native.cjs --operator");
+    expect(pkg.scripts["dock:diary"]).toBe("node electron/install-both-native.cjs --diary");
     expect(pkg.scripts["fix-mac"]).toBe("node electron/fix-mac.cjs");
     expect(pkg.scripts.repair).toBe("node electron/fix-mac.cjs");
     expect(pkg.scripts["reveal:mod"]).toBe("node electron/install-mac.cjs --operator --reveal");
@@ -126,7 +126,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.4");
+    expect(APP_VERSION).toBe("0.6.5");
   });
 
   it("does not run diary views while compiling the operator", () => {
