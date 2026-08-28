@@ -91,6 +91,125 @@ function fillBuffer(ctx: AudioContext, kind: SoundscapeId): AudioBuffer {
   return buffer;
 }
 
+export type BreathPhase = "in" | "hold" | "out" | "rest";
+
+export type BreathBedHandle = {
+  setPhase: (phase: BreathPhase) => void;
+  stop: () => void;
+};
+
+const BREATH_LEVEL: Record<BreathPhase, number> = {
+  rest: 0.11,
+  in: 0.2,
+  hold: 0.2,
+  out: 0.08,
+};
+
+const BREATH_RAMP: Record<BreathPhase, number> = {
+  rest: 0.8,
+  in: 3.6,
+  hold: 0.12,
+  out: 6.5,
+};
+
+let activeBedStop: (() => void) | null = null;
+
+export function stopBreathBed() {
+  activeBedStop?.();
+  activeBedStop = null;
+}
+
+/**
+ * Low pad on the same graph as brown noise. No speech, no MP3.
+ * Start it from a useEffect after unlockAudio() in the tap — same pattern as soundscapes.
+ */
+export function startBreathBed(): BreathBedHandle {
+  stopBreathBed();
+  stopSample();
+  const ctx = context();
+  void ctx.resume();
+
+  const a = ctx.createOscillator();
+  const b = ctx.createOscillator();
+  a.type = "sine";
+  b.type = "sine";
+  a.frequency.value = 73.4;
+  b.frequency.value = 73.88;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 280;
+  filter.Q.value = 0.7;
+
+  const gain = ctx.createGain();
+  gain.gain.value = 0.0001;
+
+  a.connect(filter);
+  b.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  a.start();
+  b.start();
+
+  let stopped = false;
+  let rampFrom = 0.0001;
+  let rampTo = 0.0001;
+  let rampAt = ctx.currentTime;
+  let rampFor = 0.01;
+
+  function levelNow(t: number): number {
+    const p = Math.min(1, Math.max(0, (t - rampAt) / Math.max(rampFor, 0.001)));
+    return rampFrom + (rampTo - rampFrom) * p;
+  }
+
+  function setPhase(phase: BreathPhase) {
+    if (stopped) return;
+    const t = ctx.currentTime;
+    const from = Math.max(levelNow(t), 0.0001);
+    const to = Math.max(BREATH_LEVEL[phase], 0.0001);
+    const dur = BREATH_RAMP[phase];
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(from, t);
+    gain.gain.linearRampToValueAtTime(to, t + dur);
+    rampFrom = from;
+    rampTo = to;
+    rampAt = t;
+    rampFor = dur;
+  }
+
+  setPhase("rest");
+
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    if (activeBedStop === stop) activeBedStop = null;
+    const t = ctx.currentTime;
+    const from = Math.max(levelNow(t), 0.0001);
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(from, t);
+    gain.gain.linearRampToValueAtTime(0.0001, t + 0.4);
+    window.setTimeout(() => {
+      try {
+        a.stop();
+        b.stop();
+      } catch {
+        /* already stopped */
+      }
+      try {
+        a.disconnect();
+        b.disconnect();
+        filter.disconnect();
+        gain.disconnect();
+      } catch {
+        /* context gone */
+      }
+    }, 450);
+  };
+
+  activeBedStop = stop;
+  return { setPhase, stop };
+}
+
 export function startSoundscape(kind: SoundscapeId, volume = 0.2): NoiseHandle {
   stopAllSoundscapes();
   const ctx = context();
@@ -207,10 +326,17 @@ export function stopSample() {
 }
 
 /** Play a decoded buffer on the unlocked graph. Safe to call from a timer. */
-export function playSample(buffer: AudioBuffer, volume = 0.72): void {
+export async function playSample(buffer: AudioBuffer, volume = 0.72): Promise<void> {
   stopSample();
   const ctx = context();
-  void ctx.resume();
+  // start() while suspended is discarded in WebKit — await the mixer, then start.
+  if (ctx.state === "suspended") {
+    try {
+      await ctx.resume();
+    } catch {
+      return;
+    }
+  }
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   const gain = ctx.createGain();
@@ -249,5 +375,5 @@ export function playSample(buffer: AudioBuffer, volume = 0.72): void {
 
 export async function playUrl(url: string, volume = 0.72): Promise<void> {
   const buffer = await decodeUrl(url);
-  playSample(buffer, volume);
+  await playSample(buffer, volume);
 }

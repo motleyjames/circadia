@@ -3,8 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
-import { startSoundscape, stopAllSoundscapes, unlockAudio, type SoundscapeId } from "@/lib/audio";
-import { beatAt, hushVoice, MEDITATIONS, meditationById, playGuide, prefetchGuide } from "@/lib/meditations";
+import {
+  startBreathBed,
+  startSoundscape,
+  stopAllSoundscapes,
+  stopBreathBed,
+  unlockAudio,
+  type SoundscapeId,
+} from "@/lib/audio";
+import { beatAt, MEDITATIONS, meditationById } from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +33,13 @@ export function WindDown() {
     setMode("pick");
   }
 
-  useEffect(() => () => hushVoice(), []);
+  useEffect(
+    () => () => {
+      stopBreathBed();
+      stopAllSoundscapes();
+    },
+    [],
+  );
 
   if (mode === "meditate") {
     return (
@@ -67,8 +80,8 @@ export function WindDown() {
       <section>
         <p className="text-[11px] tracking-[0.22em] text-sky-300/80 uppercase">Visual meditations</p>
         <p className="mt-1 text-xs text-zinc-500">
-          A breathing field in this window — not a YouTube tab. The voice is a quiet recorded
-          guide. Turn it off if you want the room silent. Rate it in the morning.
+          A breathing field in this window — not a YouTube tab. A low tone follows the orb, on the
+          same mixer as brown noise. No voice.
         </p>
         <div className="mt-3 grid gap-2">
           {MEDITATIONS.map((m) => (
@@ -77,8 +90,6 @@ export function WindDown() {
               type="button"
               onClick={() => {
                 void unlockAudio();
-                void playGuide(m.id, 0);
-                prefetchGuide(m.id);
                 setMeditationId(m.id);
                 setMode("meditate");
               }}
@@ -125,11 +136,10 @@ function MeditationPlayer({
 }) {
   const script = meditationById(id);
   const [elapsed, setElapsed] = useState(0);
-  const [voice, setVoice] = useState(true);
   const [running, setRunning] = useState(true);
   const elapsedRef = useRef(0);
   const logged = useRef(false);
-  const spokenAt = useRef<number | null>(null);
+  const bedRef = useRef<ReturnType<typeof startBreathBed> | null>(null);
   const beat = useMemo(() => beatAt(script, elapsed), [script, elapsed]);
   const done = elapsed >= script.durationSeconds;
 
@@ -137,7 +147,8 @@ function MeditationPlayer({
     if (logged.current) return;
     if (fromUnmount && elapsedRef.current < 5) return;
     logged.current = true;
-    hushVoice();
+    bedRef.current?.stop();
+    bedRef.current = null;
     onExit(elapsedRef.current, elapsedRef.current >= script.durationSeconds);
   }
 
@@ -146,31 +157,30 @@ function MeditationPlayer({
   }, [elapsed]);
 
   useEffect(() => {
+    const bed = startBreathBed();
+    bedRef.current = bed;
+    return () => {
+      bed.stop();
+      if (bedRef.current === bed) bedRef.current = null;
+      finish(true);
+    };
+    // unmount-only logging; id change remounts this player
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  useEffect(() => {
+    if (!running || done) {
+      bedRef.current?.setPhase("rest");
+      return;
+    }
+    bedRef.current?.setPhase(beat.breath ?? "rest");
+  }, [beat.breath, running, done]);
+
+  useEffect(() => {
     if (!running || done) return;
     const timer = window.setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => window.clearInterval(timer);
   }, [running, done]);
-
-  useEffect(() => {
-    if (!voice) {
-      hushVoice();
-      spokenAt.current = null;
-      return;
-    }
-    if (!running || done) return;
-    if (spokenAt.current === beat.atSeconds) return;
-    spokenAt.current = beat.atSeconds;
-    playGuide(id, beat.atSeconds);
-  }, [beat.atSeconds, voice, running, done, id]);
-
-  useEffect(
-    () => () => {
-      finish(true);
-    },
-    // unmount only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
 
   const scale =
     beat.breath === "in" ? 1.22 : beat.breath === "hold" ? 1.22 : beat.breath === "out" ? 0.84 : 1;
@@ -196,25 +206,7 @@ function MeditationPlayer({
           type="button"
           variant="outline"
           className="rounded-full border-white/15"
-          onClick={() => {
-            if (voice) hushVoice();
-            setVoice((v) => !v);
-          }}
-        >
-          Voice {voice ? "on" : "off"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="rounded-full border-white/15"
-          onClick={() => {
-            if (running) {
-              hushVoice();
-            } else {
-              spokenAt.current = null;
-            }
-            setRunning((r) => !r);
-          }}
+          onClick={() => setRunning((r) => !r)}
         >
           {running && !done ? "Pause" : "Resume"}
         </Button>

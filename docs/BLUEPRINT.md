@@ -130,7 +130,7 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 
 **Study:** optional, consent-gated after sleep intake. Yes turns the pipeline on — no Send button. Three schemas hit `POST /api/study` on the diary. `circadia-roster-v1` (name + body; email/phone fields exist for old files but new cards send null), `circadia-study-v1` (stripped nights), `circadia-fault-v1` (app errors). James reads them in Circadia Operator.app (`npm run dock:mod`, gold clock) or `npm run mod` on port 43149, gated by `CIRCADIA_MOD_KEY`. The diary 404s `/mod`. Write to `data/study-inbox/` (gitignored). Optional forward via `STUDY_INGEST_URL`. Do not store request IP. Never auto-send a loaded sample week.
 
-**Audio:** Web Audio procedural noise. Unlock on a **user gesture** or devices stay silent. No MP3 licensing. Meditations are a visual field + optional `speechSynthesis`.
+**Audio:** Web Audio procedural noise. Unlock on a **user gesture** or devices stay silent. No MP3 licensing. Meditations are a visual field plus a breath-locked pad on that same graph — not `speechSynthesis`, not an HTML `<audio>` element.
 
 **Notifications:** Notification API, permission only from a tap (intake / You). Honest limit: browsers ping unreliably in the background. The countdown is the reliable gate. Native push is the Capacitor milestone.
 
@@ -151,7 +151,7 @@ src/app/          diary: /  /check-in  /insights  /library  /you  /api/study
 
 - Cover → clinical intake → countdown-first Tonight
 - Wake-derived window; body metrics editable in You
-- Tonight countdown + wind-down (3 meditations with a recorded bedside guide, 4 soundscapes)
+- Tonight countdown + wind-down (3 meditations with a breath-locked tone, 4 soundscapes)
 - Morning bubble interview including dream option
 - Week review on Notes from the first mornings; consult still gates bottles at ~7 nights
 - Consult engine + follow-ups + You thread + corpus tests
