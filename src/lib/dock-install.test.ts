@@ -35,10 +35,9 @@ describe("Dock install invariants", () => {
     expect(serve).toContain("next");
     expect(serve).toContain("start");
     expect(readFileSync("src/middleware.ts", "utf8")).toContain("voice/");
-    expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain(
-      "spokenAt = useRef<number | null>(null)",
-    );
-    expect(readFileSync("src/components/wind-down.tsx", "utf8")).not.toContain("hushVoice();\n      finish(true)");
+    expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("startBreathBed");
+    expect(readFileSync("src/components/wind-down.tsx", "utf8")).not.toContain("playGuide");
+    expect(readFileSync("src/components/wind-down.tsx", "utf8")).not.toContain("hushVoice");
     expect(launcher).toContain("mediaTypesRequiringUserActionForPlayback");
     expect(launcher).toContain("allowsInlineMediaPlayback");
     expect(serve).toContain("needsBuild");
@@ -139,7 +138,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.16");
+    expect(APP_VERSION).toBe("0.6.17");
   });
 
   it("does not run diary views while compiling the operator", () => {

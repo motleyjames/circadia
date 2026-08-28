@@ -36,7 +36,7 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 1. **Sign up / Log in** — first and last name, email or phone, and a password. Circadia will not email or text you. There is no reset email: if you forget the password, the diary on this computer stays locked.
 2. **Sleep intake** — age, height, weight, the problem, wake time, meds, alerts.
 3. **Study gate** — yes turns the pipeline on. No Send button after that.
-4. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise. The breathing field has a quiet recorded guide (not the computer’s robot voice). You can turn it off.
+4. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise. The breathing field has a low tone on the same mixer as brown noise. No voice.
 5. **Morning interview** — tap bubbles. Yes/no. Dropdowns only when the answer is yes.
 6. **Notes** — a week read from the first mornings: which dates were better, which were worse, and what I would try next. Honest when the window is thin. After each morning, one library page that night actually earned — not a tour of the shelf. Bottles stay in **Consult**, and only after about seven logs.
 7. **You** — the file. Clocks, meds, log out. Not a JSON dump. Not a second copy of chat.
