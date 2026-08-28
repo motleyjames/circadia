@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { useCircadia } from "@/context/circadia-store";
+import { hasOrphanLocalFile } from "@/lib/storage";
+import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
 type Mode = "create" | "login";
@@ -15,6 +17,7 @@ export function AuthGate() {
   const [lastName, setLastName] = useState("");
   const [contact, setContact] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [orphan] = useState(() => hasOrphanLocalFile());
 
   function submit() {
     setError(null);
@@ -35,8 +38,9 @@ export function AuthGate() {
           Circadia
         </h1>
         <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-          A sleep file on this computer. Email or phone is how you open it again — not a way for
-          anyone to reach you.
+          {orphan
+            ? "This computer already has a diary. First and last name, then an email or phone, keeps it — and is how you open it again. Circadia will not contact you."
+            : "A sleep file on this computer. Email or phone is how you open it again — not a way for anyone to reach you."}
         </p>
 
         <div className="mt-8 grid grid-cols-2 rounded-full border border-white/12 p-1">
@@ -93,7 +97,9 @@ export function AuthGate() {
           </label>
           <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">
             {mode === "create"
-              ? "This identifier opens your file on this computer. Circadia will not email or text you."
+              ? orphan
+                ? "Create file claims the diary already on this computer. It does not start you over."
+                : "This identifier opens your file on this computer. Circadia will not email or text you."
               : "Same email or phone you used when you created the file."}
           </p>
 
@@ -111,6 +117,7 @@ export function AuthGate() {
           There is no password and no cloud account. Anyone at this computer who knows the email or
           phone can open the file.
         </p>
+        <p className="mt-3 text-[11px] tracking-[0.18em] text-zinc-700 uppercase">{APP_VERSION}</p>
       </div>
     </div>
   );

@@ -66,7 +66,7 @@ describe("local file vault", () => {
     localStorage.clear();
   });
 
-  it("migrates a named file with email into a session", () => {
+  it("migrates a named file into the vault without auto-opening it", () => {
     const prior = hydrateState({
       profile: {
         onboardingComplete: true,
@@ -81,8 +81,11 @@ describe("local file vault", () => {
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prior));
     migrateToVault();
-    expect(getSessionLogin()).toBe("email:james@colorado.edu");
-    expect(loadState().profile?.name).toBe("James Motley");
+    expect(getSessionLogin()).toBeNull();
+    const opened = openFile("james@colorado.edu");
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.state.profile?.name).toBe("James Motley");
   });
 
   it("does not auto-open an empty legacy blob", () => {
@@ -131,6 +134,38 @@ describe("local file vault", () => {
     });
     closeFile();
     expect(openFile("nobody@example.com")).toEqual({ ok: false, error: AUTH_ERRORS.missing });
+  });
+
+  it("create file claims an orphan local diary instead of wiping it", () => {
+    localStorage.setItem(
+      VAULT_KEY,
+      JSON.stringify({
+        [LOCAL_FILE_KEY]: hydrateState({
+          profile: {
+            onboardingComplete: true,
+            firstName: "you",
+            lastName: "",
+            age: 19,
+            heightCm: 180,
+            weightKg: 75,
+            targetSleep: "23:00",
+            targetWake: "07:00",
+          },
+          researchNotes: "keep the nights",
+        }),
+      }),
+    );
+    const claimed = createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+    });
+    expect(claimed.ok).toBe(true);
+    if (!claimed.ok) return;
+    expect(claimed.state.researchNotes).toBe("keep the nights");
+    expect(claimed.state.profile?.firstName).toBe("Ada");
+    expect(claimed.state.profile?.onboardingComplete).toBe(true);
+    expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")[LOCAL_FILE_KEY]).toBeUndefined();
   });
 
   it("erase removes the current file; attachLogin rekeys a local file", () => {

@@ -14,7 +14,9 @@ import { isClock, normalizeClock } from "@/lib/windows";
 /** Legacy single-file blob. Migrated once into the vault. */
 export const STORAGE_KEY = "circadia:v1";
 export const VAULT_KEY = "circadia:v1:files";
-export const SESSION_KEY = "circadia:v1:session";
+/** Which file is open. Not the 0.6.0 auto-login key — that skipped the gate. */
+export const SESSION_KEY = "circadia:v1:open";
+const LEGACY_SESSION_KEY = "circadia:v1:session";
 
 export const emptyStudy = (): StudyState => ({
   asked: false,
@@ -82,7 +84,8 @@ export function migrateToVault(): void {
       return;
     }
     window.localStorage.setItem(VAULT_KEY, JSON.stringify({ [key]: hydrated }));
-    window.localStorage.setItem(SESSION_KEY, JSON.stringify({ login: key }));
+    window.localStorage.removeItem(LEGACY_SESSION_KEY);
+    window.localStorage.removeItem(SESSION_KEY);
   } catch {
     window.localStorage.setItem(VAULT_KEY, "{}");
   }
@@ -110,6 +113,7 @@ function writeRawVault(files: Record<string, unknown>): void {
 export function getSessionLogin(): string | null {
   if (typeof window === "undefined") return null;
   migrateToVault();
+  window.localStorage.removeItem(LEGACY_SESSION_KEY);
   try {
     const raw = window.localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
@@ -122,11 +126,17 @@ export function getSessionLogin(): string | null {
 
 export function writeSession(login: string | null): void {
   if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LEGACY_SESSION_KEY);
   if (!login) {
     window.localStorage.removeItem(SESSION_KEY);
     return;
   }
   window.localStorage.setItem(SESSION_KEY, JSON.stringify({ login }));
+}
+
+export function hasOrphanLocalFile(): boolean {
+  if (typeof window === "undefined") return false;
+  return Boolean(readRawVault()[LOCAL_FILE_KEY]);
 }
 
 export function loadState(): CircadiaState {
@@ -166,10 +176,35 @@ export function createFile(input: {
   const files = readRawVault();
   if (files[login]) return { ok: false, error: AUTH_ERRORS.exists };
   const { email, phone } = contactFromLogin(login);
-  const state: CircadiaState = {
-    ...emptyState(),
-    profile: draftProfile({ firstName, lastName, email, phone }),
-  };
+  const orphan = files[LOCAL_FILE_KEY];
+  let state: CircadiaState;
+  if (orphan) {
+    try {
+      const existing = hydrateState(orphan);
+      const profile = existing.profile
+        ? {
+            ...existing.profile,
+            firstName,
+            lastName,
+            name: displayName(firstName, lastName),
+            email,
+            phone,
+          }
+        : draftProfile({ firstName, lastName, email, phone });
+      state = { ...existing, profile };
+    } catch {
+      state = {
+        ...emptyState(),
+        profile: draftProfile({ firstName, lastName, email, phone }),
+      };
+    }
+    delete files[LOCAL_FILE_KEY];
+  } else {
+    state = {
+      ...emptyState(),
+      profile: draftProfile({ firstName, lastName, email, phone }),
+    };
+  }
   files[login] = state;
   writeRawVault(files);
   writeSession(login);
