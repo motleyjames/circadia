@@ -168,6 +168,14 @@ describe("chat and dreams", () => {
     expect(reply.text.toLowerCase()).not.toMatch(/empty diary|need band|aasm|cbt-i/);
   });
 
+  it("names Quviviq and Dayvigo as prescription sleep drugs without a start/stop order", () => {
+    const reply = answerQuestion("what is Quviviq", profile, []);
+    expect(reply.citations).toContain("prescription-hypnotics");
+    expect(reply.text).toMatch(/Dayvigo|Belsomra|Quviviq/);
+    expect(reply.text.toLowerCase()).toMatch(/never tell you to start/);
+    expect(reply.text.toLowerCase()).not.toMatch(/aasm|cbt-i|\bscn\b|stop taking/);
+  });
+
   it("does not dump the chart when it does not know the topic", () => {
     const reply = answerQuestion("what is the weather in boulder", profile, []);
     expect(reply.text.toLowerCase()).toMatch(/don.?t have a solid note/);

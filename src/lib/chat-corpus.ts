@@ -90,6 +90,10 @@ const TOPICS: Topic[] = [
       "can I stop my ambien",
       "sonata vs ambien",
       "restoril for insomnia",
+      "what is quviviq",
+      "is dayvigo a sleeping pill",
+      "belsomra vs ambien",
+      "should I take suvorexant",
     ],
     followUps: [
       { q: "can I stop it", must: "never|prescriber|stop" },

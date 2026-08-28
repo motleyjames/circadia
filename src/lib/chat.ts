@@ -13,12 +13,12 @@ export type ChatReply = {
   citations: string[];
 };
 
-export const CLINIC_PROMPTS = [
-  "Why can’t I fall asleep?",
-  "I keep waking at 3.",
-  "What is Unisom?",
-  "Should I take melatonin?",
-  "What does alcohol actually do?",
+export const CLINIC_STARTERS = [
+  { q: "I cannot fall asleep", hint: "Lying in bed trying is the usual trap." },
+  { q: "I wake at 3 and stay up", hint: "Second-half nights, drinks, watching the clock." },
+  { q: "What does Unisom actually do?", hint: "An old allergy medicine sold as a sleep aid." },
+  { q: "Is melatonin a sleeping pill?", hint: "It is a clock signal. Clinics do not treat it as one." },
+  { q: "What does alcohol do to the night?", hint: "Drowsy going in. Broken in the second half." },
 ] as const;
 
 type Consult = {
@@ -85,12 +85,12 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
   if (extra) return extra;
 
   if (
-    /ambien|zolpidem|lunesta|trazodone|hydroxyzine|atarax|sonata|restoril|silenor/.test(
+    /ambien|zolpidem|lunesta|trazodone|hydroxyzine|atarax|sonata|restoril|silenor|belsomra|suvorexant|dayvigo|lemborexant|quviviq|daridorexant|\borexin\b|\bdoras?\b/.test(
       lower,
     )
   ) {
     return {
-      text: "Those are prescription sleep drugs (Ambien is the one people mean most). They can help you fall asleep. They can also leave you groggy, and some people get odd nighttime behavior. I will never tell you to start, stop, or change a prescription — that is your prescriber. The long-term plan is still the same: a wake time you protect, and getting out of bed if you are lying there awake.",
+      text: "Prescription sleep drugs. Ambien is the common one. A newer family — Belsomra, Dayvigo, Quviviq — blocks a wake signal instead of knocking you out the old way. Trazodone is often used off-label; it is not a first-line sleeping pill. They can help you fall or stay asleep. They can also leave you groggy, and some people get odd nighttime behavior. I will never tell you to start, stop, or change a prescription — that is your prescriber. The long-term plan is still a wake time you protect, and getting out of bed if you are lying there awake. Adding a pill to that plan is not usually better than the plan alone.",
       citations: ["prescription-hypnotics"],
     };
   }
@@ -114,7 +114,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
 
   if (/\b(thc|cbd|cannabis|weed|marijuana|edibles?|gummies)\b/.test(lower)) {
     return {
-      text: "THC can make you sleepy, then steal dream sleep (REM). Coming off it at 3 a.m. can feel like a restless, vivid night — in the same family as alcohol, not identical. CBD evidence for insomnia is small and mixed. I will not tell you to start or stop cannabis. If you use it most nights, say so — I will treat it as part of the picture, not as a treatment.",
+      text: "THC can make you sleepy, then steal dream sleep (REM). A recent lab night in people who already have insomnia found less total sleep and less REM, not more. Coming off it at 3 a.m. can feel restless and vivid — same family as alcohol, not identical. CBD evidence is still mixed. I will not tell you to start or stop cannabis. If you use it most nights, say so — I will treat it as part of the picture, not as a treatment.",
       citations: ["cannabis-sleep"],
     };
   }
@@ -161,7 +161,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
       ? `On your diary: drinks on ${n} of ${reports.length} nights.`
       : "Once drink nights are on the chart I can compare them to dry ones.";
     return {
-      text: `${chart} Alcohol makes you drowsy going in, then shreds the second half of the night — more wake-ups, less dream sleep. “Spins” means the dose was already past useful sleep. If we run one experiment: two dry nights, compare how you rate the morning. That beats a new bottle.`,
+      text: `${chart} Even one or two drinks can steal dream sleep. Heavier drinks make you drowsy going in, then shred the second half — more wake-ups, less dreaming. “Spins” means the dose was already past useful sleep. If we run one experiment: two dry nights, compare how you rate the morning. That beats a new bottle.`,
       citations: ["alcohol"],
     };
   }

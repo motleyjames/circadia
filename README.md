@@ -40,7 +40,8 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 5. **Morning interview** — tap bubbles. Yes/no. Dropdowns only when the answer is yes.
 6. **Notes** — Circadia writes on the breakdown. After **seven** logged mornings it may discuss melatonin or magnesium.
 7. **You** — the file. Clocks, meds, log out. Not a JSON dump. Not a second copy of chat.
-8. **Library** — conservative research. Import/export your data.
+8. **Library** — conservative research. Plain language first, sources second. Import/export your data.
+9. **Consult** — the desk on the right (or the strip above the tab bar). Deterministic answers from the diary and the library. Citations open the note. Unknown → withhold.
 
 ## Paid testers and the pipeline
 

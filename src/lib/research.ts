@@ -22,11 +22,12 @@ export const RESEARCH: ResearchArticle[] = [
     title: "The wake time is the circadian anchor",
     summary:
       "A stable get-up time, including weekends, is the strongest schedule lever most people have.",
-    body: "Your circadian system is a clock in the brain (the SCN) that is set primarily by light. The most reliable way to train that clock is a consistent wake time, then morning outdoor light within about an hour of getting up. Sleeping in on weekends creates 'social jet lag': a mini time-zone shift that makes Sunday night harder. CBT-I clinics treat a fixed wake time as non-negotiable even when the night was short — naps and an earlier bedtime are the recovery tools, not a late morning.",
+    body: "Your circadian system is a clock in the brain (the SCN) that is set primarily by light. The most reliable way to train that clock is a consistent wake time, then morning outdoor light within about an hour of getting up. Sleeping in on weekends creates 'social jet lag': a mini time-zone shift that makes Sunday night harder. CBT-I clinics treat a fixed wake time as non-negotiable even when the night was short — naps and an earlier bedtime are the recovery tools, not a late morning. ACP (2016) and AASM (2021) still put this behavioral package first for chronic insomnia; the 2026 AASM combination guideline did not unseat that.",
     tags: ["schedule", "circadian", "wake", "light"],
     aliases: ["wake time", "get-up time", "getting up time"],
     say: "A stable get-up time, including weekends, is the strongest schedule lever most people have. Morning outdoor light helps. Sleeping in pushes tonight later.",
-    source: "CBT-I clinical practice; Czeisler circadian photoreception work; AASM insomnia guideline",
+    source:
+      "ACP 2016 chronic insomnia CPG (CBT-I first-line); AASM 2021 behavioral/psychological insomnia CPG; AASM 2026 combination-treatment CPG; Czeisler circadian photoreception",
   },
   {
     id: "sleep-pressure",
@@ -37,7 +38,8 @@ export const RESEARCH: ResearchArticle[] = [
     tags: ["latency", "insomnia", "cbt-i", "falling"],
     aliases: ["sleep pressure", "stimulus control"],
     say: "The longer you are awake, the more sleep pressure you build. Lying in bed trying flattens that. If you are awake about 20 minutes, get up, keep it dim, come back when sleepy.",
-    source: "Bootzin stimulus control; Spielman sleep restriction; AASM CBT-I recommendation",
+    source:
+      "Bootzin stimulus control; Spielman sleep restriction; AASM 2021 CBT-I strong recommendation; AASM 2026 combination CPG (CBT-I alone preferred over CBT-I+med)",
   },
   {
     id: "light-screens",
@@ -54,20 +56,24 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Alcohol is a sleep fragmenter, not a sleep aid",
     summary:
       "Drinks can shorten sleep latency and then shred the second half of the night — including REM.",
-    body: "Ethanol is sedating on the way in. In the second half of the night it causes rebound wakefulness, more arousals, and suppressed REM, with a later REM rebound that feels like vivid or spinning-adjacent dreams. 'Spins' are a vestibular/intoxication signal that the dose was already in a range that will not produce restorative sleep. There is no healthy-sleep version of a heavy night. Even one to two drinks measurably fragment sleep in lab studies for many people. If sleep is the goal, alcohol is one of the highest-leverage things to move.",
+    body: "Ethanol is sedating on the way in. A 2024 systematic review and meta-analysis in healthy adults found REM delayed and reduced even at a low dose (~two standard drinks); higher doses are what actually shorten time-to-sleep, and they make the REM hit worse. In the second half of the night you get rebound wakefulness, more arousals, and a later REM rebound that feels like vivid or spinning-adjacent dreams. Wine is not an exception — the melatonin in it is not a sleep dose. There is no healthy-sleep version of a heavy night. If sleep is the goal, alcohol is one of the highest-leverage things to move.",
     tags: ["alcohol", "rem", "staying", "rating"],
     aliases: ["alcohol", "beer", "wine", "hangover"],
-    source: "Ebrahim et al. alcohol and sleep architecture; AASM substance and sleep reviews",
+    say: "Even one or two drinks can steal dream sleep. Heavier drinks make you drowsy going in, then shred the second half — more wake-ups, less dreaming. Wine is not a sleep aid.",
+    source:
+      "Gardiner et al. 2024 Sleep Med Rev (alcohol dose–response, REM); 2015–2025 narrative reviews of alcohol/wine and sleep; classic Ebrahim architecture work",
   },
   {
     id: "melatonin",
     title: "Melatonin is a clock signal, not a sleeping pill",
     summary:
       "Low-dose, correctly timed melatonin can shift a late clock. High doses at lights-out usually miss the point.",
-    body: "Endogenous melatonin rises in dim evening light and tells the body it is night. Supplemental melatonin can phase-shift the clock, which is why it is used (carefully) for delayed sleep phase and jet lag. Hypnotic use — 5–10 mg at bedtime because you cannot fall asleep — is often the wrong tool: you may get next-day grogginess, and you have not trained the clock. Typical circadian-science doses discussed in the literature are closer to 0.3–1 mg, taken earlier than people expect (often 1–3 hours before desired sleep, sometimes earlier for delayed phase under clinical guidance). It is not first-line for chronic insomnia; CBT-I is. Do not start it if you are pregnant, on interacting medications, or under 18 without a clinician. Circadia will only raise it after a week of logs, and only as education.",
+    body: "Endogenous melatonin rises in dim evening light and tells the body it is night. Supplemental melatonin can phase-shift the clock, which is why it is used (carefully) for delayed sleep phase and jet lag. The AASM 2017 pharmacologic guideline suggests clinicians not use melatonin as a treatment for chronic insomnia versus no treatment (weak recommendation) — that is about knockout use, not clock timing. Hypnotic use — 5–10 mg at bedtime because you cannot fall asleep — is usually the wrong tool: next-day grogginess, and you have not trained the clock. Circadian-science doses in the phase-response literature are closer to 0.3–1 mg, taken earlier than people expect (often 1–3 hours before desired sleep, sometimes earlier for delayed phase under clinical guidance). CBT-I remains first-line for chronic insomnia. Do not start melatonin if you are pregnant, on interacting medications, or under 18 without a clinician. Circadia will only raise it after a week of logs, and only as education.",
     tags: ["melatonin", "supplement", "circadian", "delayed"],
     aliases: ["melatonin"],
-    source: "Auld / Ferracioli-Oda melatonin meta-analyses; AASM melatonin position; circadian phase-response literature",
+    say: "Melatonin is a clock signal, not a sleeping pill. Sleep clinics try a stable wake time first. If a clinician later agrees, the usual discussion is a low dose (often 0.3–1 mg) earlier than bedtime, not 10 mg at lights-out.",
+    source:
+      "AASM 2017 pharmacologic insomnia CPG (weak against melatonin as hypnotic); Burgess / Lewy melatonin phase-response; Auld / Ferracioli-Oda meta-analyses; ACP 2016 / AASM 2021 CBT-I first-line",
   },
   {
     id: "magnesium",
@@ -152,14 +158,14 @@ export const RESEARCH: ResearchArticle[] = [
     say: "Sleeping in after a short night feels kind and pushes tonight later. Protect your wake time. Catch-up is a short nap before mid-afternoon, or an earlier bedtime once you are actually sleepy. If you might drive, sleep is safety.",
     body: "Homeostatic pressure and circadian timing are two systems. Sleeping until noon after a 3 am night discharges pressure at the wrong clock time and delays tonight. In CBT-I, the wake time stays put even after a poor night; recovery is a brief nap (about 20 minutes, before mid-afternoon) or an earlier bedtime only once sleepy — not more hours in bed hoping. Exception: if you might drive, operate machinery, or cannot stay awake, sleep is a safety intervention, not a willpower test. Tell a clinician if sleepiness is that severe — that can be apnea, narcolepsy, or severe restriction, not 'bad habits.'",
     tags: ["naps", "weekend", "sleep in", "catch up", "wake", "schedule"],
-    source: "CBT-I sleep restriction and stimulus-control practice; AASM insomnia guideline",
+    source: "AASM 2021 behavioral CPG; CBT-I sleep restriction and stimulus-control practice",
   },
   {
     id: "otc-antihistamines",
     title: "Unisom, Benadryl, and other aisle sleep aids",
     summary:
       "They are old allergy medicines sold for sleep. They can knock you out. They are not good sleep, and they are not a nightly plan.",
-    body: "Unisom SleepTabs are usually doxylamine. Some Unisom gels, ZzzQuil, Tylenol PM, Advil PM, and Benadryl use diphenhydramine. Both are first-generation antihistamines. They make you drowsy by blocking a wake signal, not by fixing the clock or sleep pressure. Lab and clinic reviews: next-day fog is common, the effect fades if you take them often, and the sleep you get is often lighter and more broken. Sleep clinics do not recommend them as ongoing insomnia treatment. Rare backup for a one-off night is a different question than a habit. Do not mix with alcohol. Older adults, glaucoma, urinary retention, and other drowsy meds raise the risk — that is a pharmacist or doctor, not an aisle. Circadia will not tell you to start these.",
+    body: "Unisom SleepTabs are usually doxylamine. Some Unisom gels, ZzzQuil, Tylenol PM, Advil PM, and Benadryl use diphenhydramine. Both are first-generation antihistamines. They make you drowsy by blocking a wake signal (histamine), not by fixing the clock or sleep pressure. The AASM 2017 pharmacologic guideline suggests clinicians not use diphenhydramine for chronic insomnia (weak). Next-day fog is common, the effect fades if you take them often, and the sleep you get is often lighter and more broken. Rare backup for a one-off night is a different question than a habit. Do not mix with alcohol. Older adults (Beers criteria), glaucoma, urinary retention, and other drowsy meds raise the risk — pharmacist or doctor, not an aisle. Circadia will not tell you to start these.",
     tags: ["unisom", "benadryl", "zzzquil", "doxylamine", "diphenhydramine", "otc", "sleep aid"],
     aliases: [
       "unisom",
@@ -177,15 +183,17 @@ export const RESEARCH: ResearchArticle[] = [
       "sleeping pill",
       "sleeping pills",
     ],
-    source: "AASM 2017 insomnia guideline (antihistamines not recommended for chronic insomnia); first-generation antihistamine sleep and hangover literature; Beers criteria for older adults",
+    say: "Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep — next-day fog is common, and they work less if you take them often. Not a nightly plan. Do not mix with alcohol.",
+    source:
+      "AASM 2017 pharmacologic CPG (weak against diphenhydramine for chronic insomnia); first-generation antihistamine hangover literature; Beers criteria for older adults",
   },
   {
     id: "prescription-hypnotics",
     title: "Prescription sleep drugs",
     summary:
-      "Ambien and similar drugs can help you fall asleep. They do not replace a wake-time plan, and an app will never change your dose.",
-    body: "Zolpidem (Ambien), eszopiclone (Lunesta), zaleplon (Sonata), and some benzodiazepines are prescription hypnotics. Trazodone and hydroxyzine are often used off-label for sleep. They can shorten the time it takes to fall asleep. They can also cause next-day grogginess, odd nighttime behavior (especially zolpidem), and worse sleep for a few nights if you stop suddenly. Sleep clinics still treat a stable wake time and 'bed is for sleep' as the long-term plan, with or without a pill. Circadia will never tell you to start, stop, or change a prescribed drug. That is your prescriber.",
-    tags: ["ambien", "zolpidem", "lunesta", "trazodone", "prescription", "hypnotic"],
+      "Ambien, the newer wake-signal blockers, and off-label trazodone can help some people sleep. They do not replace a wake-time plan. An app will never change your dose.",
+    body: "Zolpidem (Ambien), eszopiclone (Lunesta), zaleplon (Sonata), and some benzodiazepines are GABA-acting hypnotics. Dual orexin receptor antagonists (DORAs) — suvorexant (Belsomra, in the 2017 AASM CPG), lemborexant (Dayvigo, 2019), daridorexant (Quviviq, 2022) — block a wake-promoting peptide rather than boosting sleep circuitry the old way; they were mostly approved after the 2017 drug-by-drug CPG, so that document is incomplete for the class. Trazodone and hydroxyzine are often used off-label; AASM 2017 suggests clinicians not use trazodone for chronic insomnia (weak). All of these can shorten latency or waking. They can also cause next-day grogginess, odd nighttime behavior (especially zolpidem), and rebound if stopped suddenly. ACP 2016 and AASM 2021 still put CBT-I first. The AASM 2026 combination CPG (conditional, low certainty) suggests CBT-I plus a medication over a medication alone, and suggests against combination over CBT-I alone. Circadia will never tell you to start, stop, or change a prescribed drug.",
+    tags: ["ambien", "zolpidem", "lunesta", "trazodone", "prescription", "hypnotic", "dora"],
     aliases: [
       "ambien",
       "zolpidem",
@@ -202,18 +210,29 @@ export const RESEARCH: ResearchArticle[] = [
       "temazepam",
       "silenor",
       "doxepin",
+      "belsomra",
+      "suvorexant",
+      "dayvigo",
+      "lemborexant",
+      "quviviq",
+      "daridorexant",
+      "orexin",
     ],
-    source: "FDA labels for zolpidem and eszopiclone; AASM pharmacologic insomnia guideline; clinical reviews of off-label trazodone for sleep",
+    say: "Prescription sleep drugs. Ambien is the common one. A newer family — Belsomra, Dayvigo, Quviviq — blocks a wake signal instead of knocking you out the old way. Trazodone is often used off-label; it is not a first-line sleeping pill. I will never tell you to start, stop, or change a prescription. The long-term plan is still a wake time you protect, and getting out of bed if you are lying there awake. Adding a pill to that plan is not usually better than the plan alone.",
+    source:
+      "AASM 2017 pharmacologic CPG; AASM 2021 behavioral CPG; AASM 2026 combination-treatment CPG (Buysse et al., J Clin Sleep Med); FDA labels for zolpidem, suvorexant, lemborexant, daridorexant",
   },
   {
     id: "cannabis-sleep",
     title: "THC, CBD, and sleep",
     summary:
       "THC can make you sleepy and then steal REM. CBD is mixed. Neither is a clean insomnia treatment.",
-    body: "THC is sedating for many people on the way in, then it suppresses REM. When it wears off you can get vivid or restless nights — similar in shape to alcohol, not identical. CBD evidence for insomnia is small and mixed; high doses can be alerting for some people. Edibles last longer than smoke and are easier to overshoot. If sleep is the goal, nightly THC is a trade: easier onset, worse architecture. Circadia will not tell you to start or stop cannabis; it will treat it as a confounder on the diary if you say you use it.",
+    body: "THC is sedating for many people on the way in, then it suppresses REM. When it wears off you can get vivid or restless nights — similar in shape to alcohol, not identical. A 2025 pilot randomized night in adults with insomnia (oral 10 mg THC + 200 mg CBD vs placebo) found less total sleep and a large REM cut, not a longer night. CBD-alone evidence for insomnia is still small and mixed; high doses can be alerting for some people. Edibles last longer than smoke and are easier to overshoot. Nightly THC is a trade: easier onset, worse architecture. Circadia will not tell you to start or stop cannabis; it will treat it as a confounder on the diary if you say you use it.",
     tags: ["thc", "cbd", "cannabis", "weed", "rem"],
     aliases: ["thc", "cbd", "cannabis", "weed", "marijuana", "edible", "edibles", "gummies"],
-    source: "Cannabinoids and sleep architecture reviews; REM suppression with THC; mixed CBD insomnia trials",
+    say: "THC can make you sleepy, then steal dream sleep. A recent lab night in people who already have insomnia found less total sleep and less REM, not more. CBD evidence is still mixed. I will not tell you to start or stop cannabis.",
+    source:
+      "Suraev et al. 2025 J Sleep Res (THC/CBD insomnia pilot, high-density EEG); cannabinoid–sleep reviews 2021–2024; REM suppression with THC",
   },
   {
     id: "nicotine",
@@ -276,10 +295,11 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "Mild at best, mixed evidence, not a plan. Valerian has liver rare-risk noise. None outrank wake time.",
     say: "L-theanine is mild. Glycine has small sleep data. Ashwagandha is mixed and not a sleep drug. Valerian is mixed and has rare liver-injury reports — not something to stack 'to be sure.' None of these beat a wake time and getting out of bed if you are awake. I will not tell you to start them.",
-    body: "Theanine, valerian, ashwagandha, and glycine are marketed for sleep with small or mixed trials. Valerian has rare hepatotoxicity reports. Circadia treats them as optional, low-confidence, never first-line, and never a stack.",
+    body: "Theanine, valerian, ashwagandha, and glycine are marketed for sleep with small or mixed trials. The AASM 2017 pharmacologic guideline suggests clinicians not use valerian for chronic insomnia (weak). Valerian also has rare hepatotoxicity reports. Circadia treats them as optional, low-confidence, never first-line, and never a stack.",
     tags: ["theanine", "valerian", "ashwagandha", "glycine", "herbal"],
     aliases: ["theanine", "l-theanine", "valerian", "ashwagandha", "glycine", "chamomile", "lemon balm"],
-    source: "Herbal sleep systematic reviews; valerian hepatotoxicity case literature; glycine sleep trials small",
+    source:
+      "AASM 2017 pharmacologic CPG (weak against valerian); herbal sleep systematic reviews; valerian hepatotoxicity case literature; glycine sleep trials small",
   },
   {
     id: "late-eating",

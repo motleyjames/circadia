@@ -37,15 +37,15 @@ Ranked. If a feature fights this list, the feature loses.
 
 1. **Fixed wake time** is the circadian anchor (SCN, morning light). Weekend sleep-ins are social jet lag. Asleep-by is **derived** from wake × age-band midpoint. Wake is the independent variable.
 2. **Sleep pressure vs time in bed.** Bed is for sleep. If awake ~20 minutes, get up. Long latency is not a melatonin deficiency by default.
-3. **CBT-I is first-line chronic insomnia care** (AASM). The app coaches the behaviors. It does not run full sleep restriction without safety rails (bipolar spectrum, driving, untreated apnea).
-4. **Alcohol fragments the second half of the night and suppresses REM.** Spins are a dose signal. This outranks supplements.
+3. **CBT-I is first-line chronic insomnia care** (ACP 2016; AASM 2021). The 2026 AASM combination CPG did not unseat that: it suggests CBT-I+med over med alone, and suggests against CBT-I+med over CBT-I alone. The app coaches the behaviors. It does not run full sleep restriction without safety rails (bipolar spectrum, driving, untreated apnea).
+4. **Alcohol fragments the second half of the night and suppresses REM** — including at ~one to two drinks (Gardiner 2024 meta-analysis). Spins are a dose signal. This outranks supplements.
 5. **The hour off screens is a behavioral gate.** Melanopsin / evening light is real; arousal from content is usually the larger term. Morning outdoor light is the other half.
 6. **Duration bands** (NSF / AASM): teens 8–10, young adults 7–9, adults ≥7. Long time in bed with poor ratings ≠ more sleep.
 7. **Melatonin** is a phase-shift signal (~0.3–1 mg, *before* desired sleep), not a 10 mg hypnotic at lights-out. Hold recommendations until ~7 nights so delay vs alcohol vs screens can show.
 8. **Aisle sedatives** (Unisom / doxylamine, Benadryl / diphenhydramine, ZzzQuil, PM combos) knock you out. They are not good sleep and not a nightly plan. Antihistamines are not first-line chronic insomnia care.
-9. **Prescription hypnotics** (Ambien and kin): education only. Never start, stop, or change a dose from the app.
+9. **Prescription hypnotics:** Ambien/Z-drugs, off-label trazodone, and DORAs (Belsomra / Dayvigo / Quviviq). Education only. Never start, stop, or change a dose from the app. A pill plus the behavioral plan is not usually better than the plan alone (AASM 2026).
 10. **Magnesium** (glycinate 200–400 mg is what people mean): mixed, small trials. Optional adjunct. Kidney disease is a hard stop we cannot see — say so.
-11. **THC** sedates then steals REM. **Nicotine** is a stimulant you take to bed. **Caffeine** half-life ~5–6 h. Name them when asked; do not moralize.
+11. **THC** sedates then steals REM (2025 insomnia lab night: less total sleep, less REM). **Nicotine** is a stimulant you take to bed. **Caffeine** half-life ~5–6 h. Name them when asked; do not moralize.
 12. **OSA** is not insomnia. Snore / gasp / high BMI + unrefreshing sleep → clinician, not a noise machine.
 13. **Pregnancy:** no pharmacologic suggestions. Obstetric clinician.
 14. **Dreams** are mostly REM cognition. Alcohol rebound and some antidepressants explain a lot of “wild night” reports. No symbol dictionary.
