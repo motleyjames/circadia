@@ -38,9 +38,9 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 3. **Study gate** — yes turns the pipeline on. No Send button after that.
 4. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise.
 5. **Morning interview** — tap bubbles. Yes/no. Dropdowns only when the answer is yes.
-6. **Notes** — a week read from the first mornings: which dates were better, which were worse, and what I would try next. Honest when the window is thin. Bottles stay in **Consult**, and only after about seven logs.
+6. **Notes** — a week read from the first mornings: which dates were better, which were worse, and what I would try next. Honest when the window is thin. After each morning, one library page that night actually earned — not a tour of the shelf. Bottles stay in **Consult**, and only after about seven logs.
 7. **You** — the file. Clocks, meds, log out. Not a JSON dump. Not a second copy of chat.
-8. **Library** — conservative research. Plain language first, sources second. Import/export your data.
+8. **Library** — conservative research. Plain language first, sources second. The morning’s page is pinned at the top; the rest of the shelf stays browseable. Import/export your data.
 9. **Consult** — the desk on the right (or the strip above the tab bar). Opens empty. Answers from the diary (a named morning, last night, this week) and the library. Citations open the note. Unknown → withhold. Past consults file to History, by day. Open one to continue. Delete if you want it gone.
 
 ## Paid testers and the pipeline

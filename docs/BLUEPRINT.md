@@ -62,7 +62,7 @@ Walker-style overclaim is banned. If the literature is mixed, the UI says **low 
 first open:  cover → intake → study gate (join or keep local) → Tonight
 evening:     countdown disc → screens-down ping → wind-down
 night:       (user is offline on purpose)
-morning:     bubble interview → optional dream
+morning:     bubble interview → optional dream → Notes hands one library page from that morning
 anytime:     chat bar (follow-ups allowed) — the rail is the thread
 week 1:      Notes reads the week from the first mornings (sketch until a few logs)
 week 2+:     consult may discuss supplements, still second to behavior
