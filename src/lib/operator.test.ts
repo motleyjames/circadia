@@ -54,18 +54,26 @@ describe("contact", () => {
 });
 
 describe("roster vs night pack", () => {
-  it("puts a name on the roster and keeps login identifiers out of both packs", () => {
+  it("keeps names and login identifiers out of both packs", () => {
     const s = state();
     const roster = buildRoster(s);
     const pack = buildStudyPack(s);
     expect(validateRoster(roster).ok).toBe(true);
+    expect(roster.name).toBeNull();
     expect(roster.email).toBeNull();
     expect(roster.phone).toBeNull();
-    expect(roster.name).toBe("James Motley");
+    expect(JSON.stringify(roster)).not.toMatch(/James Motley/);
     expect(JSON.stringify(pack)).not.toMatch(/colorado\.edu/i);
     expect(JSON.stringify(pack)).not.toMatch(/303-555-0142/);
     expect(JSON.stringify(pack)).not.toMatch(/James Motley/);
     expect(anonymityViolations(pack, s)).toEqual([]);
+  });
+
+  it("still parses a legacy roster that carried a name", () => {
+    const roster = { ...buildRoster(state()), name: "James Motley" };
+    const parsed = validateRoster(roster);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) expect(parsed.value.name).toBe("James Motley");
   });
 
   it("rejects a roster that smuggles dream text", () => {
@@ -83,7 +91,7 @@ describe("roster vs night pack", () => {
 });
 
 describe("moderator snapshot", () => {
-  it("counts unique people from roster, nights, and faults", () => {
+  it("counts unique people from roster, nights, and faults without exposing PII", () => {
     const s = state();
     const snapshot = summarizeInbox([
       { file: "roster-aaaa.json", payload: buildRoster(s) },
@@ -102,7 +110,19 @@ describe("moderator snapshot", () => {
     ]);
     expect(snapshot.userCount).toBe(2);
     expect(snapshot.faultCount).toBe(1);
-    expect(snapshot.people[0]?.name).toBe("James Motley");
-    expect(snapshot.people.find((p) => p.name === "Tester Two")?.email).toBe("two@example.com");
+    expect(snapshot.people).toHaveLength(2);
+    expect(snapshot.people.some((p) => p.participantId.startsWith("aaaaaaaa"))).toBe(true);
+    expect(snapshot.people.some((p) => p.participantId.startsWith("bbbbbbbb"))).toBe(true);
+    const dumped = JSON.stringify(snapshot);
+    expect(dumped).not.toMatch(/James Motley/);
+    expect(dumped).not.toMatch(/Tester Two/);
+    expect(dumped).not.toMatch(/two@example\.com/);
+    expect(dumped).not.toMatch(/colorado\.edu/i);
+    expect(dumped).not.toMatch(/"name"/);
+    expect(dumped).not.toMatch(/"email"/);
+    expect(dumped).not.toMatch(/"phone"/);
+    expect(dumped).not.toMatch(/"heightCm"/);
+    expect(dumped).not.toMatch(/"weightKg"/);
+    expect(snapshot.people.every((p) => !("name" in p))).toBe(true);
   });
 });

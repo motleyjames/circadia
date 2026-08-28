@@ -26,7 +26,7 @@ export function buildRoster(state: CircadiaState): RosterEvent {
     at: new Date().toISOString(),
     participantId,
     appVersion: APP_VERSION,
-    name: profile.name.trim() || "you",
+    name: null,
     email: null,
     phone: null,
     age: profile.age,
@@ -96,7 +96,10 @@ export function validateRoster(raw: unknown): RosterResult {
   if (typeof p.appVersion !== "string" || p.appVersion.length > 32) {
     return { ok: false, error: "Invalid app version." };
   }
-  if (typeof p.name !== "string" || p.name.trim().length < 1 || p.name.length > 80) {
+  if (
+    p.name !== null &&
+    (typeof p.name !== "string" || p.name.trim().length < 1 || p.name.length > 80)
+  ) {
     return { ok: false, error: "Invalid name." };
   }
   if (p.email !== null && (typeof p.email !== "string" || !isEmail(p.email))) {
@@ -133,7 +136,7 @@ export function validateRoster(raw: unknown): RosterResult {
       at: p.at,
       participantId: p.participantId,
       appVersion: p.appVersion,
-      name: p.name.trim(),
+      name: typeof p.name === "string" ? p.name.trim() : null,
       email: p.email,
       phone: p.phone,
       age: p.age,

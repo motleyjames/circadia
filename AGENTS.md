@@ -25,4 +25,5 @@ Local-first Next.js sleep companion. No database and no cloud auth. Profile, mor
 - `useCircadia` must not throw when the provider is missing. Diary routes are server-gated; they are not `"use client"` pages.
 - Linux cannot compile AppKit. `npm run dock` / `put-on-dock` failing here is expected. Those scripts are Mac-only.
 - Mac Dock install belongs in a clone of https://github.com/motleyjames/circadia.git at 0.6.5 or newer. Never run dock commands in an old `rest-ai` 0.5.0 tree.
+- Operator never displays names, email, phone, or body measurements. Signups stitch on `participantId`. Sleep stats only. `summarizeInbox` must drop PII even if a legacy roster file still has a name.
 

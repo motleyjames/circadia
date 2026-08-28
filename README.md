@@ -48,7 +48,7 @@ If you are paying people to use Circadia, payment happens **outside** the app.
 
 After signup they choose once:
 
-- **Join the study** — that is the send. A roster card leaves immediately (name, age, height, weight, clocks — not email or phone). After each real morning, a stripped night pack leaves on its own. If the app throws, a fault leaves too.
+- **Join the study** — that is the send. A roster card leaves immediately (participant number, sleep window, falling/staying — not a name, not email or phone). After each real morning, a stripped night pack leaves on its own. If the app throws, a fault leaves too.
 - **Keep everything on this computer** — the app is unchanged. Nothing is sent.
 
 There is no Send now. Testers do not see JSON.
@@ -57,7 +57,9 @@ There is no Send now. Testers do not see JSON.
 
 **Night packs never contain:** name, email, phone, dream text, chat text, medication/supplement strings, height/weight, calendar dates, report ids, IP.
 
-**Roster cards contain** the name and body so testers show up in the inbox. Email and phone stay on their computer as the login identifier. That is not a cloud backup of the diary, and it is not a number James can call. Dreams still live only on their machine.
+**Roster cards contain** a participant number, sleep window, and struggle flags so testers still show up as users in the inbox. Names, email, phone, height, and weight stay on their computer. That is not a cloud backup of the diary, and it is not a number James can call. Dreams still live only on their machine.
+
+The operator app shows signup counts and sleep stats against that participant number. It does not show names or other personal information.
 
 Packs land in `data/study-inbox/` on the machine running Circadia. Testers on *their* computers only reach you if that app can POST to a host you control — set `STUDY_INGEST_URL` (and optional `STUDY_INGEST_TOKEN`) on their install, pointing at yours.
 
@@ -104,4 +106,4 @@ Dream “meaning” is theme-tagging plus physiology (alcohol and REM rebound, m
 
 ## Why this way
 
-A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped; the roster is a name and body, not a contact list. James reads packs in the operator app (`npm run mod`). The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.
+A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped. The roster is a participant number and sleep window, not a name and not a contact list. James reads stats in the operator app (`npm run mod`). The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.

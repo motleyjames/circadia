@@ -25,7 +25,7 @@ export type MeditationId = "478" | "body-scan" | "pmr";
 export type Profile = {
   firstName: string;
   lastName: string;
-  /** Display name: first + last. Operator roster uses this, not email or phone. */
+  /** Display name on this computer. Never shown in Operator. */
   name: string;
   age: number;
   sex: Sex;
@@ -156,7 +156,8 @@ export type RosterEvent = {
   at: string;
   participantId: string;
   appVersion: string;
-  name: string;
+  /** Legacy inbox files may still carry a name. New cards send null. Operator never displays it. */
+  name: string | null;
   /** Kept on the schema so old inbox files still parse. New cards send null. */
   email: string | null;
   phone: string | null;

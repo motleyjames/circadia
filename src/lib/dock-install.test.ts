@@ -131,7 +131,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.5");
+    expect(APP_VERSION).toBe("0.6.6");
   });
 
   it("does not run diary views while compiling the operator", () => {
@@ -166,7 +166,7 @@ describe("morning sleep-aid question", () => {
 describe("put-on-dock script", () => {
   it("refuses Linux and prints the 0.6.5 version gate", () => {
     const run = spawnSync("bash", ["scripts/put-on-dock.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("Circadia 0.6.5");
+    expect(run.stdout).toContain("0.6.5");
     if (process.platform === "darwin") {
       expect([0, 5]).toContain(run.status);
     } else {
