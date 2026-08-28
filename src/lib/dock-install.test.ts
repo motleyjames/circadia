@@ -119,7 +119,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.3");
+    expect(APP_VERSION).toBe("0.6.4");
   });
 
   it("does not run diary views while compiling the operator", () => {
@@ -136,7 +136,11 @@ describe("morning sleep-aid question", () => {
     expect(readFileSync("src/components/diary-page.tsx", "utf8")).toContain("isOperatorSurface");
     expect(readFileSync("src/components/diary-page.tsx", "utf8")).not.toContain('"use client"');
     expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("CircadiaSafeTree");
-    expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain('typeof window === "undefined"');
+    expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("return NOOP_VALUE");
+    expect(readFileSync("src/context/circadia-store.tsx", "utf8")).not.toMatch(
+      /const ctx = useContext\(CircadiaContext\);\s*if \(!ctx\) throw new Error\("useCircadia must be used inside CircadiaProvider"\)/,
+    );
+    expect(readFileSync("src/app/layout.tsx", "utf8")).toContain("CircadiaSafeTree");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("CircadiaSafeTree");
     expect(nextConfig).toContain("CIRCADIA_PACK_STATIC");
     expect(nextConfig).toContain("nextOutput");

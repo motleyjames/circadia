@@ -493,8 +493,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
 export function useCircadia() {
   const ctx = useContext(CircadiaContext);
   if (ctx) return ctx;
-  // Next still prerenders diary pages while compiling the operator (no layout).
-  // Browser stays strict: a missing provider is a real bug.
-  if (typeof window === "undefined") return NOOP_VALUE;
-  throw new Error("useCircadia must be used inside CircadiaProvider");
+  // Operator compile prerenders /insights, /check-in, etc. without the diary
+  // tree. A throw here is what killed Circadia Operator.app on the Mac.
+  return NOOP_VALUE;
 }
