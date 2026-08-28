@@ -10,7 +10,7 @@ This is the architecture. The running app is the first vertical, not a mock.
 
 The **engine** may say AASM, CBT-I, SCN, melanopsin. This document does. Tests and library sources do.
 
-The **mouth** (onboarding, Tonight, chat replies, chips) may not. A 3 a.m. user gets “get up if you are still awake,” not an acronym. Jargon in the mouth is a product bug even when the science is right.
+The **mouth** (onboarding, Tonight, Notes, chat replies, chips) may not. A 3 a.m. user gets “get up if you are still awake,” not an acronym. Jargon in the mouth is a product bug even when the science is right.
 
 Same content. Two registers. If they drift, the mouth is wrong.
 
@@ -23,7 +23,7 @@ Not “everyone who wants to optimize.” They already failed at sleep. They nee
 - an **opening that feels like software** on a computer — sidebar, consult rail, not a phone bezel in a browser
 - a **short morning interview** they will actually finish (bubbles, not essays)
 - an **evening gate** (screens down 60 minutes before the sleep window)
-- notes that name the real lever (alcohol, drifting wake time, lying in bed awake) before they name a bottle
+- notes that read the week (what worked, what hurt, the next move) before they name a bottle
 - a consult that **answers the question they typed**, including follow-ups, and withholds when it does not have a note
 - optional dream storage without mysticism
 
@@ -64,8 +64,8 @@ evening:     countdown disc → screens-down ping → wind-down
 night:       (user is offline on purpose)
 morning:     bubble interview → optional dream
 anytime:     chat bar (follow-ups allowed) — the rail is the thread
-week 1:      behavioral notes only
-week 2+:     supplement discussion unlocked, still second to behavior
+week 1:      Notes reads the week from the first mornings (sketch until a few logs)
+week 2+:     consult may discuss supplements, still second to behavior
 ```
 
 Open Circadia **always lands on Tonight** after the study gate, not whatever route was underneath the overlay.
@@ -153,7 +153,7 @@ src/app/          diary: /  /check-in  /insights  /library  /you  /api/study
 - Wake-derived window; body metrics editable in You
 - Tonight countdown + wind-down (3 meditations, 4 soundscapes)
 - Morning bubble interview including dream option
-- Grounded notes + 7-night supplement gate
+- Week review on Notes from the first mornings; consult still gates bottles at ~7 nights
 - Consult engine + follow-ups + You thread + corpus tests
 - Research library (clock, alcohol, aisle, Rx, THC, nicotine, shift, jet lag, pregnancy, reflux, …)
 - JSON import/export; sample week labeled, confirm-before-overwrite

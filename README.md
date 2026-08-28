@@ -38,7 +38,7 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 3. **Study gate** — yes turns the pipeline on. No Send button after that.
 4. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise.
 5. **Morning interview** — tap bubbles. Yes/no. Dropdowns only when the answer is yes.
-6. **Notes** — Circadia writes on the breakdown. After **seven** logged mornings it may discuss melatonin or magnesium.
+6. **Notes** — a week read from the first mornings: what worked, what hurt, and what to do next. Honest when the window is thin. Bottles stay in **Consult**, and only after about seven logs.
 7. **You** — the file. Clocks, meds, log out. Not a JSON dump. Not a second copy of chat.
 8. **Library** — conservative research. Plain language first, sources second. Import/export your data.
 9. **Consult** — the desk on the right (or the strip above the tab bar). Opens empty. Answers from the diary and the library. Citations open the note. Unknown → withhold. Past consults file to History, by day. Open one to continue. Delete if you want it gone.
