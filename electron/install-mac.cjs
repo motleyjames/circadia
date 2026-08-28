@@ -80,7 +80,7 @@ const root = path.join(__dirname, "..");
 const swift = path.join(__dirname, "launcher.swift");
 const png = path.join(__dirname, operator ? "operator-icon.png" : "icon.png");
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
-const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.6.2";
+const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.6.3";
 
 if (!fs.existsSync(png)) {
   console.error(`Missing ${png}. The ${operator ? "gold" : "ice"} clock will not appear in the Dock.`);
@@ -110,6 +110,7 @@ function buildDiary() {
   );
   const env = { ...process.env };
   delete env.CIRCADIA_ELECTRON;
+  delete env.CIRCADIA_PACK_STATIC;
   if (operator) {
     env.CIRCADIA_SURFACE = "mod";
     env.NEXT_PUBLIC_CIRCADIA_SURFACE = "mod";
@@ -117,6 +118,11 @@ function buildDiary() {
     delete env.CIRCADIA_SURFACE;
     delete env.NEXT_PUBLIC_CIRCADIA_SURFACE;
   }
+  if (env.CIRCADIA_ELECTRON === "1" || env.CIRCADIA_PACK_STATIC === "1") {
+    console.error("Dock compile refuses static export. CIRCADIA_ELECTRON / CIRCADIA_PACK_STATIC leaked.");
+    process.exit(1);
+  }
+  console.log(`Dock compile env: surface=${operator ? "mod" : "diary"} electron=off pack_static=off`);
   const result = spawnSync(process.execPath, [nextBin, "build"], { cwd: root, stdio: "inherit", env });
   if (result.status !== 0) {
     console.error(`next build failed. ${APP_FILE} was not replaced.`);

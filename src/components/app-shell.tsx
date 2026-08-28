@@ -1,6 +1,6 @@
 "use client";
 
-import { CircadiaProvider, useCircadia } from "@/context/circadia-store";
+import { CircadiaProvider, CircadiaSafeTree, useCircadia } from "@/context/circadia-store";
 import { AuthGate } from "@/components/auth-gate";
 import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
@@ -94,10 +94,10 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   if (isOperatorSurface()) {
     return (
-      <>
+      <CircadiaSafeTree>
         <NativeChrome />
         <div className="night-sky min-h-dvh text-zinc-100">{children}</div>
-      </>
+      </CircadiaSafeTree>
     );
   }
 

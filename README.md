@@ -11,20 +11,24 @@ Two apps. They are not the same window.
 - **Ice clock** — Circadia. Sign up / Log in, then the diary.
 - **Gold clock** — Circadia Operator. Your inbox. Testers never see this.
 
-`npm run dock` used to install the diary only, which is why the gold one never showed up. It now installs **both**, in that order: ice first, then gold. If Operator’s compile fails, the diary app is already in `/Applications` — run `npm run dock:mod` after.
+`npm run dock` installs **both**, in that order: ice first, then gold. If Operator’s compile fails, the diary app is already in `/Applications` — run `npm run dock:mod` after.
 
-Run this from **this repo** (the one whose Preview shows Sign up / Log in and version 0.6.2). An older `rest-ai` clone that still says “A diary needs a name” will put the old intake on the Dock.
+Run this from **this repo** (Sign up / Log in, version **0.6.3**). An older `rest-ai` clone that still says “A diary needs a name”, or that dies on `/check-in` during Operator compile, is not this tree — `npm run dock` there will rebuild the broken apps.
+
+If either of these is already on screen:
+
+1. **`Cannot find module …/app/Users/…/electron/main.cjs`** — leftover Electron Circadia. Cmd+Q the dialog, then `node electron/fix-mac.cjs` from this folder.
+2. **`useCircadia must be used inside CircadiaProvider` on `/check-in`** — Operator was static-exporting diary pages. This tree refuses that. Do not keep compiling the old clone.
 
 ```bash
 xcode-select --install   # once, if Swift never compiled
 cd /path/to/this-circadia
 npm install
+node electron/fix-mac.cjs
 npm run dock
 ```
 
-That writes `/Applications/Circadia.app` and `/Applications/Circadia Operator.app`, puts an alias for each on the Desktop, and opens them. Drag **both** to the Dock. Remove any tile named Electron.
-
-If a `Cannot find module …/app/Users/…/electron/main.cjs` dialog is already on screen: Cmd+Q it, then `node electron/fix-mac.cjs`, then `npm run dock`.
+That writes `/Applications/Circadia.app` and `/Applications/Circadia Operator.app`, puts an alias for each on the Desktop, and opens them. Drag **both** to the Dock. Remove any tile named Electron. The gold clock is **Circadia Operator**, not the ice Circadia tile.
 
 Operator-only: `npm run dock:mod`. Browser inbox without Dock: `npm run mod` → http://127.0.0.1:43149, passphrase `circadia-local`.
 

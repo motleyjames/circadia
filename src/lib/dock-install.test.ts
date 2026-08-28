@@ -119,7 +119,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.2");
+    expect(APP_VERSION).toBe("0.6.3");
   });
 
   it("does not run diary views while compiling the operator", () => {
@@ -130,8 +130,19 @@ describe("morning sleep-aid question", () => {
       "src/app/you/page.tsx",
       "src/app/library/page.tsx",
     ]) {
-      expect(readFileSync(file, "utf8")).toContain("DiarySurface");
+      expect(readFileSync(file, "utf8")).toContain("DiaryPage");
+      expect(readFileSync(file, "utf8")).not.toContain('"use client"');
     }
+    expect(readFileSync("src/components/diary-page.tsx", "utf8")).toContain("isOperatorSurface");
+    expect(readFileSync("src/components/diary-page.tsx", "utf8")).not.toContain('"use client"');
+    expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("CircadiaSafeTree");
     expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain('typeof window === "undefined"');
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("CircadiaSafeTree");
+    expect(nextConfig).toContain("CIRCADIA_PACK_STATIC");
+    expect(nextConfig).toContain("nextOutput");
+    expect(install).toContain("delete env.CIRCADIA_PACK_STATIC");
+    expect(install).toContain("delete env.CIRCADIA_ELECTRON");
+    expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("CIRCADIA_PACK_STATIC");
+    expect(readFileSync("electron/serve-dock.cjs", "utf8")).toContain("CIRCADIA_PACK_STATIC");
   });
 });

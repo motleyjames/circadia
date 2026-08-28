@@ -40,6 +40,7 @@ function build() {
   console.log(operator ? "Circadia Operator: source is newer than the Dock compile. Building…" : "Circadia: source is newer than the Dock compile. Building…");
   const env = { ...process.env };
   delete env.CIRCADIA_ELECTRON;
+  delete env.CIRCADIA_PACK_STATIC;
   if (operator) {
     env.CIRCADIA_SURFACE = "mod";
     env.NEXT_PUBLIC_CIRCADIA_SURFACE = "mod";

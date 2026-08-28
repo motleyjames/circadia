@@ -182,6 +182,39 @@ type CircadiaContextValue = {
 
 const CircadiaContext = createContext<CircadiaContextValue | null>(null);
 
+const noop = () => undefined;
+
+const NOOP_VALUE: CircadiaContextValue = {
+  ready: false,
+  state: SERVER_STATE,
+  session: null,
+  canLogOut: false,
+  signUp: async () => ({ ok: false as const, error: "Not in the browser." }),
+  logIn: async () => ({ ok: false as const, error: "Not in the browser." }),
+  logOut: noop,
+  attachLogin: async () => ({ ok: false as const, error: "Not in the browser." }),
+  changePassword: async () => ({ ok: false as const, error: "Not in the browser." }),
+  saveProfile: noop,
+  addReport: noop,
+  removeLatestReport: noop,
+  addSession: noop,
+  sendChat: noop,
+  clearChat: noop,
+  setResearchNotes: noop,
+  importJson: noop,
+  loadSampleWeek: noop,
+  resetAll: noop,
+  joinStudy: noop,
+  declineStudy: noop,
+  leaveStudy: noop,
+  sendStudyNow: async () => undefined,
+};
+
+/** Operator has no diary file. Still provide context so /check-in cannot throw during compile. */
+export function CircadiaSafeTree({ children }: { children: ReactNode }) {
+  return <CircadiaContext.Provider value={NOOP_VALUE}>{children}</CircadiaContext.Provider>;
+}
+
 function noopSubscribe() {
   return () => undefined;
 }
@@ -462,33 +495,6 @@ export function useCircadia() {
   if (ctx) return ctx;
   // Next still prerenders diary pages while compiling the operator (no layout).
   // Browser stays strict: a missing provider is a real bug.
-  if (typeof window === "undefined") {
-    const noop = () => undefined;
-    return {
-      ready: false,
-      state: SERVER_STATE,
-      session: null,
-      canLogOut: false,
-      signUp: async () => ({ ok: false as const, error: "Not in the browser." }),
-      logIn: async () => ({ ok: false as const, error: "Not in the browser." }),
-      logOut: noop,
-      attachLogin: async () => ({ ok: false as const, error: "Not in the browser." }),
-      changePassword: async () => ({ ok: false as const, error: "Not in the browser." }),
-      saveProfile: noop,
-      addReport: noop,
-      removeLatestReport: noop,
-      addSession: noop,
-      sendChat: noop,
-      clearChat: noop,
-      setResearchNotes: noop,
-      importJson: noop,
-      loadSampleWeek: noop,
-      resetAll: noop,
-      joinStudy: noop,
-      declineStudy: noop,
-      leaveStudy: noop,
-      sendStudyNow: async () => undefined,
-    };
-  }
+  if (typeof window === "undefined") return NOOP_VALUE;
   throw new Error("useCircadia must be used inside CircadiaProvider");
 }

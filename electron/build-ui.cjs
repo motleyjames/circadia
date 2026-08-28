@@ -29,7 +29,7 @@ try {
     {
       cwd: root,
       stdio: "inherit",
-      env: { ...process.env, CIRCADIA_ELECTRON: "1" },
+      env: { ...process.env, CIRCADIA_ELECTRON: "1", CIRCADIA_PACK_STATIC: "1" },
     },
   );
   if (result.status) {
