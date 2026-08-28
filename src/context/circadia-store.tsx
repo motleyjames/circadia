@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { answerQuestion, makeChatMessage } from "@/lib/chat";
+import { threadFromLive, upsertConsult } from "@/lib/consult-threads";
 import { sampleWeekState } from "@/lib/demo";
 import { installFaultReporter } from "@/lib/fault-reporter";
 import { startScreenOffWatcher } from "@/lib/notifications";
@@ -169,7 +170,9 @@ type CircadiaContextValue = {
   removeLatestReport: () => void;
   addSession: (session: Omit<WindDownSession, "id">) => void;
   sendChat: (text: string) => void;
-  clearChat: () => void;
+  newConsult: () => void;
+  openConsult: (id: string) => void;
+  deleteConsult: (id: string) => void;
   setResearchNotes: (notes: string) => void;
   importJson: (raw: string) => void;
   loadSampleWeek: () => void;
@@ -199,7 +202,9 @@ const NOOP_VALUE: CircadiaContextValue = {
   removeLatestReport: noop,
   addSession: noop,
   sendChat: noop,
-  clearChat: noop,
+  newConsult: noop,
+  openConsult: noop,
+  deleteConsult: noop,
   setResearchNotes: noop,
   importJson: noop,
   loadSampleWeek: noop,
@@ -308,12 +313,38 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       const you = makeChatMessage("you", trimmed);
       const reply = answerQuestion(trimmed, prev.profile, prev.reports, prev.chat);
       const circadia = makeChatMessage("circadia", reply.text, reply.citations);
-      return { ...prev, chat: [...prev.chat, you, circadia].slice(-200) };
+      const messages = [...prev.chat, you, circadia].slice(-200);
+      const id = prev.activeConsultId ?? newId();
+      const thread = threadFromLive(messages, id);
+      return {
+        ...prev,
+        chat: messages,
+        activeConsultId: id,
+        consultHistory: thread ? upsertConsult(prev.consultHistory, thread) : prev.consultHistory,
+      };
     });
   }, []);
 
-  const clearChat = useCallback(() => {
-    patch((prev) => ({ ...prev, chat: [] }));
+  const newConsult = useCallback(() => {
+    patch((prev) => ({ ...prev, chat: [], activeConsultId: null }));
+  }, []);
+
+  const openConsult = useCallback((id: string) => {
+    patch((prev) => {
+      const thread = prev.consultHistory.find((item) => item.id === id);
+      if (!thread) return prev;
+      return { ...prev, chat: thread.messages, activeConsultId: thread.id };
+    });
+  }, []);
+
+  const deleteConsult = useCallback((id: string) => {
+    patch((prev) => {
+      const consultHistory = prev.consultHistory.filter((item) => item.id !== id);
+      if (prev.activeConsultId === id) {
+        return { ...prev, consultHistory, chat: [], activeConsultId: null };
+      }
+      return { ...prev, consultHistory };
+    });
   }, []);
 
   const setResearchNotes = useCallback((researchNotes: string) => {
@@ -451,7 +482,9 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       removeLatestReport,
       addSession,
       sendChat,
-      clearChat,
+      newConsult,
+      openConsult,
+      deleteConsult,
       setResearchNotes,
       importJson,
       loadSampleWeek,
@@ -475,7 +508,9 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       removeLatestReport,
       addSession,
       sendChat,
-      clearChat,
+      newConsult,
+      openConsult,
+      deleteConsult,
       setResearchNotes,
       importJson,
       loadSampleWeek,

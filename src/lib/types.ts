@@ -94,6 +94,15 @@ export type ChatMessage = {
   citations?: string[];
 };
 
+/** One filed consult. The live desk is `chat` + `activeConsultId`. */
+export type ConsultThread = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: ChatMessage[];
+};
+
 export type StudyStatus = "sent" | "error" | "blocked";
 
 export type StudyState = {
@@ -112,7 +121,11 @@ export type CircadiaState = {
   profile: Profile | null;
   reports: MorningReport[];
   sessions: WindDownSession[];
+  /** Live desk. Empty after hydrate — yesterday's thread is in consultHistory. */
   chat: ChatMessage[];
+  /** Which history row the live desk is continuing. Null = a new consult. */
+  activeConsultId: string | null;
+  consultHistory: ConsultThread[];
   researchNotes: string;
   demoWeek: boolean;
   study: StudyState;

@@ -16,6 +16,58 @@ describe("hydrateState", () => {
     expect(state.study.consented).toBe(false);
   });
 
+  it("files a leftover live chat into history and leaves the desk empty", () => {
+    const state = hydrateState({
+      chat: [
+        {
+          id: "c1",
+          role: "you",
+          text: "Should I take melatonin?",
+          createdAt: "2026-08-27T22:00:00.000Z",
+        },
+        {
+          id: "c2",
+          role: "circadia",
+          text: "Melatonin is a clock signal, not a sleeping pill.",
+          createdAt: "2026-08-27T22:00:01.000Z",
+          citations: ["melatonin"],
+        },
+      ],
+      activeConsultId: "should-not-reopen",
+    });
+    expect(state.chat).toEqual([]);
+    expect(state.activeConsultId).toBeNull();
+    expect(state.consultHistory).toHaveLength(1);
+    expect(state.consultHistory[0]?.title).toMatch(/melatonin/i);
+    expect(state.consultHistory[0]?.messages).toHaveLength(2);
+  });
+
+  it("does not duplicate a thread that was already in history", () => {
+    const messages = [
+      {
+        id: "c1",
+        role: "you" as const,
+        text: "What is Quviviq?",
+        createdAt: "2026-08-28T16:00:00.000Z",
+      },
+    ];
+    const state = hydrateState({
+      chat: messages,
+      activeConsultId: "thread-quviviq-01",
+      consultHistory: [
+        {
+          id: "thread-quviviq-01",
+          title: "What is Quviviq?",
+          createdAt: "2026-08-28T16:00:00.000Z",
+          updatedAt: "2026-08-28T16:00:00.000Z",
+          messages,
+        },
+      ],
+    });
+    expect(state.consultHistory).toHaveLength(1);
+    expect(state.chat).toEqual([]);
+  });
+
   it("keeps a study participant number across hydrate", () => {
     const state = hydrateState({
       profile: {

@@ -1,6 +1,7 @@
 import { AUTH_ERRORS, LOCAL_FILE_KEY, contactFromLogin, displayName, loginKeyFromInput, loginKeyFromProfile, splitDisplayName } from "@/lib/login";
 import { hashPassword, passwordIssue, verifyPassword, type PasswordLock } from "@/lib/password";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
+import { coerceChat, coerceConsultHistory, parkLiveConsult } from "@/lib/consult-threads";
 import type { CircadiaState, MorningReport, Profile, StudyState, StudyStatus } from "@/lib/types";
 import { isClock, normalizeClock } from "@/lib/windows";
 
@@ -27,6 +28,8 @@ export const emptyState = (): CircadiaState => ({
   reports: [],
   sessions: [],
   chat: [],
+  activeConsultId: null,
+  consultHistory: [],
   researchNotes: "",
   demoWeek: false,
   study: emptyStudy(),
@@ -170,7 +173,11 @@ export function loadState(): CircadiaState {
   const file = readRawVault()[login];
   if (!file) return emptyState();
   try {
-    return hydrateState(file);
+    const state = hydrateState(file);
+    const files = readRawVault();
+    files[login] = state;
+    writeRawVault(files);
+    return state;
   } catch {
     return emptyState();
   }
@@ -261,6 +268,9 @@ export async function openFile(
   }
   try {
     const state = hydrateState(file);
+    const files = readRawVault();
+    files[login] = state;
+    writeRawVault(files);
     writeSession(login);
     return { ok: true, login, state };
   } catch {
@@ -350,12 +360,19 @@ export function hydrateState(parsed: unknown): CircadiaState {
     throw new Error("Not a Circadia file.");
   }
   const raw = parsed as Partial<CircadiaState>;
+  const parked = parkLiveConsult({
+    chat: coerceChat(raw.chat),
+    consultHistory: coerceConsultHistory(raw.consultHistory),
+    activeConsultId: typeof raw.activeConsultId === "string" ? raw.activeConsultId : null,
+  });
   return {
     ...emptyState(),
     profile: coerceProfile(raw.profile),
     reports: Array.isArray(raw.reports) ? raw.reports.map(coerceReport).filter((r): r is MorningReport => r !== null) : [],
     sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
-    chat: Array.isArray(raw.chat) ? raw.chat : [],
+    chat: parked.chat,
+    activeConsultId: parked.activeConsultId,
+    consultHistory: parked.consultHistory,
     researchNotes: typeof raw.researchNotes === "string" ? raw.researchNotes : "",
     demoWeek: Boolean(raw.demoWeek),
     study: coerceStudy(raw.study),
