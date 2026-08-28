@@ -1,4 +1,4 @@
-import { isEmail, isPhone, normalizeEmail, normalizePhone } from "@/lib/contact";
+import { extractEmail, isPhone, phoneDigits } from "@/lib/contact";
 
 /** Vault key for a diary that was never given an email or phone. */
 export const LOCAL_FILE_KEY = "local:this-computer";
@@ -8,7 +8,11 @@ export const AUTH_ERRORS = {
   contact: "Use an email or a phone number.",
   exists: "That email or phone already has a diary on this computer. Log in instead.",
   missing: "No diary for that on this computer.",
-  credentials: "Wrong email, phone, or password.",
+  credentials: "Wrong password.",
+  crypto: "This page could not check a password. Open Circadia.app or http://127.0.0.1:43148 — not a file on disk.",
+  noop: "This window is not the diary. Open Circadia.app, not the operator.",
+  orphan:
+    "This computer already has a diary with no login. Sign up — that attaches your email or phone. It does not start you over.",
 } as const;
 
 export function displayName(firstName: string, lastName: string): string {
@@ -28,15 +32,28 @@ export function splitDisplayName(name: string): { firstName: string; lastName: s
  * NEW: this is a key into this computer's vault, not a way to message anyone.
  */
 export function loginKeyFromInput(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (isEmail(trimmed)) return `email:${normalizeEmail(trimmed)}`;
-  if (isPhone(trimmed)) return `phone:${normalizePhone(trimmed).replace(/\D/g, "")}`;
+  const email = extractEmail(raw);
+  if (email) return `email:${email}`;
+  if (isPhone(raw)) return `phone:${phoneDigits(raw)}`;
   return null;
+}
+
+/** Same person, different typing: +1, angle-bracket emails. */
+export function loginKeyCandidates(raw: string): string[] {
+  const primary = loginKeyFromInput(raw);
+  if (!primary) return [];
+  const keys = [primary];
+  if (primary.startsWith("phone:")) {
+    const digits = primary.slice("phone:".length);
+    if (digits.length === 10) keys.push(`phone:1${digits}`);
+    if (digits.length === 11 && digits.startsWith("1")) keys.push(`phone:${digits.slice(1)}`);
+  }
+  return [...new Set(keys)];
 }
 
 export function loginKeyFromProfile(profile: { email?: string; phone?: string } | null | undefined): string | null {
   if (!profile) return null;
-  if (profile.email && isEmail(profile.email)) return loginKeyFromInput(profile.email);
+  if (profile.email && extractEmail(profile.email)) return loginKeyFromInput(profile.email);
   if (profile.phone && isPhone(profile.phone)) return loginKeyFromInput(profile.phone);
   return null;
 }
@@ -56,4 +73,29 @@ export function formatLoginForDisplay(login: string | null): string {
 
 export function sessionAllowsLogout(login: string | null): boolean {
   return Boolean(login && login !== LOCAL_FILE_KEY);
+}
+
+export type DiaryIdentity = {
+  login: string;
+  display: string;
+  orphan: boolean;
+};
+
+export function identitiesFromVaultKeys(keys: string[]): DiaryIdentity[] {
+  return keys
+    .map((login) =>
+      login === LOCAL_FILE_KEY
+        ? { login, display: "a diary with no email or phone yet", orphan: true }
+        : { login, display: formatLoginForDisplay(login) || login, orphan: false },
+    )
+    .sort((a, b) => Number(a.orphan) - Number(b.orphan) || a.display.localeCompare(b.display));
+}
+
+export function defaultAuthMode(identities: DiaryIdentity[]): "signup" | "login" {
+  return identities.some((row) => !row.orphan) ? "login" : "signup";
+}
+
+export function defaultContactField(identities: DiaryIdentity[]): string {
+  const named = identities.filter((row) => !row.orphan);
+  return named.length === 1 ? named[0].display : "";
 }

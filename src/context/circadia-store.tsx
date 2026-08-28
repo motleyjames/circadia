@@ -16,7 +16,7 @@ import { sampleWeekState } from "@/lib/demo";
 import { installFaultReporter } from "@/lib/fault-reporter";
 import { startScreenOffWatcher } from "@/lib/notifications";
 import { buildFault, buildRoster } from "@/lib/operator";
-import { sessionAllowsLogout } from "@/lib/login";
+import { AUTH_ERRORS, sessionAllowsLogout } from "@/lib/login";
 import {
   attachLoginToCurrent,
   changePassword as changePasswordOnFile,
@@ -29,6 +29,7 @@ import {
   loadState,
   openFile,
   saveState,
+  bootVaultFromDisk,
 } from "@/lib/storage";
 import { anonymityViolations, buildStudyPack } from "@/lib/study";
 import { postInbox } from "@/lib/study-client";
@@ -77,6 +78,37 @@ function serverSnapshot(): CircadiaState {
 
 function serverSession(): string | null {
   return SERVER_SESSION;
+}
+
+let bootReady = false;
+const readyListeners = new Set<() => void>();
+
+function subscribeReady(listener: () => void) {
+  readyListeners.add(listener);
+  return () => {
+    readyListeners.delete(listener);
+  };
+}
+
+function snapshotReady() {
+  return bootReady;
+}
+
+function serverReady() {
+  return false;
+}
+
+async function finishVaultBoot() {
+  try {
+    await bootVaultFromDisk();
+  } catch {
+    /* localStorage still holds whatever this origin has */
+  }
+  bootReady = true;
+  sessionMemory = undefined;
+  memory = null;
+  readyListeners.forEach((listener) => listener());
+  emit();
 }
 
 function write(next: CircadiaState) {
@@ -192,11 +224,11 @@ const NOOP_VALUE: CircadiaContextValue = {
   state: SERVER_STATE,
   session: null,
   canLogOut: false,
-  signUp: async () => ({ ok: false as const, error: "Not in the browser." }),
-  logIn: async () => ({ ok: false as const, error: "Not in the browser." }),
+  signUp: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
+  logIn: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
   logOut: noop,
-  attachLogin: async () => ({ ok: false as const, error: "Not in the browser." }),
-  changePassword: async () => ({ ok: false as const, error: "Not in the browser." }),
+  attachLogin: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
+  changePassword: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
   saveProfile: noop,
   addReport: noop,
   removeLatestReport: noop,
@@ -220,15 +252,15 @@ export function CircadiaSafeTree({ children }: { children: ReactNode }) {
   return <CircadiaContext.Provider value={NOOP_VALUE}>{children}</CircadiaContext.Provider>;
 }
 
-function noopSubscribe() {
-  return () => undefined;
-}
-
 export function CircadiaProvider({ children }: { children: ReactNode }) {
   const state = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
   const session = useSyncExternalStore(subscribe, currentSession, serverSession);
-  const ready = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  const ready = useSyncExternalStore(subscribeReady, snapshotReady, serverReady);
   const rosterCatchUp = useRef(false);
+
+  useEffect(() => {
+    void finishVaultBoot();
+  }, []);
 
   useEffect(() => {
     if (!state.profile?.notificationsEnabled || !state.profile.targetSleep) return;
@@ -367,23 +399,31 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       password: string;
       confirm: string;
     }): Promise<AuthResult> => {
-      const result = await createFile(input);
-      if (!result.ok) return result;
-      sessionMemory = result.login;
-      memory = result.state;
-      emit();
-      return { ok: true };
+      try {
+        const result = await createFile(input);
+        if (!result.ok) return result;
+        sessionMemory = result.login;
+        memory = result.state;
+        emit();
+        return { ok: true };
+      } catch {
+        return { ok: false, error: AUTH_ERRORS.credentials };
+      }
     },
     [],
   );
 
   const logIn = useCallback(async (contact: string, password: string): Promise<AuthResult> => {
-    const result = await openFile(contact, password);
-    if (!result.ok) return result;
-    sessionMemory = result.login;
-    memory = result.state;
-    emit();
-    return { ok: true };
+    try {
+      const result = await openFile(contact, password);
+      if (!result.ok) return result;
+      sessionMemory = result.login;
+      memory = result.state;
+      emit();
+      return { ok: true };
+    } catch {
+      return { ok: false, error: AUTH_ERRORS.credentials };
+    }
   }, []);
 
   const logOut = useCallback(() => {

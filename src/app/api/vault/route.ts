@@ -1,0 +1,29 @@
+import { NextResponse } from "next/server";
+import { isOperatorSurface } from "@/lib/surface";
+import { isLocalRequest, parseDiskVault } from "@/lib/vault";
+import { readDiskVault, writeDiskVault } from "@/lib/vault-file";
+
+export const runtime = "nodejs";
+
+function deny() {
+  return NextResponse.json({ ok: false, error: "Not found." }, { status: 404 });
+}
+
+export async function GET(request: Request) {
+  if (isOperatorSurface() || !isLocalRequest(request)) return deny();
+  const vault = await readDiskVault();
+  return NextResponse.json(vault, { headers: { "cache-control": "no-store" } });
+}
+
+export async function PUT(request: Request) {
+  if (isOperatorSurface() || !isLocalRequest(request)) return deny();
+  let raw: unknown;
+  try {
+    raw = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "Invalid JSON." }, { status: 400 });
+  }
+  const vault = parseDiskVault(raw);
+  await writeDiskVault(vault);
+  return NextResponse.json({ ok: true });
+}

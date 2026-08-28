@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { AUTH_ERRORS, LOCAL_FILE_KEY, loginKeyFromInput, loginKeyFromProfile } from "./login";
+import { AUTH_ERRORS, LOCAL_FILE_KEY, defaultAuthMode, defaultContactField, identitiesFromVaultKeys, loginKeyCandidates, loginKeyFromInput, loginKeyFromProfile } from "./login";
 import {
   SESSION_KEY,
   STORAGE_KEY,
@@ -47,7 +47,19 @@ describe("login keys", () => {
     expect(loginKeyFromInput("James@Colorado.EDU")).toBe("email:james@colorado.edu");
     expect(loginKeyFromInput("303-555-0142")).toBe("phone:3035550142");
     expect(loginKeyFromInput("(303) 555-0142")).toBe("phone:3035550142");
+    expect(loginKeyFromInput("+1 303-555-0142")).toBe("phone:3035550142");
+    expect(loginKeyFromInput("1-303-555-0142")).toBe("phone:3035550142");
+    expect(loginKeyFromInput("James Motley <jbmotley06@icloud.com>")).toBe("email:jbmotley06@icloud.com");
+    expect(loginKeyFromInput("James Motley jbmotley06@icloud.com")).toBe("email:jbmotley06@icloud.com");
     expect(loginKeyFromInput("not-an-id")).toBeNull();
+    expect(loginKeyCandidates("303-555-0142")).toContain("phone:13035550142");
+  });
+
+  it("defaults the gate to log in when a named diary already exists", () => {
+    const named = identitiesFromVaultKeys(["email:jbmotley06@icloud.com"]);
+    expect(defaultAuthMode(named)).toBe("login");
+    expect(defaultContactField(named)).toBe("jbmotley06@icloud.com");
+    expect(defaultAuthMode(identitiesFromVaultKeys([LOCAL_FILE_KEY]))).toBe("signup");
   });
 
   it("prefers email on a profile when both exist", () => {
@@ -64,6 +76,8 @@ describe("local file vault", () => {
     const mem = new MemoryStorage();
     Object.defineProperty(globalThis, "localStorage", { value: mem, configurable: true });
     Object.defineProperty(globalThis, "window", { value: globalThis, configurable: true });
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ v: 1, files: {}, locks: {}, session: null }), { status: 200 })) as typeof fetch;
   });
 
   afterEach(() => {
@@ -154,7 +168,7 @@ describe("local file vault", () => {
     closeFile();
     expect(await openFile("nobody@example.com", PASS)).toEqual({
       ok: false,
-      error: AUTH_ERRORS.credentials,
+      error: AUTH_ERRORS.missing,
     });
   });
 
@@ -203,7 +217,7 @@ describe("local file vault", () => {
     expect(getSessionLogin()).toBeNull();
     expect(await openFile("ada@example.com", PASS)).toEqual({
       ok: false,
-      error: AUTH_ERRORS.credentials,
+      error: AUTH_ERRORS.missing,
     });
 
     localStorage.setItem(
@@ -230,5 +244,58 @@ describe("local file vault", () => {
     expect(attached.login).toBe("email:ada@example.com");
     expect(getSessionLogin()).toBe("email:ada@example.com");
     expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")[LOCAL_FILE_KEY]).toBeUndefined();
+  });
+
+  it("opens with a +1 phone and a pasted email, and names a missing diary honestly", async () => {
+    const created = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "303-555-0142",
+      ...creds,
+    });
+    expect(created.ok).toBe(true);
+    closeFile();
+    const byCountry = await openFile("+1 (303) 555-0142", PASS);
+    expect(byCountry.ok).toBe(true);
+
+    const mail = await createFile({
+      firstName: "James",
+      lastName: "Motley",
+      contact: "jbmotley06@icloud.com",
+      ...creds,
+    });
+    expect(mail.ok).toBe(true);
+    closeFile();
+    const pasted = await openFile("James Motley <jbmotley06@icloud.com>", PASS);
+    expect(pasted.ok).toBe(true);
+
+    expect(await openFile("nobody@example.com", PASS)).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.missing,
+    });
+  });
+
+  it("points login at sign up when the only file is an orphan", async () => {
+    localStorage.setItem(
+      VAULT_KEY,
+      JSON.stringify({
+        [LOCAL_FILE_KEY]: hydrateState({
+          profile: {
+            onboardingComplete: true,
+            firstName: "you",
+            lastName: "",
+            age: 19,
+            heightCm: 180,
+            weightKg: 75,
+            targetSleep: "23:00",
+            targetWake: "07:00",
+          },
+        }),
+      }),
+    );
+    expect(await openFile("jbmotley06@icloud.com", PASS)).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.orphan,
+    });
   });
 });
