@@ -12,6 +12,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from shutil import copy2
 
 import edge_tts
 
@@ -92,13 +93,21 @@ def write_silence() -> None:
 async def main() -> int:
     write_silence()
     overlaps: list[str] = []
+    by_text: dict[str, Path] = {}
     for script_id, book in LINES.items():
         times = sorted(int(k) for k in book)
         durations: dict[int, float] = {}
         for at in times:
             dest = OUT / script_id / f"{at}.mp3"
             text = book[str(at)]
-            dur = await render_line(text, dest)
+            cached = by_text.get(text)
+            if cached is not None:
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                copy2(cached, dest)
+                dur = duration_seconds(dest)
+            else:
+                dur = await render_line(text, dest)
+                by_text[text] = dest
             durations[at] = dur
             print(f"{script_id}/{at}.mp3  {dur:.2f}s  {text[:64]}")
         for prev, nxt in zip(times, times[1:]):
