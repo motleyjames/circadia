@@ -24,7 +24,7 @@ Not “everyone who wants to optimize.” They already failed at sleep. They nee
 - a **short morning interview** they will actually finish (bubbles, not essays)
 - an **evening gate** (screens down 60 minutes before the sleep window)
 - notes that read the week (what worked, what hurt, the next move) before they name a bottle
-- a consult that **answers the question they typed**, including follow-ups, and withholds when it does not have a note
+- a consult that **answers the question they typed**, including follow-ups and a named morning from the diary, and withholds when it does not have a note
 - optional dream storage without mysticism
 
 James-shaped context that must not become the whole product: college-aged, delayed clock, drinks, screens, maybe stimulants. The engine is parameterized by age, meds, BMI, activity — so a 45-year-old with magnesium already in the cabinet gets a different note.

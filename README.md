@@ -41,7 +41,7 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 6. **Notes** — a week read from the first mornings: which dates were better, which were worse, and what I would try next. Honest when the window is thin. Bottles stay in **Consult**, and only after about seven logs.
 7. **You** — the file. Clocks, meds, log out. Not a JSON dump. Not a second copy of chat.
 8. **Library** — conservative research. Plain language first, sources second. Import/export your data.
-9. **Consult** — the desk on the right (or the strip above the tab bar). Opens empty. Answers from the diary and the library. Citations open the note. Unknown → withhold. Past consults file to History, by day. Open one to continue. Delete if you want it gone.
+9. **Consult** — the desk on the right (or the strip above the tab bar). Opens empty. Answers from the diary (a named morning, last night, this week) and the library. Citations open the note. Unknown → withhold. Past consults file to History, by day. Open one to continue. Delete if you want it gone.
 
 ## Paid testers and the pipeline
 
