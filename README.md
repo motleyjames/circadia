@@ -13,7 +13,7 @@ Two apps. They are not the same window.
 
 `npm run dock` installs **both**, in that order: ice first, then gold. If Operator’s compile fails, the diary app is already in `/Applications` — run `npm run dock:mod` after.
 
-Run this from **this repo** (Sign up / Log in, version **0.6.3**). An older `rest-ai` clone that still says “A diary needs a name”, or that dies on `/check-in` during Operator compile, is not this tree — `npm run dock` there will rebuild the broken apps.
+Run this from **this repo** (Sign up / Log in, version **0.6.4**). An older `rest-ai` clone that still says “A diary needs a name”, or that dies on `/insights` or `/check-in` during Operator compile, is not this tree.
 
 If either of these is already on screen:
 

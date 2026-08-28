@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Outfit } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
+import { CircadiaSafeTree } from "@/context/circadia-store";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -50,7 +51,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`dark ${outfit.variable} ${fraunces.variable} h-full antialiased`}>
       <body className="min-h-full bg-[#05040a] font-sans text-zinc-100">
-        <AppShell>{children}</AppShell>
+        <CircadiaSafeTree>
+          <AppShell>{children}</AppShell>
+        </CircadiaSafeTree>
       </body>
     </html>
   );

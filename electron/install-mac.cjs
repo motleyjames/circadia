@@ -80,7 +80,7 @@ const root = path.join(__dirname, "..");
 const swift = path.join(__dirname, "launcher.swift");
 const png = path.join(__dirname, operator ? "operator-icon.png" : "icon.png");
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
-const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.6.3";
+const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.6.4";
 
 if (!fs.existsSync(png)) {
   console.error(`Missing ${png}. The ${operator ? "gold" : "ice"} clock will not appear in the Dock.`);
