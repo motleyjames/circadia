@@ -142,8 +142,9 @@ describe("native assemble of both Dock apps", () => {
           expect(existsSync(path.join(dest, "Contents", "Resources", "app", "package.json"))).toBe(false);
           const payload = JSON.parse(
             readFileSync(path.join(dest, "Contents", "Resources", "install.json"), "utf8"),
-          ) as { port: number; serve: string; surface?: string; title: string };
+          ) as { port: number; serve: string; surface?: string; title: string; updateUrl?: string };
           expect(payload.serve).toBe("electron/serve-dock.cjs");
+          expect(payload.updateUrl).toBe("https://github.com/motleyjames/circadia.git");
           expect(payload.port).toBe(bundle.APP_KINDS[kind].port);
           expect(payload.title).toBe(result.kind.display);
           if (kind === "mod") {

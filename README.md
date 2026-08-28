@@ -29,7 +29,7 @@ That writes `Circadia.app` and `Circadia Operator.app` ( `/Applications` if writ
 
 Operator-only: `npm run dock:mod`. Diary-only: `npm run dock:diary`. Browser inbox: `npm run mod` → http://127.0.0.1:43149, passphrase `circadia-local`.
 
-Keep this folder where it is. If you move it, run `npm run dock` again. Unidentified developer: right-click → **Open**. Logs: `~/Library/Logs/Circadia.log` and `~/Library/Logs/Circadia-Operator.log`.
+Keep this folder where it is. If you move it, run `npm run dock` once. After that, **opening Circadia.app or Circadia Operator.app pulls GitHub `main` and rebuilds**. Unidentified developer: right-click → **Open**. Logs: `~/Library/Logs/Circadia.log` and `~/Library/Logs/Circadia-Operator.log`.
 
 ## What you do
 

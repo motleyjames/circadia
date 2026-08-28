@@ -55,8 +55,18 @@ function build() {
   }
 }
 
+try {
+  const { pullDockTree } = require("./dock-update.cjs");
+  const update = pullDockTree(root);
+  if (update.updated) console.log("Circadia Dock pulled", update.to);
+  else if (!update.ok) console.error("Circadia Dock update failed; starting current tree.", update.error);
+  else if (update.skipped && update.skipped !== "env") console.log("Circadia Dock update skipped:", update.skipped);
+} catch (err) {
+  console.error("Circadia Dock update crashed; starting current tree.", err && err.message ? err.message : err);
+}
+
 if (!fs.existsSync(nextBin)) {
-  console.error("Next is missing. Run npm install inside rest-ai.");
+  console.error("Next is missing. Run npm install inside this Circadia folder.");
   process.exit(1);
 }
 

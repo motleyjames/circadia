@@ -96,6 +96,8 @@ function assembleNativeApp(opts) {
     title: kind.display,
     logFile: kind.logFile,
     serve: "electron/serve-dock.cjs",
+    update: "electron/dock-update.cjs",
+    updateUrl: "https://github.com/motleyjames/circadia.git",
     version: opts.version || "0.6.5",
     installedAt: new Date().toISOString(),
   };

@@ -82,12 +82,12 @@ func startNext(_ install: Install) throws {
   let serve = (install.repo as NSString).appendingPathComponent(serveRel)
   guard FileManager.default.isExecutableFile(atPath: install.node) else {
     throw NSError(domain: "Circadia", code: 1, userInfo: [
-      NSLocalizedDescriptionKey: "Node is gone.\n\(install.node)\nRun npm run dock from rest-ai again.",
+      NSLocalizedDescriptionKey: "Node is gone.\n\(install.node)\nOpen Circadia.app again after Node is installed.",
     ])
   }
   guard FileManager.default.fileExists(atPath: serve) else {
     throw NSError(domain: "Circadia", code: 2, userInfo: [
-      NSLocalizedDescriptionKey: "This app is stale. From rest-ai run:\nnpm run dock   or   npm run dock:mod",
+      NSLocalizedDescriptionKey: "This app is stale. Open Circadia.app from the clone at github.com/motleyjames/circadia.",
     ])
   }
 
@@ -154,9 +154,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     appTitle = install?.title ?? "Circadia"
     operatorApp = install?.surface == "mod"
     window.title = appTitle
-    if operatorApp {
-      splash.stringValue = "Opening the inbox…"
-    }
+    splash.stringValue = operatorApp ? "Updating the inbox…" : "Updating Circadia…"
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
@@ -214,12 +212,16 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
   func boot(_ install: Install?) {
     activeURL = makeDiaryURL(install)
     guard let install else {
-      fail("This \(appTitle).app has no project pointer.\nFrom the rest-ai folder run:\nnpm run dock   or   npm run dock:mod")
+      fail("This \(appTitle).app has no project pointer.\nClone github.com/motleyjames/circadia and run npm run put-on-dock once.")
       return
     }
     if !FileManager.default.fileExists(atPath: install.repo) {
-      fail("The rest-ai folder moved.\nLast seen:\n\(install.repo)\nOpen that clone and run npm run dock again.")
+      fail("The Circadia folder moved.\nLast seen:\n\(install.repo)\nPut that clone back, or run npm run put-on-dock once.")
       return
+    }
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      self.splash.stringValue = self.operatorApp ? "Updating the inbox…" : "Updating Circadia…"
     }
     do {
       try startNext(install)
@@ -227,7 +229,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
       fail(error.localizedDescription)
       return
     }
-    if waitForDiary(timeout: 180) {
+    if waitForDiary(timeout: 360) {
       loadDiary()
       return
     }
