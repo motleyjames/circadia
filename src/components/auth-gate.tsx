@@ -60,10 +60,10 @@ export function AuthGate() {
         </h1>
         <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
           {orphan && !named.length
-            ? "This computer already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. Circadia will not contact you."
+            ? "This computer already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. The diary is encrypted on this computer. Circadia will not contact you."
             : named.length
-              ? "Log in to the diary on this computer. Circadia will not email or text you."
-              : "Sign up or log in. Email or phone plus a password opens Circadia on this computer — not a way for anyone to reach you."}
+              ? "Log in to the diary on this computer. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
+              : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this computer — not a way for anyone to reach you."}
         </p>
 
         {named.length ? (

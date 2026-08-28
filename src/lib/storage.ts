@@ -1,5 +1,19 @@
 import { AUTH_ERRORS, LOCAL_FILE_KEY, contactFromLogin, displayName, identitiesFromVaultKeys, loginKeyCandidates, loginKeyFromInput, loginKeyFromProfile, splitDisplayName, type DiaryIdentity } from "@/lib/login";
-import { CRYPTO_UNAVAILABLE, hashPassword, passwordIssue, verifyPassword, type PasswordLock } from "@/lib/password";
+import {
+  CRYPTO_UNAVAILABLE,
+  decryptPayload,
+  dropAllMasters,
+  dropMaster,
+  encryptPayload,
+  getMaster,
+  hasMaster,
+  holdMaster,
+  isVaultEnvelope,
+  newPasswordLock,
+  passwordIssue,
+  unlockMaster,
+  type PasswordLock,
+} from "@/lib/password";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
 import { coerceChat, coerceConsultHistory, parkLiveConsult } from "@/lib/consult-threads";
@@ -9,10 +23,42 @@ import { isClock, normalizeClock } from "@/lib/windows";
 /** Legacy single-file blob. Migrated once into the vault. */
 export const STORAGE_KEY = "circadia:v1";
 export const VAULT_KEY = "circadia:v1:files";
-/** Which file is open. Not the 0.6.0 auto-login key — that skipped the gate. */
+/** Last-used login for the gate. Never means the diary is unlocked. */
 export const SESSION_KEY = "circadia:v1:open";
+export const LAST_LOGIN_KEY = "circadia:v1:last-login";
 export const LOCKS_KEY = "circadia:v1:locks";
 const LEGACY_SESSION_KEY = "circadia:v1:session";
+
+let openLogin: string | null = null;
+const plainByLogin = new Map<string, CircadiaState>();
+const writeGen = new Map<string, number>();
+let persistChain: Promise<void> = Promise.resolve();
+
+function bumpGen(login: string): number {
+  const next = (writeGen.get(login) ?? 0) + 1;
+  writeGen.set(login, next);
+  return next;
+}
+
+function enqueueVaultWrite(work: () => Promise<void>): Promise<void> {
+  persistChain = persistChain.then(work).catch(() => {
+    /* a failed encrypt must not stall later writes */
+  });
+  return persistChain;
+}
+
+export async function flushVaultWrites(): Promise<void> {
+  await persistChain;
+}
+
+/** Tests share this module. Wipe in-memory masters so one case cannot unlock the next. */
+export function resetVaultMemoryForTests(): void {
+  openLogin = null;
+  plainByLogin.clear();
+  writeGen.clear();
+  persistChain = Promise.resolve();
+  dropAllMasters();
+}
 
 export const emptyStudy = (): StudyState => ({
   asked: false,
@@ -111,25 +157,36 @@ function writeRawVault(files: Record<string, unknown>): void {
 export function getSessionLogin(): string | null {
   if (typeof window === "undefined") return null;
   migrateToVault();
-  window.localStorage.removeItem(LEGACY_SESSION_KEY);
-  try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as { login?: unknown };
-    return typeof parsed.login === "string" && parsed.login.length > 0 ? parsed.login : null;
-  } catch {
-    return null;
-  }
+  if (!openLogin || !hasMaster(openLogin)) return null;
+  return openLogin;
 }
 
-export function writeSession(login: string | null): void {
+function readLastLogin(): string | null {
+  if (typeof window === "undefined") return null;
+  for (const key of [LAST_LOGIN_KEY, SESSION_KEY]) {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as { login?: unknown };
+      if (typeof parsed.login === "string" && parsed.login.length > 0) return parsed.login;
+    } catch {
+      /* try the next key */
+    }
+  }
+  return null;
+}
+
+function writeLastLogin(login: string | null): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(LEGACY_SESSION_KEY);
-  if (!login) {
-    window.localStorage.removeItem(SESSION_KEY);
-    return;
-  }
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify({ login }));
+  window.localStorage.removeItem(SESSION_KEY);
+  if (!login) return;
+  window.localStorage.setItem(LAST_LOGIN_KEY, JSON.stringify({ login }));
+}
+
+function rememberOpen(login: string): void {
+  openLogin = login;
+  writeLastLogin(login);
 }
 
 export function hasOrphanLocalFile(): boolean {
@@ -160,16 +217,7 @@ function captureDisk(): DiskVault {
     v: VAULT_DISK_VERSION,
     files: readRawVault(),
     locks: readLocks(),
-    session: (() => {
-      try {
-        const raw = window.localStorage.getItem(SESSION_KEY);
-        if (!raw) return null;
-        const parsed = JSON.parse(raw) as { login?: unknown };
-        return typeof parsed.login === "string" && parsed.login.length > 0 ? parsed.login : null;
-      } catch {
-        return null;
-      }
-    })(),
+    session: readLastLogin(),
   };
 }
 
@@ -211,7 +259,7 @@ export async function bootVaultFromDisk(): Promise<void> {
   const merged = mergeDiskVault(local, disk);
   writeRawVault(merged.files);
   writeLocks(merged.locks);
-  writeSession(merged.session);
+  writeLastLogin(merged.session);
   await pushVaultToDisk();
 }
 
@@ -239,31 +287,45 @@ function deleteLock(login: string): void {
   writeLocks(locks);
 }
 
+async function persistEncrypted(login: string, state: CircadiaState, gen: number): Promise<void> {
+  if (writeGen.get(login) !== gen) return;
+  const master = getMaster(login);
+  if (!master) return;
+  const envelope = await encryptPayload(state, master);
+  if (writeGen.get(login) !== gen) return;
+  const files = readRawVault();
+  files[login] = envelope;
+  writeRawVault(files);
+}
+
+async function readDiary(login: string, master: Uint8Array): Promise<CircadiaState> {
+  const file = readRawVault()[login];
+  if (!file) throw new Error("Not a Circadia file.");
+  if (isVaultEnvelope(file)) {
+    return hydrateState(await decryptPayload(file, master));
+  }
+  return hydrateState(file);
+}
+
+function cloneState(state: CircadiaState): CircadiaState {
+  return JSON.parse(JSON.stringify(state)) as CircadiaState;
+}
+
 export function loadState(): CircadiaState {
   if (typeof window === "undefined") return emptyState();
   const login = getSessionLogin();
   if (!login) return emptyState();
-  const file = readRawVault()[login];
-  if (!file) return emptyState();
-  try {
-    const state = hydrateState(file);
-    const files = readRawVault();
-    files[login] = state;
-    writeRawVault(files);
-    return state;
-  } catch {
-    return emptyState();
-  }
+  return plainByLogin.get(login) ?? emptyState();
 }
 
 export function saveState(state: CircadiaState) {
   if (typeof window === "undefined") return;
   const login = getSessionLogin();
   if (!login) return;
-  const files = readRawVault();
-  files[login] = state;
-  writeRawVault(files);
-  schedulePersistDisk();
+  plainByLogin.set(login, state);
+  const snapshot = cloneState(state);
+  const gen = bumpGen(login);
+  void enqueueVaultWrite(() => persistEncrypted(login, snapshot, gen));
 }
 
 export async function createFile(input: {
@@ -288,6 +350,7 @@ export async function createFile(input: {
   const orphan = files[LOCAL_FILE_KEY];
   let state: CircadiaState;
   if (orphan) {
+    if (isVaultEnvelope(orphan)) return { ok: false, error: AUTH_ERRORS.orphan };
     try {
       const existing = hydrateState(orphan);
       const profile = existing.profile
@@ -309,24 +372,33 @@ export async function createFile(input: {
     }
     delete files[LOCAL_FILE_KEY];
     deleteLock(LOCAL_FILE_KEY);
+    writeRawVault(files);
   } else {
     state = {
       ...emptyState(),
       profile: draftProfile({ firstName, lastName, email, phone }),
     };
   }
-  files[login] = state;
-  writeRawVault(files);
   try {
-    setLock(login, await hashPassword(input.password));
+    const minted = await newPasswordLock(input.password);
+    holdMaster(login, minted.master);
+    setLock(login, minted.lock);
+    plainByLogin.set(login, state);
+    rememberOpen(login);
+    const gen = bumpGen(login);
+    await persistEncrypted(login, cloneState(state), gen);
+    schedulePersistDisk();
+    return { ok: true, login, state };
   } catch (err) {
-    delete files[login];
-    writeRawVault(files);
+    dropMaster(login);
+    if (openLogin === login) openLogin = null;
+    plainByLogin.delete(login);
+    const next = readRawVault();
+    delete next[login];
+    writeRawVault(next);
+    deleteLock(login);
     return authCaught(err);
   }
-  writeSession(login);
-  schedulePersistDisk();
-  return { ok: true, login, state };
 }
 
 export async function openFile(
@@ -343,24 +415,33 @@ export async function openFile(
     if (hasOrphanLocalFile()) return { ok: false, error: AUTH_ERRORS.orphan };
     return { ok: false, error: AUTH_ERRORS.missing };
   }
-  const file = files[login];
   const lock = readLocks()[login];
   try {
     if (lock) {
-      if (!(await verifyPassword(password, lock))) return { ok: false, error: AUTH_ERRORS.credentials };
+      const unlocked = await unlockMaster(password, lock);
+      if (!unlocked) return { ok: false, error: AUTH_ERRORS.credentials };
+      if (unlocked.migratedLock) setLock(login, unlocked.migratedLock);
+      holdMaster(login, unlocked.master);
     } else {
       const pwd = passwordIssue(password);
       if (pwd) return { ok: false, error: pwd };
-      setLock(login, await hashPassword(password));
+      const minted = await newPasswordLock(password);
+      setLock(login, minted.lock);
+      holdMaster(login, minted.master);
     }
-    const state = hydrateState(file);
-    const next = readRawVault();
-    next[login] = state;
-    writeRawVault(next);
-    writeSession(login);
+    const master = getMaster(login);
+    if (!master) return { ok: false, error: AUTH_ERRORS.crypto };
+    const state = await readDiary(login, master);
+    plainByLogin.set(login, state);
+    rememberOpen(login);
+    const gen = bumpGen(login);
+    await persistEncrypted(login, cloneState(state), gen);
     schedulePersistDisk();
     return { ok: true, login, state };
   } catch (err) {
+    dropMaster(login);
+    if (openLogin === login) openLogin = null;
+    plainByLogin.delete(login);
     if (err instanceof Error && err.message === "Not a Circadia file.") {
       return { ok: false, error: AUTH_ERRORS.credentials };
     }
@@ -368,20 +449,37 @@ export async function openFile(
   }
 }
 
-export function closeFile(): void {
-  writeSession(null);
+export async function closeFile(): Promise<void> {
+  const login = openLogin;
+  openLogin = null;
+  await flushVaultWrites();
+  if (login) {
+    dropMaster(login);
+    plainByLogin.delete(login);
+    writeLastLogin(login);
+  } else if (typeof window !== "undefined") {
+    window.localStorage.removeItem(SESSION_KEY);
+    window.localStorage.removeItem(LEGACY_SESSION_KEY);
+  }
   schedulePersistDisk();
 }
 
 export function eraseCurrentFile(): void {
-  const login = getSessionLogin();
+  const login = getSessionLogin() ?? openLogin;
+  openLogin = null;
   if (login) {
+    bumpGen(login);
+    dropMaster(login);
+    plainByLogin.delete(login);
     const files = readRawVault();
     delete files[login];
     writeRawVault(files);
     deleteLock(login);
   }
-  writeSession(null);
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(SESSION_KEY);
+    window.localStorage.removeItem(LEGACY_SESSION_KEY);
+  }
   schedulePersistDisk();
 }
 
@@ -399,27 +497,32 @@ export async function attachLoginToCurrent(
   if (pwd) return { ok: false, error: pwd };
   const files = readRawVault();
   if (files[nextKey] && nextKey !== current) return { ok: false, error: AUTH_ERRORS.exists };
-  const raw = files[current];
-  if (!raw) return { ok: false, error: AUTH_ERRORS.missing };
-  let state: CircadiaState;
-  try {
-    state = hydrateState(raw);
-  } catch {
-    return { ok: false, error: AUTH_ERRORS.missing };
-  }
+  const live = plainByLogin.get(current);
+  if (!live) return { ok: false, error: AUTH_ERRORS.missing };
   const { email, phone } = contactFromLogin(nextKey);
-  const profile = state.profile
-    ? { ...state.profile, email, phone }
+  const profile = live.profile
+    ? { ...live.profile, email, phone }
     : draftProfile({ firstName: "", lastName: "", email, phone });
-  const nextState: CircadiaState = { ...state, profile };
-  delete files[current];
-  files[nextKey] = nextState;
-  writeRawVault(files);
-  deleteLock(current);
-  setLock(nextKey, await hashPassword(password));
-  writeSession(nextKey);
-  schedulePersistDisk();
-  return { ok: true, login: nextKey, state: nextState };
+  const nextState: CircadiaState = { ...live, profile };
+  try {
+    const minted = await newPasswordLock(password);
+    bumpGen(current);
+    dropMaster(current);
+    plainByLogin.delete(current);
+    delete files[current];
+    deleteLock(current);
+    writeRawVault(files);
+    holdMaster(nextKey, minted.master);
+    setLock(nextKey, minted.lock);
+    plainByLogin.set(nextKey, nextState);
+    rememberOpen(nextKey);
+    const gen = bumpGen(nextKey);
+    await persistEncrypted(nextKey, cloneState(nextState), gen);
+    schedulePersistDisk();
+    return { ok: true, login: nextKey, state: nextState };
+  } catch (err) {
+    return authCaught(err);
+  }
 }
 
 export async function changePassword(
@@ -432,13 +535,24 @@ export async function changePassword(
   if (!login) return { ok: false, error: AUTH_ERRORS.missing };
   const pwd = passwordIssue(nextPassword, confirm);
   if (pwd) return { ok: false, error: pwd };
+  const live = plainByLogin.get(login);
+  if (!live) return { ok: false, error: AUTH_ERRORS.missing };
   const lock = readLocks()[login];
-  if (lock && !(await verifyPassword(currentPassword, lock))) {
-    return { ok: false, error: "Current password is wrong." };
+  try {
+    if (lock) {
+      const unlocked = await unlockMaster(currentPassword, lock);
+      if (!unlocked) return { ok: false, error: "Current password is wrong." };
+    }
+    const minted = await newPasswordLock(nextPassword);
+    holdMaster(login, minted.master);
+    setLock(login, minted.lock);
+    const gen = bumpGen(login);
+    await persistEncrypted(login, cloneState(live), gen);
+    schedulePersistDisk();
+    return { ok: true };
+  } catch (err) {
+    return authCaught(err);
   }
-  setLock(login, await hashPassword(nextPassword));
-  schedulePersistDisk();
-  return { ok: true };
 }
 
 export function exportState(state: CircadiaState): string {

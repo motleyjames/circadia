@@ -139,7 +139,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     config.websiteDataStore = WKWebsiteDataStore.default()
     // HTML5 <audio> is gated; speechSynthesis was not. Empty set = play from a timer.
     config.mediaTypesRequiringUserActionForPlayback = []
-    config.allowsInlineMediaPlayback = true
+    // Inline media playback is an iOS WKWebView flag. macOS WebKit has no such property; setting it fails swiftc.
     let js = "document.documentElement.classList.add('circadia-native');"
     config.userContentController.addUserScript(
       WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true)
