@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { useCircadia } from "@/context/circadia-store";
+import { CircadiaSafeTree, useCircadia } from "@/context/circadia-store";
 
 function Probe() {
   const { ready, state } = useCircadia();
@@ -13,5 +13,10 @@ describe("useCircadia during prerender", () => {
     const html = renderToString(createElement(Probe));
     expect(html).toContain("wait");
     expect(html).toContain("empty");
+  });
+
+  it("does not throw inside CircadiaSafeTree (operator compile)", () => {
+    const html = renderToString(createElement(CircadiaSafeTree, null, createElement(Probe)));
+    expect(html).toContain("wait");
   });
 });

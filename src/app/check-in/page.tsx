@@ -1,12 +1,10 @@
-"use client";
-
 import { CheckInFlow } from "@/components/check-in-flow";
-import { DiarySurface } from "@/components/diary-surface";
+import { DiaryPage } from "@/components/diary-page";
 
 export default function CheckInPage() {
   return (
-    <DiarySurface>
+    <DiaryPage>
       <CheckInFlow />
-    </DiarySurface>
+    </DiaryPage>
   );
 }

@@ -1,12 +1,10 @@
-"use client";
-
-import { DiarySurface } from "@/components/diary-surface";
+import { DiaryPage } from "@/components/diary-page";
 import { LibraryView } from "@/components/library-view";
 
 export default function LibraryPage() {
   return (
-    <DiarySurface>
+    <DiaryPage>
       <LibraryView />
-    </DiarySurface>
+    </DiaryPage>
   );
 }
