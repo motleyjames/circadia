@@ -13,6 +13,7 @@
     "dock:mod": "node electron/install-both-native.cjs --operator",
     "dock:diary": "node electron/install-both-native.cjs --diary",
     "dock:all": "node electron/install-both-native.cjs",
+    "put-on-dock": "bash scripts/put-on-dock.sh",
     "fix-mac": "node electron/fix-mac.cjs",
     "repair": "node electron/fix-mac.cjs",
     "reveal": "node electron/install-mac.cjs --reveal",

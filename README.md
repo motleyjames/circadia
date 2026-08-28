@@ -13,10 +13,11 @@ Two native apps. Same Swift binary. Different `install.json`. Not Electron.
 
 `npm run dock` compiles Next for both surfaces, compiles `launcher.swift` once, then wraps two `.app` bundles. It will not copy `Electron.app`. If `swiftc` fails, nothing is replaced.
 
+Easiest path on your Mac, from **this** 0.6.5 folder (not an old `rest-ai` clone):
+
 ```bash
-xcode-select --install   # once
 npm install
-npm run dock
+npm run put-on-dock
 ```
 
 That writes `Circadia.app` and `Circadia Operator.app` ( `/Applications` if writable, otherwise `~/Applications` ), then opens both. Drag both to the Dock. Remove any tile named Electron.
