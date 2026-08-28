@@ -3,10 +3,12 @@ import { readFileSync } from "node:fs";
 import { sampleWeekState } from "./demo";
 import { emptyState } from "./storage";
 import type { MorningReport, Profile } from "./types";
-import { buildWeekReview, weekReviewMouth } from "./week-review";
+import { buildWeekReview, formatMorningDate, weekReviewMouth } from "./week-review";
 
 const BAN = /aasm|cbt-i|\bscn\b/i;
 const BOTTLE_LEAD = /take melatonin|try melatonin|start melatonin|magnesium glycinate/i;
+const ROBOT = /on the board|close a case|restedness averaged|loudest signal|i will not overclaim|against the \d[–-]\d hours/i;
+const DATE = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}\b/;
 
 const profile: Profile = {
   firstName: "James",
@@ -52,6 +54,11 @@ function mouthOf(reports: MorningReport[], p: Profile = profile): string {
 }
 
 describe("week review", () => {
+  it("formats a morning as a calendar date, not a machine stamp", () => {
+    expect(formatMorningDate("2026-08-27")).toBe("Aug 27");
+    expect(formatMorningDate("2026-01-01")).toBe("Jan 1");
+  });
+
   it("returns an empty review when there are no mornings", () => {
     const review = buildWeekReview(profile, []);
     expect(review.nightsLogged).toBe(0);
@@ -59,7 +66,7 @@ describe("week review", () => {
     expect(review.doThis).toEqual([]);
   });
 
-  it("reads a messy drink week: hurt drinks, dry-night advice, no jargon", () => {
+  it("reads a messy drink week: dated better/worse nights, dry-night advice, no jargon", () => {
     const reports = [
       report({
         morningDate: "2026-01-01",
@@ -136,17 +143,23 @@ describe("week review", () => {
     const review = buildWeekReview(profile, reports);
     expect(review.nightsLogged).toBe(7);
     expect(review.sketch).toBe(false);
+    expect(review.read).toMatch(/Jan 4/);
+    expect(review.read).toMatch(/Jan 1/);
+    expect(review.read).toMatch(/Jan 5/);
+    expect(review.read).toMatch(/drinks/i);
+    expect(review.hurt.join(" ")).toMatch(/Jan 1/);
+    expect(review.hurt.join(" ")).toMatch(/Jan 5/);
     expect(review.hurt.join(" ")).toMatch(/drinks/i);
-    expect(review.hurt.join(" ")).toMatch(/2 /);
-    expect(review.worked.join(" ")).toMatch(/wind-down/i);
+    expect(review.worked[0]).toBe("Jan 4, Jan 6, and Jan 7 — 4/5, no drinks, wind-down.");
+    expect(review.hurt[0]).toBe("Jan 1 and Jan 5 — 2/5, drinks, slow to fall asleep.");
     expect(review.doThis[0]).toMatch(/dry/i);
     expect(review.doThis.join(" ")).not.toMatch(BOTTLE_LEAD);
     expect(weekReviewMouth(review)).not.toMatch(BAN);
-    expect(review.read).toMatch(/7 mornings/i);
-    expect(review.read.toLowerCase()).toMatch(/timing problem|working against you/);
+    expect(weekReviewMouth(review)).not.toMatch(ROBOT);
+    if (review.hurt[0]) expect(review.read).not.toContain(review.hurt[0]);
   });
 
-  it("reads a clean week as worked / steady, not a bottle pitch", () => {
+  it("reads a clean week as dated and steady, not a bottle pitch", () => {
     const reports = [1, 2, 3, 4, 5, 6, 7].map((d) =>
       report({
         morningDate: `2026-01-0${d}`,
@@ -162,13 +175,14 @@ describe("week review", () => {
     expect(review.sketch).toBe(false);
     expect(review.hurt.join(" ")).not.toMatch(/drinks/i);
     expect(review.worked.length).toBeGreaterThan(0);
-    expect(review.worked.join(" ")).toMatch(/dry|duration|wake|restedness|wind-down/i);
-    expect(review.doThis.join(" ")).toMatch(/repeat|keep logging|wind-down/i);
+    expect(review.worked.join(" ")).toMatch(DATE);
+    expect(review.doThis.join(" ")).toMatch(/repeat|keep going|wind-down/i);
     expect(review.doThis.join(" ")).not.toMatch(BOTTLE_LEAD);
     expect(weekReviewMouth(review)).not.toMatch(BAN);
+    expect(weekReviewMouth(review)).not.toMatch(ROBOT);
   });
 
-  it("treats one morning as a sketch and still says what it shows", () => {
+  it("treats one morning as a dated snapshot", () => {
     const review = buildWeekReview(profile, [
       report({
         morningDate: "2026-01-01",
@@ -184,11 +198,42 @@ describe("week review", () => {
     ]);
     expect(review.nightsLogged).toBe(1);
     expect(review.sketch).toBe(true);
-    expect(review.headline).toMatch(/sketch/i);
-    expect(review.read).toMatch(/one night can lie/i);
+    expect(review.headline).toMatch(/one morning/i);
+    expect(review.read).toMatch(/Jan 1/);
+    expect(review.read).toMatch(/snapshot/i);
     expect(review.hurt.join(" ") + review.doThis.join(" ")).toMatch(/dry/i);
     expect(weekReviewMouth(review)).not.toMatch(BAN);
     expect(weekReviewMouth(review)).not.toMatch(BOTTLE_LEAD);
+    expect(weekReviewMouth(review)).not.toMatch(ROBOT);
+  });
+
+  it("names both dates when two rough mornings look the same", () => {
+    const review = buildWeekReview(profile, [
+      report({
+        morningDate: "2026-08-27",
+        wokeAt: "09:00",
+        fellAsleepAt: "00:30",
+        rating: 2,
+        sleepLatencyMinutes: 50,
+        screenOffMinutes: 0,
+      }),
+      report({
+        morningDate: "2026-08-28",
+        wokeAt: "09:10",
+        fellAsleepAt: "00:40",
+        rating: 2,
+        sleepLatencyMinutes: 75,
+        screenOffMinutes: 15,
+      }),
+    ]);
+    expect(review.headline).toMatch(/early look/i);
+    expect(review.read).toMatch(/Aug 27/);
+    expect(review.read).toMatch(/Aug 28/);
+    expect(review.read).toMatch(/fall asleep/i);
+    expect(review.hurt[0]).toBe("Aug 27 and Aug 28 — about 63 minutes to fall asleep.");
+    if (review.hurt[0]) expect(review.read).not.toContain(review.hurt[0]);
+    expect(weekReviewMouth(review)).not.toMatch(ROBOT);
+    expect(review.doThis[0]).toMatch(/get out of bed/i);
   });
 
   it("uses only the last seven mornings when more are logged", () => {
@@ -234,6 +279,9 @@ describe("week review", () => {
     expect(review.worked.join(" ")).toMatch(/wind-down/i);
     expect(review.doThis[0]).toMatch(/dry/i);
     expect(weekReviewMouth(review)).not.toMatch(BAN);
+    expect(review.read).toMatch(DATE);
+    expect(review.hurt.join(" ")).toMatch(DATE);
+    expect(weekReviewMouth(review)).not.toMatch(ROBOT);
   });
 
   it("keeps the Notes page a week read, not a melatonin gate", () => {
@@ -256,6 +304,7 @@ describe("week review", () => {
     ];
     for (const text of mouths) {
       expect(text).not.toMatch(BAN);
+      expect(text).not.toMatch(ROBOT);
     }
   });
 });
