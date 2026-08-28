@@ -6,7 +6,7 @@ export const LOCAL_FILE_KEY = "local:this-computer";
 export const AUTH_ERRORS = {
   name: "Enter a first and last name.",
   contact: "Use an email or a phone number.",
-  exists: "A file already exists for that on this computer. Log in instead.",
+  exists: "That email or phone already has a diary on this computer. Log in instead.",
   missing: "No file for that on this computer.",
 } as const;
 

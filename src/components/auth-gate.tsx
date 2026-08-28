@@ -8,11 +8,11 @@ import { hasOrphanLocalFile } from "@/lib/storage";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
-type Mode = "create" | "login";
+type Mode = "signup" | "login";
 
 export function AuthGate() {
   const { signUp, logIn } = useCircadia();
-  const [mode, setMode] = useState<Mode>("create");
+  const [mode, setMode] = useState<Mode>("signup");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [contact, setContact] = useState("");
@@ -21,7 +21,7 @@ export function AuthGate() {
 
   function submit() {
     setError(null);
-    if (mode === "create") {
+    if (mode === "signup") {
       const result = signUp({ firstName, lastName, contact });
       if (!result.ok) setError(result.error);
       return;
@@ -39,13 +39,13 @@ export function AuthGate() {
         </h1>
         <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
           {orphan
-            ? "This computer already has a diary. First and last name, then an email or phone, keeps it — and is how you open it again. Circadia will not contact you."
-            : "A sleep file on this computer. Email or phone is how you open it again — not a way for anyone to reach you."}
+            ? "This computer already has a diary. Sign up with your name and an email or phone to keep it — that is how you log back in. Circadia will not contact you."
+            : "Sign up or log in. Email or phone is how you open Circadia on this computer, not a way for anyone to reach you."}
         </p>
 
         <div className="mt-8 grid grid-cols-2 rounded-full border border-white/12 p-1">
-          <ModeTab active={mode === "create"} onClick={() => { setMode("create"); setError(null); }}>
-            Create file
+          <ModeTab active={mode === "signup"} onClick={() => { setMode("signup"); setError(null); }}>
+            Sign up
           </ModeTab>
           <ModeTab active={mode === "login"} onClick={() => { setMode("login"); setError(null); }}>
             Log in
@@ -59,7 +59,7 @@ export function AuthGate() {
             submit();
           }}
         >
-          {mode === "create" ? (
+          {mode === "signup" ? (
             <div className="grid grid-cols-2 gap-2">
               <label className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
                 First name
@@ -84,7 +84,7 @@ export function AuthGate() {
             </div>
           ) : null}
 
-          <label className={cn("block text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase", mode === "create" ? "mt-4" : "mt-0")}>
+          <label className={cn("block text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase", mode === "signup" ? "mt-4" : "mt-0")}>
             Email or phone
             <Input
               autoComplete={mode === "login" ? "username" : "email"}
@@ -96,11 +96,11 @@ export function AuthGate() {
             />
           </label>
           <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">
-            {mode === "create"
+            {mode === "signup"
               ? orphan
-                ? "Create file claims the diary already on this computer. It does not start you over."
-                : "This identifier opens your file on this computer. Circadia will not email or text you."
-              : "Same email or phone you used when you created the file."}
+                ? "This does not start you over. It attaches a login to the diary already here."
+                : "Circadia will not email or text you. There is no password."
+              : "The same email or phone you used when you signed up."}
           </p>
 
           {error ? <p className="mt-4 text-[13px] text-amber-200/90">{error}</p> : null}
@@ -109,13 +109,13 @@ export function AuthGate() {
             type="submit"
             className="mt-8 h-14 w-full cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 transition-opacity hover:opacity-90"
           >
-            {mode === "create" ? "Create file" : "Log in"}
+            {mode === "signup" ? "Sign up" : "Log in"}
           </button>
         </form>
 
         <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-600">
-          There is no password and no cloud account. Anyone at this computer who knows the email or
-          phone can open the file.
+          Anyone at this computer who knows the email or phone can open the diary. That is the
+          login. It is not a number for the person who built Circadia.
         </p>
         <p className="mt-3 text-[11px] tracking-[0.18em] text-zinc-700 uppercase">{APP_VERSION}</p>
       </div>

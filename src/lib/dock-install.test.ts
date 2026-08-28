@@ -47,7 +47,7 @@ describe("Dock install invariants", () => {
   it("does not prefetch routes from login or sleep intake", () => {
     expect(onboarding).not.toContain("useRouter");
     expect(authGate).not.toContain("useRouter");
-    expect(authGate).toContain("Create file");
+    expect(authGate).toContain("Sign up");
     expect(authGate).toContain("Log in");
     expect(onboarding).not.toContain("James can reach");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("AuthGate");
