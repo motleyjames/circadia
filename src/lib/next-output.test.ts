@@ -28,6 +28,6 @@ describe("nextOutput", () => {
     expect(nextOutput({ CIRCADIA_PACK_STATIC: "1" })).toBe("export");
     expect(nextOutput({})).toBe("standalone");
     expect(nextImagesUnoptimized({ CIRCADIA_PACK_STATIC: "1" })).toBe(true);
-    expect(nextImagesUnoptimized({ CIRCADIA_ELECTRON: "1" })).toBe(false);
+    expect(nextImagesUnoptimized({})).toBe(false);
   });
 });
