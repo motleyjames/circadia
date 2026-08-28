@@ -7,49 +7,54 @@ import { Button } from "@/components/ui/button";
 import { buildSleepNotes } from "@/lib/advisor";
 import { readDream } from "@/lib/dreams";
 import { weekBreakdown } from "@/lib/metrics";
-import { buildRecommendations } from "@/lib/recommendations";
 import { researchById } from "@/lib/research";
 import { formatClock, formatDuration, minutesToClock } from "@/lib/time";
 import type { SleepNote } from "@/lib/types";
+import { buildWeekReview, lastSevenReports } from "@/lib/week-review";
 
 export function InsightsView() {
   const { state, loadSampleWeek, removeLatestReport } = useCircadia();
   const profile = state.profile;
-  const recs = useMemo(
-    () => (profile ? buildRecommendations(profile, state.reports) : null),
-    [profile, state.reports],
-  );
+  const windowReports = useMemo(() => lastSevenReports(state.reports), [state.reports]);
   const notes = useMemo(
     () => (profile ? buildSleepNotes(profile, state.reports) : []),
     [profile, state.reports],
   );
-  const week = useMemo(() => weekBreakdown(state.reports), [state.reports]);
+  const week = useMemo(() => weekBreakdown(windowReports), [windowReports]);
+  const review = useMemo(
+    () => (profile ? buildWeekReview(profile, state.reports) : null),
+    [profile, state.reports],
+  );
   const dreamReports = state.reports.filter((r) => r.dream?.text);
-  if (!profile || !recs) return null;
+  if (!profile) return null;
+
+  const empty = state.reports.length === 0;
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-8">
-      <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">Notes</p>
-      <h1 className="font-heading mt-1 text-3xl text-zinc-50">The breakdown.</h1>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-        Circadia reads your bubbles, your body stats, meds, and activity — then writes like a sleep
-        scientist, not a horoscope. Confidence is labeled because guessing is how these apps get people hurt.
+      <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Notes</p>
+      <h1 className="font-heading mt-1 text-3xl text-zinc-50">The week.</h1>
+      <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
+        A clinician-style read of your last mornings — what helped, what hurt, and the next move.
+        Simple on purpose. I will not sell you a bottle from two nights.
       </p>
 
       {state.demoWeek ? (
         <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
-          Sample week is loaded so you can see the seven-night gate. It is not your sleep. Log a real morning to replace it.
+          Sample mornings. The overview uses the last seven. It is not your sleep. Log a real morning
+          to replace it.
         </p>
       ) : null}
 
-      {state.reports.length === 0 ? (
+      {empty ? (
         <div className="mt-6 rounded-3xl border border-white/10 bg-white/4 p-4">
           <p className="text-sm text-zinc-200">No mornings yet.</p>
           <p className="mt-1 text-xs text-zinc-500">
-            Log tonight tomorrow. To see a full week of notes and the supplement gate, you can load a
-            sample student week — it is clearly fake data.
+            Log tonight tomorrow. The week read starts on night one — honest, and labeled as a
+            sketch until there are a few mornings. Load a sample student week if you want to see
+            the shape first. It is clearly fake data.
           </p>
-          <div className="mt-3 flex gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Link
               href="/check-in"
               className="inline-flex items-center rounded-full bg-sky-300 px-4 py-2 text-sm text-zinc-950"
@@ -79,7 +84,14 @@ export function InsightsView() {
           <div className="mt-6 grid grid-cols-3 gap-2">
             <Stat label="mean sleep" value={formatDuration(week.meanDurationMinutes)} />
             <Stat label="rating" value={week.meanRating ? week.meanRating.toFixed(1) : "—"} />
-            <Stat label="nights" value={String(state.reports.length)} />
+            <Stat
+              label="nights"
+              value={
+                state.reports.length > week.nights.length
+                  ? `${week.nights.length} of ${state.reports.length}`
+                  : String(week.nights.length)
+              }
+            />
           </div>
 
           <div className="mt-4 overflow-x-auto">
@@ -87,7 +99,7 @@ export function InsightsView() {
               {week.nights.map((n) => (
                 <div key={n.reportId} className="flex w-10 flex-col items-center gap-1">
                   <div
-                    className="w-6 rounded-full bg-gradient-to-t from-violet-700 to-sky-300"
+                    className="w-6 rounded-full bg-gradient-to-t from-sky-900 to-sky-300"
                     style={{ height: `${Math.min(96, (n.durationMinutes / 600) * 96)}px` }}
                     title={`${n.morningDate} ${formatDuration(n.durationMinutes)}`}
                   />
@@ -109,57 +121,44 @@ export function InsightsView() {
         </>
       )}
 
-      <section className="mt-8">
-        <h2 className="text-sm text-zinc-200">After enough data</h2>
-        <p className="mt-1 text-xs text-zinc-500">
-          Melatonin / magnesium talk waits until {recs.nightsNeeded} mornings. You have {recs.nightsLogged}.
-        </p>
-        <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full bg-violet-400"
-            style={{ width: `${Math.min(100, (recs.nightsLogged / recs.nightsNeeded) * 100)}%` }}
-          />
-        </div>
-        {recs.ready ? (
-          <div className="mt-4 space-y-3">
-            {recs.supplements.map((s) => (
-              <article key={s.id + s.title} className="rounded-3xl border border-violet-300/25 bg-violet-500/10 p-4">
-                <p className="text-[10px] tracking-[0.18em] text-violet-200 uppercase">
-                  {s.confidence} confidence
-                </p>
-                <h3 className="mt-1 text-sm text-zinc-50">{s.title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-zinc-300">{s.body}</p>
-                <p className="mt-2 text-[11px] text-zinc-500">{s.notFirstLine}</p>
-              </article>
-            ))}
-            <div className="rounded-3xl border border-white/10 p-4">
-              <p className="text-[11px] tracking-[0.18em] text-zinc-500 uppercase">Use tonight</p>
-              {recs.suggestedSessions.map((s) => (
-                <p key={`${s.kind}-${s.id}`} className="mt-2 text-xs text-zinc-300">
-                  <span className="text-zinc-100">{labelSession(s.id)}</span> — {s.why}
-                </p>
-              ))}
-              <Link
-                href="/"
-                className="mt-3 inline-flex rounded-full bg-white/10 px-4 py-2 text-xs text-zinc-100"
-              >
-                Open wind-down
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <p className="mt-3 text-xs text-zinc-500">
-            Wind-down is available now. Supplement notes stay locked so we do not guess from two nights.
-          </p>
-        )}
-      </section>
+      {review && review.nightsLogged > 0 ? (
+        <section className="mt-10">
+          <p className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase">This week</p>
+          <h2 className="font-heading mt-1 text-[1.65rem] leading-tight text-zinc-50">{review.headline}</h2>
+          <p className="mt-2 max-w-[46ch] text-[13px] leading-relaxed text-zinc-500">{review.kicker}</p>
 
-      <section className="mt-8 space-y-3">
-        <h2 className="text-sm text-zinc-200">Advisor notes</h2>
-        {notes.map((n) => (
-          <NoteCard key={n.id} note={n} />
-        ))}
-      </section>
+          <div className="mt-6 border-l border-sky-300/35 pl-4">
+            <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">The read</p>
+            <p className="mt-2 max-w-[48ch] text-[15px] leading-relaxed text-zinc-200">{review.read}</p>
+          </div>
+
+          <div className="mt-8 space-y-7">
+            {review.worked.length > 0 ? (
+              <WeekColumn kicker="Worked" items={review.worked} tone="worked" />
+            ) : null}
+            {review.hurt.length > 0 ? (
+              <WeekColumn kicker="Hurt" items={review.hurt} tone="hurt" />
+            ) : null}
+            <WeekColumn kicker="Do this" items={review.doThis} tone="advice" numbered />
+          </div>
+
+          <Link
+            href="/"
+            className="mt-8 inline-flex rounded-full border border-sky-300/25 px-4 py-2 text-xs text-zinc-100"
+          >
+            Open wind-down
+          </Link>
+        </section>
+      ) : null}
+
+      {empty ? (
+        <section className="mt-8 space-y-3">
+          <h2 className="text-sm text-zinc-200">Before the first morning</h2>
+          {notes.map((n) => (
+            <NoteCard key={n.id} note={n} />
+          ))}
+        </section>
+      ) : null}
 
       {dreamReports.length > 0 ? (
         <section className="mt-8 space-y-3">
@@ -192,10 +191,44 @@ export function InsightsView() {
 
       {week.nights.length > 0 ? (
         <p className="mt-8 text-[11px] text-zinc-600">
-          Mid-sleep average ~{formatClock(minutesToClock(week.meanMidpointMinutes), profile.units)}. Wake spread ~
-          {Math.round(week.wakeSpreadMinutes)} min.
+          Mid-sleep average ~{formatClock(minutesToClock(week.meanMidpointMinutes), profile.units)}. Wake
+          spread ~{Math.round(week.wakeSpreadMinutes)} min.
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function WeekColumn({
+  kicker,
+  items,
+  tone,
+  numbered = false,
+}: {
+  kicker: string;
+  items: string[];
+  tone: "worked" | "hurt" | "advice";
+  numbered?: boolean;
+}) {
+  const rule =
+    tone === "worked"
+      ? "border-sky-300/30"
+      : tone === "hurt"
+        ? "border-zinc-500/45"
+        : "border-zinc-100/20";
+  return (
+    <div className={`border-l ${rule} pl-4`}>
+      <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">{kicker}</p>
+      <ul className="mt-2 space-y-2.5">
+        {items.map((item, i) => (
+          <li key={item} className="flex gap-2.5 text-[13px] leading-relaxed text-zinc-300">
+            <span className="mt-px w-4 shrink-0 text-[11px] text-zinc-600">
+              {numbered ? String(i + 1) : "·"}
+            </span>
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -228,17 +261,4 @@ function NoteCard({ note }: { note: SleepNote }) {
       ) : null}
     </article>
   );
-}
-
-function labelSession(id: string) {
-  const map: Record<string, string> = {
-    "478": "4–7–8 breathing",
-    "body-scan": "Body scan",
-    pmr: "Muscle release",
-    brown: "Brown noise",
-    pink: "Pink noise",
-    rain: "Rain bed",
-    ocean: "Slow ocean",
-  };
-  return map[id] ?? id;
 }
