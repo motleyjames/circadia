@@ -24,6 +24,20 @@ function context(): AudioContext {
 /** Must run inside a tap. Browsers otherwise start the graph `suspended` and you get silence. */
 export async function unlockAudio(): Promise<void> {
   const ctx = context();
+  // A 1-sample tick in the tap is what actually opens the Mac mixer.
+  // resume() alone is not enough in WKWebView; HTMLAudioElement is a different gate.
+  try {
+    const tick = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = tick;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.001;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+  } catch {
+    /* first frame */
+  }
   if (ctx.state === "suspended") await ctx.resume();
 }
 
@@ -153,4 +167,87 @@ export function startSoundscape(kind: SoundscapeId, volume = 0.2): NoiseHandle {
 
   activeStop = stop;
   return { stop };
+}
+
+const decoded = new Map<string, AudioBuffer>();
+let sampleStop: (() => void) | null = null;
+let sampleGen = 0;
+
+function decodePcm(ctx: AudioContext, data: ArrayBuffer): Promise<AudioBuffer> {
+  const first = data.slice(0);
+  const promised = ctx.decodeAudioData(first);
+  if (promised && typeof promised.then === "function") {
+    return promised.catch(() => {
+      const retry = data.slice(0);
+      return new Promise<AudioBuffer>((resolve, reject) => {
+        ctx.decodeAudioData(retry, resolve, reject);
+      });
+    });
+  }
+  return new Promise((resolve, reject) => {
+    ctx.decodeAudioData(data.slice(0), resolve, reject);
+  });
+}
+
+/** Fetch + decode through the same AudioContext the soundscapes use. */
+export async function decodeUrl(url: string): Promise<AudioBuffer> {
+  const hit = decoded.get(url);
+  if (hit) return hit;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`audio ${res.status} ${url}`);
+  const data = await res.arrayBuffer();
+  const buffer = await decodePcm(context(), data);
+  decoded.set(url, buffer);
+  return buffer;
+}
+
+export function stopSample() {
+  sampleStop?.();
+  sampleStop = null;
+}
+
+/** Play a decoded buffer on the unlocked graph. Safe to call from a timer. */
+export function playSample(buffer: AudioBuffer, volume = 0.72): void {
+  stopSample();
+  const ctx = context();
+  void ctx.resume();
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const gain = ctx.createGain();
+  gain.gain.value = 0.0001;
+  source.connect(gain);
+  gain.connect(ctx.destination);
+  source.start();
+  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.05);
+  const mine = ++sampleGen;
+  const stop = () => {
+    if (sampleStop !== stop) return;
+    sampleStop = null;
+    const t = ctx.currentTime;
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), t);
+    gain.gain.linearRampToValueAtTime(0.0001, t + 0.08);
+    window.setTimeout(() => {
+      try {
+        source.stop();
+      } catch {
+        /* already stopped */
+      }
+      try {
+        source.disconnect();
+        gain.disconnect();
+      } catch {
+        /* graph gone */
+      }
+    }, 120);
+  };
+  sampleStop = stop;
+  source.onended = () => {
+    if (sampleGen === mine && sampleStop === stop) sampleStop = null;
+  };
+}
+
+export async function playUrl(url: string, volume = 0.72): Promise<void> {
+  const buffer = await decodeUrl(url);
+  playSample(buffer, volume);
 }
