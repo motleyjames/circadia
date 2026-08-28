@@ -5,7 +5,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { useCircadia } from "@/context/circadia-store";
-import { hasOrphanLocalFile } from "@/lib/storage";
+import { defaultAuthMode, defaultContactField } from "@/lib/login";
+import { listDiaryLogins } from "@/lib/storage";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -13,15 +14,17 @@ type Mode = "signup" | "login";
 
 export function AuthGate() {
   const { signUp, logIn } = useCircadia();
-  const [mode, setMode] = useState<Mode>("signup");
+  const identities = listDiaryLogins();
+  const named = identities.filter((row) => !row.orphan);
+  const orphan = identities.some((row) => row.orphan);
+  const [mode, setMode] = useState<Mode>(() => defaultAuthMode(identities));
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [contact, setContact] = useState("");
+  const [contact, setContact] = useState(() => defaultContactField(identities));
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [orphan] = useState(() => hasOrphanLocalFile());
 
   async function submit() {
     if (busy) return;
@@ -30,11 +33,19 @@ export function AuthGate() {
     try {
       if (mode === "signup") {
         const result = await signUp({ firstName, lastName, contact, password, confirm });
-        if (!result.ok) setError(result.error);
+        if (!result.ok) {
+          setError(result.error);
+          if (result.error.includes("Log in instead")) setMode("login");
+        }
         return;
       }
       const result = await logIn(contact, password);
-      if (!result.ok) setError(result.error);
+      if (!result.ok) {
+        setError(result.error);
+        if (result.error.includes("Sign up")) setMode("signup");
+      }
+    } catch {
+      setError("Could not check the password on this computer. Try again.");
     } finally {
       setBusy(false);
     }
@@ -48,10 +59,20 @@ export function AuthGate() {
           Circadia
         </h1>
         <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-          {orphan
+          {orphan && !named.length
             ? "This computer already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. Circadia will not contact you."
-            : "Sign up or log in. Email or phone plus a password opens Circadia on this computer — not a way for anyone to reach you."}
+            : named.length
+              ? "Log in to the diary on this computer. Circadia will not email or text you."
+              : "Sign up or log in. Email or phone plus a password opens Circadia on this computer — not a way for anyone to reach you."}
         </p>
+
+        {named.length ? (
+          <p className="mt-4 text-[13px] leading-relaxed text-zinc-500">
+            {named.length === 1
+              ? `Diary on this computer: ${named[0].display}`
+              : `Diaries on this computer: ${named.map((row) => row.display).join(", ")}`}
+          </p>
+        ) : null}
 
         <div className="mt-8 grid grid-cols-2 rounded-full border border-white/12 p-1">
           <ModeTab
@@ -116,6 +137,7 @@ export function AuthGate() {
             <Input
               autoComplete={mode === "login" ? "username" : "email"}
               inputMode="email"
+              name="username"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               placeholder="you@school.edu or a phone number"
@@ -190,6 +212,7 @@ function SecretField({
         <Input
           type={show ? "text" : "password"}
           autoComplete={autoComplete}
+          name="password"
           value={value}
           onChange={(e) => onChange(e.target.value.slice(0, 128))}
           className="h-12 rounded-2xl border-white/10 bg-white/4 px-4 pr-12 text-[15px] text-zinc-50"

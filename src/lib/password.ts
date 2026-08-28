@@ -1,6 +1,7 @@
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
 export const PBKDF2_ITERATIONS = 100_000;
+export const CRYPTO_UNAVAILABLE = "WEB_CRYPTO_UNAVAILABLE";
 
 export type PasswordLock = {
   algo: "pbkdf2-sha256";
@@ -65,12 +66,26 @@ export async function verifyPassword(password: string, lock: PasswordLock): Prom
   return timingSafeEqual(actual, expected);
 }
 
+function asBufferSource(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+export function hasWebCrypto(): boolean {
+  const subtle = globalThis.crypto?.subtle;
+  return typeof subtle?.importKey === "function" && typeof subtle.deriveBits === "function";
+}
+
 async function derive(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+  if (!hasWebCrypto()) {
+    const err = new Error(CRYPTO_UNAVAILABLE);
+    err.name = CRYPTO_UNAVAILABLE;
+    throw err;
+  }
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, [
     "deriveBits",
   ]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", hash: "SHA-256", salt: salt as BufferSource, iterations },
+    { name: "PBKDF2", hash: "SHA-256", salt: asBufferSource(salt), iterations },
     key,
     256,
   );

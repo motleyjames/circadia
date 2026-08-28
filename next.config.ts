@@ -24,11 +24,15 @@ const nextConfig: NextConfig = {
     if (packStatic) return [];
     return [
       {
-        source: "/:path*",
+        source: "/((?!api/).*)",
         headers: [
           { key: "Access-Control-Allow-Origin", value: "*" },
           { key: "Cache-Control", value: "no-store" },
         ],
+      },
+      {
+        source: "/api/:path*",
+        headers: [{ key: "Cache-Control", value: "no-store" }],
       },
     ];
   },

@@ -26,8 +26,7 @@ func installPort(_ install: Install?) -> Int {
 }
 
 func makeDiaryURL(_ install: Install?) -> URL {
-  let stamp = install?.version ?? "0.4.4"
-  return URL(string: "http://127.0.0.1:\(installPort(install))/?v=\(stamp)")!
+  return URL(string: "http://127.0.0.1:\(installPort(install))/")!
 }
 let logsDir: URL = {
   let logs = FileManager.default.homeDirectoryForCurrentUser
@@ -137,6 +136,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
   )
   let web: WKWebView = {
     let config = WKWebViewConfiguration()
+    config.websiteDataStore = WKWebsiteDataStore.default()
     // HTML5 <audio> is gated; speechSynthesis was not. Empty set = play from a timer.
     config.mediaTypesRequiringUserActionForPlayback = []
     config.allowsInlineMediaPlayback = true
