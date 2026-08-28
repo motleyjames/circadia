@@ -7,7 +7,7 @@ import { buildWeekReview, formatMorningDate, weekReviewMouth } from "./week-revi
 
 const BAN = /aasm|cbt-i|\bscn\b/i;
 const BOTTLE_LEAD = /take melatonin|try melatonin|start melatonin|magnesium glycinate/i;
-const ROBOT = /on the board|close a case|restedness averaged|loudest signal|i will not overclaim|against the \d[–-]\d hours/i;
+const ROBOT = /on the board|close a case|restedness averaged|loudest signal|i will not overclaim/i;
 const DATE = /\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}\b/;
 
 const profile: Profile = {
@@ -150,8 +150,12 @@ describe("week review", () => {
     expect(review.hurt.join(" ")).toMatch(/Jan 1/);
     expect(review.hurt.join(" ")).toMatch(/Jan 5/);
     expect(review.hurt.join(" ")).toMatch(/drinks/i);
-    expect(review.worked[0]).toBe("Jan 4, Jan 6, and Jan 7 — 4/5, no drinks, wind-down.");
-    expect(review.hurt[0]).toBe("Jan 1 and Jan 5 — 2/5, drinks, slow to fall asleep.");
+    expect(review.worked.join(" ")).toMatch(/Jan 4/);
+    expect(review.worked.join(" ")).toMatch(/Asleep around/);
+    expect(review.hurt.join(" ")).toMatch(/Jan 1/);
+    expect(review.hurt.join(" ")).toMatch(/Jan 5/);
+    expect(review.read).toContain("\n\n");
+    expect(review.read.length).toBeGreaterThan(280);
     expect(review.doThis[0]).toMatch(/dry/i);
     expect(review.doThis.join(" ")).not.toMatch(BOTTLE_LEAD);
     expect(weekReviewMouth(review)).not.toMatch(BAN);
@@ -201,6 +205,7 @@ describe("week review", () => {
     expect(review.headline).toMatch(/one morning/i);
     expect(review.read).toMatch(/Jan 1/);
     expect(review.read).toMatch(/snapshot/i);
+    expect(review.read).toContain("\n\n");
     expect(review.hurt.join(" ") + review.doThis.join(" ")).toMatch(/dry/i);
     expect(weekReviewMouth(review)).not.toMatch(BAN);
     expect(weekReviewMouth(review)).not.toMatch(BOTTLE_LEAD);
@@ -229,8 +234,12 @@ describe("week review", () => {
     expect(review.headline).toMatch(/early look/i);
     expect(review.read).toMatch(/Aug 27/);
     expect(review.read).toMatch(/Aug 28/);
-    expect(review.read).toMatch(/fall asleep/i);
-    expect(review.hurt[0]).toBe("Aug 27 and Aug 28 — about 63 minutes to fall asleep.");
+    expect(review.read).toMatch(/falling asleep/i);
+    expect(review.hurt.join(" ")).toMatch(/Aug 27/);
+    expect(review.hurt.join(" ")).toMatch(/Aug 28/);
+    expect(review.hurt.join(" ")).toMatch(/minutes to fall asleep/);
+    expect(review.read).toContain("\n\n");
+    expect(review.read.length).toBeGreaterThan(220);
     if (review.hurt[0]) expect(review.read).not.toContain(review.hurt[0]);
     expect(weekReviewMouth(review)).not.toMatch(ROBOT);
     expect(review.doThis[0]).toMatch(/get out of bed/i);

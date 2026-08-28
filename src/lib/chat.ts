@@ -4,6 +4,7 @@ import { readDream } from "@/lib/dreams";
 import { flagMedications, weekBreakdown } from "@/lib/metrics";
 import { buildRecommendations } from "@/lib/recommendations";
 import { extraConsult } from "@/lib/consult-extra";
+import { answerDiaryQuestion } from "@/lib/diary-consult";
 import { resolveQuestion } from "@/lib/chat-history";
 import { matchResearch } from "@/lib/research";
 import { formatClock, formatDuration, newId, overnightDuration, sleepNeedHours } from "@/lib/time";
@@ -14,6 +15,7 @@ export type ChatReply = {
 };
 
 export const CLINIC_STARTERS = [
+  { q: "Walk me through last night", hint: "Your log. Clocks, rating, what got in the way." },
   { q: "I cannot fall asleep", hint: "Lying in bed trying is the usual trap." },
   { q: "I wake at 3 and stay up", hint: "Second-half nights, drinks, watching the clock." },
   { q: "What does Unisom actually do?", hint: "An old allergy medicine sold as a sleep aid." },
@@ -147,6 +149,9 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
       : `Magnesium is not a knockout pill. The evidence is mixed and small. I will only mention glycinate as a maybe after ${recs.nightsNeeded} nights if your pattern even fits (${recs.nightsLogged} logged). Kidney disease is a hard no — that is a human, not an aisle.`;
     return { text: plan ?? "", citations: ["magnesium"] };
   }
+
+  const diaryAsk = answerDiaryQuestion(q, profile, reports);
+  if (diaryAsk) return diaryAsk;
 
   if (/caffeine|coffee|espresso|energy drink/.test(lower)) {
     return {

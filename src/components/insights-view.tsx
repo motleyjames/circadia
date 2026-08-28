@@ -35,8 +35,8 @@ export function InsightsView() {
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Notes</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">The week.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
-        The better nights, the worse ones, and what I would try next. Dates, not a score dump.
-        I will not sell you a bottle from two nights.
+        The better nights, the worse ones, and what I would try next. Ask Consult about a specific
+        morning — I will read the log, not guess. I will not sell you a bottle from two nights.
       </p>
 
       {state.demoWeek ? (
@@ -129,7 +129,13 @@ export function InsightsView() {
 
           <div className="mt-6 border-l border-sky-300/35 pl-4">
             <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">What I see</p>
-            <p className="mt-2 max-w-[48ch] text-[15px] leading-relaxed text-zinc-200">{review.read}</p>
+            <div className="mt-2 max-w-[52ch] space-y-3">
+              {review.read.split("\n\n").map((para) => (
+                <p key={para.slice(0, 48)} className="text-[15px] leading-relaxed text-zinc-200">
+                  {para}
+                </p>
+              ))}
+            </div>
           </div>
 
           <div className="mt-8 space-y-7">
