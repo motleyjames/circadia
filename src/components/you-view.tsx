@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
 import { StudyPanel } from "@/components/study-panel";
@@ -13,7 +14,8 @@ import type { ActivityLevel, Profile } from "@/lib/types";
 import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
 
 export function YouView() {
-  const { state, saveProfile, resetAll, loadSampleWeek, session, logOut, attachLogin, canLogOut } = useCircadia();
+  const { state, saveProfile, resetAll, loadSampleWeek, session, logOut, attachLogin, canLogOut, changePassword } =
+    useCircadia();
   const profile = state.profile;
   const imperial = cmToFeetInches(profile?.heightCm ?? 170);
   const [feet, setFeet] = useState(String(imperial.feet));
@@ -23,7 +25,13 @@ export function YouView() {
   const [firstName, setFirstName] = useState(profile?.firstName ?? "");
   const [lastName, setLastName] = useState(profile?.lastName ?? "");
   const [loginDraft, setLoginDraft] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginConfirm, setLoginConfirm] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
+  const [nextConfirm, setNextConfirm] = useState("");
+  const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
   const [medDraft, setMedDraft] = useState("");
   const [supDraft, setSupDraft] = useState("");
 
@@ -81,8 +89,8 @@ export function YouView() {
             <div>
               <p className="text-xs text-zinc-400">Save a login</p>
               <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">
-                An email or phone lets you sign out and open this file again. Circadia will not
-                contact you.
+                Email or phone plus a password lets you sign out and open this diary again. Circadia
+                will not contact you.
               </p>
               <Input
                 value={loginDraft}
@@ -90,14 +98,17 @@ export function YouView() {
                 placeholder="you@school.edu or a phone number"
                 className="mt-3 h-11 rounded-2xl border-white/10 bg-white/5"
               />
+              <YouSecret label="Password" value={loginPassword} onChange={setLoginPassword} />
+              <YouSecret label="Confirm password" value={loginConfirm} onChange={setLoginConfirm} />
               {loginError ? <p className="mt-2 text-[13px] text-amber-200/90">{loginError}</p> : null}
               <Button
                 type="button"
                 className="mt-3 h-11 w-full cursor-pointer rounded-full bg-zinc-50 text-zinc-950"
                 onClick={() => {
-                  const result = attachLogin(loginDraft);
-                  if (!result.ok) setLoginError(result.error);
-                  else setLoginError(null);
+                  void attachLogin(loginDraft, loginPassword, loginConfirm).then((result) => {
+                    if (!result.ok) setLoginError(result.error);
+                    else setLoginError(null);
+                  });
                 }}
               >
                 Save login
@@ -108,19 +119,42 @@ export function YouView() {
               <p className="text-xs text-zinc-400">How you log in</p>
               <p className="mt-1 font-heading text-lg text-zinc-50">{formatLoginForDisplay(session)}</p>
               <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
-                This stays on this computer. Circadia will not email or text you. There is no
-                password — anyone at this laptop who knows this identifier can open the file.
+                Email or phone plus your password. Circadia will not email or text you. The password
+                is checked on this computer.
               </p>
+              <YouSecret label="Current password" value={currentPassword} onChange={setCurrentPassword} />
+              <YouSecret label="New password" value={nextPassword} onChange={setNextPassword} />
+              <YouSecret label="Confirm new password" value={nextConfirm} onChange={setNextConfirm} />
+              {passwordMsg ? <p className="mt-2 text-[13px] text-amber-200/90">{passwordMsg}</p> : null}
               <Button
                 type="button"
                 variant="outline"
-                className="mt-4 h-11 w-full cursor-pointer rounded-full border-white/15"
+                className="mt-3 h-11 w-full cursor-pointer rounded-full border-white/15"
+                onClick={() => {
+                  void changePassword(currentPassword, nextPassword, nextConfirm).then((result) => {
+                    if (!result.ok) setPasswordMsg(result.error);
+                    else {
+                      setPasswordMsg("Password updated.");
+                      setCurrentPassword("");
+                      setNextPassword("");
+                      setNextConfirm("");
+                    }
+                  });
+                }}
+              >
+                Update password
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2 h-11 w-full cursor-pointer rounded-full border-white/15"
                 onClick={logOut}
               >
                 Log out
               </Button>
               <p className="mt-2 text-[12px] leading-relaxed text-zinc-600">
-                This computer still has your file. The same email or phone opens it.
+                This computer still has your diary. The same email or phone, plus the password, opens
+                it.
               </p>
             </div>
           )}
@@ -267,6 +301,39 @@ export function YouView() {
         </section>
       </div>
     </div>
+  );
+}
+
+function YouSecret({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <label className="mt-3 block text-xs text-zinc-400">
+      {label}
+      <span className="relative mt-1 block">
+        <Input
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value.slice(0, 128))}
+          className="h-11 rounded-2xl border-white/10 bg-white/5 pr-12"
+        />
+        <button
+          type="button"
+          onClick={() => setShow((v) => !v)}
+          className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-zinc-500 hover:text-zinc-200"
+          aria-label={show ? "Hide password" : "Show password"}
+        >
+          {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        </button>
+      </span>
+    </label>
   );
 }
 

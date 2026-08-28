@@ -4,6 +4,7 @@ import {
   SESSION_KEY,
   STORAGE_KEY,
   VAULT_KEY,
+  LOCKS_KEY,
   attachLoginToCurrent,
   closeFile,
   createFile,
@@ -15,6 +16,9 @@ import {
   openFile,
   saveState,
 } from "./storage";
+
+const PASS = "correct-horse";
+const creds = { password: PASS, confirm: PASS };
 
 class MemoryStorage {
   private map = new Map<string, string>();
@@ -66,7 +70,7 @@ describe("local file vault", () => {
     localStorage.clear();
   });
 
-  it("migrates a named file into the vault without auto-opening it", () => {
+  it("migrates a named file into the vault without auto-opening it", async () => {
     const prior = hydrateState({
       profile: {
         onboardingComplete: true,
@@ -82,7 +86,7 @@ describe("local file vault", () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(prior));
     migrateToVault();
     expect(getSessionLogin()).toBeNull();
-    const opened = openFile("james@colorado.edu");
+    const opened = await openFile("james@colorado.edu", PASS);
     expect(opened.ok).toBe(true);
     if (!opened.ok) return;
     expect(opened.state.profile?.name).toBe("James Motley");
@@ -95,17 +99,19 @@ describe("local file vault", () => {
     expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")).toEqual({});
   });
 
-  it("creates a file, logs out without deleting it, then opens it again", () => {
-    const created = createFile({
+  it("creates a file, logs out without deleting it, then opens it with the password", async () => {
+    const created = await createFile({
       firstName: "Ada",
       lastName: "Lovelace",
       contact: "ada@example.com",
+      ...creds,
     });
     expect(created.ok).toBe(true);
     if (!created.ok) return;
     expect(created.state.profile?.onboardingComplete).toBe(false);
     expect(created.state.profile?.firstName).toBe("Ada");
     expect(getSessionLogin()).toBe("email:ada@example.com");
+    expect(JSON.stringify(localStorage.getItem(LOCKS_KEY))).not.toMatch(/correct-horse/);
 
     created.state.researchNotes = "keep me";
     saveState(created.state);
@@ -114,29 +120,45 @@ describe("local file vault", () => {
     expect(loadState().profile).toBeNull();
     expect(localStorage.getItem(SESSION_KEY)).toBeNull();
 
-    const opened = openFile("ADA@example.com");
+    expect(await openFile("ADA@example.com", "wrong-horse")).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.credentials,
+    });
+    const opened = await openFile("ADA@example.com", PASS);
     expect(opened.ok).toBe(true);
     if (!opened.ok) return;
     expect(opened.state.researchNotes).toBe("keep me");
     expect(opened.state.profile?.lastName).toBe("Lovelace");
   });
 
-  it("refuses a second file for the same login and a missing login", () => {
-    expect(createFile({ firstName: "A", lastName: "", contact: "a@example.com" })).toEqual({
+  it("refuses a second file for the same login and a missing login", async () => {
+    expect(
+      await createFile({ firstName: "A", lastName: "", contact: "a@example.com", ...creds }),
+    ).toEqual({
       ok: false,
       error: AUTH_ERRORS.name,
     });
-    const first = createFile({ firstName: "Ada", lastName: "Lovelace", contact: "303-555-0199" });
+    const first = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "303-555-0199",
+      ...creds,
+    });
     expect(first.ok).toBe(true);
-    expect(createFile({ firstName: "Ada", lastName: "Lovelace", contact: "3035550199" })).toEqual({
+    expect(
+      await createFile({ firstName: "Ada", lastName: "Lovelace", contact: "3035550199", ...creds }),
+    ).toEqual({
       ok: false,
       error: AUTH_ERRORS.exists,
     });
     closeFile();
-    expect(openFile("nobody@example.com")).toEqual({ ok: false, error: AUTH_ERRORS.missing });
+    expect(await openFile("nobody@example.com", PASS)).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.credentials,
+    });
   });
 
-  it("create file claims an orphan local diary instead of wiping it", () => {
+  it("create file claims an orphan local diary instead of wiping it", async () => {
     localStorage.setItem(
       VAULT_KEY,
       JSON.stringify({
@@ -155,10 +177,11 @@ describe("local file vault", () => {
         }),
       }),
     );
-    const claimed = createFile({
+    const claimed = await createFile({
       firstName: "Ada",
       lastName: "Lovelace",
       contact: "ada@example.com",
+      ...creds,
     });
     expect(claimed.ok).toBe(true);
     if (!claimed.ok) return;
@@ -168,16 +191,20 @@ describe("local file vault", () => {
     expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")[LOCAL_FILE_KEY]).toBeUndefined();
   });
 
-  it("erase removes the current file; attachLogin rekeys a local file", () => {
-    const created = createFile({
+  it("erase removes the current file; attachLogin rekeys a local file", async () => {
+    const created = await createFile({
       firstName: "Ada",
       lastName: "Lovelace",
       contact: "ada@example.com",
+      ...creds,
     });
     expect(created.ok).toBe(true);
     eraseCurrentFile();
     expect(getSessionLogin()).toBeNull();
-    expect(openFile("ada@example.com")).toEqual({ ok: false, error: AUTH_ERRORS.missing });
+    expect(await openFile("ada@example.com", PASS)).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.credentials,
+    });
 
     localStorage.setItem(
       VAULT_KEY,
@@ -197,7 +224,7 @@ describe("local file vault", () => {
       }),
     );
     localStorage.setItem(SESSION_KEY, JSON.stringify({ login: LOCAL_FILE_KEY }));
-    const attached = attachLoginToCurrent("ada@example.com");
+    const attached = await attachLoginToCurrent("ada@example.com", PASS, PASS);
     expect(attached.ok).toBe(true);
     if (!attached.ok) return;
     expect(attached.login).toBe("email:ada@example.com");

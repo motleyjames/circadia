@@ -1,12 +1,5 @@
-import {
-  AUTH_ERRORS,
-  LOCAL_FILE_KEY,
-  contactFromLogin,
-  displayName,
-  loginKeyFromInput,
-  loginKeyFromProfile,
-  splitDisplayName,
-} from "@/lib/login";
+import { AUTH_ERRORS, LOCAL_FILE_KEY, contactFromLogin, displayName, loginKeyFromInput, loginKeyFromProfile, splitDisplayName } from "@/lib/login";
+import { hashPassword, passwordIssue, verifyPassword, type PasswordLock } from "@/lib/password";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
 import type { CircadiaState, MorningReport, Profile, StudyState, StudyStatus } from "@/lib/types";
 import { isClock, normalizeClock } from "@/lib/windows";
@@ -16,6 +9,7 @@ export const STORAGE_KEY = "circadia:v1";
 export const VAULT_KEY = "circadia:v1:files";
 /** Which file is open. Not the 0.6.0 auto-login key — that skipped the gate. */
 export const SESSION_KEY = "circadia:v1:open";
+export const LOCKS_KEY = "circadia:v1:locks";
 const LEGACY_SESSION_KEY = "circadia:v1:session";
 
 export const emptyStudy = (): StudyState => ({
@@ -139,6 +133,36 @@ export function hasOrphanLocalFile(): boolean {
   return Boolean(readRawVault()[LOCAL_FILE_KEY]);
 }
 
+function readLocks(): Record<string, PasswordLock> {
+  if (typeof window === "undefined") return {};
+  const raw = window.localStorage.getItem(LOCKS_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as Record<string, PasswordLock>;
+  } catch {
+    return {};
+  }
+}
+
+function writeLocks(locks: Record<string, PasswordLock>): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LOCKS_KEY, JSON.stringify(locks));
+}
+
+function setLock(login: string, lock: PasswordLock): void {
+  const locks = readLocks();
+  locks[login] = lock;
+  writeLocks(locks);
+}
+
+function deleteLock(login: string): void {
+  const locks = readLocks();
+  delete locks[login];
+  writeLocks(locks);
+}
+
 export function loadState(): CircadiaState {
   if (typeof window === "undefined") return emptyState();
   const login = getSessionLogin();
@@ -161,11 +185,13 @@ export function saveState(state: CircadiaState) {
   writeRawVault(files);
 }
 
-export function createFile(input: {
+export async function createFile(input: {
   firstName: string;
   lastName: string;
   contact: string;
-}): { ok: true; login: string; state: CircadiaState } | { ok: false; error: string } {
+  password: string;
+  confirm: string;
+}): Promise<{ ok: true; login: string; state: CircadiaState } | { ok: false; error: string }> {
   if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.contact };
   migrateToVault();
   const firstName = input.firstName.trim();
@@ -173,6 +199,8 @@ export function createFile(input: {
   if (!firstName || !lastName) return { ok: false, error: AUTH_ERRORS.name };
   const login = loginKeyFromInput(input.contact);
   if (!login) return { ok: false, error: AUTH_ERRORS.contact };
+  const pwd = passwordIssue(input.password, input.confirm);
+  if (pwd) return { ok: false, error: pwd };
   const files = readRawVault();
   if (files[login]) return { ok: false, error: AUTH_ERRORS.exists };
   const { email, phone } = contactFromLogin(login);
@@ -199,6 +227,7 @@ export function createFile(input: {
       };
     }
     delete files[LOCAL_FILE_KEY];
+    deleteLock(LOCAL_FILE_KEY);
   } else {
     state = {
       ...emptyState(),
@@ -207,25 +236,35 @@ export function createFile(input: {
   }
   files[login] = state;
   writeRawVault(files);
+  setLock(login, await hashPassword(input.password));
   writeSession(login);
   return { ok: true, login, state };
 }
 
-export function openFile(
+export async function openFile(
   contact: string,
-): { ok: true; login: string; state: CircadiaState } | { ok: false; error: string } {
+  password: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | { ok: false; error: string }> {
   if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.contact };
   migrateToVault();
   const login = loginKeyFromInput(contact);
   if (!login) return { ok: false, error: AUTH_ERRORS.contact };
   const file = readRawVault()[login];
-  if (!file) return { ok: false, error: AUTH_ERRORS.missing };
+  if (!file) return { ok: false, error: AUTH_ERRORS.credentials };
+  const lock = readLocks()[login];
+  if (lock) {
+    if (!(await verifyPassword(password, lock))) return { ok: false, error: AUTH_ERRORS.credentials };
+  } else {
+    const pwd = passwordIssue(password);
+    if (pwd) return { ok: false, error: pwd };
+    setLock(login, await hashPassword(password));
+  }
   try {
     const state = hydrateState(file);
     writeSession(login);
     return { ok: true, login, state };
   } catch {
-    return { ok: false, error: AUTH_ERRORS.missing };
+    return { ok: false, error: AUTH_ERRORS.credentials };
   }
 }
 
@@ -239,18 +278,23 @@ export function eraseCurrentFile(): void {
     const files = readRawVault();
     delete files[login];
     writeRawVault(files);
+    deleteLock(login);
   }
   writeSession(null);
 }
 
-export function attachLoginToCurrent(
+export async function attachLoginToCurrent(
   contact: string,
-): { ok: true; login: string; state: CircadiaState } | { ok: false; error: string } {
+  password: string,
+  confirm: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | { ok: false; error: string }> {
   if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.contact };
   const current = getSessionLogin();
   if (!current) return { ok: false, error: AUTH_ERRORS.missing };
   const nextKey = loginKeyFromInput(contact);
   if (!nextKey) return { ok: false, error: AUTH_ERRORS.contact };
+  const pwd = passwordIssue(password, confirm);
+  if (pwd) return { ok: false, error: pwd };
   const files = readRawVault();
   if (files[nextKey] && nextKey !== current) return { ok: false, error: AUTH_ERRORS.exists };
   const raw = files[current];
@@ -269,8 +313,28 @@ export function attachLoginToCurrent(
   delete files[current];
   files[nextKey] = nextState;
   writeRawVault(files);
+  deleteLock(current);
+  setLock(nextKey, await hashPassword(password));
   writeSession(nextKey);
   return { ok: true, login: nextKey, state: nextState };
+}
+
+export async function changePassword(
+  currentPassword: string,
+  nextPassword: string,
+  confirm: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.credentials };
+  const login = getSessionLogin();
+  if (!login) return { ok: false, error: AUTH_ERRORS.missing };
+  const pwd = passwordIssue(nextPassword, confirm);
+  if (pwd) return { ok: false, error: pwd };
+  const lock = readLocks()[login];
+  if (lock && !(await verifyPassword(currentPassword, lock))) {
+    return { ok: false, error: "Current password is wrong." };
+  }
+  setLock(login, await hashPassword(nextPassword));
+  return { ok: true };
 }
 
 export function exportState(state: CircadiaState): string {

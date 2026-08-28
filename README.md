@@ -2,7 +2,7 @@
 
 A desktop sleep companion for people who **cannot fall asleep, cannot stay asleep, or both**. The job is a healthy, repeatable schedule — not a shop of powders.
 
-Circadia is local-first. Profile, mornings, dreams, and chat live on this computer. Create a file with your name and an email or phone — that identifier is how you log back in on this laptop, not a cloud account and not a way for James to reach you. There is no password. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
+Circadia is local-first. Profile, mornings, dreams, and chat live on this computer. Sign up with your name, an email or phone, and a password — that is how you log back in on this laptop, not a cloud account and not a way for James to reach you. The password is hashed on this computer. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
 
 ## Put it on the Dock (Mac)
 
@@ -36,7 +36,7 @@ Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again.
 
 ## What you do
 
-1. **Create file / Log in** — first and last name, then email or phone. That is how you open Circadia on this computer if you log out. Circadia will not email or text you.
+1. **Sign up / Log in** — first and last name, email or phone, and a password. Circadia will not email or text you. There is no reset email: if you forget the password, the diary on this computer stays locked.
 2. **Sleep intake** — age, height, weight, the problem, wake time, meds, alerts.
 3. **Study gate** — yes turns the pipeline on. No Send button after that.
 4. **Tonight** — countdown to screens-down (one hour before sleep), then a breathing field or calm noise.

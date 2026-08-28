@@ -18,6 +18,7 @@ import { buildFault, buildRoster } from "@/lib/operator";
 import { sessionAllowsLogout } from "@/lib/login";
 import {
   attachLoginToCurrent,
+  changePassword as changePasswordOnFile,
   closeFile,
   createFile,
   emptyState,
@@ -152,10 +153,17 @@ type CircadiaContextValue = {
   state: CircadiaState;
   session: string | null;
   canLogOut: boolean;
-  signUp: (input: { firstName: string; lastName: string; contact: string }) => AuthResult;
-  logIn: (contact: string) => AuthResult;
+  signUp: (input: {
+    firstName: string;
+    lastName: string;
+    contact: string;
+    password: string;
+    confirm: string;
+  }) => Promise<AuthResult>;
+  logIn: (contact: string, password: string) => Promise<AuthResult>;
   logOut: () => void;
-  attachLogin: (contact: string) => AuthResult;
+  attachLogin: (contact: string, password: string, confirm: string) => Promise<AuthResult>;
+  changePassword: (current: string, next: string, confirm: string) => Promise<AuthResult>;
   saveProfile: (profile: Profile) => void;
   addReport: (report: Omit<MorningReport, "id" | "createdAt">) => void;
   removeLatestReport: () => void;
@@ -287,17 +295,26 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     patch((prev) => sampleWeekState(prev));
   }, []);
 
-  const signUp = useCallback((input: { firstName: string; lastName: string; contact: string }): AuthResult => {
-    const result = createFile(input);
-    if (!result.ok) return result;
-    sessionMemory = result.login;
-    memory = result.state;
-    emit();
-    return { ok: true };
-  }, []);
+  const signUp = useCallback(
+    async (input: {
+      firstName: string;
+      lastName: string;
+      contact: string;
+      password: string;
+      confirm: string;
+    }): Promise<AuthResult> => {
+      const result = await createFile(input);
+      if (!result.ok) return result;
+      sessionMemory = result.login;
+      memory = result.state;
+      emit();
+      return { ok: true };
+    },
+    [],
+  );
 
-  const logIn = useCallback((contact: string): AuthResult => {
-    const result = openFile(contact);
+  const logIn = useCallback(async (contact: string, password: string): Promise<AuthResult> => {
+    const result = await openFile(contact, password);
     if (!result.ok) return result;
     sessionMemory = result.login;
     memory = result.state;
@@ -312,14 +329,24 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     emit();
   }, []);
 
-  const attachLogin = useCallback((contact: string): AuthResult => {
-    const result = attachLoginToCurrent(contact);
-    if (!result.ok) return result;
-    sessionMemory = result.login;
-    memory = result.state;
-    emit();
-    return { ok: true };
-  }, []);
+  const attachLogin = useCallback(
+    async (contact: string, password: string, confirm: string): Promise<AuthResult> => {
+      const result = await attachLoginToCurrent(contact, password, confirm);
+      if (!result.ok) return result;
+      sessionMemory = result.login;
+      memory = result.state;
+      emit();
+      return { ok: true };
+    },
+    [],
+  );
+
+  const changePassword = useCallback(
+    async (current: string, next: string, confirm: string): Promise<AuthResult> => {
+      return changePasswordOnFile(current, next, confirm);
+    },
+    [],
+  );
 
   const resetAll = useCallback(() => {
     eraseCurrentFile();
@@ -385,6 +412,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       logIn,
       logOut,
       attachLogin,
+      changePassword,
       saveProfile,
       addReport,
       removeLatestReport,
@@ -408,6 +436,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       logIn,
       logOut,
       attachLogin,
+      changePassword,
       saveProfile,
       addReport,
       removeLatestReport,
@@ -440,10 +469,11 @@ export function useCircadia() {
       state: SERVER_STATE,
       session: null,
       canLogOut: false,
-      signUp: () => ({ ok: false as const, error: "Not in the browser." }),
-      logIn: () => ({ ok: false as const, error: "Not in the browser." }),
+      signUp: async () => ({ ok: false as const, error: "Not in the browser." }),
+      logIn: async () => ({ ok: false as const, error: "Not in the browser." }),
       logOut: noop,
-      attachLogin: () => ({ ok: false as const, error: "Not in the browser." }),
+      attachLogin: async () => ({ ok: false as const, error: "Not in the browser." }),
+      changePassword: async () => ({ ok: false as const, error: "Not in the browser." }),
       saveProfile: noop,
       addReport: noop,
       removeLatestReport: noop,
