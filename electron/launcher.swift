@@ -247,7 +247,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     DispatchQueue.main.async { [weak self] in
       self?.splash.stringValue = message
       let alert = NSAlert()
-      alert.messageText = operatorApp
+      alert.messageText = self.operatorApp
         ? "Circadia Operator is running. The inbox is not."
         : "Circadia is running. The diary is not."
       alert.informativeText = message

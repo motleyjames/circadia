@@ -21,6 +21,8 @@ describe("Dock install invariants", () => {
   });
 
   it("runs production Next via serve-dock, never turbopack in the Dock window", () => {
+    expect(launcher).toContain("WKWebView");
+    expect(launcher).toContain("self.operatorApp");
     expect(launcher).toContain("43148");
     expect(launcher).toContain("serve-dock.cjs");
     expect(launcher).not.toContain('"dev"');
