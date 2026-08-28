@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
 import { startSoundscape, stopAllSoundscapes, unlockAudio, type SoundscapeId } from "@/lib/audio";
-import { beatAt, hushVoice, MEDITATIONS, meditationById, speak, unlockVoice } from "@/lib/meditations";
+import { beatAt, hushVoice, MEDITATIONS, meditationById, playGuide } from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -63,9 +63,10 @@ export function WindDown() {
   return (
     <div className="space-y-6">
       <section>
-        <p className="text-[11px] tracking-[0.22em] text-violet-300/80 uppercase">Visual meditations</p>
+        <p className="text-[11px] tracking-[0.22em] text-sky-300/80 uppercase">Visual meditations</p>
         <p className="mt-1 text-xs text-zinc-500">
-          A breathing field in this window — not a YouTube tab. Voice is optional. Rate it in the morning.
+          A breathing field in this window — not a YouTube tab. The voice is a quiet recorded
+          guide. Turn it off if you want the room silent. Rate it in the morning.
         </p>
         <div className="mt-3 grid gap-2">
           {MEDITATIONS.map((m) => (
@@ -73,8 +74,8 @@ export function WindDown() {
               key={m.id}
               type="button"
               onClick={() => {
-                unlockVoice();
                 void unlockAudio();
+                playGuide(m.id, 0);
                 setMeditationId(m.id);
                 setMode("meditate");
               }}
@@ -125,6 +126,7 @@ function MeditationPlayer({
   const [running, setRunning] = useState(true);
   const elapsedRef = useRef(0);
   const logged = useRef(false);
+  const spokenAt = useRef<number | null>(0);
   const beat = useMemo(() => beatAt(script, elapsed), [script, elapsed]);
   const done = elapsed >= script.durationSeconds;
 
@@ -147,12 +149,16 @@ function MeditationPlayer({
   }, [running, done]);
 
   useEffect(() => {
-    if (done) hushVoice();
-  }, [done]);
-
-  useEffect(() => {
-    if (voice && running && !done) speak(beat.text);
-  }, [beat.text, voice, running, done]);
+    if (!voice) {
+      hushVoice();
+      spokenAt.current = null;
+      return;
+    }
+    if (!running || done) return;
+    if (spokenAt.current === beat.atSeconds) return;
+    spokenAt.current = beat.atSeconds;
+    playGuide(id, beat.atSeconds);
+  }, [beat.atSeconds, voice, running, done, id]);
 
   useEffect(
     () => () => {
