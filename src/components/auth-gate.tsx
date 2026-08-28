@@ -67,7 +67,7 @@ export function AuthGate() {
                   autoComplete="given-name"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value.slice(0, 40))}
-                  placeholder="Ada"
+                  placeholder="First"
                   className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-[15px] text-zinc-50"
                 />
               </label>
@@ -77,7 +77,7 @@ export function AuthGate() {
                   autoComplete="family-name"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value.slice(0, 40))}
-                  placeholder="Lovelace"
+                  placeholder="Last"
                   className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-[15px] text-zinc-50"
                 />
               </label>
