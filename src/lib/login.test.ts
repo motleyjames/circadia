@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { bytesToBase64, newPasswordLock } from "./password";
 import { AUTH_ERRORS, LOCAL_FILE_KEY, defaultAuthMode, defaultContactField, identitiesFromVaultKeys, loginKeyCandidates, loginKeyFromInput, loginKeyFromProfile } from "./login";
 import {
+  LAST_LOGIN_KEY,
+  LOCKS_KEY,
   SESSION_KEY,
   STORAGE_KEY,
   VAULT_KEY,
-  LOCKS_KEY,
   attachLoginToCurrent,
+  bootVaultFromDisk,
+  changePassword,
   closeFile,
   createFile,
   eraseCurrentFile,
@@ -14,10 +18,12 @@ import {
   loadState,
   migrateToVault,
   openFile,
+  resetVaultMemoryForTests,
   saveState,
 } from "./storage";
 
 const PASS = "correct-horse";
+const NEXT_PASS = "new-correct-horse";
 const creds = { password: PASS, confirm: PASS };
 
 class MemoryStorage {
@@ -73,6 +79,7 @@ describe("login keys", () => {
 
 describe("local file vault", () => {
   beforeEach(() => {
+    resetVaultMemoryForTests();
     const mem = new MemoryStorage();
     Object.defineProperty(globalThis, "localStorage", { value: mem, configurable: true });
     Object.defineProperty(globalThis, "window", { value: globalThis, configurable: true });
@@ -81,6 +88,7 @@ describe("local file vault", () => {
   });
 
   afterEach(() => {
+    resetVaultMemoryForTests();
     localStorage.clear();
   });
 
@@ -113,7 +121,7 @@ describe("local file vault", () => {
     expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")).toEqual({});
   });
 
-  it("creates a file, logs out without deleting it, then opens it with the password", async () => {
+  it("creates a file, encrypts it, and does not unlock from a leftover session key", async () => {
     const created = await createFile({
       firstName: "Ada",
       lastName: "Lovelace",
@@ -126,13 +134,17 @@ describe("local file vault", () => {
     expect(created.state.profile?.firstName).toBe("Ada");
     expect(getSessionLogin()).toBe("email:ada@example.com");
     expect(JSON.stringify(localStorage.getItem(LOCKS_KEY))).not.toMatch(/correct-horse/);
+    expect(JSON.stringify(localStorage.getItem(VAULT_KEY))).not.toMatch(/Ada Lovelace/);
 
     created.state.researchNotes = "keep me";
     saveState(created.state);
-    closeFile();
+    await closeFile();
     expect(getSessionLogin()).toBeNull();
     expect(loadState().profile).toBeNull();
     expect(localStorage.getItem(SESSION_KEY)).toBeNull();
+    expect(JSON.stringify(localStorage.getItem(VAULT_KEY))).not.toMatch(/keep me/);
+    const sealed = JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")["email:ada@example.com"] as { enc?: boolean };
+    expect(sealed.enc).toBe(true);
 
     expect(await openFile("ADA@example.com", "wrong-horse")).toEqual({
       ok: false,
@@ -143,6 +155,12 @@ describe("local file vault", () => {
     if (!opened.ok) return;
     expect(opened.state.researchNotes).toBe("keep me");
     expect(opened.state.profile?.lastName).toBe("Lovelace");
+
+    await closeFile();
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ login: "email:ada@example.com" }));
+    await bootVaultFromDisk();
+    expect(getSessionLogin()).toBeNull();
+    expect(loadState().researchNotes).toBe("");
   });
 
   it("refuses a second file for the same login and a missing login", async () => {
@@ -159,13 +177,13 @@ describe("local file vault", () => {
       ...creds,
     });
     expect(first.ok).toBe(true);
+    await closeFile();
     expect(
       await createFile({ firstName: "Ada", lastName: "Lovelace", contact: "3035550199", ...creds }),
     ).toEqual({
       ok: false,
       error: AUTH_ERRORS.exists,
     });
-    closeFile();
     expect(await openFile("nobody@example.com", PASS)).toEqual({
       ok: false,
       error: AUTH_ERRORS.missing,
@@ -203,9 +221,10 @@ describe("local file vault", () => {
     expect(claimed.state.profile?.firstName).toBe("Ada");
     expect(claimed.state.profile?.onboardingComplete).toBe(true);
     expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")[LOCAL_FILE_KEY]).toBeUndefined();
+    expect(JSON.stringify(localStorage.getItem(VAULT_KEY))).not.toMatch(/keep the nights/);
   });
 
-  it("erase removes the current file; attachLogin rekeys a local file", async () => {
+  it("erase removes the current file; attachLogin rekeys and re-encrypts", async () => {
     const created = await createFile({
       firstName: "Ada",
       lastName: "Lovelace",
@@ -220,30 +239,28 @@ describe("local file vault", () => {
       error: AUTH_ERRORS.missing,
     });
 
-    localStorage.setItem(
-      VAULT_KEY,
-      JSON.stringify({
-        [LOCAL_FILE_KEY]: hydrateState({
-          profile: {
-            onboardingComplete: true,
-            firstName: "Ada",
-            lastName: "Lovelace",
-            age: 19,
-            heightCm: 180,
-            weightKg: 75,
-            targetSleep: "23:00",
-            targetWake: "07:00",
-          },
-        }),
-      }),
-    );
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ login: LOCAL_FILE_KEY }));
-    const attached = await attachLoginToCurrent("ada@example.com", PASS, PASS);
+    const again = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    again.state.researchNotes = "rekeyed notes";
+    saveState(again.state);
+    const attached = await attachLoginToCurrent("303-555-0100", PASS, PASS);
     expect(attached.ok).toBe(true);
     if (!attached.ok) return;
-    expect(attached.login).toBe("email:ada@example.com");
-    expect(getSessionLogin()).toBe("email:ada@example.com");
-    expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")[LOCAL_FILE_KEY]).toBeUndefined();
+    expect(attached.login).toBe("phone:3035550100");
+    expect(getSessionLogin()).toBe("phone:3035550100");
+    expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")["email:ada@example.com"]).toBeUndefined();
+    await closeFile();
+    expect(JSON.stringify(localStorage.getItem(VAULT_KEY))).not.toMatch(/rekeyed notes/);
+    const opened = await openFile("303-555-0100", PASS);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.state.researchNotes).toBe("rekeyed notes");
   });
 
   it("opens with a +1 phone and a pasted email, and names a missing diary honestly", async () => {
@@ -254,7 +271,7 @@ describe("local file vault", () => {
       ...creds,
     });
     expect(created.ok).toBe(true);
-    closeFile();
+    await closeFile();
     const byCountry = await openFile("+1 (303) 555-0142", PASS);
     expect(byCountry.ok).toBe(true);
 
@@ -265,7 +282,7 @@ describe("local file vault", () => {
       ...creds,
     });
     expect(mail.ok).toBe(true);
-    closeFile();
+    await closeFile();
     const pasted = await openFile("James Motley <jbmotley06@icloud.com>", PASS);
     expect(pasted.ok).toBe(true);
 
@@ -297,5 +314,79 @@ describe("local file vault", () => {
       ok: false,
       error: AUTH_ERRORS.orphan,
     });
+  });
+
+  it("upgrades a 0.6.19 lock so the stored hash is no longer the AES key", async () => {
+    const minted = await newPasswordLock(PASS);
+    const v1 = {
+      algo: "pbkdf2-sha256" as const,
+      iterations: minted.lock.iterations,
+      salt: minted.lock.salt,
+      hash: bytesToBase64(minted.master),
+    };
+    localStorage.setItem(
+      VAULT_KEY,
+      JSON.stringify({
+        "email:ada@example.com": hydrateState({
+          profile: {
+            onboardingComplete: false,
+            firstName: "Ada",
+            lastName: "Lovelace",
+            email: "ada@example.com",
+          },
+          researchNotes: "legacy plaintext",
+        }),
+      }),
+    );
+    localStorage.setItem(LOCKS_KEY, JSON.stringify({ "email:ada@example.com": v1 }));
+    const opened = await openFile("ada@example.com", PASS);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.state.researchNotes).toBe("legacy plaintext");
+    const upgraded = JSON.parse(localStorage.getItem(LOCKS_KEY) ?? "{}")["email:ada@example.com"] as {
+      kdf?: number;
+      hash: string;
+    };
+    expect(upgraded.kdf).toBe(2);
+    expect(upgraded.hash).not.toBe(v1.hash);
+    await closeFile();
+    expect(JSON.stringify(localStorage.getItem(VAULT_KEY))).not.toMatch(/legacy plaintext/);
+    expect(await openFile("ada@example.com", PASS)).toMatchObject({ ok: true });
+  });
+
+  it("re-encrypts the diary when the password changes", async () => {
+    const created = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    created.state.researchNotes = "after rotate";
+    saveState(created.state);
+    expect(await changePassword(PASS, NEXT_PASS, NEXT_PASS)).toEqual({ ok: true });
+    await closeFile();
+    expect(await openFile("ada@example.com", PASS)).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.credentials,
+    });
+    const opened = await openFile("ada@example.com", NEXT_PASS);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.state.researchNotes).toBe("after rotate");
+  });
+
+  it("does not treat last-login as an unlocked session", () => {
+    localStorage.setItem(LAST_LOGIN_KEY, JSON.stringify({ login: "email:ada@example.com" }));
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ login: "email:ada@example.com" }));
+    localStorage.setItem(
+      VAULT_KEY,
+      JSON.stringify({
+        "email:ada@example.com": { enc: true, v: 1, iv: "YQ==", ct: "Yg==" },
+      }),
+    );
+    expect(getSessionLogin()).toBeNull();
+    expect(loadState().profile).toBeNull();
   });
 });

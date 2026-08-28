@@ -119,8 +119,8 @@ export function YouView() {
               <p className="text-xs text-zinc-400">How you log in</p>
               <p className="mt-1 font-heading text-lg text-zinc-50">{formatLoginForDisplay(session)}</p>
               <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
-                Email or phone plus your password. Circadia will not email or text you. The password
-                is checked on this computer.
+                Email or phone plus your password. The diary is encrypted on this computer. Circadia
+                does not keep a copy of your password, and there is no reset email.
               </p>
               <YouSecret label="Current password" value={currentPassword} onChange={setCurrentPassword} />
               <YouSecret label="New password" value={nextPassword} onChange={setNextPassword} />

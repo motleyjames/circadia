@@ -39,6 +39,7 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("playGuide");
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).not.toContain("speakBedside");
     expect(launcher).toContain("websiteDataStore");
+    expect(launcher).not.toMatch(/config\.allowsInlineMediaPlayback/);
     expect(launcher).not.toContain("?v=");
     expect(existsSync("src/app/api/vault/route.ts")).toBe(true);
     expect(nextConfig).toContain("/((?!api/).*)");
@@ -69,6 +70,7 @@ describe("Dock install invariants", () => {
     expect(authGate).toContain('type={show ? "text" : "password"}');
     expect(authGate).toContain("Confirm password");
     expect(authGate).not.toContain("There is no password");
+    expect(authGate).toContain("encrypted");
     expect(onboarding).not.toContain("James can reach");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("AuthGate");
   });
@@ -140,7 +142,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.19");
+    expect(APP_VERSION).toBe("0.6.20");
   });
 
   it("does not run diary views while compiling the operator", () => {

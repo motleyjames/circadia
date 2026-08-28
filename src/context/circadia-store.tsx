@@ -427,7 +427,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logOut = useCallback(() => {
-    closeFile();
+    void closeFile();
     sessionMemory = null;
     memory = emptyState();
     emit();
