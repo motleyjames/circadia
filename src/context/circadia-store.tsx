@@ -50,11 +50,15 @@ function subscribe(listener: () => void) {
 }
 
 function snapshot(): CircadiaState {
-  if (sessionMemory === undefined) {
-    sessionMemory = typeof window === "undefined" ? null : getSessionLogin();
+  if (typeof window === "undefined") return memory ?? SERVER_STATE;
+  const disk = getSessionLogin();
+  if (sessionMemory !== disk) {
+    sessionMemory = disk;
+    memory = disk ? loadState() : emptyState();
+  } else if (!memory) {
+    memory = loadState();
   }
-  if (!memory) memory = loadState();
-  return memory;
+  return memory ?? SERVER_STATE;
 }
 
 function currentSession(): string | null {
