@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { DEFAULT_MOD_KEY } from "@/lib/mod-key-shared";
-import type { ModeratorSnapshot } from "@/lib/moderator";
+import { shortParticipantId, type ModeratorSnapshot } from "@/lib/moderator";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -102,8 +102,8 @@ export default function ModeratorPage() {
           </div>
           <h1 className="font-heading mt-3 text-3xl tracking-tight text-zinc-50">Inbox</h1>
           <p className="mt-1 max-w-[46ch] text-[13px] leading-relaxed text-zinc-500">
-            People who said yes. Nights that left on their own. Faults the diary caught. This page
-            is not linked from the tester app.
+            Signups and sleep stats, keyed by participant number. No names, email, phone, or body
+            measurements. This page is not linked from the tester app.
           </p>
         </div>
         <button
@@ -118,7 +118,7 @@ export default function ModeratorPage() {
       {error ? <p className="mt-4 text-[13px] text-red-300">{error}</p> : null}
 
       <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="People" value={snapshot?.userCount ?? "—"} />
+        <Stat label="Signups" value={snapshot?.userCount ?? "—"} />
         <Stat label="Nights logged" value={snapshot?.nightCount ?? "—"} />
         <Stat label="Night packs" value={snapshot?.nightPackCount ?? "—"} />
         <Stat label="Faults" value={snapshot?.faultCount ?? "—"} />
@@ -127,7 +127,7 @@ export default function ModeratorPage() {
       <div className="mt-8 flex gap-1 rounded-full border border-white/8 bg-white/[0.03] p-1">
         {(
           [
-            ["people", "People"],
+            ["people", "Signups"],
             ["nights", "Nights"],
             ["faults", "Faults"],
           ] as const
@@ -149,7 +149,7 @@ export default function ModeratorPage() {
       {tab === "people" ? (
         <ul className="mt-6 space-y-3">
           {!snapshot?.people.length ? (
-            <Empty>No one has joined yet. When a tester says yes, they land here.</Empty>
+            <Empty>No signups yet. A join still counts as a user — without a name.</Empty>
           ) : (
             snapshot.people.map((person) => (
               <li
@@ -157,21 +157,39 @@ export default function ModeratorPage() {
                 className="rounded-3xl border border-white/8 bg-white/[0.03] px-5 py-4"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="font-heading text-2xl text-zinc-50">{person.name ?? "Unnamed"}</h2>
-                  <p className="font-mono text-[11px] text-zinc-600">
-                    {person.participantId.slice(0, 8)}
-                  </p>
+                  <h2 className="font-heading text-2xl text-zinc-50">
+                    Participant {shortParticipantId(person.participantId)}
+                  </h2>
+                  <p className="font-mono text-[11px] text-zinc-600">v{person.lastAppVersion ?? "—"}</p>
                 </div>
                 <p className="mt-2 text-[13px] text-zinc-500">
-                  {person.age ?? "—"} yrs
-                  {person.activity ? ` · ${person.activity}` : ""}
-                  {person.nightsLogged ? ` · ${person.nightsLogged} night${person.nightsLogged === 1 ? "" : "s"}` : " · no mornings yet"}
-                  {person.faultCount ? ` · ${person.faultCount} fault${person.faultCount === 1 ? "" : "s"}` : ""}
+                  {person.ageBand ? `${person.ageBand} · ` : ""}
+                  {person.nightsLogged
+                    ? `${person.nightsLogged} night${person.nightsLogged === 1 ? "" : "s"}`
+                    : "no mornings yet"}
+                  {person.faultCount
+                    ? ` · ${person.faultCount} fault${person.faultCount === 1 ? "" : "s"}`
+                    : ""}
                 </p>
+                {person.meanRating != null || person.lastDurationMinutes != null ? (
+                  <p className="mt-1 text-[13px] text-zinc-400">
+                    {person.meanRating != null
+                      ? `Mean rating ${person.meanRating.toFixed(1)}`
+                      : "No ratings"}
+                    {person.lastDurationMinutes != null
+                      ? ` · last sleep ${formatSleep(person.lastDurationMinutes)}`
+                      : ""}
+                  </p>
+                ) : null}
                 {person.targetSleep && person.targetWake ? (
                   <p className="mt-1 text-[12px] text-zinc-600">
                     Window {person.targetSleep}–{person.targetWake}
                     {person.struggles.length ? ` · ${person.struggles.join(" + ")}` : ""}
+                  </p>
+                ) : null}
+                {person.flags.length ? (
+                  <p className="mt-2 text-[12px] tracking-wide text-violet-200/70 uppercase">
+                    {person.flags.join(" · ")}
                   </p>
                 ) : null}
                 {person.lastFault ? (
@@ -194,16 +212,16 @@ export default function ModeratorPage() {
                 className="rounded-3xl border border-white/8 bg-white/[0.03] px-5 py-4"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <h2 className="font-heading text-xl text-zinc-50">{night.name ?? "Unnamed"}</h2>
+                  <h2 className="font-heading text-xl text-zinc-50">
+                    Participant {shortParticipantId(night.participantId)}
+                  </h2>
                   <p className="text-[12px] text-zinc-600">{night.nightCount} nights in pack</p>
                 </div>
-                <p className="mt-1 font-mono text-[11px] text-zinc-600">
-                  {night.participantId.slice(0, 8)} · v{night.appVersion}
-                </p>
+                <p className="mt-1 font-mono text-[11px] text-zinc-600">v{night.appVersion}</p>
                 <p className="mt-2 text-[13px] text-zinc-400">
                   {night.meanRating != null ? `Mean rating ${night.meanRating.toFixed(1)}` : "No ratings"}
                   {night.lastDurationMinutes != null
-                    ? ` · last sleep ${Math.round(night.lastDurationMinutes / 60)}h ${night.lastDurationMinutes % 60}m`
+                    ? ` · last sleep ${formatSleep(night.lastDurationMinutes)}`
                     : ""}
                 </p>
                 {night.flags.length ? (
@@ -228,13 +246,12 @@ export default function ModeratorPage() {
                 className="rounded-3xl border border-white/8 bg-white/[0.03] px-5 py-4"
               >
                 <p className="text-[12px] text-zinc-500">
-                  {fault.name ?? "Unnamed"} · {new Date(fault.at).toLocaleString()}
+                  Participant {shortParticipantId(fault.participantId)} ·{" "}
+                  {new Date(fault.at).toLocaleString()}
                   {fault.href ? ` · ${fault.href}` : ""}
                 </p>
                 <p className="mt-2 text-[14px] leading-relaxed text-zinc-200">{fault.message}</p>
-                <p className="mt-1 font-mono text-[11px] text-zinc-600">
-                  {fault.participantId.slice(0, 8)} · v{fault.appVersion}
-                </p>
+                <p className="mt-1 font-mono text-[11px] text-zinc-600">v{fault.appVersion}</p>
               </li>
             ))
           )}
@@ -242,6 +259,12 @@ export default function ModeratorPage() {
       ) : null}
     </div>
   );
+}
+
+function formatSleep(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${hours}h ${rest}m`;
 }
 
 function Stat({ label, value }: { label: string; value: number | string }) {

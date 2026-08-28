@@ -1,4 +1,5 @@
 import { parseInboxPayload } from "@/lib/inbox-payload";
+import { ageBand } from "@/lib/study";
 import type { FaultEvent, RosterEvent, StudyNight, StudyPack } from "@/lib/types";
 
 export type InboxFile = {
@@ -6,29 +7,28 @@ export type InboxFile = {
   payload: unknown;
 };
 
+export function shortParticipantId(id: string): string {
+  return id.slice(0, 8);
+}
+
 export type ModeratorPerson = {
   participantId: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  age: number | null;
-  heightCm: number | null;
-  weightKg: number | null;
-  activity: string | null;
   struggles: string[];
   targetSleep: string | null;
   targetWake: string | null;
   joinedAt: string | null;
-  lastNightAt: string | null;
   nightsLogged: number;
   lastAppVersion: string | null;
   faultCount: number;
   lastFault: string | null;
+  meanRating: number | null;
+  lastDurationMinutes: number | null;
+  flags: string[];
+  ageBand: string | null;
 };
 
 export type ModeratorNightPack = {
   participantId: string;
-  name: string | null;
   receivedAt: string;
   appVersion: string;
   nightCount: number;
@@ -39,7 +39,6 @@ export type ModeratorNightPack = {
 
 export type ModeratorFault = {
   participantId: string;
-  name: string | null;
   at: string;
   message: string;
   href: string | null;
@@ -73,7 +72,6 @@ function meanRating(nights: StudyNight[]): number | null {
 
 export function summarizeInbox(files: InboxFile[]): ModeratorSnapshot {
   const people = new Map<string, ModeratorPerson>();
-  const names = new Map<string, string>();
   const nights: ModeratorNightPack[] = [];
   const faults: ModeratorFault[] = [];
   const latestPack = new Map<string, StudyPack>();
@@ -84,22 +82,18 @@ export function summarizeInbox(files: InboxFile[]): ModeratorSnapshot {
     if (existing) return existing;
     const created: ModeratorPerson = {
       participantId: id,
-      name: null,
-      email: null,
-      phone: null,
-      age: null,
-      heightCm: null,
-      weightKg: null,
-      activity: null,
       struggles: [],
       targetSleep: null,
       targetWake: null,
       joinedAt: null,
-      lastNightAt: null,
       nightsLogged: 0,
       lastAppVersion: null,
       faultCount: 0,
       lastFault: null,
+      meanRating: null,
+      lastDurationMinutes: null,
+      flags: [],
+      ageBand: null,
     };
     people.set(id, created);
     return created;
@@ -125,7 +119,6 @@ export function summarizeInbox(files: InboxFile[]): ModeratorSnapshot {
       if (!prev || pack.nights.length >= prev.nights.length) latestPack.set(id, pack);
       nights.push({
         participantId: id,
-        name: null,
         receivedAt: file.file,
         appVersion: pack.appVersion,
         nightCount: pack.nights.length,
@@ -141,7 +134,6 @@ export function summarizeInbox(files: InboxFile[]): ModeratorSnapshot {
       row.lastFault = fault.message;
       faults.push({
         participantId: id,
-        name: null,
         at: fault.at,
         message: fault.message,
         href: fault.href,
@@ -152,30 +144,28 @@ export function summarizeInbox(files: InboxFile[]): ModeratorSnapshot {
 
   for (const [id, roster] of latestRoster) {
     const row = person(id);
-    names.set(id, roster.name);
-    row.name = roster.name;
-    row.email = roster.email;
-    row.phone = roster.phone;
-    row.age = roster.age;
-    row.heightCm = roster.heightCm;
-    row.weightKg = roster.weightKg;
-    row.activity = roster.activity;
     row.struggles = roster.struggles;
     row.targetSleep = roster.targetSleep;
     row.targetWake = roster.targetWake;
     row.lastAppVersion = roster.appVersion;
+    if (!row.ageBand) row.ageBand = ageBand(roster.age);
   }
 
   for (const [id, pack] of latestPack) {
     const row = person(id);
     row.nightsLogged = pack.nights.length;
-    row.lastNightAt = pack.nights.length ? "logged" : null;
+    row.meanRating = meanRating(pack.nights);
+    row.lastDurationMinutes = pack.nights.at(-1)?.durationMinutes ?? null;
+    row.flags = nightFlags(pack.nights);
+    row.ageBand = pack.profile.ageBand;
+    if (!row.struggles.length) row.struggles = pack.profile.struggles;
+    if (!row.targetSleep) row.targetSleep = pack.profile.targetSleep;
+    if (!row.targetWake) row.targetWake = pack.profile.targetWake;
   }
 
-  for (const night of nights) night.name = names.get(night.participantId) ?? null;
-  for (const fault of faults) fault.name = names.get(fault.participantId) ?? null;
-
-  const peopleList = [...people.values()].sort((a, b) => (a.name ?? a.participantId).localeCompare(b.name ?? b.participantId));
+  const peopleList = [...people.values()].sort((a, b) =>
+    a.participantId.localeCompare(b.participantId),
+  );
   faults.sort((a, b) => b.at.localeCompare(a.at));
   nights.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
 
