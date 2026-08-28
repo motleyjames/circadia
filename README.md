@@ -6,33 +6,29 @@ Circadia is local-first. Profile, mornings, dreams, and chat live on this comput
 
 ## Put it on the Dock (Mac)
 
-Circadia is a native WKWebView window, not Electron. Electron fallback is what produced `Cannot find module …/app/Users/…/electron/main.cjs`.
+Two apps. They are not the same window.
 
-If that dialog is on screen **right now**, do not run `npm run dock`. That command, on an old rest-ai tree, rebuilds Operator, dies on `/check-in`, and leaves the broken Electron app in place.
+- **Ice clock** — Circadia. Sign up / Log in, then the diary.
+- **Gold clock** — Circadia Operator. Your inbox. Testers never see this.
 
-```bash
-cd ~/rest-ai
-# Cmd+Q the error dialog first
-node electron/fix-mac.cjs
-```
+`npm run dock` used to install the diary only, which is why the gold one never showed up. It now installs **both**, in that order: ice first, then gold. If Operator’s compile fails, the diary app is already in `/Applications` — run `npm run dock:mod` after.
 
-If `electron/fix-mac.cjs` is not in that folder, this session’s commits are not on that clone. Paste the fixer from the agent thread, or copy `electron/fix-mac.cjs` in by hand. Then:
+Run this from **this repo** (the one whose Preview shows Sign up / Log in and version 0.6.2). An older `rest-ai` clone that still says “A diary needs a name” will put the old intake on the Dock.
 
 ```bash
-npm run dev
-```
-
-Diary: http://127.0.0.1:43147. Operator inbox (James): `npm run mod` → http://127.0.0.1:43149. Passphrase `circadia-local`.
-
-Native Dock, once Command Line Tools are installed (`xcode-select --install`):
-
-```bash
+xcode-select --install   # once, if Swift never compiled
+cd /path/to/this-circadia
+npm install
 npm run dock
 ```
 
-That installs **Circadia only**. Operator Dock is separate: `npm run dock:mod`. `npm run dock` used to chain both; the Operator compile aborting is why ice Circadia never got replaced.
+That writes `/Applications/Circadia.app` and `/Applications/Circadia Operator.app`, puts an alias for each on the Desktop, and opens them. Drag **both** to the Dock. Remove any tile named Electron.
 
-Keep the `rest-ai` folder where it is. If you move it, run `npm run dock` again. If macOS says unidentified developer: right-click Circadia → **Open**. Logs: `~/Library/Logs/Circadia.log`.
+If a `Cannot find module …/app/Users/…/electron/main.cjs` dialog is already on screen: Cmd+Q it, then `node electron/fix-mac.cjs`, then `npm run dock`.
+
+Operator-only: `npm run dock:mod`. Browser inbox without Dock: `npm run mod` → http://127.0.0.1:43149, passphrase `circadia-local`.
+
+Keep this folder where it is. If you move it, run `npm run dock` again. Unidentified developer: right-click the app → **Open**. Logs: `~/Library/Logs/Circadia.log` and `~/Library/Logs/Circadia-Operator.log`.
 
 ## What you do
 
@@ -68,7 +64,7 @@ Erase this device mints a new participant number. Pause and rejoin keeps the sam
 
 ## Operator (James only)
 
-A second app. Gold clock, not the ice one. Not a page inside Circadia.
+A second app. Gold clock, not the ice one. Not a page inside Circadia. `npm run dock` installs it after the diary. Operator-only rebuild:
 
 ```bash
 npm run dock:mod
