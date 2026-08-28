@@ -7,7 +7,8 @@ export const AUTH_ERRORS = {
   name: "Enter a first and last name.",
   contact: "Use an email or a phone number.",
   exists: "That email or phone already has a diary on this computer. Log in instead.",
-  missing: "No file for that on this computer.",
+  missing: "No diary for that on this computer.",
+  credentials: "Wrong email, phone, or password.",
 } as const;
 
 export function displayName(firstName: string, lastName: string): string {
@@ -24,7 +25,7 @@ export function splitDisplayName(name: string): { firstName: string; lastName: s
 
 /**
  * Filename for a local diary. Email wins if both would parse.
- * NEW: this is a key into this computer's vault, not a password and not a way to message anyone.
+ * NEW: this is a key into this computer's vault, not a way to message anyone.
  */
 export function loginKeyFromInput(raw: string): string | null {
   const trimmed = raw.trim();

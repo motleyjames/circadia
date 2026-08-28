@@ -49,6 +49,9 @@ describe("Dock install invariants", () => {
     expect(authGate).not.toContain("useRouter");
     expect(authGate).toContain("Sign up");
     expect(authGate).toContain("Log in");
+    expect(authGate).toContain('type={show ? "text" : "password"}');
+    expect(authGate).toContain("Confirm password");
+    expect(authGate).not.toContain("There is no password");
     expect(onboarding).not.toContain("James can reach");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("AuthGate");
   });
@@ -113,7 +116,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.1");
+    expect(APP_VERSION).toBe("0.6.2");
   });
 
   it("does not run diary views while compiling the operator", () => {

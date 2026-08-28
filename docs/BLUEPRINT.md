@@ -124,7 +124,7 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 
 **Shape:** a Next.js desktop app, also packaged as an Electron Mac window (`npm run app`, `npm run dist` → `Circadia.app`). Full window, left sidebar, consult as a right rail (dock on narrower screens). Phone / Capacitor is later.
 
-**State:** `localStorage` vault `circadia:v1:files` keyed by email or phone, plus `circadia:v1:session` for which file is open. Legacy `circadia:v1` migrates once. Export/import JSON. Schema-hydrate on the way in. Local login, no server account, no password.
+**State:** `localStorage` vault `circadia:v1:files` keyed by email or phone, `circadia:v1:locks` (PBKDF2 hashes, never the password), plus `circadia:v1:open` for which file is open. Legacy `circadia:v1` migrates once. Export/import JSON. Schema-hydrate on the way in. Local login, no server account.
 
 **Study:** optional, consent-gated after sleep intake. Yes turns the pipeline on — no Send button. Three schemas hit `POST /api/study` on the diary. `circadia-roster-v1` (name + body; email/phone fields exist for old files but new cards send null), `circadia-study-v1` (stripped nights), `circadia-fault-v1` (app errors). James reads them in Circadia Operator.app (`npm run dock:mod`, gold clock) or `npm run mod` on port 43149, gated by `CIRCADIA_MOD_KEY`. The diary 404s `/mod`. Write to `data/study-inbox/` (gitignored). Optional forward via `STUDY_INGEST_URL`. Do not store request IP. Never auto-send a loaded sample week.
 
