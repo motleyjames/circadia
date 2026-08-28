@@ -10,12 +10,13 @@ export function extraConsult(lower: string): Reply | null {
   }
 
   if (
-    (/alcohol|beer|wine/.test(lower) && /unisom|benadryl|ambien|melatonin|zzzquil/.test(lower)) ||
+    (/alcohol|beer|wine/.test(lower) &&
+      /unisom|benadryl|ambien|melatonin|zzzquil|belsomra|dayvigo|quviviq/.test(lower)) ||
     (/mix|together|stack/.test(lower) && /alcohol/.test(lower))
   ) {
     return {
-      text: "Do not mix alcohol with Unisom, Benadryl, Ambien, or a heavy melatonin dose. The sedation adds up and the sleep you get is still shredded in the second half. I will not tell you how to stack them.",
-      citations: ["alcohol", "otc-antihistamines"],
+      text: "Do not mix alcohol with Unisom, Benadryl, Ambien, or the newer prescription sleep drugs. The sedation adds up and the sleep you get is still shredded in the second half. I will not tell you how to stack them.",
+      citations: ["alcohol", "otc-antihistamines", "prescription-hypnotics"],
     };
   }
 
