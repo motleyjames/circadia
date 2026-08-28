@@ -11,14 +11,19 @@ Two native apps. Same Swift binary. Different `install.json`. Not Electron.
 - **Circadia** — ice clock, port 43148. Sign up / Log in, then the diary.
 - **Circadia Operator** — gold clock, port 43149. Your inbox. Testers never see this.
 
-`npm run dock` compiles Next for both surfaces, compiles `launcher.swift` once, then wraps two `.app` bundles. It will not copy `Electron.app`. If `swiftc` fails, nothing is replaced.
-
-Easiest path on your Mac, from **this** 0.6.5 folder (not an old `rest-ai` clone):
+Clone **this** tree (0.6.5+). Do not run Dock commands in `/Users/jamesmotley/rest-ai` — that copy is 0.5.0 and rebuilds the broken Electron app.
 
 ```bash
+git clone https://github.com/motleyjames/circadia.git ~/circadia
+cd ~/circadia
+node -e "console.log(require('./package.json').name, require('./package.json').version)"
 npm install
 npm run put-on-dock
 ```
+
+The `node` line must print `circadia 0.6.5` or newer. Stop if it does not.
+
+`npm run dock` compiles Next for both surfaces, compiles `launcher.swift` once, then wraps two `.app` bundles. It will not copy `Electron.app`. If `swiftc` fails, nothing is replaced.
 
 That writes `Circadia.app` and `Circadia Operator.app` ( `/Applications` if writable, otherwise `~/Applications` ), then opens both. Drag both to the Dock. Remove any tile named Electron.
 
