@@ -10,7 +10,7 @@ import { weekBreakdown } from "@/lib/metrics";
 import { researchById } from "@/lib/research";
 import { formatClock, formatDuration, minutesToClock } from "@/lib/time";
 import type { SleepNote } from "@/lib/types";
-import { buildWeekReview, lastSevenReports } from "@/lib/week-review";
+import { buildWeekReview, formatMorningDate, lastSevenReports } from "@/lib/week-review";
 
 export function InsightsView() {
   const { state, loadSampleWeek, removeLatestReport } = useCircadia();
@@ -35,8 +35,8 @@ export function InsightsView() {
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Notes</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">The week.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
-        A clinician-style read of your last mornings — what helped, what hurt, and the next move.
-        Simple on purpose. I will not sell you a bottle from two nights.
+        The better nights, the worse ones, and what I would try next. Dates, not a score dump.
+        I will not sell you a bottle from two nights.
       </p>
 
       {state.demoWeek ? (
@@ -97,13 +97,13 @@ export function InsightsView() {
           <div className="mt-4 overflow-x-auto">
             <div className="flex min-w-max items-end gap-2 pt-4 pb-2">
               {week.nights.map((n) => (
-                <div key={n.reportId} className="flex w-10 flex-col items-center gap-1">
+                <div key={n.reportId} className="flex w-12 flex-col items-center gap-1">
                   <div
                     className="w-6 rounded-full bg-gradient-to-t from-sky-900 to-sky-300"
                     style={{ height: `${Math.min(96, (n.durationMinutes / 600) * 96)}px` }}
-                    title={`${n.morningDate} ${formatDuration(n.durationMinutes)}`}
+                    title={`${formatMorningDate(n.morningDate)} ${formatDuration(n.durationMinutes)}`}
                   />
-                  <span className="text-[9px] text-zinc-500">{n.morningDate.slice(5)}</span>
+                  <span className="text-[9px] text-zinc-500">{formatMorningDate(n.morningDate)}</span>
                 </div>
               ))}
             </div>
@@ -128,18 +128,18 @@ export function InsightsView() {
           <p className="mt-2 max-w-[46ch] text-[13px] leading-relaxed text-zinc-500">{review.kicker}</p>
 
           <div className="mt-6 border-l border-sky-300/35 pl-4">
-            <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">The read</p>
+            <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">What I see</p>
             <p className="mt-2 max-w-[48ch] text-[15px] leading-relaxed text-zinc-200">{review.read}</p>
           </div>
 
           <div className="mt-8 space-y-7">
             {review.worked.length > 0 ? (
-              <WeekColumn kicker="Worked" items={review.worked} tone="worked" />
+              <WeekColumn kicker="Better nights" items={review.worked} tone="worked" />
             ) : null}
             {review.hurt.length > 0 ? (
-              <WeekColumn kicker="Hurt" items={review.hurt} tone="hurt" />
+              <WeekColumn kicker="Worse nights" items={review.hurt} tone="hurt" />
             ) : null}
-            <WeekColumn kicker="Do this" items={review.doThis} tone="advice" numbered />
+            <WeekColumn kicker="What I would try" items={review.doThis} tone="advice" numbered />
           </div>
 
           <Link
@@ -171,7 +171,7 @@ export function InsightsView() {
               return (
                 <article key={r.id} className="rounded-3xl border border-white/8 bg-black/20 p-4">
                   <p className="text-[11px] text-zinc-500">
-                    {r.morningDate} · asleep {formatClock(r.fellAsleepAt, profile.units)}
+                    {formatMorningDate(r.morningDate)} · asleep {formatClock(r.fellAsleepAt, profile.units)}
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-zinc-200">{r.dream?.text}</p>
                   {read ? (

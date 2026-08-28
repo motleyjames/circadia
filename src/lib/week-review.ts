@@ -11,6 +11,8 @@ import {
 export const WEEK_WINDOW = 7;
 const SKETCH_NIGHTS = 3;
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export type WeekReview = {
   nightsLogged: number;
   sketch: boolean;
@@ -34,12 +36,35 @@ export function weekReviewMouth(review: WeekReview): string {
   );
 }
 
-function fmt1(n: number): string {
-  return n.toFixed(1).replace(/\.0$/, "");
+/** Calendar date only. Parsed as local Y-M-D so a morning is not shifted by timezone. */
+export function formatMorningDate(iso: string): string {
+  const [ys, ms, ds] = iso.split("-");
+  const y = Number(ys);
+  const m = Number(ms);
+  const d = Number(ds);
+  if (!y || !m || !d || m > 12) return iso;
+  return `${MONTHS[m - 1]} ${d}`;
 }
 
-function nightsWord(n: number): string {
-  return n === 1 ? "1 morning" : `${n} mornings`;
+export function listMorningDates(reports: MorningReport[]): string {
+  const dates = [...reports]
+    .sort((a, b) => a.morningDate.localeCompare(b.morningDate))
+    .map((r) => formatMorningDate(r.morningDate));
+  return joinAnd(dates);
+}
+
+function dateSpan(reports: MorningReport[]): string {
+  if (reports.length === 0) return "";
+  if (reports.length === 1) return formatMorningDate(reports[0]!.morningDate);
+  return `${formatMorningDate(reports[0]!.morningDate)}–${formatMorningDate(reports[reports.length - 1]!.morningDate)}`;
+}
+
+function joinAnd(items: string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0]!;
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  if (items.length <= 4) return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+  return `${items[0]}, ${items[1]}, and ${items.length - 2} other nights`;
 }
 
 function meanOrNull(values: number[]): number | null {
@@ -73,6 +98,40 @@ function pushUnique(list: string[], line: string, cap = 3): void {
   list.push(line);
 }
 
+function lateWake(report: MorningReport): boolean {
+  const [h, m] = report.wokeAt.split(":").map(Number);
+  return h * 60 + m >= 10 * 60;
+}
+
+function groupWhy(reports: MorningReport[], side: "better" | "worse"): string {
+  if (reports.length === 0) return "";
+  const bits: string[] = [];
+  if (side === "worse") {
+    if (reports.every((r) => r.drank)) bits.push("drinks");
+    if (reports.every((r) => r.sleepLatencyMinutes >= 30)) bits.push("slow to fall asleep");
+    if (reports.every(lateWake)) bits.push("slept in");
+    if (reports.every((r) => r.screenOffMinutes <= 15)) bits.push("phone late");
+    if (reports.every((r) => r.wokeInNight)) bits.push("woke mid-night");
+  } else {
+    if (reports.every((r) => !r.drank)) bits.push("no drinks");
+    if (reports.every((r) => r.windDownHelped === "yes")) bits.push("wind-down");
+    if (reports.every((r) => r.screenOffMinutes >= 45)) bits.push("phone parked");
+  }
+  return bits.slice(0, 2).join(", ");
+}
+
+function poleLine(reports: MorningReport[], rating: number, side: "better" | "worse"): string {
+  const why = groupWhy(reports, side);
+  const dates = listMorningDates(reports);
+  const score = `${rating}/5`;
+  if (!why) return `${dates} — ${score}.`;
+  return `${dates} — ${score}, ${why}.`;
+}
+
+function nightsAt(week: MorningReport[], rating: number): MorningReport[] {
+  return week.filter((r) => r.rating === rating);
+}
+
 /**
  * A clinician-style week read from the last seven mornings.
  * Honest when the window is thin. Never unlocks a bottle. Mouth-safe.
@@ -104,7 +163,7 @@ export function buildWeekReview(profile: Profile, reports: MorningReport[]): Wee
   const drink = week.filter((r) => r.drank);
   const dry = week.filter((r) => !r.drank);
   const drinkVsDry = ratingGap(drink, dry);
-  const spins = drink.some((r) => r.spins);
+  const spinsNights = drink.filter((r) => r.spins);
 
   const bright = week.filter((r) => r.screenOffMinutes <= 15);
   const dim = week.filter((r) => r.screenOffMinutes >= 45);
@@ -118,41 +177,54 @@ export function buildWeekReview(profile: Profile, reports: MorningReport[]): Wee
   const wdRatings = ratingGap(wdYes, wdSkip);
   const wdLat = latencyGap(wdYes, wdSkip);
 
-  const lateWakes = week.filter((r) => {
-    const [h, m] = r.wokeAt.split(":").map(Number);
-    return h * 60 + m >= 10 * 60;
-  }).length;
-  const highLatency = week.filter((r) => r.sleepLatencyMinutes >= 30).length;
-  const wokeNights = week.filter((r) => r.wokeInNight).length;
-  const shortNights = week.filter((r) => overnightDuration(r.fellAsleepAt, r.wokeAt) < need.min * 60 - 45).length;
+  const lateWakeNights = week.filter(lateWake);
+  const slowNights = week.filter((r) => r.sleepLatencyMinutes >= 30);
+  const wokeNights = week.filter((r) => r.wokeInNight);
+  const shortNights = week.filter((r) => overnightDuration(r.fellAsleepAt, r.wokeAt) < need.min * 60 - 45);
+
+  const bestRating = Math.max(...week.map((r) => r.rating));
+  const worstRating = Math.min(...week.map((r) => r.rating));
+  const split = bestRating > worstRating;
+  const betterNights = nightsAt(week, bestRating);
+  const worseNights = nightsAt(week, worstRating);
 
   const worked: string[] = [];
   const hurt: string[] = [];
   const advice: Advice[] = [];
 
+  if (split) {
+    if (bestRating >= 3) pushUnique(worked, poleLine(betterNights, bestRating, "better"));
+    pushUnique(hurt, poleLine(worseNights, worstRating, "worse"));
+  }
+
   if (drink.length > 0 && dry.length > 0 && drinkVsDry && drinkVsDry.gap <= -0.4) {
-    pushUnique(
-      hurt,
-      `Drinks: ${drink.length} night${drink.length === 1 ? "" : "s"} averaged ${fmt1(drinkVsDry.left)} vs ${fmt1(drinkVsDry.right)} on dry nights.${spins ? " Spins showed up — that dose usually wrecks the second half of the night." : ""}`,
-    );
+    if (!split || !worseNights.every((r) => r.drank)) {
+      const spin = spinsNights.length > 0 ? ` Spins on ${listMorningDates(spinsNights)}.` : "";
+      pushUnique(
+        hurt,
+        `${listMorningDates(drink)} after drinks felt worse than ${listMorningDates(dry)}.${spin}`,
+      );
+    } else if (spinsNights.length > 0) {
+      pushUnique(hurt, `Spins on ${listMorningDates(spinsNights)} — that dose usually breaks the second half of the night.`);
+    }
     advice.push({
       p: 95,
-      t: "Keep two dry nights this week and compare how you feel. If drinks keep winning the worse column, that is the lever — not a new bottle.",
+      t: "Keep two dry nights this week and compare how you feel in the morning. If those win, drinks are the problem — not something in the aisle.",
     });
   } else if (drink.length === n && n >= 2) {
-    pushUnique(hurt, "You logged drinks every night in this window. I cannot see a dry comparison yet — that is the experiment.");
+    pushUnique(hurt, `Drinks every night (${dateSpan(week)}). I cannot compare a dry morning yet.`);
     advice.push({
       p: 92,
       t: "Put two dry nights on the calendar. Without them I am guessing, and I will not guess.",
     });
   } else if (drink.length >= 1 && dry.length === 0) {
-    pushUnique(hurt, `${drink.length === 1 ? "A drink night" : `${drink.length} nights with drinks`}, and no dry night in the window to compare.`);
+    pushUnique(hurt, `${listMorningDates(drink)}: drinks, and no dry night yet to compare.`);
     advice.push({
       p: 88,
-      t: "One dry night is already information. Two is a pattern. Log both.",
+      t: "Log one dry night, then another. Two is a pattern. One is still a snapshot.",
     });
-  } else if (dry.length >= 3 && drink.length === 0 && (meanOrNull(dry.map((r) => r.rating)) ?? 0) >= 3.4) {
-    pushUnique(worked, "Dry nights this week. Restedness held without alcohol in the mix.");
+  } else if (!split && dry.length >= 3 && drink.length === 0 && (meanOrNull(dry.map((r) => r.rating)) ?? 0) >= 3.4) {
+    pushUnique(worked, `${dateSpan(week)} stayed dry, and the mornings held.`);
   }
 
   if (
@@ -160,29 +232,30 @@ export function buildWeekReview(profile: Profile, reports: MorningReport[]): Wee
     dim.length >= 1 &&
     ((screenRatings && screenRatings.gap <= -0.4) || (screenLat && screenLat.gap >= 12))
   ) {
-    const latBit =
-      screenLat && screenLat.gap >= 12
-        ? ` Falling asleep took about ${Math.round(screenLat.gap)} extra minutes when screens stayed late.`
-        : "";
-    pushUnique(
-      hurt,
-      `Screens: ${bright.length} night${bright.length === 1 ? "" : "s"} with the phone inside the last 15 minutes looked worse than the hour-off nights.${latBit}`,
-    );
+    if (!hurt.some((line) => /phone/i.test(line))) {
+      const extra =
+        screenLat && screenLat.gap >= 12
+          ? ` About ${Math.round(screenLat.gap)} extra minutes to fall asleep.`
+          : "";
+      pushUnique(
+        hurt,
+        `Phone late on ${listMorningDates(bright)}. Hour off on ${listMorningDates(dim)} felt better.${extra}`,
+      );
+    }
     advice.push({
       p: 78,
       t: "Park the phone an hour before bed. Dim room, not dark-room-and-scroll.",
     });
   } else if (bright.length >= Math.ceil(n * 0.6) && n >= 3) {
-    pushUnique(
-      hurt,
-      `Screens were still in the last 15 minutes on ${bright.length} of ${n} nights. Light at that hour is a clock signal, not just a habit.`,
-    );
+    if (!hurt.some((line) => /phone/i.test(line))) {
+      pushUnique(hurt, `Phone late on ${listMorningDates(bright)}. Light that late is a clock cue, not just a habit.`);
+    }
     advice.push({
       p: 72,
-      t: "Give the last hour to something that does not glow. One week of that is a cleaner test than a supplement.",
+      t: "Give the last hour to something that does not glow. A week of that is a cleaner test than a supplement.",
     });
   } else if (phoneInBed.length === n && n >= 3) {
-    pushUnique(hurt, "Phone in bed every night this window.");
+    pushUnique(hurt, `Phone in bed every night (${dateSpan(week)}).`);
     advice.push({
       p: 70,
       t: "Charge the phone across the room. Try two nights and compare how long it took to fall asleep.",
@@ -192,105 +265,122 @@ export function buildWeekReview(profile: Profile, reports: MorningReport[]): Wee
   const wdHelpedRating = wdRatings && wdRatings.gap >= 0.4;
   const wdHelpedLat = wdLat && wdLat.gap <= -10;
   if (wdYes.length >= 1 && wdSkip.length >= 1 && (wdHelpedRating || wdHelpedLat)) {
-    pushUnique(
-      worked,
-      wdHelpedLat
-        ? `Wind-down: used on ${wdYes.length} night${wdYes.length === 1 ? "" : "s"}. Falling asleep ran about ${Math.abs(Math.round(wdLat!.gap))} minutes faster than the skip nights.`
-        : `Wind-down nights averaged ${fmt1(wdRatings!.left)} vs ${fmt1(wdRatings!.right)} when you skipped it.`,
-    );
+    if (!worked.some((line) => /wind-down/i.test(line))) {
+      const faster = wdHelpedLat
+        ? ` About ${Math.abs(Math.round(wdLat!.gap))} minutes faster than ${listMorningDates(wdSkip)}.`
+        : "";
+      pushUnique(worked, `Wind-down on ${listMorningDates(wdYes)}.${faster}`);
+    }
     advice.push({
       p: 68,
-      t: "Keep the same wind-down on the hard nights, not only the easy ones. Repeat beats remix.",
+      t: "Use the same wind-down on the hard nights, not only the easy ones. Repeat beats remix.",
     });
-  } else if (wdYes.length >= 3 && (meanOrNull(wdYes.map((r) => r.rating)) ?? 0) >= 3.5) {
-    pushUnique(worked, `Wind-down showed up on ${wdYes.length} nights, and those mornings landed in decent shape.`);
+  } else if (!split && wdYes.length >= 3 && (meanOrNull(wdYes.map((r) => r.rating)) ?? 0) >= 3.5) {
+    pushUnique(worked, `Wind-down on ${listMorningDates(wdYes)}, and those mornings landed well.`);
     advice.push({
       p: 55,
-      t: "Do not abandon the wind-down because one night was messy. The protocol is the floor, not a mood.",
+      t: "Do not drop the wind-down because one night was messy. Keep the same one.",
     });
   } else if (wdNo.length >= 2) {
-    pushUnique(hurt, `Wind-down got a “no” on ${wdNo.length} nights. That session is not earning its keep.`);
+    pushUnique(hurt, `Wind-down did not help on ${listMorningDates(wdNo)}. That session is not earning its keep.`);
     advice.push({
       p: 52,
-      t: "Switch modality once: if breathwork felt like homework, try boring noise. If noise annoyed you, try the visual with the phone face down.",
+      t: "Switch once: if breathwork felt like homework, try boring noise. If noise annoyed you, try the visual with the phone face down.",
     });
   }
 
   if (stats.wakeSpreadMinutes >= 90 && n >= 3) {
-    const minutes = Math.round(stats.wakeSpreadMinutes);
+    const latest = [...week].sort((a, b) => {
+      const [ah, am] = a.wokeAt.split(":").map(Number);
+      const [bh, bm] = b.wokeAt.split(":").map(Number);
+      return bh * 60 + bm - (ah * 60 + am);
+    })[0]!;
     pushUnique(
       hurt,
-      `Wake time swung about ${minutes} minutes across this window. The clock hates a moving target.`,
+      `Get-up time jumped around. Latest was ${formatClock(latest.wokeAt, profile.units)} on ${formatMorningDate(latest.morningDate)}. Sleeping in writes the next night’s delay.`,
     );
     advice.push({
       p: 90,
-      t: `Defend ${wakeClock} — even after a short night. Sleeping in writes tomorrow’s delay.`,
+      t: `Get up at ${wakeClock} even after a short night. The clock learns the wake, not the bedtime.`,
     });
   } else if (n >= 5 && stats.wakeSpreadMinutes <= 45) {
-    pushUnique(worked, `Wake time stayed inside about ${Math.round(stats.wakeSpreadMinutes)} minutes. That is the clock doing its job.`);
+    pushUnique(worked, `Wake stayed near ${wakeClock} across ${dateSpan(week)}.`);
   }
 
-  if (clockLate && n >= 2) {
-    pushUnique(
-      hurt,
-      lateWakes >= 2
-        ? `Late mornings showed up (${lateWakes} wake${lateWakes === 1 ? "" : "s"} at 10:00 or later). That pattern usually means the clock is running behind, not that you “are not a morning person.”`
-        : "Mornings in this window look delayed — late to bed, late to rise, or both.",
-    );
+  if (clockLate && n >= 2 && lateWakeNights.length >= 1) {
+    if (!worseNights.every(lateWake)) {
+      pushUnique(
+        hurt,
+        `Late mornings on ${listMorningDates(lateWakeNights)}. That is a delayed clock, not “not a morning person.”`,
+      );
+    }
+    advice.push({
+      p: 86,
+      t: `Get outside within an hour of waking, ideally near ${wakeClock}. Morning light is the strongest clock cue I can give you without a prescription.`,
+    });
+  } else if (clockLate && n >= 2) {
     advice.push({
       p: 86,
       t: `Get outside within an hour of waking, ideally near ${wakeClock}. Morning light is the strongest clock cue I can give you without a prescription.`,
     });
   }
 
-  if (highLatency >= 2 || (n >= 2 && stats.meanLatencyMinutes >= 30)) {
-    pushUnique(
-      hurt,
-      `Falling asleep ran long on ${highLatency || n} night${(highLatency || n) === 1 ? "" : "s"} (about ${Math.round(stats.meanLatencyMinutes)} minutes on average). Time in bed awake teaches the bed the wrong lesson.`,
-    );
+  if (slowNights.length >= 2 || (n >= 2 && stats.meanLatencyMinutes >= 30)) {
+    const named = slowNights.length > 0 ? slowNights : week;
+    const alreadyNamed = split && worseNights.every((r) => r.sleepLatencyMinutes >= 30);
+    if (!alreadyNamed) {
+      pushUnique(
+        hurt,
+        `${listMorningDates(named)} — about ${Math.round(stats.meanLatencyMinutes)} minutes to fall asleep.`,
+      );
+    }
     advice.push({
-      p: 84,
-      t: "If you are still awake after about 20 minutes, get out of bed. Dim room, boring, back when sleepy. Do not stack another episode.",
+      p: stats.meanLatencyMinutes >= 40 ? 91 : 84,
+      t: "If you are still awake after about 20 minutes, get out of bed. Lights low, something boring, back when you are actually sleepy.",
     });
   }
 
-  if (wokeNights >= 2) {
+  if (wokeNights.length >= 2) {
     pushUnique(
       hurt,
-      `You woke and struggled on ${wokeNights} night${wokeNights === 1 ? "" : "s"}. Lying there “trying” usually makes the next wake likelier.`,
+      `Woke and could not settle on ${listMorningDates(wokeNights)}. Lying there trying usually makes the next wake likelier.`,
     );
     advice.push({
       p: 80,
-      t: "Same rule as a slow start: out of bed until sleepy. Clock-watching in the dark is not rest.",
+      t: "Same as a slow start: out of bed until sleepy. Watching the clock in the dark is not rest.",
     });
   }
 
-  if (shortNights >= 2 || vsNeed === "short") {
+  if (shortNights.length >= 2 || vsNeed === "short") {
+    const named = shortNights.length > 0 ? shortNights : week;
     pushUnique(
       hurt,
-      shortNights >= 2
-        ? `${shortNights} night${shortNights === 1 ? "" : "s"} landed well under the ${need.min}–${need.max}h band for your age (week average ${formatDuration(stats.meanDurationMinutes)}).`
+      shortNights.length >= 2
+        ? `Short nights on ${listMorningDates(named)} — under the ${need.min}–${need.max}h most people your age need (week ${formatDuration(stats.meanDurationMinutes)}).`
         : `Sleep averaged ${formatDuration(stats.meanDurationMinutes)}. ${need.label}.`,
     );
     advice.push({
       p: 76,
-      t: "Protect a real bedtime on school nights before you add a pill. Debt first, bottles later — and bottles only in consult, with enough mornings.",
+      t: "Protect a real bedtime on school nights before you add a pill. Sleep debt first. Bottles only in consult, and only with enough mornings.",
     });
-  } else if (vsNeed === "in_band" && n >= 4 && stats.meanRating >= 3.4) {
+  } else if (!split && vsNeed === "in_band" && n >= 4 && stats.meanRating >= 3.4) {
     pushUnique(
       worked,
-      `Duration held in the ${need.min}–${need.max}h band for your age (week average ${formatDuration(stats.meanDurationMinutes)}).`,
+      `Sleep length stayed in range — about ${formatDuration(stats.meanDurationMinutes)} across ${dateSpan(week)}.`,
     );
   }
 
-  if (stats.meanRating >= 3.6 && n >= 4 && hurt.length <= 1) {
-    pushUnique(worked, `Restedness averaged ${fmt1(stats.meanRating)} / 5. That is a solid week, not a fluke night.`);
+  if (!split && stats.meanRating >= 3.6 && n >= 4 && hurt.length === 0) {
+    pushUnique(
+      worked,
+      `${dateSpan(week)} felt solid (${stats.meanRating.toFixed(1).replace(/\.0$/, "")}/5), not a one-night fluke.`,
+    );
   }
 
   if (meds.length > 0) {
     pushUnique(
       hurt,
-      `${meds[0]!.name} can collide with sleep. I will not tell you to stop a prescribed med. Flag last-dose time with whoever wrote it if nights are getting worse.`,
+      `${meds[0]!.name} can make nights harder. I will not tell you to stop a prescribed med. If sleep is getting worse, ask whoever wrote it about last-dose time.`,
     );
   }
 
@@ -306,37 +396,45 @@ export function buildWeekReview(profile: Profile, reports: MorningReport[]): Wee
   if (doThis.length === 0) {
     doThis.push(
       sketch
-        ? "Log a few more mornings. I can already see tonight’s shape; I will not pretend it is a week."
-        : "Keep logging. The week is steady enough that the next move is not a new product — it is repeating what already worked.",
+        ? "Log a few more mornings. I can see tonight’s shape; I will not pretend it is a week."
+        : "Keep going. This week is steady enough that the next move is repeating what already worked — not a new product.",
     );
   }
 
   const headline = sketch
     ? n === 1
-      ? "One morning. A sketch, not a week."
-      : `${nightsWord(n)}. Early, not empty.`
+      ? "One morning."
+      : "An early look."
     : n < WEEK_WINDOW
-      ? `${nightsWord(n)}. Pattern, not a full week.`
+      ? "A partial week."
       : stats.meanRating < 2.8
-        ? "A hard week. Here is the honest read."
-        : hurt.length >= 2
-          ? "The week left a trail. Here is what it shows."
-          : "A week I can actually read.";
+        ? "A hard week."
+        : split
+          ? "A split week."
+          : "A steady week.";
 
   const kicker =
-    n < WEEK_WINDOW
-      ? `${nightsWord(n)} in the window. Not seven yet — I will still say what these nights show, and I will not overclaim.`
-      : `${nightsWord(n)} in the window.`;
+    n === 1
+      ? `${formatMorningDate(week[0]!.morningDate)}. A snapshot, not a pattern yet.`
+      : n < WEEK_WINDOW
+        ? `${dateSpan(week)} · ${n} mornings.`
+        : `${dateSpan(week)}.`;
 
   const read = writeRead({
-    n,
+    week,
     sketch,
-    profile,
-    stats,
-    hurt,
-    doThis,
+    split,
+    betterNights,
+    worseNights,
+    bestRating,
+    worstRating,
+    drink,
+    dry,
+    drinkVsDry,
+    slowNights,
     clockLate,
-    need,
+    stats,
+    vsNeed,
   });
 
   return {
@@ -352,56 +450,75 @@ export function buildWeekReview(profile: Profile, reports: MorningReport[]): Wee
 }
 
 function writeRead(args: {
-  n: number;
+  week: MorningReport[];
   sketch: boolean;
-  profile: Profile;
-  stats: ReturnType<typeof weekBreakdown>;
-  hurt: string[];
-  doThis: string[];
+  split: boolean;
+  betterNights: MorningReport[];
+  worseNights: MorningReport[];
+  bestRating: number;
+  worstRating: number;
+  drink: MorningReport[];
+  dry: MorningReport[];
+  drinkVsDry: { gap: number } | null;
+  slowNights: MorningReport[];
   clockLate: boolean;
-  need: ReturnType<typeof sleepNeedHours>;
+  stats: ReturnType<typeof weekBreakdown>;
+  vsNeed: ReturnType<typeof durationVsNeed>;
 }): string {
-  const { n, sketch, profile, stats, hurt, doThis, clockLate, need } = args;
-  const ratingBit = `Restedness averaged ${fmt1(stats.meanRating)} out of 5.`;
-  const durBit = `Sleep ran about ${formatDuration(stats.meanDurationMinutes)} against the ${need.min}–${need.max} hours most people your age need.`;
-  const latBit =
-    stats.meanLatencyMinutes >= 25
-      ? ` Falling asleep averaged about ${Math.round(stats.meanLatencyMinutes)} minutes.`
-      : stats.meanLatencyMinutes > 0
-        ? ` Falling asleep was closer to ${Math.round(stats.meanLatencyMinutes)} minutes.`
-        : "";
+  const {
+    week,
+    sketch,
+    split,
+    betterNights,
+    worseNights,
+    bestRating,
+    worstRating,
+    drink,
+    dry,
+    drinkVsDry,
+    slowNights,
+    clockLate,
+    stats,
+    vsNeed,
+  } = args;
+  const n = week.length;
+  const sentences: string[] = [];
 
-  if (sketch) {
-    const caution =
-      n === 1
-        ? "One night can lie. I will name what this morning shows and I will not turn it into a diagnosis."
-        : "Two or three nights can hint. They cannot close a case.";
-    const lever =
-      hurt[0] != null ? ` The loudest signal so far: ${lowerFirst(stripLead(hurt[0]))}` : doThis[0] != null ? ` Next: ${doThis[0]}` : "";
-    return `${nightsWord(n)} on the board. ${ratingBit} ${durBit}${latBit} ${caution}${lever}`;
+  if (n === 1) {
+    const r = week[0]!;
+    const lat =
+      r.sleepLatencyMinutes >= 30 ? `, and it took about ${r.sleepLatencyMinutes} minutes to fall asleep` : "";
+    const drinkBit = r.drank ? " after drinks" : "";
+    sentences.push(`On ${formatMorningDate(r.morningDate)} you rated it ${r.rating}/5${drinkBit}${lat}.`);
+    sentences.push("One morning is a snapshot. I would not change your plan on it yet.");
+    return sentences.join(" ");
   }
 
-  const clockBit = clockLate
-    ? " The clock looks delayed — late nights pulling late mornings — which is a timing problem, not a character flaw."
-    : ` Wake time is the cheapest clock tool you have; protect ${formatClock(profile.targetWake, profile.units)} before you add chemistry.`;
-  const hurtLead =
-    hurt.length >= 2
-      ? " More than one thing in this window is working against you. Rank the next week by the loudest lever, not by whatever is in the cabinet."
-      : hurt.length === 1
-        ? " One pattern is doing most of the damage. Fix that before you shop."
-        : " Nothing in this window is screaming. Repeat what worked; do not invent a crisis.";
-  const next = doThis[0] != null ? ` ${doThis[0]}` : "";
+  if (split) {
+    sentences.push(
+      `${listMorningDates(betterNights)} ${betterNights.length === 1 ? "was" : "were"} the better ${betterNights.length === 1 ? "morning" : "mornings"} (${bestRating}/5). ${listMorningDates(worseNights)} ${worseNights.length === 1 ? "was" : "were"} worse (${worstRating}/5).`,
+    );
+  } else {
+    sentences.push(`${listMorningDates(week)} ${n === 2 ? "both" : "all"} came in at ${bestRating}/5.`);
+  }
 
-  return `${nightsWord(n)} logged. ${ratingBit} ${durBit}${latBit}${clockBit}${hurtLead}${next}`;
-}
+  if (drink.length > 0 && dry.length > 0 && drinkVsDry && drinkVsDry.gap <= -0.4) {
+    sentences.push("The worse mornings line up with drinks.");
+  } else if (slowNights.length >= 2 && vsNeed !== "short") {
+    sentences.push(
+      `You were in bed long enough. The problem is how long it took to fall asleep — about ${Math.round(stats.meanLatencyMinutes)} minutes.`,
+    );
+  } else if (vsNeed === "short") {
+    sentences.push("The nights ran short of what most people your age need.");
+  } else if (clockLate) {
+    sentences.push("Bed and wake both ran late. That is a timing issue, not a character one.");
+  } else if (!split && stats.meanRating >= 3.5) {
+    sentences.push("I would keep this week, not add anything.");
+  }
 
-function stripLead(line: string): string {
-  const cut = line.indexOf(": ");
-  if (cut === -1) return line;
-  return line.slice(cut + 2);
-}
+  if (sketch) {
+    sentences.push("A few mornings can point. They are not a diagnosis.");
+  }
 
-function lowerFirst(line: string): string {
-  if (!line) return line;
-  return `${line[0]!.toLowerCase()}${line.slice(1)}`;
+  return sentences.join(" ");
 }
