@@ -47,5 +47,6 @@ next-env.d.ts
 # anonymous study packs land here locally — never commit them
 /data/study-inbox/*
 !/data/study-inbox/.gitkeep
+/.circadia-update.lock
 /src/app/.api-parked
 /.api-parked
