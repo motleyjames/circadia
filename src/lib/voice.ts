@@ -58,8 +58,19 @@ function ensureClip(): HTMLAudioElement | null {
     clip = new Audio();
     clip.preload = "auto";
     clip.setAttribute("playsinline", "true");
+    clip.setAttribute("webkit-playsinline", "true");
+  }
+  if (typeof document !== "undefined" && !clip.isConnected) {
+    clip.setAttribute("hidden", "true");
+    document.body.appendChild(clip);
   }
   return clip;
+}
+
+function clipMatches(el: HTMLAudioElement, url: string): boolean {
+  const src = el.currentSrc || el.src;
+  if (!src) return false;
+  return src.endsWith(url) || src.includes(`${url}?`) || src.includes(url);
 }
 
 function stopFade() {
@@ -151,22 +162,37 @@ export function playGuide(id: MeditationId, atSeconds: number) {
     return;
   }
 
+  stopFade();
+  next.volume = 1;
+
   let fellBack = false;
-  const fallback = () => {
+  const fallback = (reason?: unknown) => {
     if (fellBack) return;
+    const name =
+      reason && typeof reason === "object" && "name" in reason ? String((reason as { name: string }).name) : "";
+    if (name === "AbortError") return;
     fellBack = true;
     speakBedside(line);
   };
-  next.onerror = fallback;
-  stopFade();
-  next.volume = 0.62;
-  next.src = url;
-  const play = next.play();
-  if (play && typeof play.then === "function") {
-    play.catch(fallback);
+
+  const playNow = () => {
+    next.volume = 1;
+    void next.play().catch(fallback);
+  };
+
+  next.onerror = () => fallback();
+
+  if (clipMatches(next, url)) {
+    if (!next.paused && next.currentTime > 0.05) return;
+    next.onloadeddata = playNow;
+    playNow();
     return;
   }
-  speakBedside(line);
+
+  next.onloadeddata = playNow;
+  next.src = url;
+  next.load();
+  if (next.readyState >= 2) playNow();
 }
 
 export function speak(text: string) {
@@ -184,9 +210,10 @@ function speakBedside(text: string) {
   utterance.pitch = BEDSIDE_PITCH;
   utterance.volume = BEDSIDE_VOLUME;
   const preferred = pickBedsideVoice(s.getVoices());
-  if (!preferred) return;
-  const match = s.getVoices().find((v) => v.voiceURI === preferred.voiceURI || v.name === preferred.name);
-  if (match) utterance.voice = match;
+  if (preferred) {
+    const match = s.getVoices().find((v) => v.voiceURI === preferred.voiceURI || v.name === preferred.name);
+    if (match) utterance.voice = match;
+  }
   s.speak(utterance);
 }
 
