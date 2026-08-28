@@ -28,9 +28,11 @@ function reveal(dest) {
 }
 
 function aliasOnDesktop(dest) {
-  if (!operator) return;
   const desktop = path.join(os.homedir(), "Desktop");
-  if (!fs.existsSync(desktop)) return;
+  if (!fs.existsSync(desktop)) {
+    console.warn("No Desktop folder — skipping alias.");
+    return;
+  }
   const script = `
 tell application "Finder"
   set theApp to POSIX file ${JSON.stringify(dest)}
@@ -38,11 +40,25 @@ tell application "Finder"
   try
     delete file ${JSON.stringify(APP_DISPLAY)} of folder theDesk
   end try
+  try
+    delete file ${JSON.stringify(APP_FILE)} of folder theDesk
+  end try
   make alias file to theApp at theDesk
 end tell
 `;
-  spawnSync("osascript", ["-e", script], { stdio: "ignore" });
-  console.log(`Desktop alias: ${path.join(desktop, APP_DISPLAY)}`);
+  const aliased = spawnSync("osascript", ["-e", script], { encoding: "utf8" });
+  if (aliased.status === 0) {
+    console.log(`Desktop: ${path.join(desktop, APP_DISPLAY)}`);
+    return;
+  }
+  const link = path.join(desktop, APP_FILE);
+  try {
+    fs.rmSync(link, { force: true, recursive: true });
+    fs.symlinkSync(dest, link);
+    console.log(`Desktop link: ${link}`);
+  } catch (error) {
+    console.warn("Could not put an icon on the Desktop:", aliased.stderr || error);
+  }
 }
 
 if (process.argv.includes("--reveal")) {
@@ -64,7 +80,12 @@ const root = path.join(__dirname, "..");
 const swift = path.join(__dirname, "launcher.swift");
 const png = path.join(__dirname, operator ? "operator-icon.png" : "icon.png");
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
-const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.5.4";
+const APP_VERSION = typeof pkg.version === "string" ? pkg.version : "0.6.2";
+
+if (!fs.existsSync(png)) {
+  console.error(`Missing ${png}. The ${operator ? "gold" : "ice"} clock will not appear in the Dock.`);
+  process.exit(1);
+}
 
 spawnSync("killall", [EXEC_NAME], { stdio: "ignore" });
 freePort(DOCK_PORT);
@@ -135,7 +156,9 @@ function makeIcns(icns) {
   }
   const result = spawnSync("iconutil", ["-c", "icns", iconset, "-o", icns], { stdio: "ignore" });
   fs.rmSync(iconset, { recursive: true, force: true });
-  if (result.status !== 0) fs.copyFileSync(png, icns);
+  if (result.status !== 0 || !fs.existsSync(icns)) {
+    throw new Error(`Could not build AppIcon.icns from ${png}`);
+  }
 }
 
 function writePlist(plist, executable) {
@@ -310,11 +333,12 @@ console.log(dest);
 console.log(`Node: ${process.execPath}`);
 console.log(`Repo: ${root}`);
 if (operator) {
-  console.log("A window should appear. Gold clock — not the ice Circadia icon.");
-  console.log("Look on your Desktop for Circadia Operator, or in /Applications.");
+  console.log("Gold clock. That is Circadia Operator — the inbox. Testers never see this.");
+  console.log("Look on your Desktop for Circadia Operator, and in /Applications.");
 } else {
-  console.log("A window should appear. Drag THIS Circadia to the Dock. Remove any icon named Electron.");
-  console.log("Operator app (gold clock): npm run dock:mod");
+  console.log("Ice clock. That is Circadia — Sign up / Log in, then Tonight.");
+  console.log("Drag THIS Circadia to the Dock. Remove any icon named Electron.");
+  console.log("Installing the gold Operator next…");
 }
 reveal(dest);
 aliasOnDesktop(dest);

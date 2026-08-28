@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SLEEP_AID_QUESTION } from "./intake";
 import { APP_VERSION } from "./version";
@@ -76,16 +76,19 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
     expect(pkg.scripts.dock).toContain("fix-mac.cjs");
-    expect(pkg.scripts.dock).not.toContain("--operator");
+    expect(pkg.scripts.dock).toContain("install-mac.cjs --operator");
     expect(pkg.scripts["dock:mod"]).toContain("--operator");
     expect(pkg.scripts["fix-mac"]).toBe("node electron/fix-mac.cjs");
     expect(pkg.scripts.repair).toBe("node electron/fix-mac.cjs");
     expect(pkg.scripts["reveal:mod"]).toBe("node electron/install-mac.cjs --operator --reveal");
     expect(install).toContain("aliasOnDesktop");
+    expect(install).not.toMatch(/function aliasOnDesktop[\s\S]{0,80}if \(!operator\) return/);
     expect(install).toContain("--operator");
     expect(install).toContain("Circadia Operator.app");
     expect(install).toContain("app.circadia.operator");
     expect(install).toContain("operator-icon.png");
+    expect(existsSync("electron/operator-icon.png")).toBe(true);
+    expect(existsSync("electron/icon.png")).toBe(true);
     expect(install).toContain("CircadiaOperator");
     expect(launcher).toContain("let surface");
     expect(readFileSync("eslint.config.mjs", "utf8")).toContain(".next-mod");
