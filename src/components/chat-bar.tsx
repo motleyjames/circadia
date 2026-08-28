@@ -159,8 +159,10 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
       <aside className="relative z-20 hidden w-[23.5rem] shrink-0 flex-col border-l border-sky-300/10 bg-[#07080f]/95 px-5 pt-6 pb-4 xl:flex">
         <header className="mb-5 flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] tracking-[0.28em] text-sky-300/70 uppercase">Consult</p>
-            <h2 className="font-heading mt-1 text-[1.65rem] leading-none text-zinc-50">The desk</h2>
+            <h2 className="font-heading text-[1.65rem] leading-none text-zinc-50">Consult</h2>
+            <p className="mt-2 max-w-[28ch] text-[12px] leading-snug text-zinc-500">
+              Ranked answers. Named sources. Silence when the note does not exist.
+            </p>
           </div>
           {empty ? null : (
             <button
