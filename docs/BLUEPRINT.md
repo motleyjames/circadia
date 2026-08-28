@@ -151,7 +151,7 @@ src/app/          diary: /  /check-in  /insights  /library  /you  /api/study
 
 - Cover → clinical intake → countdown-first Tonight
 - Wake-derived window; body metrics editable in You
-- Tonight countdown + wind-down (3 meditations, 4 soundscapes)
+- Tonight countdown + wind-down (3 meditations with a recorded bedside guide, 4 soundscapes)
 - Morning bubble interview including dream option
 - Week review on Notes from the first mornings; consult still gates bottles at ~7 nights
 - Consult engine + follow-ups + You thread + corpus tests
