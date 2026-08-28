@@ -26,7 +26,11 @@ function needsBuild() {
   const buildId = path.join(root, distDir, "BUILD_ID");
   if (!fs.existsSync(buildId)) return true;
   const builtAt = fs.statSync(buildId).mtimeMs;
-  const srcAt = Math.max(latestMtime(path.join(root, "src")), fs.statSync(path.join(root, "package.json")).mtimeMs);
+  const srcAt = Math.max(
+    latestMtime(path.join(root, "src")),
+    latestMtime(path.join(root, "public")),
+    fs.statSync(path.join(root, "package.json")).mtimeMs,
+  );
   return srcAt > builtAt + 500;
 }
 

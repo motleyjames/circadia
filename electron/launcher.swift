@@ -137,6 +137,9 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
   )
   let web: WKWebView = {
     let config = WKWebViewConfiguration()
+    // HTML5 <audio> is gated; speechSynthesis was not. Empty set = play from a timer.
+    config.mediaTypesRequiringUserActionForPlayback = []
+    config.allowsInlineMediaPlayback = true
     let js = "document.documentElement.classList.add('circadia-native');"
     config.userContentController.addUserScript(
       WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true)

@@ -26,6 +26,8 @@ export function WindDown() {
     setMode("pick");
   }
 
+  useEffect(() => () => hushVoice(), []);
+
   if (mode === "meditate") {
     return (
       <MeditationPlayer
@@ -126,7 +128,7 @@ function MeditationPlayer({
   const [running, setRunning] = useState(true);
   const elapsedRef = useRef(0);
   const logged = useRef(false);
-  const spokenAt = useRef<number | null>(0);
+  const spokenAt = useRef<number | null>(null);
   const beat = useMemo(() => beatAt(script, elapsed), [script, elapsed]);
   const done = elapsed >= script.durationSeconds;
 
@@ -162,7 +164,6 @@ function MeditationPlayer({
 
   useEffect(
     () => () => {
-      hushVoice();
       finish(true);
     },
     // unmount only
@@ -206,8 +207,12 @@ function MeditationPlayer({
           variant="outline"
           className="rounded-full border-white/15"
           onClick={() => {
+            if (running) {
+              hushVoice();
+            } else {
+              spokenAt.current = null;
+            }
             setRunning((r) => !r);
-            if (running) hushVoice();
           }}
         >
           {running && !done ? "Pause" : "Resume"}
