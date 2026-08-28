@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
 import { startSoundscape, stopAllSoundscapes, unlockAudio, type SoundscapeId } from "@/lib/audio";
-import { beatAt, hushVoice, MEDITATIONS, meditationById, playGuide } from "@/lib/meditations";
+import { beatAt, hushVoice, MEDITATIONS, meditationById, playGuide, prefetchGuide } from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -77,7 +77,8 @@ export function WindDown() {
               type="button"
               onClick={() => {
                 void unlockAudio();
-                playGuide(m.id, 0);
+                void playGuide(m.id, 0);
+                prefetchGuide(m.id);
                 setMeditationId(m.id);
                 setMode("meditate");
               }}

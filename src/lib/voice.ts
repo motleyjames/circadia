@@ -1,4 +1,5 @@
 import type { MeditationId } from "./types";
+import { decodeUrl, playSample, stopSample, unlockAudio } from "./audio";
 import VOICE_LINES from "./voice-lines.json";
 
 type VoiceBook = Record<string, Record<string, string>>;
@@ -48,37 +49,8 @@ const BEDSIDE_RATE = BEDSIDE.rate;
 const BEDSIDE_PITCH = BEDSIDE.pitch;
 const BEDSIDE_VOLUME = BEDSIDE.volume;
 
-let clip: HTMLAudioElement | null = null;
 let voicesReady = false;
-let fadeTimer: number | null = null;
-
-function ensureClip(): HTMLAudioElement | null {
-  if (typeof Audio === "undefined") return null;
-  if (!clip) {
-    clip = new Audio();
-    clip.preload = "auto";
-    clip.setAttribute("playsinline", "true");
-    clip.setAttribute("webkit-playsinline", "true");
-  }
-  if (typeof document !== "undefined" && !clip.isConnected) {
-    clip.setAttribute("hidden", "true");
-    document.body.appendChild(clip);
-  }
-  return clip;
-}
-
-function clipMatches(el: HTMLAudioElement, url: string): boolean {
-  const src = el.currentSrc || el.src;
-  if (!src) return false;
-  return src.endsWith(url) || src.includes(`${url}?`) || src.includes(url);
-}
-
-function stopFade() {
-  if (fadeTimer != null) {
-    window.clearInterval(fadeTimer);
-    fadeTimer = null;
-  }
-}
+let guideGen = 0;
 
 function synth(): SpeechSynthesis | null {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
@@ -116,83 +88,37 @@ export function guideClipUrl(id: MeditationId, atSeconds: number): string {
   return `/voice/${id}/${atSeconds}.mp3`;
 }
 
-function fadeStop(audio: HTMLAudioElement) {
-  stopFade();
-  const started = audio.volume;
-  const steps = 8;
-  let i = 0;
-  fadeTimer = window.setInterval(() => {
-    i += 1;
-    audio.volume = Math.max(0, started * (1 - i / steps));
-    if (i >= steps) {
-      stopFade();
-      audio.pause();
-    }
-  }, 30);
-}
-
 export function hushVoice() {
-  if (clip) fadeStop(clip);
+  stopSample();
   synth()?.cancel();
 }
 
-/** Play a 250ms silence in the tap handler so later clips are allowed. */
 export function primeGuide() {
-  const a = ensureClip();
-  if (!a) {
-    unlockVoice();
-    return;
-  }
-  a.src = "/voice/silence.mp3";
-  a.volume = 0.01;
-  void a.play().catch(() => {
-    /* autoplay policy — unlockVoice still helps Speech fallback */
-  });
+  void unlockAudio();
   unlockVoice();
 }
 
-export function playGuide(id: MeditationId, atSeconds: number) {
+export function prefetchGuide(id: MeditationId) {
+  for (const row of spokenBeats(id)) {
+    void decodeUrl(guideClipUrl(id, row.atSeconds)).catch(() => {
+      /* timer lines still try; opening line is the one that must work */
+    });
+  }
+}
+
+export async function playGuide(id: MeditationId, atSeconds: number) {
   const line = spokenLine(id, atSeconds);
   if (!line) return;
-
   const url = guideClipUrl(id, atSeconds);
-  const next = ensureClip();
-  if (!next) {
+  const mine = ++guideGen;
+  try {
+    const buffer = await decodeUrl(url);
+    if (mine !== guideGen) return;
+    playSample(buffer, 0.78);
+  } catch {
+    if (mine !== guideGen) return;
     speakBedside(line);
-    return;
   }
-
-  stopFade();
-  next.volume = 1;
-
-  let fellBack = false;
-  const fallback = (reason?: unknown) => {
-    if (fellBack) return;
-    const name =
-      reason && typeof reason === "object" && "name" in reason ? String((reason as { name: string }).name) : "";
-    if (name === "AbortError") return;
-    fellBack = true;
-    speakBedside(line);
-  };
-
-  const playNow = () => {
-    next.volume = 1;
-    void next.play().catch(fallback);
-  };
-
-  next.onerror = () => fallback();
-
-  if (clipMatches(next, url)) {
-    if (!next.paused && next.currentTime > 0.05) return;
-    next.onloadeddata = playNow;
-    playNow();
-    return;
-  }
-
-  next.onloadeddata = playNow;
-  next.src = url;
-  next.load();
-  if (next.readyState >= 2) playNow();
 }
 
 export function speak(text: string) {

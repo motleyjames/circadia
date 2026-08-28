@@ -109,6 +109,7 @@ export function beatAt(script: MeditationScript, elapsed: number): MeditationBea
 export {
   hushVoice,
   playGuide,
+  prefetchGuide,
   primeGuide,
   speak,
   spokenBeats,
