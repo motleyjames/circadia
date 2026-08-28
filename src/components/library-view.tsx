@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { MorningReadingCard } from "@/components/morning-reading";
+import { suggestMorningReadingForLogs } from "@/lib/morning-reading";
 import { RESEARCH, type ResearchArticle } from "@/lib/research";
 import { exportState } from "@/lib/storage";
 
@@ -24,6 +26,10 @@ function applyOpenFromHash(setOpenId: (id: string) => void) {
 
 export function LibraryView() {
   const { state, setResearchNotes, importJson } = useCircadia();
+  const reading =
+    state.profile && state.reports.length > 0
+      ? suggestMorningReadingForLogs(state.profile, state.reports)
+      : null;
   const [openId, setOpenId] = useState<string | null>(() => hashId() || RESEARCH[0]?.id || null);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -64,11 +70,25 @@ export function LibraryView() {
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">What we are willing to say.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
         Conservative sleep science, written twice: first in plain language, then the note with
-        sources. A stable wake time and “bed is for sleep” outrank aisle supplements. Upload your
-        own notes or a Circadia JSON export — stays on this device, not a cloud.
+        sources. After a morning I pin the one page that night actually earned. The rest of the
+        shelf stays here to browse. Upload your own notes or a Circadia JSON export — stays on this
+        device, not a cloud.
       </p>
 
-      <div className="mt-6 space-y-2">
+      {reading ? (
+        <MorningReadingCard
+          reading={reading}
+          kicker="Why this one, today"
+          className="mt-8"
+          onOpen={() => setOpenId(reading.articleId)}
+        />
+      ) : null}
+
+      {reading ? (
+        <p className="mt-8 text-[11px] tracking-[0.22em] text-zinc-500 uppercase">The rest of the shelf</p>
+      ) : null}
+
+      <div className={reading ? "mt-2 space-y-2" : "mt-6 space-y-2"}>
         {RESEARCH.map((article) => (
           <LibraryArticle
             key={article.id}

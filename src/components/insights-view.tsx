@@ -10,6 +10,8 @@ import { weekBreakdown } from "@/lib/metrics";
 import { researchById } from "@/lib/research";
 import { formatClock, formatDuration, minutesToClock } from "@/lib/time";
 import type { SleepNote } from "@/lib/types";
+import { MorningReadingCard } from "@/components/morning-reading";
+import { suggestMorningReadingForLogs } from "@/lib/morning-reading";
 import { buildWeekReview, formatMorningDate, lastSevenReports } from "@/lib/week-review";
 
 export function InsightsView() {
@@ -25,6 +27,10 @@ export function InsightsView() {
     () => (profile ? buildWeekReview(profile, state.reports) : null),
     [profile, state.reports],
   );
+  const reading = useMemo(
+    () => (profile ? suggestMorningReadingForLogs(profile, state.reports) : null),
+    [profile, state.reports],
+  );
   const dreamReports = state.reports.filter((r) => r.dream?.text);
   if (!profile) return null;
 
@@ -35,8 +41,9 @@ export function InsightsView() {
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Notes</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">The week.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
-        The better nights, the worse ones, and what I would try next. Ask Consult about a specific
-        morning — I will read the log, not guess. I will not sell you a bottle from two nights.
+        The better nights, the worse ones, and what I would try next. After each morning I hand you
+        one page to read — the one that night earned, not the whole shelf. Ask Consult about a
+        specific morning — I will read the log, not guess.
       </p>
 
       {state.demoWeek ? (
@@ -118,6 +125,8 @@ export function InsightsView() {
           >
             Erase the latest morning
           </button>
+
+          {reading ? <MorningReadingCard reading={reading} className="mt-10" /> : null}
         </>
       )}
 
