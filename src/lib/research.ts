@@ -85,6 +85,32 @@ export const RESEARCH: ResearchArticle[] = [
     ],
   },
   {
+    id: "social-jetlag",
+    title: "Social jet lag is a weekend time zone you never boarded",
+    summary:
+      "The gap between school or work mornings and free mornings, reported in hours. Group findings in the literature are not a personal forecast.",
+    aliases: ["social jet lag", "social jetlag", "social jet-lag", "weekend sleep shift", "mctq"],
+    say: "When school or work mornings sit earlier than free mornings, that gap is social jet lag. Circadia reports the gap in hours. Links in the literature to mood or weight are about groups of people — not a forecast about you.",
+    body: "Social jet lag is the gap between when you sleep on mornings you have to get up (school, work) and mornings you do not. Circadia measures that gap over the last four weeks and reports it in hours. It does not turn the number into a personal health forecast.\n\nRoenneberg, Wittmann, and colleagues named the pattern in 2006, in the MCTQ line of work that compares obligated days with free days. Later papers in that line report population-level associations with mood and metabolic markers. Those are group findings. They are not a diagnosis of this diary, and Circadia will not attach them to you.\n\nThe number is withheld when there are no obligated mornings (a school break), or when too few school or free mornings are logged in the window. A zero would be a lie: unknown is not aligned.",
+    tags: ["schedule", "weekend", "social jet lag", "mctq"],
+    reviewedThrough: "2026-08",
+    confidence: "high",
+    sources: [
+      {
+        year: 2003,
+        cite: "Roenneberg T, Wirz-Justice A, Merrow M. Life between clocks. J Biol Rhythms. 2003;18(1):80-90. MCTQ line of work on obligated vs free days.",
+      },
+      {
+        year: 2006,
+        cite: "Wittmann M, Dinich J, Merrow M, Roenneberg T. Social jetlag: misalignment of biological and social time. Chronobiol Int. 2006;23(1-2):497-509.",
+      },
+      {
+        year: 2012,
+        cite: "Roenneberg T, Allebrandt KV, Merrow M, Vetter C. Social jetlag and obesity. Curr Biol. 2012;22(10):939-943. Population association, not a personal forecast.",
+      },
+    ],
+  },
+  {
     id: "sleep-pressure",
     title: "Sleep pressure is not the same thing as being 'tired'",
     summary:

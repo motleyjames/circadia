@@ -118,6 +118,21 @@ describe("research freshness", () => {
     expect(note?.sources.some((source) => source.year === 2026 && /NSF/i.test(source.cite))).toBe(true);
   });
 
+  it("keeps social jet lag as its own note, not travel jet lag", () => {
+    expect(matchResearch("social jet lag")?.id).toBe("social-jetlag");
+    expect(matchResearch("what is social jetlag")?.id).toBe("social-jetlag");
+    expect(matchResearch("jet lag")?.id).toBe("jet-lag");
+    const note = researchById("social-jetlag");
+    expect(note?.reviewedThrough).toBe("2026-08");
+    expect(note?.say).toMatch(/groups of people/);
+    expect(note?.say ?? "").not.toMatch(/\b(MSFsc|MSF|MSW|chronotype)\b/i);
+    expect(note?.body ?? "").not.toMatch(/\b(MSFsc|MSF|MSW|chronotype)\b/i);
+    expect(note?.sources.some((source) => source.year === 2006 && /Wittmann/i.test(source.cite))).toBe(
+      true,
+    );
+    expect(note?.sources.some((source) => /Roenneberg/i.test(source.cite))).toBe(true);
+  });
+
   it("records the 2025 restless-legs guideline in the note, not the mouth", () => {
     const note = researchById("restless-legs");
     expect(note?.body).toMatch(/2025/);

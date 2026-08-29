@@ -8,6 +8,7 @@ import { buildSleepNotes } from "@/lib/advisor";
 import { readDream } from "@/lib/dreams";
 import { weekBreakdown } from "@/lib/metrics";
 import { researchById } from "@/lib/research";
+import { socialJetLagCopyFromReports, socialJetLagSleepNote } from "@/lib/social-jetlag-copy";
 import { formatClock, formatDuration, minutesToClock } from "@/lib/time";
 import type { SleepNote } from "@/lib/types";
 import { MorningReadingCard } from "@/components/morning-reading";
@@ -20,6 +21,15 @@ export function InsightsView() {
   const windowReports = useMemo(() => lastSevenReports(state.reports), [state.reports]);
   const notes = useMemo(
     () => (profile ? buildSleepNotes(profile, state.reports) : []),
+    [profile, state.reports],
+  );
+  const sjlNote = useMemo(
+    () =>
+      profile
+        ? socialJetLagSleepNote(
+            socialJetLagCopyFromReports(state.reports, profile.scheduledDays, new Date()),
+          )
+        : null,
     [profile, state.reports],
   );
   const week = useMemo(() => weekBreakdown(windowReports), [windowReports]);
@@ -51,6 +61,13 @@ export function InsightsView() {
           Sample mornings. The overview uses the last seven. It is not your sleep. Log a real morning
           to replace it.
         </p>
+      ) : null}
+
+      {sjlNote ? (
+        <section className="mt-8 space-y-3">
+          <p className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase">Last 4 weeks</p>
+          <NoteCard note={sjlNote} />
+        </section>
       ) : null}
 
       {empty ? (
