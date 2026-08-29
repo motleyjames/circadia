@@ -156,6 +156,11 @@ function MorningInterview({
     ) {
       return;
     }
+    // A fresh interview cannot write if today already has a page.
+    // Revision is the only second pass, and it replaces — it does not append.
+    if (!existing && reportForMorning(state.reports, today)) {
+      return;
+    }
     const payload: Omit<MorningReport, "id" | "createdAt"> = {
       morningDate: today,
       wokeAt,
