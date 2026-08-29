@@ -1,5 +1,5 @@
 import type { MeditationId } from "./types";
-import { decodeUrl, playSample, stopSample, unlockAudio } from "./audio";
+import { decodeUrl, duckBreathBed, playSample, stopSample, unlockAudio } from "./audio";
 import VOICE_LINES from "./voice-lines.json";
 
 type VoiceBook = Record<string, Record<string, string>>;
@@ -51,6 +51,19 @@ const BEDSIDE_VOLUME = BEDSIDE.volume;
 
 let voicesReady = false;
 let guideGen = 0;
+let guideEl: HTMLAudioElement | null = null;
+
+function guideElement(): HTMLAudioElement {
+  if (typeof Audio === "undefined") {
+    throw new Error("HTML_AUDIO_UNAVAILABLE");
+  }
+  if (!guideEl) {
+    guideEl = new Audio();
+    guideEl.preload = "auto";
+    guideEl.setAttribute("playsinline", "true");
+  }
+  return guideEl;
+}
 
 function synth(): SpeechSynthesis | null {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
@@ -88,19 +101,49 @@ export function guideClipUrl(id: MeditationId, atSeconds: number): string {
   return `/voice/${id}/${atSeconds}.mp3`;
 }
 
+export function guideIsPlaying(): boolean {
+  return Boolean(guideEl && !guideEl.paused && !guideEl.ended);
+}
+
 export function hushVoice() {
+  guideGen += 1;
+  if (guideEl) {
+    guideEl.onended = null;
+    try {
+      guideEl.pause();
+    } catch {
+      /* element not playing */
+    }
+  }
   stopSample();
   synth()?.cancel();
 }
 
+/**
+ * NEW: HTMLAudioElement is the WKWebView timer-safe path. Swift already set
+ * mediaTypesRequiringUserActionForPlayback = []. Web Audio BufferSource.start()
+ * from a useEffect is discarded even when the breath pad is running.
+ * Call this inside the tap that starts the meditation, then play() on later beats.
+ */
 export function primeGuide() {
   void unlockAudio();
-  unlockVoice();
+  try {
+    const el = guideElement();
+    el.muted = true;
+    el.volume = 0;
+    el.src = "/voice/silence.mp3";
+    void el.play().catch(() => {
+      /* the opening line's play() in the same tap is the real unlock */
+    });
+  } catch {
+    /* jsdom / SSR */
+  }
 }
 
 export function prefetchGuide(id: MeditationId) {
   for (const row of spokenBeats(id)) {
-    void decodeUrl(guideClipUrl(id, row.atSeconds)).catch(() => {
+    const url = guideClipUrl(id, row.atSeconds);
+    void decodeUrl(url).catch(() => {
       /* timer lines still try; opening line is the one that must work */
     });
   }
@@ -111,13 +154,43 @@ export async function playGuide(id: MeditationId, atSeconds: number) {
   if (!line) return;
   const url = guideClipUrl(id, atSeconds);
   const mine = ++guideGen;
+  stopSample();
+  duckBreathBed(0.32);
+  const lift = () => {
+    if (mine === guideGen) duckBreathBed(1, 0.55);
+  };
   try {
-    const buffer = await decodeUrl(url);
-    if (mine !== guideGen) return;
-    await playSample(buffer, 0.6);
+    const el = guideElement();
+    el.onended = null;
+    try {
+      el.pause();
+    } catch {
+      /* first play */
+    }
+    el.muted = false;
+    el.volume = 0.68;
+    el.src = url;
+    el.onended = () => {
+      if (mine === guideGen) lift();
+    };
+    await el.play();
+    if (mine !== guideGen) {
+      try {
+        el.pause();
+      } catch {
+        /* superseded */
+      }
+    }
   } catch {
-    // Missed clip stays silent. A Mac novelty voice is worse than a missed line.
     if (mine !== guideGen) return;
+    try {
+      const buffer = await decodeUrl(url);
+      if (mine !== guideGen) return;
+      await playSample(buffer, 0.6);
+    } catch {
+      // Missed clip stays silent. A Mac novelty voice is worse than a missed line.
+      lift();
+    }
   }
 }
 
