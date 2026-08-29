@@ -3,6 +3,7 @@ import { answerQuestion, makeChatMessage } from "./chat";
 import { bannedIn, buildCorpus } from "./chat-corpus";
 import { isFollowUp, resolveQuestion } from "./chat-history";
 import type { ChatMessage, Profile } from "./types";
+import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 
 const profile: Profile = {
   firstName: "James",
@@ -23,6 +24,7 @@ const profile: Profile = {
   onboardingComplete: true,
   email: "",
   phone: "",
+  scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
 const corpus = buildCorpus();

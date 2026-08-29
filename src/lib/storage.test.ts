@@ -152,6 +152,49 @@ describe("hydrateState", () => {
     expect(state.reports[0]?.supplementNote).toBe("should not need this for unisom-type");
   });
 
+  it("defaults scheduledDays to Mon–Fri and keeps a custom week, including all-off", () => {
+    const legacy = hydrateState({
+      profile: {
+        onboardingComplete: true,
+        name: "x",
+        age: 19,
+        heightCm: 180,
+        weightKg: 75,
+        targetSleep: "23:30",
+        targetWake: "07:30",
+      },
+    });
+    expect(legacy.profile?.scheduledDays).toEqual([false, true, true, true, true, true, false]);
+
+    const sundayShift = hydrateState({
+      profile: {
+        onboardingComplete: true,
+        name: "x",
+        age: 19,
+        heightCm: 180,
+        weightKg: 75,
+        targetSleep: "23:30",
+        targetWake: "07:30",
+        scheduledDays: [true, true, true, true, true, false, false],
+      },
+    });
+    expect(sundayShift.profile?.scheduledDays).toEqual([true, true, true, true, true, false, false]);
+
+    const schoolBreak = hydrateState({
+      profile: {
+        onboardingComplete: true,
+        name: "x",
+        age: 19,
+        heightCm: 180,
+        weightKg: 75,
+        targetSleep: "23:30",
+        targetWake: "07:30",
+        scheduledDays: [false, false, false, false, false, false, false],
+      },
+    });
+    expect(schoolBreak.profile?.scheduledDays).toEqual([false, false, false, false, false, false, false]);
+  });
+
   it("throws on garbage", () => {
     expect(() => hydrateState("nope")).toThrow(/Circadia/);
   });

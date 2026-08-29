@@ -9,6 +9,7 @@ import {
 import { researchById } from "./research";
 import { emptyState } from "./storage";
 import type { MorningReport, Profile } from "./types";
+import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 
 const BAN = /aasm|cbt-i|\bscn\b/i;
 const BOTTLE_PUSH = /take melatonin|try melatonin|start melatonin|take more melatonin|stop taking/i;
@@ -33,6 +34,7 @@ const profile: Profile = {
   onboardingComplete: true,
   email: "",
   phone: "",
+  scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
 function report(partial: Partial<MorningReport> & Pick<MorningReport, "morningDate">): MorningReport {

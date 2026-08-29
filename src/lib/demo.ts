@@ -1,4 +1,5 @@
 import type { CircadiaState, MorningReport, Profile } from "@/lib/types";
+import { DEFAULT_SCHEDULED_DAYS } from "@/lib/schedule";
 import { newId } from "@/lib/time";
 
 function isoDaysAgo(days: number): string {
@@ -29,6 +30,7 @@ const SAMPLE_PROFILE: Profile = {
   onboardingComplete: true,
   email: "",
   phone: "",
+  scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
 /** A plausible messy student week — not a miracle recovery arc. */

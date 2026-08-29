@@ -3,6 +3,7 @@ import { emptyState } from "./storage";
 import { anonymityViolations, buildStudyPack, validateStudyPack } from "./study";
 import { medicationClasses } from "./metrics";
 import type { CircadiaState, MorningReport, Profile } from "./types";
+import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 
 const hostileProfile: Profile = {
   firstName: "James",
@@ -23,6 +24,7 @@ const hostileProfile: Profile = {
   onboardingComplete: true,
   email: "james@example.com",
   phone: "3035550100",
+  scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
 function hostileState(): CircadiaState {

@@ -7,6 +7,7 @@ import { buildFault, buildRoster, validateFault, validateRoster, validateRosterV
 import { emptyState } from "./storage";
 import { anonymityViolations, assertSendable, buildStudyPack } from "./study";
 import type { CircadiaState, Profile, RosterEvent } from "./types";
+import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 
 const profile: Profile = {
   firstName: "James",
@@ -27,6 +28,7 @@ const profile: Profile = {
   units: "imperial",
   notificationsEnabled: false,
   onboardingComplete: true,
+  scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
 function state(): CircadiaState {

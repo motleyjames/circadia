@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { sampleWeekState } from "./demo";
 import { emptyState } from "./storage";
 import type { MorningReport, Profile } from "./types";
+import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 import { buildWeekReview, formatMorningDate, weekReviewMouth } from "./week-review";
 
 const BAN = /aasm|cbt-i|\bscn\b/i;
@@ -29,6 +30,7 @@ const profile: Profile = {
   onboardingComplete: true,
   email: "",
   phone: "",
+  scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
 function report(partial: Partial<MorningReport> & Pick<MorningReport, "morningDate">): MorningReport {
