@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MorningReadingCard } from "@/components/morning-reading";
 import { suggestMorningReadingForLogs } from "@/lib/morning-reading";
@@ -12,7 +11,6 @@ import {
   researchSourceLine,
   type ResearchArticle,
 } from "@/lib/research";
-import { exportState } from "@/lib/storage";
 
 function hashId(): string {
   if (typeof window === "undefined") return "";
@@ -30,14 +28,12 @@ function applyOpenFromHash(setOpenId: (id: string) => void) {
 }
 
 export function LibraryView() {
-  const { state, setResearchNotes, importJson } = useCircadia();
+  const { state, setResearchNotes } = useCircadia();
   const reading =
     state.profile && state.reports.length > 0
       ? suggestMorningReadingForLogs(state.profile, state.reports)
       : null;
   const [openId, setOpenId] = useState<string | null>(() => hashId() || RESEARCH[0]?.id || null);
-  const [error, setError] = useState("");
-  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     applyOpenFromHash(setOpenId);
@@ -45,29 +41,6 @@ export function LibraryView() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
-
-  function download() {
-    const blob = new Blob([exportState(state)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "circadia-data.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function onFile(file: File) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        importJson(String(reader.result));
-        setError("");
-      } catch {
-        setError("That file is not a Circadia JSON export.");
-      }
-    };
-    reader.readAsText(file);
-  }
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-8">
@@ -78,8 +51,8 @@ export function LibraryView() {
         sources. Each note is stamped with the month a person last checked it against current
         guidelines. Tests fail if a stamp is more than a year old. This is not a live paper feed —
         Circadia does not scrape PubMed. After a morning I pin the one page that night actually
-        earned. The rest of the shelf stays here to browse. Upload your own notes or a Circadia JSON
-        export — stays on this device, not a cloud.
+        earned. The rest of the shelf stays here to browse. Paste your own notes below if you want
+        Circadia to remember them as yours — not as truth. Stays on this device, not a cloud.
       </p>
 
       {reading ? (
@@ -114,36 +87,6 @@ export function LibraryView() {
           placeholder="Paste a paper abstract, a clinician’s instruction, anything Circadia should remember as your note — not as truth."
           className="mt-2 min-h-32 rounded-3xl border-white/10 bg-white/5"
         />
-      </section>
-
-      <section className="mt-8 space-y-2">
-        <h2 className="text-sm text-zinc-200">Sleep data</h2>
-        <p className="text-xs text-zinc-500">
-          Export everything on this computer. Import a previous Circadia file. No account.
-        </p>
-        <div className="flex gap-2">
-          <Button className="rounded-full bg-white/10 text-zinc-100" onClick={download}>
-            Export JSON
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-full border-white/15"
-            onClick={() => fileRef.current?.click()}
-          >
-            Import JSON
-          </Button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) onFile(file);
-            }}
-          />
-        </div>
-        {error ? <p className="text-xs text-red-300">{error}</p> : null}
       </section>
     </div>
   );
