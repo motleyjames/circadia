@@ -43,9 +43,7 @@ export function SidebarNav() {
         })}
       </nav>
       <p className="px-5 pb-6 text-[11px] leading-relaxed text-zinc-600">
-        {study.consented
-          ? "Study on — nights leave on their own."
-          : "Diary stays on this computer."}
+        {study.consented ? "Study is on. The switch is in You." : "Diary stays on this computer."}
       </p>
     </aside>
   );
