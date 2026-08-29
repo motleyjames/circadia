@@ -47,12 +47,8 @@ export function LibraryView() {
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Library</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">What we are willing to say.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
-        Conservative sleep science, written twice: first in plain language, then the note with
-        sources. Each note is stamped with the month a person last checked it against current
-        guidelines. Tests fail if a stamp is more than a year old. This is not a live paper feed —
-        Circadia does not scrape PubMed. After a morning I pin the one page that night actually
-        earned. The rest of the shelf stays here to browse. Paste your own notes below if you want
-        Circadia to remember them as yours — not as truth. Stays on this device, not a cloud.
+        The short version first. The longer note is underneath if you want it. After a morning I pin
+        the one page that night actually earned. The rest of the shelf stays here to browse.
       </p>
 
       {reading ? (
@@ -79,13 +75,16 @@ export function LibraryView() {
         ))}
       </div>
 
-      <section className="mt-8">
-        <h2 className="text-sm text-zinc-200">Your notes / research</h2>
+      <section className="mt-10">
+        <h2 className="text-sm text-zinc-200">A line for yourself</h2>
+        <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+          Something a clinician told you, or a sentence you want this diary to remember.
+        </p>
         <Textarea
           value={state.researchNotes}
           onChange={(e) => setResearchNotes(e.target.value)}
-          placeholder="Paste a paper abstract, a clinician’s instruction, anything Circadia should remember as your note — not as truth."
-          className="mt-2 min-h-32 rounded-3xl border-white/10 bg-white/5"
+          placeholder="Stays on this device."
+          className="mt-2 min-h-24 rounded-3xl border-white/10 bg-white/5"
         />
       </section>
     </div>
