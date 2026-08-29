@@ -6,6 +6,7 @@ type NoiseHandle = {
 
 let shared: AudioContext | null = null;
 let activeStop: (() => void) | null = null;
+const decoded = new Map<string, AudioBuffer>();
 
 function createContext(): AudioContext {
   const Ctor =
@@ -16,6 +17,7 @@ function createContext(): AudioContext {
 
 function context(): AudioContext {
   if (!shared || shared.state === "closed") {
+    decoded.clear();
     shared = createContext();
   }
   return shared;
@@ -99,10 +101,10 @@ export type BreathBedHandle = {
 };
 
 const BREATH_LEVEL: Record<BreathPhase, number> = {
-  rest: 0.07,
-  in: 0.13,
-  hold: 0.13,
-  out: 0.05,
+  rest: 0.016,
+  in: 0.038,
+  hold: 0.038,
+  out: 0.012,
 };
 
 const BREATH_RAMP: Record<BreathPhase, number> = {
@@ -137,8 +139,9 @@ export function duckBreathBed(factor: number, seconds = 0.28) {
 }
 
 /**
- * Low pad on the same graph as brown noise. Keeps the mixer running so guide clips can start.
- * Start it from a useEffect after unlockAudio() in the tap — same pattern as soundscapes.
+ * One quiet sine under the guide. Two close frequencies beat (~0.5 Hz) and read as a buzz —
+ * that is not a bed, so this pad is a single oscillator.
+ * Start it from the same tap as the guide so the graph is already running.
  */
 export function startBreathBed(): BreathBedHandle {
   stopBreathBed();
@@ -146,11 +149,8 @@ export function startBreathBed(): BreathBedHandle {
   void ctx.resume();
 
   const a = ctx.createOscillator();
-  const b = ctx.createOscillator();
   a.type = "sine";
-  b.type = "sine";
   a.frequency.value = 73.4;
-  b.frequency.value = 73.88;
 
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
@@ -163,13 +163,11 @@ export function startBreathBed(): BreathBedHandle {
   duck.gain.value = 1;
 
   a.connect(filter);
-  b.connect(filter);
   filter.connect(gain);
   gain.connect(duck);
   duck.connect(ctx.destination);
   bedDuck = duck;
   a.start();
-  b.start();
 
   let stopped = false;
   let rampFrom = 0.0001;
@@ -213,13 +211,11 @@ export function startBreathBed(): BreathBedHandle {
     window.setTimeout(() => {
       try {
         a.stop();
-        b.stop();
       } catch {
         /* already stopped */
       }
       try {
         a.disconnect();
-        b.disconnect();
         filter.disconnect();
         gain.disconnect();
         duck.disconnect();
@@ -312,34 +308,103 @@ export function startSoundscape(kind: SoundscapeId, volume = 0.2): NoiseHandle {
   return { stop };
 }
 
-const decoded = new Map<string, AudioBuffer>();
 let sampleStop: (() => void) | null = null;
 let sampleGen = 0;
 
-function decodePcm(ctx: AudioContext, data: ArrayBuffer): Promise<AudioBuffer> {
-  const first = data.slice(0);
-  const promised = ctx.decodeAudioData(first);
-  if (promised && typeof promised.then === "function") {
-    return promised.catch(() => {
-      const retry = data.slice(0);
-      return new Promise<AudioBuffer>((resolve, reject) => {
-        ctx.decodeAudioData(retry, resolve, reject);
-      });
-    });
-  }
-  return new Promise((resolve, reject) => {
-    ctx.decodeAudioData(data.slice(0), resolve, reject);
-  });
+function fourcc(view: DataView, offset: number): string {
+  return String.fromCharCode(
+    view.getUint8(offset),
+    view.getUint8(offset + 1),
+    view.getUint8(offset + 2),
+    view.getUint8(offset + 3),
+  );
 }
 
-/** Fetch + decode through the same AudioContext the soundscapes use. */
-export async function decodeUrl(url: string): Promise<AudioBuffer> {
+export type PcmClip = {
+  samples: Float32Array;
+  sampleRate: number;
+};
+
+/**
+ * Read a mono 16-bit PCM WAV in JS. WebKit's decodeAudioData has been a dead end
+ * for these clips (MPEG-2, then MPEG-1) — the bytes are fine; the decoder is not.
+ */
+export function parseWavPcm(data: ArrayBuffer): PcmClip {
+  if (data.byteLength < 44) throw new Error("wav too small");
+  const view = new DataView(data);
+  if (fourcc(view, 0) !== "RIFF" || fourcc(view, 8) !== "WAVE") {
+    throw new Error("not a wave");
+  }
+  let offset = 12;
+  let channels = 0;
+  let sampleRate = 0;
+  let bits = 0;
+  let format = 0;
+  let dataOffset = -1;
+  let dataSize = 0;
+  while (offset + 8 <= view.byteLength) {
+    const id = fourcc(view, offset);
+    const size = view.getUint32(offset + 4, true);
+    const body = offset + 8;
+    if (body + size > view.byteLength) break;
+    if (id === "fmt ") {
+      format = view.getUint16(body, true);
+      channels = view.getUint16(body + 2, true);
+      sampleRate = view.getUint32(body + 4, true);
+      bits = view.getUint16(body + 14, true);
+    } else if (id === "data") {
+      dataOffset = body;
+      dataSize = size;
+    }
+    offset = body + size + (size % 2);
+  }
+  if (format !== 1) throw new Error("need pcm");
+  if (channels !== 1) throw new Error("need mono");
+  if (bits !== 16) throw new Error("need s16");
+  if (dataOffset < 0 || sampleRate < 8000) throw new Error("incomplete wav");
+  const count = Math.floor(dataSize / 2);
+  if (count < 1) throw new Error("empty wav");
+  const samples = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    samples[i] = view.getInt16(dataOffset + i * 2, true) / 32768;
+  }
+  return { samples, sampleRate };
+}
+
+function resampleLinear(input: Float32Array, fromRate: number, toRate: number): Float32Array {
+  if (fromRate === toRate) return input;
+  const ratio = fromRate / toRate;
+  const outLen = Math.max(1, Math.round(input.length / ratio));
+  const out = new Float32Array(outLen);
+  const last = input.length - 1;
+  for (let i = 0; i < outLen; i++) {
+    const src = i * ratio;
+    const i0 = Math.min(Math.floor(src), last);
+    const i1 = Math.min(i0 + 1, last);
+    const t = src - i0;
+    out[i] = input[i0] * (1 - t) + input[i1] * t;
+  }
+  return out;
+}
+
+export function pcmToBuffer(clip: PcmClip): AudioBuffer {
+  const ctx = context();
+  const samples =
+    clip.sampleRate === ctx.sampleRate
+      ? clip.samples
+      : resampleLinear(clip.samples, clip.sampleRate, ctx.sampleRate);
+  const buffer = ctx.createBuffer(1, Math.max(1, samples.length), ctx.sampleRate);
+  buffer.getChannelData(0).set(samples);
+  return buffer;
+}
+
+/** Fetch a WAV, parse PCM in JS, cache an AudioBuffer on the shared graph. */
+export async function loadWavUrl(url: string): Promise<AudioBuffer> {
   const hit = decoded.get(url);
   if (hit) return hit;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`audio ${res.status} ${url}`);
-  const data = await res.arrayBuffer();
-  const buffer = await decodePcm(context(), data);
+  const buffer = pcmToBuffer(parseWavPcm(await res.arrayBuffer()));
   decoded.set(url, buffer);
   return buffer;
 }
@@ -489,6 +554,6 @@ export async function playSample(buffer: AudioBuffer, volume = 0.72): Promise<vo
 }
 
 export async function playUrl(url: string, volume = 0.72): Promise<void> {
-  const buffer = await decodeUrl(url);
+  const buffer = await loadWavUrl(url);
   await playSample(buffer, volume);
 }

@@ -143,7 +143,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.22");
+    expect(APP_VERSION).toBe("0.6.23");
   });
 
   it("does not run diary views while compiling the operator", () => {
