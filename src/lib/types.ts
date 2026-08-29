@@ -6,6 +6,9 @@ export type Struggle = "falling" | "staying";
 
 export type Units = "imperial" | "metric";
 
+/** Index 0 = Sunday. Length is always 7. */
+export type ScheduledDays = [boolean, boolean, boolean, boolean, boolean, boolean, boolean];
+
 export type SleepRating = 1 | 2 | 3 | 4 | 5;
 
 export type SupplementKind = "melatonin" | "magnesium" | "both" | "antihistamine" | "other";
@@ -44,6 +47,11 @@ export type Profile = {
   units: Units;
   notificationsEnabled: boolean;
   onboardingComplete: boolean;
+  /**
+   * Mornings the person has to get up for something.
+   * Index 0 = Sunday … 6 = Saturday. Not inferred from weekday.
+   */
+  scheduledDays: ScheduledDays;
 };
 
 export type DreamReport = {

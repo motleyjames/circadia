@@ -18,6 +18,7 @@ import {
 } from "@/lib/password";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
+import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS } from "@/lib/schedule";
 import { coerceChat, coerceConsultHistory, parkLiveConsult } from "@/lib/consult-threads";
 import type { CircadiaState, MorningReport, Profile, StudyState, StudyStatus } from "@/lib/types";
 import { isClock, normalizeClock } from "@/lib/windows";
@@ -112,6 +113,7 @@ export function draftProfile(input: {
     units: "imperial",
     notificationsEnabled: false,
     onboardingComplete: false,
+    scheduledDays: copyScheduledDays(DEFAULT_SCHEDULED_DAYS),
   };
 }
 
@@ -750,6 +752,7 @@ function coerceProfile(value: CircadiaState["profile"] | unknown): Profile | nul
     units: p.units === "metric" ? "metric" : "imperial",
     notificationsEnabled: Boolean(p.notificationsEnabled),
     onboardingComplete: complete,
+    scheduledDays: coerceScheduledDays(p.scheduledDays),
   };
 }
 

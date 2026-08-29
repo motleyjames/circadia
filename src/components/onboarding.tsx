@@ -16,6 +16,8 @@ import {
   sleepNeedHours,
   targetDurationMinutes,
 } from "@/lib/time";
+import { ScheduledDaysPicker } from "@/components/scheduled-days-picker";
+import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS } from "@/lib/schedule";
 import type { Profile, Struggle } from "@/lib/types";
 import { normalizeClock } from "@/lib/windows";
 import { useCircadia } from "@/context/circadia-store";
@@ -69,8 +71,9 @@ const INTAKE = [
   { kicker: "01", title: "Body" },
   { kicker: "02", title: "The problem" },
   { kicker: "03", title: "Wake time" },
-  { kicker: "04", title: "What you take" },
-  { kicker: "05", title: "Alerts" },
+  { kicker: "04", title: "Obligated mornings" },
+  { kicker: "05", title: "What you take" },
+  { kicker: "06", title: "Alerts" },
 ] as const;
 
 export function Onboarding() {
@@ -85,6 +88,11 @@ export function Onboarding() {
   const [phase, setPhase] = useState<Phase>("neither");
   const [wakeTime, setWakeTime] = useState(PHASE_WAKE.neither);
   const [stimulant, setStimulant] = useState("");
+  const [scheduledDays, setScheduledDays] = useState(() =>
+    existing?.scheduledDays
+      ? coerceScheduledDays(existing.scheduledDays)
+      : copyScheduledDays(DEFAULT_SCHEDULED_DAYS),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,6 +146,7 @@ export function Onboarding() {
       units: "imperial",
       notificationsEnabled: granted,
       onboardingComplete: true,
+      scheduledDays,
     };
     saveProfile(profile);
   }
@@ -147,7 +156,7 @@ export function Onboarding() {
       <header className="flex items-center justify-between px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4">
         <Mark className="size-5" />
         <p className="text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">
-          {INTAKE[step].kicker} / 05
+          {INTAKE[step].kicker} / 06
         </p>
         <span className="size-5" aria-hidden />
       </header>
@@ -255,6 +264,21 @@ export function Onboarding() {
         {step === 3 && (
           <section className="mt-5">
             <h1 className="max-w-[18ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
+              Which mornings do you have to get up for something?
+            </h1>
+            <p className="mt-3 max-w-[38ch] text-[15px] leading-relaxed text-zinc-400">
+              Class, a shift, a bus. Not “I like a routine.” Circadia cannot guess this from a
+              calendar — a free Friday is still a free Friday.
+            </p>
+            <div className="mt-8">
+              <ScheduledDaysPicker value={scheduledDays} onChange={setScheduledDays} />
+            </div>
+          </section>
+        )}
+
+        {step === 4 && (
+          <section className="mt-5">
+            <h1 className="max-w-[18ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
               A stimulant is not a personality.
             </h1>
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
@@ -270,7 +294,7 @@ export function Onboarding() {
           </section>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <section className="mt-5">
             <h1 className="max-w-[16ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
               One ping. One hour before bed.
@@ -298,7 +322,7 @@ export function Onboarding() {
             Back
           </button>
         ) : null}
-        {step < 4 ? (
+        {step < 5 ? (
           <button
             type="button"
             onClick={() => {

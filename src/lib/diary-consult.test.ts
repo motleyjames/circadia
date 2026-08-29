@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { answerQuestion, makeChatMessage } from "./chat";
 import { answerDiaryQuestion, parseDiaryAsk } from "./diary-consult";
 import type { MorningReport, Profile } from "./types";
+import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 
 const profile: Profile = {
   firstName: "James",
@@ -22,6 +23,7 @@ const profile: Profile = {
   onboardingComplete: true,
   email: "",
   phone: "",
+  scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
 function report(partial: Partial<MorningReport> & Pick<MorningReport, "morningDate">): MorningReport {

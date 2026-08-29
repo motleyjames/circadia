@@ -4,6 +4,7 @@ import { answerQuestion } from "./chat";
 import { readDream } from "./dreams";
 import { buildRecommendations, NIGHTS_NEEDED } from "./recommendations";
 import type { MorningReport, Profile } from "./types";
+import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 
 const profile: Profile = {
   firstName: "James",
@@ -24,6 +25,7 @@ const profile: Profile = {
   onboardingComplete: true,
   email: "",
   phone: "",
+  scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
 function report(partial: Partial<MorningReport> & Pick<MorningReport, "morningDate">): MorningReport {

@@ -12,6 +12,7 @@ import { displayName, formatLoginForDisplay } from "@/lib/login";
 import { bmiKgM, cmToFeetInches, feetInchesToCm, formatClock, kgToLb, lbToKg } from "@/lib/time";
 import type { ActivityLevel, Profile } from "@/lib/types";
 import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
+import { ScheduledDaysPicker } from "@/components/scheduled-days-picker";
 
 export function YouView() {
   const { state, saveProfile, resetAll, loadSampleWeek, session, logOut, attachLogin, canLogOut, changePassword } =
@@ -247,6 +248,16 @@ export function YouView() {
               onChange={(targetWake) => persist({ targetWake })}
               columns={3}
               options={WAKE_TARGET_OPTIONS.map((t) => ({ value: t, label: formatClock(t, profile.units) }))}
+            />
+          </div>
+          <div>
+            <p className="mb-2 text-xs text-zinc-400">Which mornings do you have to get up for something?</p>
+            <p className="mb-3 text-[13px] leading-relaxed text-zinc-500">
+              Class, a shift, a bus. Not inferred from the calendar.
+            </p>
+            <ScheduledDaysPicker
+              value={profile.scheduledDays}
+              onChange={(scheduledDays) => persist({ scheduledDays })}
             />
           </div>
           <div>
