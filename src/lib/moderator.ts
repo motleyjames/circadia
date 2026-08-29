@@ -1,6 +1,6 @@
 import { parseInboxPayload } from "@/lib/inbox-payload";
 import { ageBand } from "@/lib/study";
-import type { FaultEvent, RosterEvent, StudyNight, StudyPack } from "@/lib/types";
+import type { AnyRosterEvent, FaultEvent, StudyNight, StudyPack } from "@/lib/types";
 
 export type InboxFile = {
   file: string;
@@ -75,7 +75,7 @@ export function summarizeInbox(files: InboxFile[]): ModeratorSnapshot {
   const nights: ModeratorNightPack[] = [];
   const faults: ModeratorFault[] = [];
   const latestPack = new Map<string, StudyPack>();
-  const latestRoster = new Map<string, RosterEvent>();
+  const latestRoster = new Map<string, AnyRosterEvent>();
 
   function person(id: string): ModeratorPerson {
     const existing = people.get(id);
@@ -148,7 +148,7 @@ export function summarizeInbox(files: InboxFile[]): ModeratorSnapshot {
     row.targetSleep = roster.targetSleep;
     row.targetWake = roster.targetWake;
     row.lastAppVersion = roster.appVersion;
-    if (!row.ageBand) row.ageBand = ageBand(roster.age);
+    row.ageBand = roster.schema === "circadia-roster-v2" ? roster.ageBand : ageBand(roster.age);
   }
 
   for (const [id, pack] of latestPack) {

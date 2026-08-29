@@ -80,13 +80,45 @@ describe("login keys", () => {
 });
 
 describe("local file vault", () => {
+  let sessionKeys: Map<string, string>;
+  let sessionKeyWriteOk = true;
+
   beforeEach(() => {
     resetVaultMemoryForTests();
+    sessionKeys = new Map();
+    sessionKeyWriteOk = true;
     const mem = new MemoryStorage();
     Object.defineProperty(globalThis, "localStorage", { value: mem, configurable: true });
     Object.defineProperty(globalThis, "window", { value: globalThis, configurable: true });
-    globalThis.fetch = (async () =>
-      new Response(JSON.stringify({ v: 1, files: {}, locks: {}, session: null }), { status: 200 })) as typeof fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), "http://127.0.0.1");
+      if (url.pathname === "/api/session-key") {
+        const method = (init?.method ?? "GET").toUpperCase();
+        if (method === "POST") {
+          if (!sessionKeyWriteOk) {
+            return new Response(JSON.stringify({ ok: false, error: "Keychain unavailable." }), { status: 503 });
+          }
+          const body = JSON.parse(String(init?.body ?? "{}")) as { login?: string; master?: string };
+          if (typeof body.login === "string" && typeof body.master === "string") {
+            sessionKeys.set(body.login, body.master);
+            return new Response(JSON.stringify({ ok: true }), { status: 200 });
+          }
+          return new Response(JSON.stringify({ ok: false }), { status: 400 });
+        }
+        if (method === "GET") {
+          const login = url.searchParams.get("login") ?? "";
+          const master = sessionKeys.get(login);
+          if (!master) return new Response(JSON.stringify({ ok: false }), { status: 404 });
+          return new Response(JSON.stringify({ ok: true, login, master }), { status: 200 });
+        }
+        if (method === "DELETE") {
+          const login = url.searchParams.get("login") ?? "";
+          sessionKeys.delete(login);
+          return new Response(JSON.stringify({ ok: true }), { status: 200 });
+        }
+      }
+      return new Response(JSON.stringify({ v: 1, files: {}, locks: {}, session: null }), { status: 200 });
+    }) as typeof fetch;
   });
 
   afterEach(() => {
@@ -166,7 +198,7 @@ describe("local file vault", () => {
     expect(loadState().researchNotes).toBe("");
   });
 
-  it("stays signed in after process death using the persisted unlock, not a login-name flag", async () => {
+  it("stays signed in after process death using the keychain, not a plaintext localStorage key", async () => {
     const created = await createFile({
       firstName: "Ada",
       lastName: "Lovelace",
@@ -178,20 +210,18 @@ describe("local file vault", () => {
     created.state.researchNotes = "still here after quit";
     saveState(created.state);
     await flushVaultWrites();
-    const unlockRaw = localStorage.getItem(SESSION_UNLOCK_KEY);
-    expect(unlockRaw).toBeTruthy();
-    const unlock = JSON.parse(unlockRaw ?? "null") as { v?: number; login?: string; master?: string };
-    expect(unlock.v).toBe(1);
-    expect(unlock.login).toBe("email:ada@example.com");
-    expect(unlock.master).toMatch(/^[A-Za-z0-9+/]+=*$/);
-    expect(unlockRaw).not.toMatch(/correct-horse/);
-    const diskShape = JSON.stringify({
-      files: JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}"),
-      locks: JSON.parse(localStorage.getItem(LOCKS_KEY) ?? "{}"),
-      session: JSON.parse(localStorage.getItem(LAST_LOGIN_KEY) ?? "null"),
-    });
-    expect(diskShape).not.toContain(unlock.master);
-    expect(diskShape).not.toMatch(/still here after quit/);
+    expect(localStorage.getItem(SESSION_UNLOCK_KEY)).toBeNull();
+    const master = sessionKeys.get("email:ada@example.com");
+    expect(master).toMatch(/^[A-Za-z0-9+/]+=*$/);
+    expect(master).not.toMatch(/correct-horse/);
+    const dumped = JSON.stringify([
+      localStorage.getItem(VAULT_KEY),
+      localStorage.getItem(LOCKS_KEY),
+      localStorage.getItem(LAST_LOGIN_KEY),
+      localStorage.getItem(SESSION_UNLOCK_KEY),
+    ]);
+    expect(dumped).not.toContain(master);
+    expect(dumped).not.toMatch(/still here after quit/);
 
     resetVaultMemoryForTests();
     expect(getSessionLogin()).toBeNull();
@@ -199,6 +229,50 @@ describe("local file vault", () => {
     await bootVaultFromDisk();
     expect(getSessionLogin()).toBe("email:ada@example.com");
     expect(loadState().researchNotes).toBe("still here after quit");
+    expect(localStorage.getItem(SESSION_UNLOCK_KEY)).toBeNull();
+  });
+
+  it("deletes a leftover plaintext unlock key on boot", async () => {
+    const created = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const planted = JSON.stringify({
+      v: 1,
+      login: "email:ada@example.com",
+      master: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+    });
+    localStorage.setItem(SESSION_UNLOCK_KEY, planted);
+    await bootVaultFromDisk();
+    expect(localStorage.getItem(SESSION_UNLOCK_KEY)).toBeNull();
+    expect(getSessionLogin()).toBe("email:ada@example.com");
+  });
+
+  it("fails closed when the keychain cannot store the master", async () => {
+    sessionKeyWriteOk = false;
+    const created = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(getSessionLogin()).toBe("email:ada@example.com");
+    expect(localStorage.getItem(SESSION_UNLOCK_KEY)).toBeNull();
+    expect(sessionKeys.size).toBe(0);
+    created.state.researchNotes = "must not restore";
+    saveState(created.state);
+    await flushVaultWrites();
+    resetVaultMemoryForTests();
+    await bootVaultFromDisk();
+    expect(getSessionLogin()).toBeNull();
+    expect(loadState().researchNotes).toBe("");
+    expect(localStorage.getItem(SESSION_UNLOCK_KEY)).toBeNull();
   });
 
   it("refuses a second file for the same login and a missing login", async () => {

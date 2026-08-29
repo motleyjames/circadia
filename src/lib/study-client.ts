@@ -1,6 +1,6 @@
-import type { FaultEvent, RosterEvent, StudyPack } from "@/lib/types";
+import type { AnyRosterEvent, FaultEvent, StudyPack } from "@/lib/types";
 
-export type InboxBody = StudyPack | RosterEvent | FaultEvent;
+export type InboxBody = StudyPack | AnyRosterEvent | FaultEvent;
 
 export async function postInbox(body: InboxBody): Promise<{ ok: boolean; error?: string }> {
   try {

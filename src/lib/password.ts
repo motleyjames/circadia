@@ -11,7 +11,7 @@ export type PasswordLock = {
   /**
    * 2 = `hash` is SHA-256(master). 1 or omitted = `hash` is the master itself (0.6.19).
    * The lock file never stores the AES key — the verifier cannot decrypt the diary.
-   * Stay-signed-in holds the master in this origin's WebKit data until Log out.
+   * Stay-signed-in holds the master in the macOS Keychain until Log out.
    */
   kdf?: 1 | 2;
 };

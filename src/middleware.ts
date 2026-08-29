@@ -19,6 +19,9 @@ export function middleware(request: NextRequest) {
     if (pathname === "/api/vault" || pathname.startsWith("/api/vault/")) {
       return notFound("This is the operator.");
     }
+    if (pathname === "/api/session-key" || pathname.startsWith("/api/session-key/")) {
+      return notFound("This is the operator.");
+    }
     if (pathname === "/" || pathname === "") {
       const url = request.nextUrl.clone();
       url.pathname = "/mod";

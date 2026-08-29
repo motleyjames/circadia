@@ -31,7 +31,7 @@ import {
   saveState,
   bootVaultFromDisk,
 } from "@/lib/storage";
-import { anonymityViolations, buildStudyPack } from "@/lib/study";
+import { assertSendable, buildStudyPack } from "@/lib/study";
 import { postInbox } from "@/lib/study-client";
 import type { CircadiaState, MorningReport, Profile, WindDownSession } from "@/lib/types";
 import { newId } from "@/lib/time";
@@ -134,11 +134,27 @@ function markSend(ok: boolean, error: string | null, extra?: { rosterSentAt?: st
   }));
 }
 
+function markBlocked() {
+  patch((prev) => ({
+    ...prev,
+    study: {
+      ...prev.study,
+      lastStatus: "blocked",
+      lastError: "Pack failed the anonymity check. Nothing left this computer.",
+    },
+  }));
+}
+
 async function transmitRoster() {
   const current = snapshot();
   if (!current.study.consented || !current.study.participantId || !current.profile) return;
   try {
-    const result = await postInbox(buildRoster(current));
+    const payload = buildRoster(current);
+    if (assertSendable(payload, current).length) {
+      markBlocked();
+      return;
+    }
+    const result = await postInbox(payload);
     markSend(result.ok, result.error ?? null, {
       rosterSentAt: result.ok ? new Date().toISOString() : undefined,
     });
@@ -152,16 +168,8 @@ async function transmitStudy() {
   if (!current.study.consented || !current.study.participantId) return;
   try {
     const pack = buildStudyPack(current);
-    const leaks = anonymityViolations(pack, current);
-    if (leaks.length) {
-      patch((prev) => ({
-        ...prev,
-        study: {
-          ...prev.study,
-          lastStatus: "blocked",
-          lastError: "Pack failed the anonymity check. Nothing left this computer.",
-        },
-      }));
+    if (assertSendable(pack, current).length) {
+      markBlocked();
       return;
     }
     const result = await postInbox(pack);
@@ -175,7 +183,12 @@ async function transmitFault(message: string, extra?: { stack?: string | null; h
   const current = snapshot();
   if (!current.study.consented || !current.study.participantId) return;
   try {
-    await postInbox(buildFault(current, message, extra));
+    const payload = buildFault(current, message, extra);
+    if (assertSendable(payload, current).length) {
+      markBlocked();
+      return;
+    }
+    await postInbox(payload);
   } catch {
     // faults are best-effort
   }

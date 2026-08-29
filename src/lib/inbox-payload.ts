@@ -1,12 +1,19 @@
-import { FAULT_SCHEMA, ROSTER_SCHEMA, validateFault, validateRoster } from "@/lib/operator";
+import {
+  FAULT_SCHEMA,
+  ROSTER_SCHEMA,
+  ROSTER_SCHEMA_V2,
+  validateFault,
+  validateRoster,
+  validateRosterV2,
+} from "@/lib/operator";
 import { STUDY_SCHEMA, validateStudyPack } from "@/lib/study";
-import type { FaultEvent, RosterEvent, StudyPack } from "@/lib/types";
+import type { AnyRosterEvent, FaultEvent, StudyPack } from "@/lib/types";
 
 export type InboxKind = "study" | "roster" | "fault";
 
 export type ParsedInbox =
   | { ok: true; kind: "study"; value: StudyPack }
-  | { ok: true; kind: "roster"; value: RosterEvent }
+  | { ok: true; kind: "roster"; value: AnyRosterEvent }
   | { ok: true; kind: "fault"; value: FaultEvent }
   | { ok: false; error: string };
 
@@ -21,6 +28,10 @@ export function parseInboxPayload(raw: unknown): ParsedInbox {
   }
   if (schema === ROSTER_SCHEMA) {
     const parsed = validateRoster(raw);
+    return parsed.ok ? { ok: true, kind: "roster", value: parsed.value } : parsed;
+  }
+  if (schema === ROSTER_SCHEMA_V2) {
+    const parsed = validateRosterV2(raw);
     return parsed.ok ? { ok: true, kind: "roster", value: parsed.value } : parsed;
   }
   if (schema === FAULT_SCHEMA) {
