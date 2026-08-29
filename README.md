@@ -33,7 +33,7 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 
 ## What you do
 
-1. **Sign up / Log in** — first and last name, email or phone, and a password. Circadia will not email or text you. There is no company server holding passwords: unlock happens on this computer, then the diary is encrypted at rest. There is no reset email: if you forget the password, the diary on this computer stays locked. If a diary is already on this Mac, the gate opens on **Log in** and names the email or phone. The file is stored on disk (`~/Library/Application Support/Circadia` on a Mac), not only in the window. Opening the app still asks for the password — a leftover “already open” flag is not enough.
+1. **Sign up / Log in** — first and last name, email or phone, and a password. Circadia will not email or text you. There is no company server holding passwords: unlock happens on this computer, then the diary is encrypted at rest. There is no reset email — if you forget it, the diary on this computer stays locked. If a diary is already on this Mac, the gate opens on **Log in** and names the email or phone. The file is stored on disk (`~/Library/Application Support/Circadia` on a Mac), not only in the window. After you log in, Circadia stays signed in on this computer until you log out — quitting the app is not logout.
 2. **Sleep intake** — age, height, weight, the problem, wake time, meds, alerts.
 3. **Study gate** — yes turns the pipeline on. No Send button after that.
 4. **Tonight** — countdown to screens-down (one hour before sleep), then a guided meditation or calm noise. The guide is a quiet recording over a low tone. Close your eyes; you do not have to read the orb.

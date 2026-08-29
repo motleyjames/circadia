@@ -119,8 +119,9 @@ export function YouView() {
               <p className="text-xs text-zinc-400">How you log in</p>
               <p className="mt-1 font-heading text-lg text-zinc-50">{formatLoginForDisplay(session)}</p>
               <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
-                Email or phone plus your password. The diary is encrypted on this computer. Circadia
-                does not keep a copy of your password, and there is no reset email.
+                Email or phone plus your password. Circadia stays signed in on this computer until
+                you log out. The diary is encrypted here. Circadia does not keep a copy of your
+                password, and there is no reset email.
               </p>
               <YouSecret label="Current password" value={currentPassword} onChange={setCurrentPassword} />
               <YouSecret label="New password" value={nextPassword} onChange={setNextPassword} />
@@ -153,8 +154,9 @@ export function YouView() {
                 Log out
               </Button>
               <p className="mt-2 text-[12px] leading-relaxed text-zinc-600">
-                This computer still has your diary. The same email or phone, plus the password, opens
-                it.
+                Closing the app does not log you out. Log out here when you want the password gate
+                back. This computer still has your diary — the same email or phone, plus the
+                password, opens it.
               </p>
             </div>
           )}

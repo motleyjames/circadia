@@ -71,9 +71,12 @@ describe("Dock install invariants", () => {
     expect(authGate).toContain('type={show ? "text" : "password"}');
     expect(authGate).toContain("Confirm password");
     expect(authGate).not.toContain("There is no password");
-    expect(authGate).toContain("encrypted");
+    expect(authGate).toContain("stays signed in");
+    expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("SESSION_UNLOCK_KEY");
+    expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("restorePersistedSession");
     expect(onboarding).not.toContain("James can reach");
-    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("AuthGate");
+    expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("Closing the app does not log you out");
+    expect(readFileSync("README.md", "utf8")).toContain("stays signed in");
   });
 
   it("runs the operator as a second app on its own port, not a page in the diary", () => {
@@ -143,7 +146,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("SLEEP_AID_QUESTION");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(APP_VERSION).toBe("0.6.23");
+    expect(APP_VERSION).toBe("0.6.24");
   });
 
   it("does not run diary views while compiling the operator", () => {

@@ -62,8 +62,8 @@ export function AuthGate() {
           {orphan && !named.length
             ? "This computer already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. The diary is encrypted on this computer. Circadia will not contact you."
             : named.length
-              ? "Log in to the diary on this computer. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
-              : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this computer — not a way for anyone to reach you."}
+              ? "Log in to the diary on this computer. After that, Circadia stays signed in here until you log out. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
+              : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this computer — not a way for anyone to reach you. Circadia stays signed in on this computer until you log out."}
         </p>
 
         {named.length ? (
