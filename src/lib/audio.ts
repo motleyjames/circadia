@@ -114,6 +114,11 @@ const BREATH_RAMP: Record<BreathPhase, number> = {
 
 let activeBedStop: (() => void) | null = null;
 let bedDuck: GainNode | null = null;
+let liveBed: BreathBedHandle | null = null;
+
+export function getBreathBed(): BreathBedHandle | null {
+  return liveBed;
+}
 
 export function stopBreathBed() {
   activeBedStop?.();
@@ -198,6 +203,7 @@ export function startBreathBed(): BreathBedHandle {
     if (stopped) return;
     stopped = true;
     if (activeBedStop === stop) activeBedStop = null;
+    if (liveBed && liveBed.stop === stop) liveBed = null;
     if (bedDuck === duck) bedDuck = null;
     const t = ctx.currentTime;
     const from = Math.max(levelNow(t), 0.0001);
@@ -224,7 +230,8 @@ export function startBreathBed(): BreathBedHandle {
   };
 
   activeBedStop = stop;
-  return { setPhase, stop };
+  liveBed = { setPhase, stop };
+  return liveBed;
 }
 
 export function startSoundscape(kind: SoundscapeId, volume = 0.2): NoiseHandle {
@@ -335,6 +342,91 @@ export async function decodeUrl(url: string): Promise<AudioBuffer> {
   const buffer = await decodePcm(context(), data);
   decoded.set(url, buffer);
   return buffer;
+}
+
+export function peekDecoded(url: string): AudioBuffer | null {
+  return decoded.get(url) ?? null;
+}
+
+export function unlockAudioSync() {
+  const ctx = context();
+  try {
+    const tick = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = tick;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.001;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    src.start();
+  } catch {
+    /* first frame */
+  }
+  void ctx.resume();
+}
+
+type ScheduledNode = { source: AudioBufferSourceNode; gain: GainNode };
+const scheduled: ScheduledNode[] = [];
+
+export function stopScheduledBuffers() {
+  const ctx = context();
+  if (bedDuck) {
+    try {
+      bedDuck.gain.cancelScheduledValues(ctx.currentTime);
+      bedDuck.gain.setValueAtTime(1, ctx.currentTime);
+    } catch {
+      /* pad already gone */
+    }
+  }
+  for (const node of scheduled) {
+    try {
+      node.source.stop();
+    } catch {
+      /* already stopped */
+    }
+    try {
+      node.source.disconnect();
+      node.gain.disconnect();
+    } catch {
+      /* graph gone */
+    }
+  }
+  scheduled.length = 0;
+}
+
+/** Call from a tap. `when` is AudioContext time. */
+export function scheduleBufferAt(buffer: AudioBuffer, when: number, volume = 1): void {
+  const ctx = context();
+  void ctx.resume();
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const gain = ctx.createGain();
+  gain.gain.value = volume;
+  source.connect(gain);
+  gain.connect(ctx.destination);
+  const startAt = Math.max(when, ctx.currentTime);
+  source.start(startAt);
+  if (bedDuck) {
+    const duck = bedDuck.gain;
+    duck.setValueAtTime(0.12, startAt);
+    duck.setValueAtTime(1, startAt + Math.max(buffer.duration, 0.2));
+  }
+  const node: ScheduledNode = { source, gain };
+  scheduled.push(node);
+  source.onended = () => {
+    const i = scheduled.indexOf(node);
+    if (i >= 0) scheduled.splice(i, 1);
+    try {
+      source.disconnect();
+      gain.disconnect();
+    } catch {
+      /* already gone */
+    }
+  };
+}
+
+export function audioNow(): number {
+  return context().currentTime;
 }
 
 export function stopSample() {

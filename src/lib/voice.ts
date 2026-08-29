@@ -1,5 +1,13 @@
 import type { MeditationId } from "./types";
-import { decodeUrl, duckBreathBed, playSample, stopSample, unlockAudio } from "./audio";
+import {
+  audioNow,
+  decodeUrl,
+  peekDecoded,
+  scheduleBufferAt,
+  stopSample,
+  stopScheduledBuffers,
+  unlockAudioSync,
+} from "./audio";
 import VOICE_LINES from "./voice-lines.json";
 
 type VoiceBook = Record<string, Record<string, string>>;
@@ -52,15 +60,44 @@ const BEDSIDE_VOLUME = BEDSIDE.volume;
 let voicesReady = false;
 let guideGen = 0;
 let guideEl: HTMLAudioElement | null = null;
+const htmlTimers: number[] = [];
 
-function guideElement(): HTMLAudioElement {
+function clearHtmlTimers() {
+  for (const id of htmlTimers) window.clearTimeout(id);
+  htmlTimers.length = 0;
+}
+
+/**
+ * NEW: WebKit often will not play a detached Audio() node. Keep one in the document.
+ */
+function mountGuideElement(): HTMLAudioElement {
+  if (typeof document !== "undefined") {
+    const existing = document.getElementById("circadia-guide");
+    if (existing instanceof HTMLAudioElement) {
+      guideEl = existing;
+      return existing;
+    }
+  }
   if (typeof Audio === "undefined") {
     throw new Error("HTML_AUDIO_UNAVAILABLE");
   }
   if (!guideEl) {
     guideEl = new Audio();
+    guideEl.id = "circadia-guide";
     guideEl.preload = "auto";
     guideEl.setAttribute("playsinline", "true");
+    guideEl.setAttribute("webkit-playsinline", "true");
+    guideEl.setAttribute("aria-hidden", "true");
+    guideEl.style.position = "fixed";
+    guideEl.style.left = "0";
+    guideEl.style.bottom = "0";
+    guideEl.style.width = "8px";
+    guideEl.style.height = "8px";
+    guideEl.style.opacity = "0.02";
+    guideEl.style.pointerEvents = "none";
+  }
+  if (typeof document !== "undefined" && guideEl.parentElement !== document.body) {
+    document.body.appendChild(guideEl);
   }
   return guideEl;
 }
@@ -101,12 +138,11 @@ export function guideClipUrl(id: MeditationId, atSeconds: number): string {
   return `/voice/${id}/${atSeconds}.mp3`;
 }
 
-export function guideIsPlaying(): boolean {
-  return Boolean(guideEl && !guideEl.paused && !guideEl.ended);
-}
-
 export function hushVoice() {
   guideGen += 1;
+  clearHtmlTimers();
+  stopScheduledBuffers();
+  stopSample();
   if (guideEl) {
     guideEl.onended = null;
     try {
@@ -115,83 +151,98 @@ export function hushVoice() {
       /* element not playing */
     }
   }
-  stopSample();
   synth()?.cancel();
-}
-
-/**
- * NEW: HTMLAudioElement is the WKWebView timer-safe path. Swift already set
- * mediaTypesRequiringUserActionForPlayback = []. Web Audio BufferSource.start()
- * from a useEffect is discarded even when the breath pad is running.
- * Call this inside the tap that starts the meditation, then play() on later beats.
- */
-export function primeGuide() {
-  void unlockAudio();
-  try {
-    const el = guideElement();
-    el.muted = true;
-    el.volume = 0;
-    el.src = "/voice/silence.mp3";
-    void el.play().catch(() => {
-      /* the opening line's play() in the same tap is the real unlock */
-    });
-  } catch {
-    /* jsdom / SSR */
-  }
 }
 
 export function prefetchGuide(id: MeditationId) {
   for (const row of spokenBeats(id)) {
-    const url = guideClipUrl(id, row.atSeconds);
-    void decodeUrl(url).catch(() => {
-      /* timer lines still try; opening line is the one that must work */
+    void decodeUrl(guideClipUrl(id, row.atSeconds)).catch(() => {
+      /* tap still has an HTMLAudio fallback */
     });
   }
 }
 
-export async function playGuide(id: MeditationId, atSeconds: number) {
-  const line = spokenLine(id, atSeconds);
-  if (!line) return;
-  const url = guideClipUrl(id, atSeconds);
-  const mine = ++guideGen;
-  stopSample();
-  duckBreathBed(0.32);
-  const lift = () => {
-    if (mine === guideGen) duckBreathBed(1, 0.55);
-  };
+export function warmGuides() {
+  for (const id of Object.keys(LINES) as MeditationId[]) {
+    prefetchGuide(id);
+  }
+}
+
+export function primeGuide() {
+  unlockAudioSync();
   try {
-    const el = guideElement();
-    el.onended = null;
-    try {
-      el.pause();
-    } catch {
-      /* first play */
-    }
-    el.muted = false;
-    el.volume = 0.68;
-    el.src = url;
-    el.onended = () => {
-      if (mine === guideGen) lift();
-    };
-    await el.play();
-    if (mine !== guideGen) {
-      try {
-        el.pause();
-      } catch {
-        /* superseded */
-      }
-    }
+    mountGuideElement();
   } catch {
-    if (mine !== guideGen) return;
+    /* jsdom / SSR */
+  }
+  warmGuides();
+}
+
+function remainingBeats(id: MeditationId, fromSeconds: number) {
+  return spokenBeats(id).filter((row) => row.atSeconds + 0.05 >= fromSeconds);
+}
+
+function playHtmlClip(el: HTMLAudioElement, url: string) {
+  el.muted = false;
+  el.volume = 1;
+  el.src = url;
+  const play = el.play();
+  if (play && typeof play.catch === "function") {
+    void play.catch(() => {
+      /* later beats may still fire */
+    });
+  }
+}
+
+/**
+ * Call only from a click. Never from useEffect.
+ * Opening line: HTMLAudio.play() inside the gesture (WKWebView's HTML media gate).
+ * Later lines: BufferSource.start(futureTime) issued in that same gesture, so a timer
+ * never has to call start().
+ */
+export function startGuideFromTap(id: MeditationId, fromSeconds = 0) {
+  unlockAudioSync();
+  hushVoice();
+  const mine = guideGen;
+  const needed = remainingBeats(id, fromSeconds);
+  const opening = needed[0];
+  if (opening && opening.atSeconds <= fromSeconds + 0.05) {
     try {
-      const buffer = await decodeUrl(url);
-      if (mine !== guideGen) return;
-      await playSample(buffer, 0.6);
+      playHtmlClip(mountGuideElement(), guideClipUrl(id, opening.atSeconds));
     } catch {
-      // Missed clip stays silent. A Mac novelty voice is worse than a missed line.
-      lift();
+      /* no Audio constructor */
     }
   }
+  const later = needed.filter((row) => row.atSeconds > fromSeconds + 0.05);
+  const laterReady = later.length > 0 && later.every((row) => peekDecoded(guideClipUrl(id, row.atSeconds)));
+  if (laterReady) {
+    const t0 = audioNow();
+    for (const row of later) {
+      const buffer = peekDecoded(guideClipUrl(id, row.atSeconds));
+      if (!buffer) continue;
+      scheduleBufferAt(buffer, t0 + Math.max(0, row.atSeconds - fromSeconds), 1);
+    }
+    return;
+  }
+  if (later.length === 0) return;
+  try {
+    for (const row of later) {
+      const delay = Math.max(0, (row.atSeconds - fromSeconds) * 1000);
+      htmlTimers.push(
+        window.setTimeout(() => {
+          if (mine !== guideGen) return;
+          playHtmlClip(mountGuideElement(), guideClipUrl(id, row.atSeconds));
+        }, delay),
+      );
+    }
+  } catch {
+    /* no Audio constructor */
+  }
+}
+
+/** @deprecated kept so older call sites compile; the tap uses startGuideFromTap. */
+export async function playGuide(id: MeditationId, atSeconds: number) {
+  startGuideFromTap(id, atSeconds);
 }
 
 export function speak(text: string) {

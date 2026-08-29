@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
 import {
+  getBreathBed,
   startBreathBed,
   startSoundscape,
   stopAllSoundscapes,
@@ -16,10 +17,10 @@ import {
   hushVoice,
   MEDITATIONS,
   meditationById,
-  playGuide,
   prefetchGuide,
   primeGuide,
-  guideIsPlaying,
+  startGuideFromTap,
+  warmGuides,
 } from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -42,50 +43,17 @@ export function WindDown() {
     setMode("pick");
   }
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    primeGuide();
+    warmGuides();
+    return () => {
       hushVoice();
       stopBreathBed();
       stopAllSoundscapes();
-    },
-    [],
-  );
+    };
+  }, []);
 
-  if (mode === "meditate") {
-    return (
-      <MeditationPlayer
-        id={meditationId}
-        onExit={(elapsed, completed) => {
-          logSession({
-            startedAt: new Date().toISOString(),
-            kind: "meditation",
-            meditationId,
-            durationSeconds: elapsed,
-            completed,
-          });
-        }}
-      />
-    );
-  }
-
-  if (mode === "sound") {
-    return (
-      <SoundPlayer
-        id={soundId}
-        onExit={(elapsed) => {
-          logSession({
-            startedAt: new Date().toISOString(),
-            kind: "soundscape",
-            soundscapeId: soundId,
-            durationSeconds: elapsed,
-            completed: elapsed >= 60,
-          });
-        }}
-      />
-    );
-  }
-
-  return (
+  const picker = (
     <div className="space-y-6">
       <section>
         <p className="text-[11px] tracking-[0.22em] text-sky-300/80 uppercase">Guided meditations</p>
@@ -101,8 +69,8 @@ export function WindDown() {
               onClick={() => {
                 primeGuide();
                 prefetchGuide(m.id);
-                void playGuide(m.id, 0);
                 startBreathBed();
+                startGuideFromTap(m.id, 0);
                 setMeditationId(m.id);
                 setMode("meditate");
               }}
@@ -138,6 +106,47 @@ export function WindDown() {
       </section>
     </div>
   );
+
+  return (
+    <>
+      <audio
+        id="circadia-guide"
+        playsInline
+        preload="auto"
+        aria-hidden
+        className="pointer-events-none fixed right-0 bottom-0 h-2 w-2 opacity-[0.02]"
+      />
+      {mode === "meditate" ? (
+        <MeditationPlayer
+          id={meditationId}
+          onExit={(elapsed, completed) => {
+            logSession({
+              startedAt: new Date().toISOString(),
+              kind: "meditation",
+              meditationId,
+              durationSeconds: elapsed,
+              completed,
+            });
+          }}
+        />
+      ) : mode === "sound" ? (
+        <SoundPlayer
+          id={soundId}
+          onExit={(elapsed) => {
+            logSession({
+              startedAt: new Date().toISOString(),
+              kind: "soundscape",
+              soundscapeId: soundId,
+              durationSeconds: elapsed,
+              completed: elapsed >= 60,
+            });
+          }}
+        />
+      ) : (
+        picker
+      )}
+    </>
+  );
 }
 
 function MeditationPlayer({
@@ -152,7 +161,6 @@ function MeditationPlayer({
   const [running, setRunning] = useState(true);
   const elapsedRef = useRef(0);
   const logged = useRef(false);
-  const spokenAt = useRef<number | null>(null);
   const bedRef = useRef<ReturnType<typeof startBreathBed> | null>(null);
   const beat = useMemo(() => beatAt(script, elapsed), [script, elapsed]);
   const done = elapsed >= script.durationSeconds;
@@ -172,16 +180,8 @@ function MeditationPlayer({
   }, [elapsed]);
 
   useEffect(() => {
-    const bed = startBreathBed();
-    bedRef.current = bed;
-    spokenAt.current = 0;
-    // Opening line starts in the tap. Re-calling playGuide here would pause that play()
-    // and retry outside the gesture. Replay only if the tap's clip is not already running.
-    if (!guideIsPlaying()) void playGuide(id, 0);
+    bedRef.current = getBreathBed() ?? startBreathBed();
     return () => {
-      hushVoice();
-      bed.stop();
-      if (bedRef.current === bed) bedRef.current = null;
       finish(true);
     };
     // unmount-only logging; id change remounts this player
@@ -190,16 +190,11 @@ function MeditationPlayer({
 
   useEffect(() => {
     if (!running || done) {
-      hushVoice();
-      spokenAt.current = null;
       bedRef.current?.setPhase("rest");
       return;
     }
     bedRef.current?.setPhase(beat.breath ?? "rest");
-    if (spokenAt.current === beat.atSeconds) return;
-    spokenAt.current = beat.atSeconds;
-    void playGuide(id, beat.atSeconds);
-  }, [beat.atSeconds, beat.breath, running, done, id]);
+  }, [beat.breath, running, done]);
 
   useEffect(() => {
     if (!running || done) return;
@@ -232,8 +227,13 @@ function MeditationPlayer({
           variant="outline"
           className="rounded-full border-white/15"
           onClick={() => {
-            if (!running || done) primeGuide();
-            setRunning((r) => !r);
+            if (running && !done) {
+              hushVoice();
+              setRunning(false);
+              return;
+            }
+            startGuideFromTap(id, elapsedRef.current);
+            setRunning(true);
           }}
         >
           {running && !done ? "Pause" : "Resume"}

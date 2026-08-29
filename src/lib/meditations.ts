@@ -114,6 +114,7 @@ export {
   speak,
   spokenBeats,
   spokenLine,
+  startGuideFromTap,
   unlockVoice,
-  guideIsPlaying,
+  warmGuides,
 } from "./voice";
