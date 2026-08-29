@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { MEDITATIONS, beatAt, spokenBeats, spokenLine } from "./meditations";
 import { BEDSIDE, pickBedsideVoice, scoreBedsideVoice, type VoiceLike } from "./voice";
@@ -78,6 +79,16 @@ describe("meditation guide copy", () => {
         expect(existsSync(path), path).toBe(true);
       }
     }
+  });
+
+  it("ships 44.1 kHz clips WebKit can decode", () => {
+    const probe = spawnSync(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "stream=sample_rate", "-of", "csv=p=0", "public/voice/478/0.mp3"],
+      { encoding: "utf8" },
+    );
+    expect(probe.status).toBe(0);
+    expect(probe.stdout.trim()).toBe("44100");
   });
 
   it("advances the orb through the script", () => {
