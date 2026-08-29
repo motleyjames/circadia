@@ -18,7 +18,8 @@ import {
 } from "@/lib/password";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
-import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS } from "@/lib/schedule";
+import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS, isCivilDate } from "@/lib/schedule";
+import { dedupeReportsByMorningDate } from "@/lib/morning-file";
 import { coerceChat, coerceConsultHistory, parkLiveConsult } from "@/lib/consult-threads";
 import type { CircadiaState, MorningReport, Profile, StudyState, StudyStatus } from "@/lib/types";
 import { isClock, normalizeClock } from "@/lib/windows";
@@ -675,7 +676,9 @@ export function hydrateState(parsed: unknown): CircadiaState {
   return {
     ...emptyState(),
     profile: coerceProfile(raw.profile),
-    reports: Array.isArray(raw.reports) ? raw.reports.map(coerceReport).filter((r): r is MorningReport => r !== null) : [],
+    reports: dedupeReportsByMorningDate(
+      Array.isArray(raw.reports) ? raw.reports.map(coerceReport).filter((r): r is MorningReport => r !== null) : [],
+    ),
     sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
     chat: parked.chat,
     activeConsultId: parked.activeConsultId,
@@ -772,7 +775,9 @@ function coerceSupplementKind(value: unknown): MorningReport["supplementKind"] {
 function coerceReport(value: unknown): MorningReport | null {
   if (!value || typeof value !== "object") return null;
   const r = value as Partial<MorningReport>;
-  if (typeof r.morningDate !== "string" || !isClock(r.wokeAt) || !isClock(r.fellAsleepAt)) return null;
+  if (typeof r.morningDate !== "string" || !isCivilDate(r.morningDate) || !isClock(r.wokeAt) || !isClock(r.fellAsleepAt)) {
+    return null;
+  }
   const rating = r.rating;
   if (rating !== 1 && rating !== 2 && rating !== 3 && rating !== 4 && rating !== 5) return null;
   return {

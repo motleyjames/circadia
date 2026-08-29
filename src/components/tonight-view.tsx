@@ -8,6 +8,7 @@ import { Mark } from "@/components/mark";
 import { WindDown } from "@/components/wind-down";
 import { buildSleepNotes } from "@/lib/advisor";
 import { shouldBeOffScreens } from "@/lib/notifications";
+import { morningPageStatus } from "@/lib/morning-file";
 import {
   clockFromDate,
   formatClock,
@@ -16,18 +17,14 @@ import {
   minutesUntilClock,
   overnightDuration,
   screenOffClock,
-  todayIsoDate,
 } from "@/lib/time";
 
 export function TonightView() {
   const { state } = useCircadia();
   const profile = state.profile;
   const [now, setNow] = useState(() => new Date());
-  const today = todayIsoDate(now);
-  const loggedToday = state.reports.some((r) => r.morningDate === today);
   const firstOpen = state.reports.length === 0;
-  const hour = now.getHours();
-  const morningWindow = hour >= 5 && hour < 13;
+  const page = morningPageStatus(state.reports, now);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 30_000);
@@ -75,12 +72,26 @@ export function TonightView() {
         </div>
       ) : null}
 
-      {morningWindow && !loggedToday ? (
+      {page === "filed" ? (
+        <Link
+          href="/check-in"
+          className="mt-6 block text-[13px] text-zinc-300 underline-offset-4 hover:underline"
+        >
+          This morning is filed
+        </Link>
+      ) : page === "unfiled-open" ? (
         <Link
           href="/check-in"
           className="mt-6 block text-[13px] text-zinc-300 underline-offset-4 hover:underline"
         >
           Morning interview is open
+        </Link>
+      ) : page === "unfiled-late" ? (
+        <Link
+          href="/check-in"
+          className="mt-6 block text-[13px] text-zinc-300 underline-offset-4 hover:underline"
+        >
+          This morning is not filed
         </Link>
       ) : null}
 

@@ -49,6 +49,23 @@ function parseIsoDate(iso: string): { year: number; month: number; day: number }
   return { year, month, day };
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Calendar date only. Parsed as local Y-M-D so a morning is not shifted by timezone. */
+export function formatMorningDate(iso: string): string {
+  const [ys, ms, ds] = iso.split("-");
+  const y = Number(ys);
+  const m = Number(ms);
+  const d = Number(ds);
+  if (!y || !m || !d || m > 12) return iso;
+  return `${MONTHS[m - 1]} ${d}`;
+}
+
+/** True only for a real YYYY-MM-DD civil date. `2026-13-40` is not one. */
+export function isCivilDate(iso: string): boolean {
+  return parseIsoDate(iso) !== null;
+}
+
 function formatUtcIso(utc: Date): string {
   const y = utc.getUTCFullYear();
   const m = String(utc.getUTCMonth() + 1).padStart(2, "0");

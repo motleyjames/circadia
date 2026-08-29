@@ -198,4 +198,37 @@ describe("hydrateState", () => {
   it("throws on garbage", () => {
     expect(() => hydrateState("nope")).toThrow(/Circadia/);
   });
+
+  it("collapses two reports on the same morningDate and drops a fake date", () => {
+    const state = hydrateState({
+      reports: [
+        {
+          id: "old",
+          morningDate: "2026-08-29",
+          wokeAt: "07:00",
+          fellAsleepAt: "23:30",
+          rating: 2,
+          createdAt: "2026-08-29T12:00:00.000Z",
+        },
+        {
+          id: "new",
+          morningDate: "2026-08-29",
+          wokeAt: "08:00",
+          fellAsleepAt: "01:00",
+          rating: 5,
+          createdAt: "2026-08-29T18:00:00.000Z",
+        },
+        {
+          morningDate: "2026-13-40",
+          wokeAt: "07:30",
+          fellAsleepAt: "23:30",
+          rating: 3,
+        },
+      ],
+    });
+    expect(state.reports).toHaveLength(1);
+    expect(state.reports[0]?.id).toBe("new");
+    expect(state.reports[0]?.rating).toBe(5);
+    expect(state.reports[0]?.wokeAt).toBe("08:00");
+  });
 });

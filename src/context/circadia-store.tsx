@@ -33,6 +33,11 @@ import {
 } from "@/lib/storage";
 import { assertSendable, buildStudyPack } from "@/lib/study";
 import { postInbox } from "@/lib/study-client";
+import {
+  reportForMorning,
+  upsertMorningReport,
+  withdrawMorningReport,
+} from "@/lib/morning-file";
 import type { CircadiaState, MorningReport, Profile, WindDownSession } from "@/lib/types";
 import { newId } from "@/lib/time";
 
@@ -212,7 +217,7 @@ type CircadiaContextValue = {
   changePassword: (current: string, next: string, confirm: string) => Promise<AuthResult>;
   saveProfile: (profile: Profile) => void;
   addReport: (report: Omit<MorningReport, "id" | "createdAt">) => void;
-  removeLatestReport: () => void;
+  withdrawMorning: (morningDate: string) => void;
   addSession: (session: Omit<WindDownSession, "id">) => void;
   sendChat: (text: string) => void;
   newConsult: () => void;
@@ -244,7 +249,7 @@ const NOOP_VALUE: CircadiaContextValue = {
   changePassword: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
   saveProfile: noop,
   addReport: noop,
-  removeLatestReport: noop,
+  withdrawMorning: noop,
   addSession: noop,
   sendChat: noop,
   newConsult: noop,
@@ -310,20 +315,19 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addReport = useCallback((report: Omit<MorningReport, "id" | "createdAt">) => {
-    const full: MorningReport = {
-      ...report,
-      id: newId(),
-      createdAt: new Date().toISOString(),
-    };
     let shouldSend = false;
     patch((prev) => {
       shouldSend = Boolean(prev.study.consented && !prev.demoWeek);
+      const existing = reportForMorning(prev.reports, report.morningDate);
+      const full: MorningReport = {
+        ...report,
+        id: existing?.id ?? newId(),
+        createdAt: new Date().toISOString(),
+      };
       return {
         ...prev,
         demoWeek: false,
-        reports: [...prev.reports.filter((r) => r.morningDate !== full.morningDate), full].sort((a, b) =>
-          a.morningDate.localeCompare(b.morningDate),
-        ),
+        reports: upsertMorningReport(prev.reports, full),
       };
     });
     if (shouldSend) {
@@ -332,16 +336,11 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const removeLatestReport = useCallback(() => {
-    patch((prev) => {
-      if (!prev.reports.length) return prev;
-      const latest = [...prev.reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate)).at(-1);
-      if (!latest) return prev;
-      return {
-        ...prev,
-        reports: prev.reports.filter((r) => r.id !== latest.id),
-      };
-    });
+  const withdrawMorning = useCallback((morningDate: string) => {
+    patch((prev) => ({
+      ...prev,
+      reports: withdrawMorningReport(prev.reports, morningDate),
+    }));
   }, []);
 
   const addSession = useCallback((session: Omit<WindDownSession, "id">) => {
@@ -532,7 +531,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       changePassword,
       saveProfile,
       addReport,
-      removeLatestReport,
+      withdrawMorning,
       addSession,
       sendChat,
       newConsult,
@@ -558,7 +557,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       changePassword,
       saveProfile,
       addReport,
-      removeLatestReport,
+      withdrawMorning,
       addSession,
       sendChat,
       newConsult,

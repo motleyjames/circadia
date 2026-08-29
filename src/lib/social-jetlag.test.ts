@@ -161,4 +161,15 @@ describe("social jet lag", () => {
     expect(msw([], DEFAULT_SCHEDULED_DAYS, NOW)).toBeNull();
     expect(minutesToClock(195)).toBe("03:15");
   });
+
+  it("does not count a duplicated morningDate as extra scheduled nights", () => {
+    const copies = [1, 2, 3].map((n) => ({
+      ...night("2026-08-31", "23:30", "07:00"),
+      id: `dup-${n}`,
+      createdAt: `2026-08-31T1${n}:00:00.000Z`,
+    }));
+    const free = ["2026-09-05", "2026-09-06"].map((d) => night(d, "01:30", "10:00"));
+    expect(sjlWithhold([...copies, ...free], DEFAULT_SCHEDULED_DAYS, NOW)).toBe("few-scheduled");
+    expect(computeSocialJetLag([...copies, ...free], DEFAULT_SCHEDULED_DAYS, NOW)).toBeNull();
+  });
 });

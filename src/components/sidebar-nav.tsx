@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
 import { TABS } from "@/lib/nav";
+import { morningFileDue } from "@/lib/morning-file";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ export function SidebarNav() {
   const pathname = usePathname();
   const { state } = useCircadia();
   const study = state.study;
+  const morningDue = morningFileDue(state.reports);
 
   return (
     <aside className="relative z-20 hidden w-56 shrink-0 flex-col border-r border-white/8 bg-[#080712]/90 md:flex">
@@ -36,7 +38,15 @@ export function SidebarNav() {
                 active ? "bg-white/7 text-violet-100" : "text-zinc-500 hover:bg-white/4 hover:text-zinc-300",
               )}
             >
-              <Icon className={cn("size-4", active && "drop-shadow-[0_0_10px_rgba(196,181,253,0.8)]")} />
+              <span className="relative">
+                <Icon className={cn("size-4", active && "drop-shadow-[0_0_10px_rgba(196,181,253,0.8)]")} />
+                {tab.href === "/check-in" && morningDue ? (
+                  <span
+                    className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-sky-300"
+                    aria-hidden
+                  />
+                ) : null}
+              </span>
               {tab.label}
             </Link>
           );
