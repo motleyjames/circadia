@@ -7,6 +7,7 @@ import {
   obligatedMorningCount,
   toggleScheduledDay,
   weekdayFromMorningDate,
+  shiftIsoDate,
 } from "./schedule";
 
 describe("scheduled days", () => {
@@ -43,6 +44,9 @@ describe("scheduled days", () => {
     expect(weekdayFromMorningDate("2024-02-29")).toBe(4);
     expect(weekdayFromMorningDate("2024-02-30")).toBeNull();
     expect(weekdayFromMorningDate("August 30")).toBeNull();
+    expect(shiftIsoDate("2026-09-06", -27)).toBe("2026-08-10");
+    expect(shiftIsoDate("2026-03-01", -1)).toBe("2026-02-28");
+    expect(shiftIsoDate("nope", -1)).toBeNull();
   });
 
   it("classifies a night by morningDate against the person's schedule", () => {

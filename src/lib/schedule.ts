@@ -35,14 +35,8 @@ export function describeScheduledDays(days: ScheduledDays): string {
   return names.join(" · ");
 }
 
-/**
- * Calendar weekday of a morning YYYY-MM-DD.
- * Parsed as a date, not a timestamp — `new Date("2026-08-30")` is UTC midnight
- * and becomes the previous evening in US timezones.
- * Returns null if the stamp is not a real civil date.
- */
-export function weekdayFromMorningDate(morningDate: string): number | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(morningDate);
+function parseIsoDate(iso: string): { year: number; month: number; day: number } | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!match) return null;
   const year = Number(match[1]);
   const month = Number(match[2]);
@@ -52,7 +46,34 @@ export function weekdayFromMorningDate(morningDate: string): number | null {
   if (utc.getUTCFullYear() !== year || utc.getUTCMonth() !== month - 1 || utc.getUTCDate() !== day) {
     return null;
   }
-  return utc.getUTCDay();
+  return { year, month, day };
+}
+
+function formatUtcIso(utc: Date): string {
+  const y = utc.getUTCFullYear();
+  const m = String(utc.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(utc.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Calendar weekday of a morning YYYY-MM-DD.
+ * Parsed as a date, not a timestamp — `new Date("2026-08-30")` is UTC midnight
+ * and becomes the previous evening in US timezones.
+ * Returns null if the stamp is not a real civil date.
+ */
+export function weekdayFromMorningDate(morningDate: string): number | null {
+  const parsed = parseIsoDate(morningDate);
+  if (!parsed) return null;
+  return new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day)).getUTCDay();
+}
+
+/** Shift a civil YYYY-MM-DD. Null if the stamp is not a real date. */
+export function shiftIsoDate(iso: string, deltaDays: number): string | null {
+  const parsed = parseIsoDate(iso);
+  if (!parsed) return null;
+  const utc = new Date(Date.UTC(parsed.year, parsed.month - 1, parsed.day + deltaDays));
+  return formatUtcIso(utc);
 }
 
 /** Classify a night by the morning it was logged. Null if the date is unusable. */
