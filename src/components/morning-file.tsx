@@ -21,82 +21,72 @@ export function MorningFile({
   const night = filedNight(report, units);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-8 pb-10">
-      <p className="text-[12px] text-zinc-500">{night.dateLabel}</p>
-      <p className="font-heading mt-3 text-[3.15rem] leading-none tracking-tight text-zinc-50">
-        {night.durationLabel}
-      </p>
-      <p className="mt-3 text-[14px] text-zinc-400">
-        {night.asleepLabel}
-        <span className="mx-2 text-zinc-600">→</span>
-        {night.wakeLabel}
-      </p>
-
-      <div className="mt-8 max-w-md">
-        <div className="relative h-[7px] rounded-full bg-white/[0.07]">
-          <div
-            className="absolute inset-y-0 rounded-full bg-gradient-to-r from-violet-300 to-sky-300"
-            style={{ left: `${night.spanStartPercent}%`, width: `${night.spanWidthPercent}%` }}
-          />
-        </div>
-        <div
-          className="relative mt-2 flex justify-between text-[11px] text-zinc-500"
-          style={{
-            marginLeft: `${night.spanStartPercent}%`,
-            width: `${night.spanWidthPercent}%`,
-          }}
-        >
-          <span>{night.asleepLabel}</span>
-          <span>{night.wakeLabel}</span>
-        </div>
-      </div>
-
-      <RatingMarks rating={night.rating} word={night.ratingWord} />
-
-      {demoWeek ? (
-        <p className="mt-6 max-w-md text-[12px] leading-relaxed text-amber-100/80">
-          Sample week. A real morning replaces this page.
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-10 pb-12">
+      <div className="mx-auto w-full max-w-[22rem]">
+        <p className="text-center text-[12px] text-zinc-500">{night.dateLabel}</p>
+        <p className="font-heading mt-4 text-center text-[3.4rem] leading-none tracking-tight text-zinc-50">
+          {night.durationLabel}
         </p>
-      ) : null}
+        <p className="mt-3 text-center text-[14px] text-zinc-400">
+          {night.asleepLabel}
+          <span className="mx-2 text-zinc-600">→</span>
+          {night.wakeLabel}
+        </p>
 
-      <dl className="mt-10 max-w-md divide-y divide-white/[0.06] border-y border-white/[0.06]">
-        {night.facts.map((fact) => (
-          <div key={fact.label} className="flex items-baseline justify-between gap-6 py-[0.85rem]">
-            <dt className="text-[12px] text-zinc-500">{fact.label}</dt>
-            <dd className={cn("text-[13px] text-zinc-100", fact.warn && "text-amber-100/90")}>{fact.value}</dd>
+        <div className="mt-8">
+          <div className="relative h-[6px] rounded-full bg-white/[0.07]">
+            <div
+              className="absolute inset-y-0 rounded-full bg-gradient-to-r from-violet-300 to-sky-300"
+              style={{ left: `${night.spanStartPercent}%`, width: `${night.spanWidthPercent}%` }}
+            />
           </div>
-        ))}
-      </dl>
+        </div>
 
-      {night.dream ? (
-        <p className="mt-6 max-w-md text-[13px] leading-relaxed text-zinc-400">
-          <span className="text-zinc-600">Dream · </span>
-          {night.dream}
-        </p>
-      ) : null}
+        <RatingMarks rating={night.rating} word={night.ratingWord} />
 
-      <div className="mt-10 max-w-md">
-        <Link
-          href="/insights"
-          prefetch={false}
-          className="text-[14px] text-sky-300/90 underline-offset-4 hover:text-sky-200 hover:underline"
-        >
-          Notes for this morning
-        </Link>
-        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-zinc-600">
-          <button
-            type="button"
-            className="hover:text-zinc-400"
-            onClick={onCorrect}
+        {demoWeek ? (
+          <p className="mt-6 text-center text-[12px] leading-relaxed text-amber-100/80">
+            Sample week. A real morning replaces this page.
+          </p>
+        ) : null}
+
+        <dl className="mt-10 divide-y divide-white/[0.06] border-y border-white/[0.06]">
+          {night.facts.map((fact) => (
+            <div key={fact.label} className="flex items-baseline justify-between gap-6 py-[0.8rem]">
+              <dt className="text-[12px] text-zinc-500">{fact.label}</dt>
+              <dd className={cn("text-[13px] tabular-nums text-zinc-100", fact.warn && "text-amber-100/90")}>
+                {fact.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        {night.dream ? (
+          <p className="mt-6 text-[13px] leading-relaxed text-zinc-400">
+            <span className="text-zinc-600">Dream · </span>
+            {night.dream}
+          </p>
+        ) : null}
+
+        <div className="mt-10 text-center">
+          <Link
+            href="/insights"
+            prefetch={false}
+            className="text-[14px] text-sky-300/90 underline-offset-4 hover:text-sky-200 hover:underline"
           >
-            Change an answer
-          </button>
-          <span aria-hidden className="text-zinc-700">
-            ·
-          </span>
-          <button type="button" className="hover:text-zinc-400" onClick={onWithdraw}>
-            Withdraw
-          </button>
+            Notes for this morning
+          </Link>
+          <div className="mt-4 flex justify-center gap-x-3 text-[12px] text-zinc-600">
+            <button type="button" className="hover:text-zinc-400" onClick={onCorrect}>
+              Change an answer
+            </button>
+            <span aria-hidden className="text-zinc-700">
+              ·
+            </span>
+            <button type="button" className="hover:text-zinc-400" onClick={onWithdraw}>
+              Withdraw
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -105,15 +95,12 @@ export function MorningFile({
 
 function RatingMarks({ rating, word }: { rating: SleepRating; word: string }) {
   return (
-    <div className="mt-8 flex items-center gap-3">
+    <div className="mt-6 flex items-center justify-center gap-3">
       <div className="flex gap-[5px]">
         {([1, 2, 3, 4, 5] as const).map((n) => (
           <span
             key={n}
-            className={cn(
-              "h-[5px] w-5 rounded-full",
-              n <= rating ? "bg-sky-300/85" : "bg-white/10",
-            )}
+            className={cn("h-[5px] w-5 rounded-full", n <= rating ? "bg-sky-300/85" : "bg-white/10")}
           />
         ))}
       </div>
