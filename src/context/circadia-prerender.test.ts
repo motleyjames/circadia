@@ -45,7 +45,7 @@ describe("useCircadia during prerender", () => {
   });
 
   it("does not leave a JSON dump in any diary surface source", () => {
-    const ban = /Export JSON|Import JSON|Export everything on this computer/;
+    const ban = /Export JSON|Import JSON|Export everything on this computer|nights leave on their own/;
     const files = [
       "src/components/library-view.tsx",
       "src/components/you-view.tsx",
@@ -57,6 +57,8 @@ describe("useCircadia during prerender", () => {
       "src/components/study-panel.tsx",
       "src/components/chat-bar.tsx",
       "src/components/check-in-flow.tsx",
+      "src/components/sidebar-nav.tsx",
+      "src/components/bottom-nav.tsx",
     ];
     for (const rel of files) {
       const text = readFileSync(join(process.cwd(), rel), "utf8");
