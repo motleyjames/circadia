@@ -134,9 +134,16 @@ function distinctiveSlices(text: string): string[] {
 }
 
 /** Fail closed: if a pack still contains a local secret, do not send it. */
-export function anonymityViolations(pack: StudyPack, state: CircadiaState): string[] {
-  const blob = JSON.stringify(pack).toLowerCase();
+export function anonymityViolations(payload: unknown, state: CircadiaState): string[] {
+  const blob = JSON.stringify(payload).toLowerCase();
   const hits: string[] = [];
+
+  if (blob.includes('"name":')) hits.push("name");
+  if (blob.includes('"email":')) hits.push("email");
+  if (blob.includes('"phone":')) hits.push("phone");
+  if (blob.includes('"heightcm":')) hits.push("height");
+  if (blob.includes('"weightkg":')) hits.push("weight");
+  if (blob.includes('"age":')) hits.push("age");
 
   const name = state.profile?.name?.trim() ?? "";
   if (name.length >= 3 && name.toLowerCase() !== "you" && blob.includes(name.toLowerCase())) {
@@ -187,6 +194,11 @@ export function anonymityViolations(pack: StudyPack, state: CircadiaState): stri
   }
 
   return [...new Set(hits)];
+}
+
+/** Same scan for roster, night pack, and fault. Empty array means the payload may leave. */
+export function assertSendable(payload: unknown, state: CircadiaState): string[] {
+  return anonymityViolations(payload, state);
 }
 
 export type ValidateResult = { ok: true; value: StudyPack } | { ok: false; error: string };

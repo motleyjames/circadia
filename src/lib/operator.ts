@@ -1,8 +1,10 @@
 import { isEmail, isPhone } from "@/lib/contact";
-import type { CircadiaState, FaultEvent, RosterEvent } from "@/lib/types";
+import { ageBand, bmiBand } from "@/lib/study";
+import type { AgeBand, BmiBand, CircadiaState, FaultEvent, RosterEvent, RosterEventV2 } from "@/lib/types";
 import { APP_VERSION } from "@/lib/version";
 
 export const ROSTER_SCHEMA = "circadia-roster-v1" as const;
+export const ROSTER_SCHEMA_V2 = "circadia-roster-v2" as const;
 export const FAULT_SCHEMA = "circadia-fault-v1" as const;
 
 const UUID_RE =
@@ -16,22 +18,18 @@ function extraKeys(obj: object, allowed: Set<string>): string[] {
   return Object.keys(obj).filter((k) => !allowed.has(k));
 }
 
-export function buildRoster(state: CircadiaState): RosterEvent {
+export function buildRoster(state: CircadiaState): RosterEventV2 {
   const profile = state.profile;
   const participantId = state.study.participantId;
   if (!profile) throw new Error("No profile.");
   if (!participantId) throw new Error("No participant number.");
   return {
-    schema: ROSTER_SCHEMA,
+    schema: ROSTER_SCHEMA_V2,
     at: new Date().toISOString(),
     participantId,
     appVersion: APP_VERSION,
-    name: null,
-    email: null,
-    phone: null,
-    age: profile.age,
-    heightCm: profile.heightCm,
-    weightKg: profile.weightKg,
+    ageBand: ageBand(profile.age),
+    bmiBand: bmiBand(profile.heightCm, profile.weightKg),
     activity: profile.activity,
     struggles: [...profile.struggles],
     targetSleep: profile.targetSleep,
@@ -74,10 +72,34 @@ const ROSTER_KEYS = new Set([
   "targetWake",
 ]);
 
+const ROSTER_V2_KEYS = new Set([
+  "schema",
+  "at",
+  "participantId",
+  "appVersion",
+  "ageBand",
+  "bmiBand",
+  "activity",
+  "struggles",
+  "targetSleep",
+  "targetWake",
+]);
+
 const FAULT_KEYS = new Set(["schema", "at", "participantId", "appVersion", "message", "stack", "href"]);
 
 export type RosterResult = { ok: true; value: RosterEvent } | { ok: false; error: string };
+export type RosterV2Result = { ok: true; value: RosterEventV2 } | { ok: false; error: string };
 export type FaultResult = { ok: true; value: FaultEvent } | { ok: false; error: string };
+
+const AGE_BANDS: AgeBand[] = ["13-17", "18-24", "25-34", "35-44", "45-54", "55-64", "65+"];
+const BMI_BANDS: BmiBand[] = [
+  "unconfirmed",
+  "underweight",
+  "healthy",
+  "overweight",
+  "obesity-1",
+  "obesity-2",
+];
 
 export function validateRoster(raw: unknown): RosterResult {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -147,6 +169,56 @@ export function validateRoster(raw: unknown): RosterResult {
       targetSleep: p.targetSleep,
       targetWake: p.targetWake,
     } as RosterEvent,
+  };
+}
+
+export function validateRosterV2(raw: unknown): RosterV2Result {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, error: "Roster must be an object." };
+  }
+  const extra = extraKeys(raw, ROSTER_V2_KEYS);
+  if (extra.length) return { ok: false, error: `Unknown roster field: ${extra[0]}` };
+  const p = raw as Record<string, unknown>;
+  if (p.schema !== ROSTER_SCHEMA_V2) return { ok: false, error: "Unknown schema." };
+  if (typeof p.at !== "string" || p.at.length < 10 || p.at.length > 40) {
+    return { ok: false, error: "Invalid roster time." };
+  }
+  if (typeof p.participantId !== "string" || !UUID_RE.test(p.participantId)) {
+    return { ok: false, error: "Invalid participant number." };
+  }
+  if (typeof p.appVersion !== "string" || p.appVersion.length > 32) {
+    return { ok: false, error: "Invalid app version." };
+  }
+  if (!AGE_BANDS.includes(p.ageBand as AgeBand)) return { ok: false, error: "Invalid age band." };
+  if (!BMI_BANDS.includes(p.bmiBand as BmiBand)) return { ok: false, error: "Invalid BMI band." };
+  if (
+    p.activity !== "sedentary" &&
+    p.activity !== "light" &&
+    p.activity !== "moderate" &&
+    p.activity !== "high"
+  ) {
+    return { ok: false, error: "Invalid activity." };
+  }
+  if (!Array.isArray(p.struggles) || p.struggles.some((s) => s !== "falling" && s !== "staying")) {
+    return { ok: false, error: "Invalid struggles." };
+  }
+  if (!isClock(p.targetSleep) || !isClock(p.targetWake)) {
+    return { ok: false, error: "Invalid target clocks." };
+  }
+  return {
+    ok: true,
+    value: {
+      schema: ROSTER_SCHEMA_V2,
+      at: p.at,
+      participantId: p.participantId,
+      appVersion: p.appVersion,
+      ageBand: p.ageBand as AgeBand,
+      bmiBand: p.bmiBand as BmiBand,
+      activity: p.activity,
+      struggles: p.struggles as RosterEventV2["struggles"],
+      targetSleep: p.targetSleep as string,
+      targetWake: p.targetWake as string,
+    },
   };
 }
 

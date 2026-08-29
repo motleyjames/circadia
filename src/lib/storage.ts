@@ -29,7 +29,6 @@ export const VAULT_KEY = "circadia:v1:files";
 export const SESSION_KEY = "circadia:v1:open";
 export const LAST_LOGIN_KEY = "circadia:v1:last-login";
 export const LOCKS_KEY = "circadia:v1:locks";
-/** AES master for this origin. Survives quit. Cleared on Log out. Never copied to vault.json. */
 export const SESSION_UNLOCK_KEY = "circadia:v1:unlock";
 const LEGACY_SESSION_KEY = "circadia:v1:session";
 
@@ -197,46 +196,66 @@ type PersistedUnlock = {
   master: string;
 };
 
-function readPersistedUnlock(): { login: string; master: Uint8Array } | null {
-  if (typeof window === "undefined") return null;
-  const raw = window.localStorage.getItem(SESSION_UNLOCK_KEY);
-  if (!raw) return null;
+function dropLegacyUnlock(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(SESSION_UNLOCK_KEY);
+}
+
+async function persistUnlockNow(login: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  dropLegacyUnlock();
+  const master = getMaster(login);
+  if (!master) return;
   try {
-    const parsed = JSON.parse(raw) as Partial<PersistedUnlock>;
-    if (parsed.v !== 1 || typeof parsed.login !== "string" || typeof parsed.master !== "string") return null;
-    if (!parsed.login || !parsed.master) return null;
-    const master = bytesFromBase64(parsed.master);
+    const res = await fetch("/api/session-key", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ login, master: bytesToBase64(master) }),
+    });
+    if (!res.ok) return;
+  } catch {
+    /* fail closed: next launch requires the password */
+  }
+}
+
+async function fetchPersistedUnlock(login: string): Promise<{ login: string; master: Uint8Array } | null> {
+  try {
+    const res = await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const body = (await res.json()) as Partial<PersistedUnlock> & { ok?: boolean };
+    if (!body?.ok || typeof body.login !== "string" || typeof body.master !== "string") return null;
+    const master = bytesFromBase64(body.master);
     if (master.length !== 32) return null;
-    return { login: parsed.login, master };
+    return { login: body.login, master };
   } catch {
     return null;
   }
 }
 
-function writePersistedUnlock(login: string, master: Uint8Array): void {
-  if (typeof window === "undefined") return;
-  const blob: PersistedUnlock = { v: 1, login, master: bytesToBase64(master) };
-  window.localStorage.setItem(SESSION_UNLOCK_KEY, JSON.stringify(blob));
-}
-
-function clearPersistedUnlock(): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem(SESSION_UNLOCK_KEY);
+async function deletePersistedUnlock(login: string): Promise<void> {
+  dropLegacyUnlock();
+  try {
+    await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, { method: "DELETE" });
+  } catch {
+    /* localStorage already dropped */
+  }
 }
 
 function rememberOpen(login: string): void {
   openLogin = login;
   writeLastLogin(login);
-  const master = getMaster(login);
-  if (master) writePersistedUnlock(login, master);
 }
 
 async function restorePersistedSession(): Promise<void> {
-  const held = readPersistedUnlock();
+  dropLegacyUnlock();
+  const login = readLastLogin();
+  if (!login) return;
+  const held = await fetchPersistedUnlock(login);
   if (!held) return;
   const file = readRawVault()[held.login];
   if (!file) {
-    clearPersistedUnlock();
+    held.master.fill(0);
+    await deletePersistedUnlock(held.login);
     return;
   }
   try {
@@ -250,7 +269,7 @@ async function restorePersistedSession(): Promise<void> {
     held.master.fill(0);
     dropMaster(held.login);
     plainByLogin.delete(held.login);
-    clearPersistedUnlock();
+    await deletePersistedUnlock(held.login);
   }
 }
 
@@ -312,6 +331,7 @@ export async function pushVaultToDisk(): Promise<void> {
 
 export async function bootVaultFromDisk(): Promise<void> {
   if (typeof window === "undefined") return;
+  dropLegacyUnlock();
   migrateToVault();
   let disk = emptyDiskVault();
   try {
@@ -453,6 +473,7 @@ export async function createFile(input: {
     rememberOpen(login);
     const gen = bumpGen(login);
     await persistEncrypted(login, cloneState(state), gen);
+    await persistUnlockNow(login);
     schedulePersistDisk();
     return { ok: true, login, state };
   } catch (err) {
@@ -502,6 +523,7 @@ export async function openFile(
     rememberOpen(login);
     const gen = bumpGen(login);
     await persistEncrypted(login, cloneState(state), gen);
+    await persistUnlockNow(login);
     schedulePersistDisk();
     return { ok: true, login, state };
   } catch (err) {
@@ -519,12 +541,13 @@ export async function closeFile(): Promise<void> {
   const login = openLogin;
   openLogin = null;
   await flushVaultWrites();
-  clearPersistedUnlock();
   if (login) {
     dropMaster(login);
     plainByLogin.delete(login);
     writeLastLogin(login);
+    await deletePersistedUnlock(login);
   } else if (typeof window !== "undefined") {
+    dropLegacyUnlock();
     window.localStorage.removeItem(SESSION_KEY);
     window.localStorage.removeItem(LEGACY_SESSION_KEY);
   }
@@ -542,12 +565,14 @@ export function eraseCurrentFile(): void {
     delete files[login];
     writeRawVault(files);
     deleteLock(login);
+    void deletePersistedUnlock(login);
+  } else {
+    dropLegacyUnlock();
   }
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(SESSION_KEY);
     window.localStorage.removeItem(LEGACY_SESSION_KEY);
   }
-  clearPersistedUnlock();
   writeLastLogin(null);
   schedulePersistDisk();
 }
@@ -587,6 +612,8 @@ export async function attachLoginToCurrent(
     rememberOpen(nextKey);
     const gen = bumpGen(nextKey);
     await persistEncrypted(nextKey, cloneState(nextState), gen);
+    if (current !== nextKey) await deletePersistedUnlock(current);
+    await persistUnlockNow(nextKey);
     schedulePersistDisk();
     return { ok: true, login: nextKey, state: nextState };
   } catch (err) {
@@ -615,7 +642,7 @@ export async function changePassword(
     const minted = await newPasswordLock(nextPassword);
     holdMaster(login, minted.master);
     setLock(login, minted.lock);
-    writePersistedUnlock(login, minted.master);
+    await persistUnlockNow(login);
     const gen = bumpGen(login);
     await persistEncrypted(login, cloneState(live), gen);
     schedulePersistDisk();

@@ -43,6 +43,7 @@ describe("Dock install invariants", () => {
     expect(launcher).not.toMatch(/config\.allowsInlineMediaPlayback/);
     expect(launcher).not.toContain("?v=");
     expect(existsSync("src/app/api/vault/route.ts")).toBe(true);
+    expect(existsSync("src/app/api/session-key/route.ts")).toBe(true);
     expect(nextConfig).toContain("/((?!api/).*)");
     expect(serve).toContain("needsBuild");
     expect(serve).toContain('path.join(root, "public")');
@@ -74,6 +75,12 @@ describe("Dock install invariants", () => {
     expect(authGate).toContain("stays signed in");
     expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("SESSION_UNLOCK_KEY");
     expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("restorePersistedSession");
+    expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("/api/session-key");
+    expect(readFileSync("src/lib/storage.ts", "utf8")).not.toMatch(
+      /localStorage\.setItem\(\s*SESSION_UNLOCK_KEY/,
+    );
+    expect(readFileSync("src/lib/keychain.ts", "utf8")).toContain("add-generic-password");
+    expect(readFileSync("src/app/api/session-key/route.ts", "utf8")).toContain("isLocalRequest");
     expect(onboarding).not.toContain("James can reach");
     expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("Closing the app does not log you out");
     expect(readFileSync("README.md", "utf8")).toContain("stays signed in");
@@ -91,6 +98,7 @@ describe("Dock install invariants", () => {
     const mw = readFileSync("src/middleware.ts", "utf8");
     expect(mw).toContain('CIRCADIA_SURFACE === "mod"');
     expect(mw).toContain("/api/moderator");
+    expect(mw).toContain("/api/session-key");
     expect(mw).toContain("NextResponse.redirect");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("isOperatorSurface");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).not.toContain("operatorPage");

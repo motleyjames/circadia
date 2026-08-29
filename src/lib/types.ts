@@ -169,9 +169,9 @@ export type RosterEvent = {
   at: string;
   participantId: string;
   appVersion: string;
-  /** Legacy inbox files may still carry a name. New cards send null. Operator never displays it. */
+  /** Legacy inbox files may still carry a name. New cards are v2 and omit this field. Operator never displays it. */
   name: string | null;
-  /** Kept on the schema so old inbox files still parse. New cards send null. */
+  /** Kept on the schema so old inbox files still parse. New cards omit it. */
   email: string | null;
   phone: string | null;
   age: number;
@@ -182,6 +182,22 @@ export type RosterEvent = {
   targetSleep: string;
   targetWake: string;
 };
+
+/** Outbound roster. Bands only — no name, email, phone, age, height, or weight. */
+export type RosterEventV2 = {
+  schema: "circadia-roster-v2";
+  at: string;
+  participantId: string;
+  appVersion: string;
+  ageBand: AgeBand;
+  bmiBand: BmiBand;
+  activity: ActivityLevel;
+  struggles: Struggle[];
+  targetSleep: string;
+  targetWake: string;
+};
+
+export type AnyRosterEvent = RosterEvent | RosterEventV2;
 
 export type FaultEvent = {
   schema: "circadia-fault-v1";
