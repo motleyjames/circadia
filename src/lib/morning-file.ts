@@ -8,20 +8,40 @@ import type {
   Units,
   WindDownHelp,
 } from "@/lib/types";
-import { isCivilDate } from "@/lib/schedule";
-import { formatClock, formatDuration, overnightDuration, todayIsoDate } from "@/lib/time";
-import { formatMorningDate } from "@/lib/schedule";
+import { isCivilDate, formatMorningDate } from "@/lib/schedule";
+import {
+  clockToMinutes,
+  formatClock,
+  formatDuration,
+  overnightDuration,
+  todayIsoDate,
+} from "@/lib/time";
 
-export type FiledRow = {
-  kicker: string;
-  body: string;
+export type MorningPageStatus = "filed" | "unfiled-open" | "unfiled-late" | "quiet";
+
+export type FiledFact = {
+  label: string;
+  value: string;
+  warn?: boolean;
 };
 
-/**
- * How Tonight and the Morning tab should treat today.
- * `quiet` is 00:00–04:59 — not a morning yet; do not nag a second page.
- */
-export type MorningPageStatus = "filed" | "unfiled-open" | "unfiled-late" | "quiet";
+export type FiledNight = {
+  dateLabel: string;
+  durationLabel: string;
+  asleepLabel: string;
+  wakeLabel: string;
+  rating: SleepRating;
+  ratingWord: string;
+  spanStartPercent: number;
+  spanWidthPercent: number;
+  facts: FiledFact[];
+  dream?: string;
+};
+
+/** Open the morning prompt this many minutes before programmed wake. */
+export const MORNING_OPEN_BEFORE_WAKE_MINUTES = 30;
+/** First stretch after wake still reads as “this morning,” not a late catch-up. */
+export const MORNING_OPEN_AFTER_WAKE_MINUTES = 6 * 60;
 
 const RATING_WORD: Record<SleepRating, string> = {
   1: "wrecked",
@@ -30,6 +50,8 @@ const RATING_WORD: Record<SleepRating, string> = {
   4: "decent",
   5: "restored",
 };
+
+const SPAN_PAD_MINUTES = 90;
 
 /**
  * The file for one civil morning. If a diary ever stacked two rows on the
@@ -83,166 +105,166 @@ export function withdrawMorningReport(reports: MorningReport[], morningDate: str
   return reports.filter((r) => r.morningDate !== morningDate);
 }
 
-export function morningPageStatus(reports: MorningReport[], now = new Date()): MorningPageStatus {
+/**
+ * Tonight / nav timing. The Morning tab itself never locks — if you are
+ * awake you can file. Prompts wait for the programmed wake, not 5am.
+ */
+export function morningPageStatus(
+  reports: MorningReport[],
+  now = new Date(),
+  targetWake = "07:00",
+): MorningPageStatus {
   const today = todayIsoDate(now);
   if (reportForMorning(reports, today)) return "filed";
-  const hour = now.getHours();
-  if (hour < 5) return "quiet";
-  if (hour < 13) return "unfiled-open";
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const wakeMinutes = clockToMinutes(targetWake);
+  const openMinutes = Math.max(0, wakeMinutes - MORNING_OPEN_BEFORE_WAKE_MINUTES);
+  if (nowMinutes < openMinutes) return "quiet";
+  if (nowMinutes < wakeMinutes + MORNING_OPEN_AFTER_WAKE_MINUTES) return "unfiled-open";
   return "unfiled-late";
 }
 
-export function morningFileDue(reports: MorningReport[], now = new Date()): boolean {
-  const status = morningPageStatus(reports, now);
+export function morningFileDue(
+  reports: MorningReport[],
+  now = new Date(),
+  targetWake = "07:00",
+): boolean {
+  const status = morningPageStatus(reports, now, targetWake);
   return status === "unfiled-open" || status === "unfiled-late";
 }
 
-export function filedMorningRows(report: MorningReport, units: Units): FiledRow[] {
-  const duration = formatDuration(overnightDuration(report.fellAsleepAt, report.wokeAt));
-  const rows: FiledRow[] = [
-    {
-      kicker: "Clock",
-      body: `Asleep around ${formatClock(report.fellAsleepAt, units)}. Up at ${formatClock(report.wokeAt, units)}. About ${duration}.`,
-    },
-    {
-      kicker: "How it felt",
-      body: `${report.rating} — ${RATING_WORD[report.rating]}.`,
-    },
-    {
-      kicker: "Alcohol",
-      body: alcoholLine(report),
-    },
-    {
-      kicker: "Screens",
-      body: screenLine(report.screenOffMinutes),
-    },
-    {
-      kicker: "Time to sleep",
-      body: latencyLine(report.sleepLatencyMinutes),
-    },
-    {
-      kicker: "Staying asleep",
-      body: wakingLine(report),
-    },
-    {
-      kicker: "Sleep aid",
-      body: aidLine(report),
-    },
-    {
-      kicker: "Wind-down",
-      body: windLine(report.windDownHelped),
-    },
+export function ratingWord(rating: SleepRating): string {
+  return RATING_WORD[rating];
+}
+
+export function filedNight(report: MorningReport, units: Units): FiledNight {
+  const durationMinutes = overnightDuration(report.fellAsleepAt, report.wokeAt);
+  const span = sleepSpanPercents(durationMinutes);
+  const facts: FiledFact[] = [
+    { label: "Felt", value: RATING_WORD[report.rating], warn: report.rating <= 2 },
+    { label: "Alcohol", value: alcoholValue(report), warn: report.drank },
+    { label: "Screens", value: screenValue(report.screenOffMinutes), warn: report.screenOffMinutes <= 15 },
+    { label: "To sleep", value: latencyValue(report.sleepLatencyMinutes), warn: report.sleepLatencyMinutes >= 30 },
+    { label: "Night", value: wakingValue(report), warn: report.wokeInNight },
+    { label: "Aid", value: aidValue(report) },
+    { label: "Wind-down", value: windValue(report.windDownHelped) },
   ];
-  if (report.dream?.text.trim()) {
-    rows.push({
-      kicker: "Dream",
-      body: report.dream.wantMeaning
-        ? `${report.dream.text.trim()} · Circadia may look.`
-        : `${report.dream.text.trim()} · stored only.`,
-    });
-  }
-  return rows;
+  const dream = report.dream?.text.trim();
+  return {
+    dateLabel: formatMorningDate(report.morningDate),
+    durationLabel: formatDuration(durationMinutes),
+    asleepLabel: formatClock(report.fellAsleepAt, units),
+    wakeLabel: formatClock(report.wokeAt, units),
+    rating: report.rating,
+    ratingWord: RATING_WORD[report.rating],
+    spanStartPercent: span.startPercent,
+    spanWidthPercent: span.widthPercent,
+    facts,
+    dream: dream || undefined,
+  };
 }
 
-export function filedMorningKicker(morningDate: string): string {
-  return `One night. One page. ${formatMorningDate(morningDate)}.`;
+/**
+ * Sleep block on a padded overnight track.
+ * Shoulders are SPAN_PAD_MINUTES on each side, so the fill is duration / (duration + 2×pad).
+ */
+export function sleepSpanPercents(durationMinutes: number): { startPercent: number; widthPercent: number } {
+  const duration = Math.max(1, durationMinutes);
+  const windowMinutes = duration + SPAN_PAD_MINUTES * 2;
+  return {
+    startPercent: (SPAN_PAD_MINUTES / windowMinutes) * 100,
+    widthPercent: (duration / windowMinutes) * 100,
+  };
 }
 
-function alcoholLine(report: MorningReport): string {
-  if (!report.drank) return "No alcohol.";
+function alcoholValue(report: MorningReport): string {
+  if (!report.drank) return "None";
   const n = report.drinkCount;
-  const drinks =
-    n === undefined ? "Yes." : n >= 5 ? "Yes — 5 or more drinks." : `Yes — ${n} ${n === 1 ? "drink" : "drinks"}.`;
-  if (report.spins === true) return `${drinks} Spins.`;
-  if (report.spins === false) return `${drinks} No spins.`;
+  const drinks = n === undefined ? "Yes" : n >= 5 ? "5+" : String(n);
+  if (report.spins === true) return `${drinks} · spins`;
   return drinks;
 }
 
-function screenLine(value: ScreenOffMinutes): string {
+function screenValue(value: ScreenOffMinutes): string {
   switch (value) {
     case 0:
-      return "In bed with a screen.";
+      return "In bed";
     case 15:
-      return "About 15 minutes off.";
+      return "15m off";
     case 30:
-      return "About 30 minutes off.";
+      return "30m off";
     case 45:
-      return "About 45 minutes off.";
+      return "45m off";
     case 60:
-      return "An hour or more off.";
+      return "1h off";
   }
 }
 
-function latencyLine(value: LatencyBucket): string {
+function latencyValue(value: LatencyBucket): string {
   switch (value) {
     case 5:
-      return "Under 10 minutes.";
+      return "<10m";
     case 15:
-      return "10 to 20 minutes.";
+      return "10–20m";
     case 30:
-      return "20 to 40 minutes.";
+      return "20–40m";
     case 50:
-      return "40 to 60 minutes.";
+      return "40–60m";
     case 75:
-      return "An hour or more.";
+      return "1h+";
   }
 }
 
-function wakingLine(report: MorningReport): string {
-  if (!report.wokeInNight) return "Slept through, or got back easily.";
-  return `Woke and struggled. About ${wakingDuration(report.nightWakingMinutes)} up.`;
+function wakingValue(report: MorningReport): string {
+  if (!report.wokeInNight) return "Through";
+  return wakingDuration(report.nightWakingMinutes);
 }
 
 function wakingDuration(value: NightWakingDuration): string {
   switch (value) {
     case 0:
-      return "a short while";
+      return "Woke";
     case 10:
-      return "10 minutes";
+      return "~10m up";
     case 25:
-      return "25 minutes";
+      return "~25m up";
     case 45:
-      return "45 minutes";
+      return "~45m up";
     case 70:
-      return "an hour or more";
+      return "1h+ up";
   }
 }
 
-function aidLine(report: MorningReport): string {
-  if (!report.usedSupplement) return "None.";
-  const kind = aidKind(report.supplementKind);
+function aidValue(report: MorningReport): string {
+  if (!report.usedSupplement) return "None";
   if (report.supplementKind === "other" && report.supplementNote?.trim()) {
     return report.supplementNote.trim();
   }
-  return kind;
-}
-
-function aidKind(kind: SupplementKind | undefined): string {
-  switch (kind) {
+  switch (report.supplementKind) {
     case "melatonin":
-      return "Melatonin.";
+      return "Melatonin";
     case "magnesium":
-      return "Magnesium.";
+      return "Magnesium";
     case "both":
-      return "Melatonin and magnesium.";
+      return "Both";
     case "antihistamine":
-      return "Unisom-type.";
+      return "Unisom-type";
     case "other":
-      return "Something else.";
+      return "Other";
     default:
-      return "Yes.";
+      return "Yes";
   }
 }
 
-function windLine(value: WindDownHelp): string {
+function windValue(value: WindDownHelp): string {
   switch (value) {
     case "yes":
-      return "Helped.";
+      return "Helped";
     case "a_bit":
-      return "Helped a bit.";
+      return "A bit";
     case "no":
-      return "Did not help.";
+      return "No";
     case "did_not_use":
-      return "Didn’t use one.";
+      return "Skipped";
   }
 }

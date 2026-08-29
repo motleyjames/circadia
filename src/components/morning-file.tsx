@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { MorningReport, Units } from "@/lib/types";
-import { filedMorningKicker, filedMorningRows } from "@/lib/morning-file";
+import type { MorningReport, SleepRating, Units } from "@/lib/types";
+import { filedNight } from "@/lib/morning-file";
+import { cn } from "@/lib/utils";
 
 export function MorningFile({
   report,
@@ -17,53 +18,106 @@ export function MorningFile({
   onCorrect: () => void;
   onWithdraw: () => void;
 }) {
-  const rows = filedMorningRows(report, units);
+  const night = filedNight(report, units);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-5 pt-8 pb-8">
-      <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">This morning</p>
-      <h1 className="font-heading mt-1 text-2xl text-zinc-50">This morning is filed.</h1>
-      <p className="mt-1 max-w-[42ch] text-xs leading-relaxed text-zinc-500">
-        {filedMorningKicker(report.morningDate)} The interview is closed.
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-8 pb-10">
+      <p className="text-[12px] text-zinc-500">{night.dateLabel}</p>
+      <p className="font-heading mt-3 text-[3.15rem] leading-none tracking-tight text-zinc-50">
+        {night.durationLabel}
       </p>
+      <p className="mt-3 text-[14px] text-zinc-400">
+        {night.asleepLabel}
+        <span className="mx-2 text-zinc-600">→</span>
+        {night.wakeLabel}
+      </p>
+
+      <div className="mt-8 max-w-md">
+        <div className="relative h-[7px] rounded-full bg-white/[0.07]">
+          <div
+            className="absolute inset-y-0 rounded-full bg-gradient-to-r from-violet-300 to-sky-300"
+            style={{ left: `${night.spanStartPercent}%`, width: `${night.spanWidthPercent}%` }}
+          />
+        </div>
+        <div
+          className="relative mt-2 flex justify-between text-[11px] text-zinc-500"
+          style={{
+            marginLeft: `${night.spanStartPercent}%`,
+            width: `${night.spanWidthPercent}%`,
+          }}
+        >
+          <span>{night.asleepLabel}</span>
+          <span>{night.wakeLabel}</span>
+        </div>
+      </div>
+
+      <RatingMarks rating={night.rating} word={night.ratingWord} />
+
       {demoWeek ? (
-        <p className="mt-4 rounded-2xl border border-amber-300/20 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
-          Sample week. Filing a real morning replaces this page. It does not add another night.
+        <p className="mt-6 max-w-md text-[12px] leading-relaxed text-amber-100/80">
+          Sample week. A real morning replaces this page.
         </p>
       ) : null}
 
-      <div className="mt-8 max-w-[46ch] space-y-6">
-        {rows.map((row) => (
-          <div key={row.kicker} className="border-l border-sky-300/30 pl-4">
-            <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">{row.kicker}</p>
-            <p className="mt-1 text-[15px] leading-relaxed text-zinc-200">{row.body}</p>
+      <dl className="mt-10 max-w-md divide-y divide-white/[0.06] border-y border-white/[0.06]">
+        {night.facts.map((fact) => (
+          <div key={fact.label} className="flex items-baseline justify-between gap-6 py-[0.85rem]">
+            <dt className="text-[12px] text-zinc-500">{fact.label}</dt>
+            <dd className={cn("text-[13px] text-zinc-100", fact.warn && "text-amber-100/90")}>{fact.value}</dd>
           </div>
         ))}
-      </div>
+      </dl>
 
-      <div className="mt-10 flex flex-col items-start gap-3">
+      {night.dream ? (
+        <p className="mt-6 max-w-md text-[13px] leading-relaxed text-zinc-400">
+          <span className="text-zinc-600">Dream · </span>
+          {night.dream}
+        </p>
+      ) : null}
+
+      <div className="mt-10 max-w-md">
         <Link
           href="/insights"
           prefetch={false}
-          className="rounded-full bg-sky-300 px-5 py-2.5 text-sm font-medium text-zinc-950"
+          className="text-[14px] text-sky-300/90 underline-offset-4 hover:text-sky-200 hover:underline"
         >
-          See what I made of it
+          Notes for this morning
         </Link>
-        <button
-          type="button"
-          className="text-[13px] text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
-          onClick={onCorrect}
-        >
-          Change an answer
-        </button>
-        <button
-          type="button"
-          className="text-[13px] text-zinc-600 underline-offset-4 hover:text-zinc-400 hover:underline"
-          onClick={onWithdraw}
-        >
-          Withdraw this morning
-        </button>
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-zinc-600">
+          <button
+            type="button"
+            className="hover:text-zinc-400"
+            onClick={onCorrect}
+          >
+            Change an answer
+          </button>
+          <span aria-hidden className="text-zinc-700">
+            ·
+          </span>
+          <button type="button" className="hover:text-zinc-400" onClick={onWithdraw}>
+            Withdraw
+          </button>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function RatingMarks({ rating, word }: { rating: SleepRating; word: string }) {
+  return (
+    <div className="mt-8 flex items-center gap-3">
+      <div className="flex gap-[5px]">
+        {([1, 2, 3, 4, 5] as const).map((n) => (
+          <span
+            key={n}
+            className={cn(
+              "h-[5px] w-5 rounded-full",
+              n <= rating ? "bg-sky-300/85" : "bg-white/10",
+            )}
+          />
+        ))}
+      </div>
+      <span className="text-[12px] text-zinc-500">{word}</span>
     </div>
   );
 }

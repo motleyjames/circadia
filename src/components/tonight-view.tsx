@@ -24,7 +24,7 @@ export function TonightView() {
   const profile = state.profile;
   const [now, setNow] = useState(() => new Date());
   const firstOpen = state.reports.length === 0;
-  const page = morningPageStatus(state.reports, now);
+  const page = morningPageStatus(state.reports, now, profile?.targetWake);
 
   useEffect(() => {
     const t = window.setInterval(() => setNow(new Date()), 30_000);

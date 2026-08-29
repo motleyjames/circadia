@@ -155,8 +155,8 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
     expect(checkIn).toContain("File this morning");
-    expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("This morning is filed");
-    expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("The interview is closed");
+    expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("Notes for this morning");
+    expect(readFileSync("src/components/morning-file.tsx", "utf8")).not.toContain("The interview is closed");
     expect(APP_VERSION).toBe("0.6.24");
   });
 
