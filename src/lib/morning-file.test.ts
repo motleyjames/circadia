@@ -153,7 +153,8 @@ describe("one morning, one file", () => {
     expect(byLabel.Alcohol?.value).toBe("3 · spins");
     expect(byLabel.Alcohol?.warn).toBe(true);
     expect(byLabel.Screens?.value).toBe("In bed");
-    expect(byLabel.Aid?.value).toBe("Unisom-type");
+    expect(byLabel.Screens?.warn).toBe(true);
+    expect(byLabel["To sleep"]?.value).toBe("20–40m");
     expect(byLabel.Night?.value).toBe("Through");
     expect(night.dream).toBe("A hallway that would not end.");
     expect(JSON.stringify(night)).not.toMatch(/MSF|AASM|CBT-I|latency bucket/i);

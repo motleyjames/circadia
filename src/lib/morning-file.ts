@@ -141,11 +141,10 @@ export function filedNight(report: MorningReport, units: Units): FiledNight {
   const durationMinutes = overnightDuration(report.fellAsleepAt, report.wokeAt);
   const span = sleepSpanPercents(durationMinutes);
   const facts: FiledFact[] = [
-    { label: "Felt", value: RATING_WORD[report.rating], warn: report.rating <= 2 },
-    { label: "Alcohol", value: alcoholValue(report), warn: report.drank },
-    { label: "Screens", value: screenValue(report.screenOffMinutes), warn: report.screenOffMinutes <= 15 },
-    { label: "To sleep", value: latencyValue(report.sleepLatencyMinutes), warn: report.sleepLatencyMinutes >= 30 },
-    { label: "Night", value: wakingValue(report), warn: report.wokeInNight },
+    { label: "Alcohol", value: alcoholValue(report), warn: Boolean(report.drank && report.spins) },
+    { label: "Screens", value: screenValue(report.screenOffMinutes), warn: report.screenOffMinutes === 0 },
+    { label: "To sleep", value: latencyValue(report.sleepLatencyMinutes) },
+    { label: "Night", value: wakingValue(report) },
     { label: "Aid", value: aidValue(report) },
     { label: "Wind-down", value: windValue(report.windDownHelped) },
   ];
