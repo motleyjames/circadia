@@ -27,4 +27,5 @@ Local-first Next.js sleep companion. No database and no cloud auth. Profile, mor
 - Mac Dock install belongs in a clone of https://github.com/motleyjames/circadia.git at 0.6.5 or newer. Never run dock commands in an old `rest-ai` 0.5.0 tree.
 - This Linux VM cannot write the Mac Dock. After a change, `git push` to GitHub. Opening Circadia.app pulls `main` via `electron/dock-update.cjs`. Do not tell James to `put-on-dock` unless `launcher.swift` or the `.app` bundle layout changed.
 - Operator never displays names, email, phone, or body measurements. Signups stitch on `participantId`. Sleep stats only. `summarizeInbox` must drop PII even if a legacy roster file still has a name.
+- Library notes in `src/lib/research.ts` carry `reviewedThrough`. `staleResearchIds(RESEARCH)` must stay empty. Do not add a PubMed fetch. Mouth (`say`) still cannot contain AASM / CBT-I / SCN.
 
