@@ -30,4 +30,10 @@ describe("useCircadia during prerender", () => {
     expect(() => renderToString(createElement(LibraryView))).not.toThrow();
     expect(() => renderToString(createElement(TonightView))).not.toThrow();
   });
+
+  it("does not put a JSON dump on the Library shelf", () => {
+    const html = renderToString(createElement(LibraryView));
+    expect(html).not.toMatch(/Export JSON|Import JSON|Sleep data/);
+    expect(html).toMatch(/What we are willing to say/);
+  });
 });

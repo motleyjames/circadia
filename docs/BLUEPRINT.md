@@ -156,7 +156,7 @@ src/app/          diary: /  /check-in  /insights  /library  /you  /api/study
 - Week review on Notes from the first mornings; consult still gates bottles at ~7 nights
 - Consult engine + follow-ups + You thread + corpus tests
 - Research library (clock, alcohol, aisle, Rx, THC, nicotine, shift, jet lag, pregnancy, reflux, …)
-- JSON import/export; sample week labeled, confirm-before-overwrite
+- Sample week labeled, confirm-before-overwrite. No user-facing JSON dump (Library is research; You is the file).
 - Desktop shell (sidebar + consult rail)
 - Anonymous study packs, consent gate, inspectable JSON, local inbox
 - Mac app window (`npm run app`) and `Circadia.app` package (`npm run dist` on a Mac)
