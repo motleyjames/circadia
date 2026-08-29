@@ -13,7 +13,7 @@ export function SidebarNav() {
   const pathname = usePathname();
   const { state } = useCircadia();
   const study = state.study;
-  const morningDue = morningFileDue(state.reports);
+  const morningDue = morningFileDue(state.reports, new Date(), state.profile?.targetWake);
 
   return (
     <aside className="relative z-20 hidden w-56 shrink-0 flex-col border-r border-white/8 bg-[#080712]/90 md:flex">

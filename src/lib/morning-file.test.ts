@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   dedupeReportsByMorningDate,
-  filedMorningKicker,
-  filedMorningRows,
+  filedNight,
   morningFileDue,
   morningPageStatus,
   reportForMorning,
+  sleepSpanPercents,
   upsertMorningReport,
   withdrawMorningReport,
 } from "./morning-file";
@@ -41,7 +41,6 @@ describe("one morning, one file", () => {
   it("keeps the later write when two rows share a morningDate", () => {
     const first = report("2026-08-29", { id: "a", rating: 2, createdAt: "2026-08-29T12:00:00.000Z" });
     const second = report("2026-08-29", { id: "b", rating: 5, createdAt: "2026-08-29T18:00:00.000Z" });
-    // Later createdAt wins even if it sits first in the array.
     expect(reportForMorning([second, first], "2026-08-29")?.id).toBe("b");
     expect(reportForMorning([second, first], "2026-08-29")?.rating).toBe(5);
   });
@@ -92,49 +91,76 @@ describe("one morning, one file", () => {
     expect(rows.map((r) => r.morningDate)).toEqual(["2026-08-28"]);
   });
 
-  it("does not nag in the wee hours, and treats afternoon as a late file, not a second night", () => {
+  it("opens from programmed wake, not a generic 5am window", () => {
     const empty: MorningReport[] = [];
     const filed = [report("2026-08-29")];
-    expect(morningPageStatus(empty, new Date(2026, 7, 29, 3, 0, 0))).toBe("quiet");
-    expect(morningPageStatus(empty, new Date(2026, 7, 29, 7, 30, 0))).toBe("unfiled-open");
-    expect(morningPageStatus(empty, new Date(2026, 7, 29, 16, 0, 0))).toBe("unfiled-late");
-    expect(morningPageStatus(filed, new Date(2026, 7, 29, 7, 30, 0))).toBe("filed");
-    expect(morningPageStatus(filed, new Date(2026, 7, 29, 22, 0, 0))).toBe("filed");
-    expect(morningFileDue(empty, new Date(2026, 7, 29, 3, 0, 0))).toBe(false);
-    expect(morningFileDue(empty, new Date(2026, 7, 29, 7, 30, 0))).toBe(true);
-    expect(morningFileDue(filed, new Date(2026, 7, 29, 7, 30, 0))).toBe(false);
+    const wake7 = "07:00";
+    const wake10 = "10:00";
+
+    expect(morningPageStatus(empty, new Date(2026, 7, 29, 3, 0, 0), wake7)).toBe("quiet");
+    expect(morningPageStatus(empty, new Date(2026, 7, 29, 6, 29, 0), wake7)).toBe("quiet");
+    expect(morningPageStatus(empty, new Date(2026, 7, 29, 6, 30, 0), wake7)).toBe("unfiled-open");
+    expect(morningPageStatus(empty, new Date(2026, 7, 29, 7, 5, 0), wake7)).toBe("unfiled-open");
+    expect(morningPageStatus(empty, new Date(2026, 7, 29, 16, 0, 0), wake7)).toBe("unfiled-late");
+
+    // 10am wake: 7am is still night for this person.
+    expect(morningPageStatus(empty, new Date(2026, 7, 29, 7, 0, 0), wake10)).toBe("quiet");
+    expect(morningPageStatus(empty, new Date(2026, 7, 29, 9, 30, 0), wake10)).toBe("unfiled-open");
+    expect(morningPageStatus(empty, new Date(2026, 7, 29, 10, 0, 0), wake10)).toBe("unfiled-open");
+
+    expect(morningPageStatus(filed, new Date(2026, 7, 29, 7, 30, 0), wake7)).toBe("filed");
+    expect(morningFileDue(empty, new Date(2026, 7, 29, 3, 0, 0), wake7)).toBe(false);
+    expect(morningFileDue(empty, new Date(2026, 7, 29, 7, 30, 0), wake7)).toBe(true);
+    expect(morningFileDue(empty, new Date(2026, 7, 29, 16, 0, 0), wake7)).toBe(true);
+    expect(morningFileDue(filed, new Date(2026, 7, 29, 7, 30, 0), wake7)).toBe(false);
   });
 
-  it("writes the filed page in mouth register, not lab labels", () => {
+  it("places the sleep fill on a padded track (hand vector)", () => {
+    // 8h = 480m. Window = 480 + 90 + 90 = 660. Fill starts at 90/660, width 480/660.
+    expect(480 + 90 + 90).toBe(660);
+    expect((90 / 660) * 100).toBeCloseTo(13.636363, 5);
+    expect((480 / 660) * 100).toBeCloseTo(72.727272, 5);
+    const span = sleepSpanPercents(480);
+    expect(span.startPercent).toBeCloseTo(90 / 660 * 100, 10);
+    expect(span.widthPercent).toBeCloseTo(480 / 660 * 100, 10);
+    expect(span.startPercent + span.widthPercent).toBeCloseTo(((90 + 480) / 660) * 100, 10);
+  });
+
+  it("composes a night as duration + facts, not lab labels", () => {
     const page = report("2026-08-29", {
-      wokeAt: "07:30",
+      wokeAt: "09:00",
       fellAsleepAt: "23:30",
-      rating: 2,
+      rating: 3,
       drank: true,
       drinkCount: 3,
       spins: true,
       screenOffMinutes: 0,
-      sleepLatencyMinutes: 50,
-      wokeInNight: true,
-      nightWakingMinutes: 45,
+      sleepLatencyMinutes: 30,
+      wokeInNight: false,
       usedSupplement: true,
       supplementKind: "antihistamine",
-      windDownHelped: "no",
+      windDownHelped: "did_not_use",
       dream: { text: "A hallway that would not end.", wantMeaning: false },
     });
-    const rows = filedMorningRows(page, "imperial");
-    const text = rows.map((r) => `${r.kicker}: ${r.body}`).join("\n");
-    expect(filedMorningKicker("2026-08-29")).toBe("One night. One page. Aug 29.");
-    expect(text).toMatch(/11:30 pm/);
-    expect(text).toMatch(/7:30 am/);
-    expect(text).toMatch(/8h/);
-    expect(text).toContain("2 — rough.");
-    expect(text).toContain("Yes — 3 drinks. Spins.");
-    expect(text).toContain("In bed with a screen.");
-    expect(text).toContain("40 to 60 minutes.");
-    expect(text).toContain("Woke and struggled.");
-    expect(text).toContain("Unisom-type.");
-    expect(text).not.toMatch(/MSF|AASM|CBT-I|latency bucket/i);
-    expect(text).toContain("stored only.");
+    const night = filedNight(page, "imperial");
+    expect(night.dateLabel).toBe("Aug 29");
+    expect(night.durationLabel).toBe("9h 30m");
+    expect(overnightCheck()).toBe(570);
+    expect(night.asleepLabel).toBe("11:30 pm");
+    expect(night.wakeLabel).toBe("9 am");
+    expect(night.ratingWord).toBe("mixed");
+    const byLabel = Object.fromEntries(night.facts.map((f) => [f.label, f]));
+    expect(byLabel.Alcohol?.value).toBe("3 · spins");
+    expect(byLabel.Alcohol?.warn).toBe(true);
+    expect(byLabel.Screens?.value).toBe("In bed");
+    expect(byLabel.Aid?.value).toBe("Unisom-type");
+    expect(byLabel.Night?.value).toBe("Through");
+    expect(night.dream).toBe("A hallway that would not end.");
+    expect(JSON.stringify(night)).not.toMatch(/MSF|AASM|CBT-I|latency bucket/i);
   });
 });
+
+function overnightCheck(): number {
+  // 23:30 = 1410. 09:00 next day = 1410 + 570 = 1980. Independent of overnightDuration.
+  return 24 * 60 - 1410 + 9 * 60;
+}

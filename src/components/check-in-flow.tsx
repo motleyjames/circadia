@@ -17,10 +17,9 @@ import type {
   WindDownHelp,
 } from "@/lib/types";
 import { reportForMorning } from "@/lib/morning-file";
-import { shiftIsoDate } from "@/lib/schedule";
+import { formatMorningDate, shiftIsoDate } from "@/lib/schedule";
 import { clockFromDate, formatClock, todayIsoDate } from "@/lib/time";
 import { SLEEP_AID_QUESTION } from "@/lib/intake";
-import { APP_VERSION } from "@/lib/version";
 
 const SLEEP_TIMES = ["21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00"];
 const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00"];
@@ -199,8 +198,8 @@ function MorningInterview({
       </h1>
       <p className="mt-1 text-xs text-zinc-500">
         {existing
-          ? `${today} · this replaces the page you already filed. It does not add a night.`
-          : `${today} · v${APP_VERSION} · one page for this morning.`}
+          ? `${formatMorningDate(today)} · same page, new answers.`
+          : `${formatMorningDate(today)} · one page.`}
       </p>
 
       <div className="mt-6 mb-4 flex gap-1">

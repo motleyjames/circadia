@@ -37,7 +37,7 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 2. **Sleep intake** — age, height, weight, the problem, wake time, which mornings you have to get up, meds, alerts.
 3. **Study gate** — yes turns the pipeline on. No Send button after that.
 4. **Tonight** — countdown to screens-down (one hour before sleep), then a guided meditation or calm noise. The guide is a quiet recording over a low tone. Close your eyes; you do not have to read the orb.
-5. **Morning interview** — one page per calendar morning. Tap bubbles. If this morning is already filed, you see that page — correct it or withdraw it. Circadia will not stack a second night on the same date.
+5. **Morning interview** — one page per calendar morning, after the wake time you set (with a short window before). Duration first, then the night. If this morning is already filed, you see that page — you can change an answer or withdraw it. Circadia will not stack a second night on the same date.
 6. **Notes** — a week read from the first mornings: which dates were better, which were worse, and what I would try next. Honest when the window is thin. After each morning, one library page that night actually earned — not a tour of the shelf. Bottles stay in **Consult**, and only after about seven logs.
 7. **You** — the file. Clocks, meds, log out. Not a JSON dump. Not a second copy of chat.
 8. **Library** — conservative research. Plain language first, sources second. Each note is stamped with the month a person last checked it against current guidelines; `npm test` fails if a stamp is more than a year old. Circadia does not scrape PubMed (local-first). The morning’s page is pinned at the top; the rest of the shelf stays browseable. Not a JSON dump of the diary.
