@@ -1,3 +1,4 @@
+import { dedupeReportsByMorningDate } from "@/lib/morning-file";
 import type { MorningReport, ScheduledDays } from "@/lib/types";
 import { isScheduledMorning, obligatedMorningCount, shiftIsoDate } from "@/lib/schedule";
 import {
@@ -69,7 +70,7 @@ function partitionWindow(
 ): Partition {
   const scheduled: MorningReport[] = [];
   const free: MorningReport[] = [];
-  for (const report of reports) {
+  for (const report of dedupeReportsByMorningDate(reports)) {
     if (!inTrailingWindow(report.morningDate, now)) continue;
     const obligated = isScheduledMorning(report.morningDate, scheduledDays);
     if (obligated === null) continue;

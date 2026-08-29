@@ -3,6 +3,7 @@ import {
   DEFAULT_SCHEDULED_DAYS,
   coerceScheduledDays,
   describeScheduledDays,
+  isCivilDate,
   isScheduledMorning,
   obligatedMorningCount,
   toggleScheduledDay,
@@ -44,6 +45,9 @@ describe("scheduled days", () => {
     expect(weekdayFromMorningDate("2024-02-29")).toBe(4);
     expect(weekdayFromMorningDate("2024-02-30")).toBeNull();
     expect(weekdayFromMorningDate("August 30")).toBeNull();
+    expect(isCivilDate("2026-08-29")).toBe(true);
+    expect(isCivilDate("2026-13-40")).toBe(false);
+    expect(isCivilDate("nope")).toBe(false);
     expect(shiftIsoDate("2026-09-06", -27)).toBe("2026-08-10");
     expect(shiftIsoDate("2026-03-01", -1)).toBe("2026-02-28");
     expect(shiftIsoDate("nope", -1)).toBeNull();

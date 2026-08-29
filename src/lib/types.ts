@@ -61,7 +61,7 @@ export type DreamReport = {
 
 export type MorningReport = {
   id: string;
-  /** Calendar date of the morning you filled this in, YYYY-MM-DD */
+  /** Calendar date of the morning this page belongs to, YYYY-MM-DD. Unique. */
   morningDate: string;
   wokeAt: string;
   fellAsleepAt: string;

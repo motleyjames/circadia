@@ -1,3 +1,5 @@
+import { dedupeReportsByMorningDate } from "@/lib/morning-file";
+import { formatMorningDate } from "@/lib/schedule";
 import type { MorningReport, Profile } from "./types";
 import { delayedClock, durationVsNeed, flagMedications, weekBreakdown } from "./metrics";
 import {
@@ -11,7 +13,7 @@ import {
 export const WEEK_WINDOW = 7;
 const SKETCH_NIGHTS = 3;
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+export { formatMorningDate };
 
 export type WeekReview = {
   nightsLogged: number;
@@ -27,23 +29,13 @@ export type WeekReview = {
 type Advice = { p: number; t: string };
 
 export function lastSevenReports(reports: MorningReport[]): MorningReport[] {
-  return [...reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate)).slice(-WEEK_WINDOW);
+  return dedupeReportsByMorningDate(reports).slice(-WEEK_WINDOW);
 }
 
 export function weekReviewMouth(review: WeekReview): string {
   return [review.headline, review.kicker, review.read, ...review.worked, ...review.hurt, ...review.doThis].join(
     "\n",
   );
-}
-
-/** Calendar date only. Parsed as local Y-M-D so a morning is not shifted by timezone. */
-export function formatMorningDate(iso: string): string {
-  const [ys, ms, ds] = iso.split("-");
-  const y = Number(ys);
-  const m = Number(ms);
-  const d = Number(ds);
-  if (!y || !m || !d || m > 12) return iso;
-  return `${MONTHS[m - 1]} ${d}`;
 }
 
 export function listMorningDates(reports: MorningReport[]): string {

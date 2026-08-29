@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
+import { MorningFile } from "@/components/morning-file";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type {
@@ -15,6 +16,8 @@ import type {
   SupplementKind,
   WindDownHelp,
 } from "@/lib/types";
+import { reportForMorning } from "@/lib/morning-file";
+import { shiftIsoDate } from "@/lib/schedule";
 import { clockFromDate, formatClock, todayIsoDate } from "@/lib/time";
 import { SLEEP_AID_QUESTION } from "@/lib/intake";
 import { APP_VERSION } from "@/lib/version";
@@ -23,11 +26,55 @@ const SLEEP_TIMES = ["21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:3
 const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00"];
 
 export function CheckInFlow() {
-  const router = useRouter();
-  const { state, addReport, removeLatestReport } = useCircadia();
+  const { state, withdrawMorning } = useCircadia();
   const today = todayIsoDate();
-  const existing = state.reports.find((r) => r.morningDate === today);
-  const usedWindDown = state.sessions.some((s) => s.startedAt.slice(0, 10) === previousIso(today) || s.startedAt.slice(0, 10) === today);
+  const existing = reportForMorning(state.reports, today);
+  const [revising, setRevising] = useState(false);
+
+  if (existing && !revising) {
+    return (
+      <MorningFile
+        report={existing}
+        units={state.profile?.units ?? "imperial"}
+        demoWeek={state.demoWeek}
+        onCorrect={() => setRevising(true)}
+        onWithdraw={() => {
+          if (
+            !window.confirm(
+              "Withdraw this morning’s page? You can file it again today. Other mornings stay.",
+            )
+          ) {
+            return;
+          }
+          withdrawMorning(today);
+        }}
+      />
+    );
+  }
+
+  return (
+    <MorningInterview
+      key={existing ? `revise-${existing.id}` : "fresh"}
+      existing={existing}
+      onCancel={existing ? () => setRevising(false) : undefined}
+    />
+  );
+}
+
+function MorningInterview({
+  existing,
+  onCancel,
+}: {
+  existing: MorningReport | null;
+  onCancel?: () => void;
+}) {
+  const router = useRouter();
+  const { state, addReport } = useCircadia();
+  const today = todayIsoDate();
+  const priorNight = shiftIsoDate(today, -1);
+  const usedWindDown = state.sessions.some(
+    (s) => s.startedAt.slice(0, 10) === priorNight || s.startedAt.slice(0, 10) === today,
+  );
 
   const [step, setStep] = useState(0);
   const [wokeAt, setWokeAt] = useState(existing?.wokeAt ?? clockFromDate(new Date()));
@@ -139,39 +186,17 @@ export function CheckInFlow() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col px-5 pt-8 pb-3">
-      <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Morning interview</p>
-      <h1 className="font-heading mt-1 text-2xl text-zinc-50">Forty seconds. Honest bubbles.</h1>
-      <p className="mt-1 text-xs text-zinc-500">
-        {today} · v{APP_VERSION}
-        {existing ? " · this morning is already logged" : ""}
+      <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">
+        {existing ? "Correcting this morning" : "Morning interview"}
       </p>
-      {existing || state.reports.length > 0 ? (
-        <button
-          type="button"
-          className="mt-3 text-left text-[13px] text-zinc-400 underline-offset-4 hover:text-zinc-200 hover:underline"
-          onClick={() => {
-            if (!window.confirm("Erase the latest morning so you can fill it out again?")) return;
-            removeLatestReport();
-            setStep(0);
-            setRating(undefined);
-            setDrank(undefined);
-            setDrinkCount(undefined);
-            setSpins(undefined);
-            setScreenOffMinutes(undefined);
-            setSleepLatencyMinutes(undefined);
-            setWokeInNight(undefined);
-            setUsedSupplement(undefined);
-            setSupplementKind(undefined);
-            setSupplementNote("");
-            setWindDownHelped(usedWindDown ? undefined : "did_not_use");
-            setIncludeDream(false);
-            setDreamText("");
-            setWantMeaning(false);
-          }}
-        >
-          Erase the latest morning and start over
-        </button>
-      ) : null}
+      <h1 className="font-heading mt-1 text-2xl text-zinc-50">
+        {existing ? "Same date. New answers." : "Forty seconds. Honest bubbles."}
+      </h1>
+      <p className="mt-1 text-xs text-zinc-500">
+        {existing
+          ? `${today} · this replaces the page you already filed. It does not add a night.`
+          : `${today} · v${APP_VERSION} · one page for this morning.`}
+      </p>
 
       <div className="mt-6 mb-4 flex gap-1">
         {steps.map((key, i) => (
@@ -431,10 +456,16 @@ export function CheckInFlow() {
         <button
           type="button"
           className="rounded-full px-4 py-2 text-sm text-zinc-400 disabled:opacity-30"
-          disabled={step === 0}
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
+          disabled={step === 0 && !onCancel}
+          onClick={() => {
+            if (step === 0 && onCancel) {
+              onCancel();
+              return;
+            }
+            setStep((s) => Math.max(0, s - 1));
+          }}
         >
-          Back
+          {step === 0 && onCancel ? "Cancel" : "Back"}
         </button>
         {step < steps.length - 1 ? (
           <button
@@ -451,7 +482,7 @@ export function CheckInFlow() {
             className="rounded-full bg-sky-300 px-5 py-2.5 text-sm font-medium text-zinc-950"
             onClick={save}
           >
-            Save night
+            {existing ? "Save this page" : "File this morning"}
           </button>
         )}
       </div>
@@ -467,11 +498,4 @@ function Block({ title, hint, children }: { title: string; hint?: string; childr
       {children}
     </div>
   );
-}
-
-function previousIso(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  dt.setDate(dt.getDate() - 1);
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
 }

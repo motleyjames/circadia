@@ -57,6 +57,7 @@ describe("useCircadia during prerender", () => {
       "src/components/study-panel.tsx",
       "src/components/chat-bar.tsx",
       "src/components/check-in-flow.tsx",
+      "src/components/morning-file.tsx",
       "src/components/sidebar-nav.tsx",
       "src/components/bottom-nav.tsx",
     ];
@@ -64,5 +65,19 @@ describe("useCircadia during prerender", () => {
       const text = readFileSync(join(process.cwd(), rel), "utf8");
       expect(text, rel).not.toMatch(ban);
     }
+  });
+
+  it("treats a morning as one file, not a stack", () => {
+    const checkIn = readFileSync(join(process.cwd(), "src/components/check-in-flow.tsx"), "utf8");
+    const filed = readFileSync(join(process.cwd(), "src/components/morning-file.tsx"), "utf8");
+    const insights = readFileSync(join(process.cwd(), "src/components/insights-view.tsx"), "utf8");
+    const store = readFileSync(join(process.cwd(), "src/context/circadia-store.tsx"), "utf8");
+    expect(filed).toContain("This morning is filed");
+    expect(checkIn).toContain("File this morning");
+    expect(checkIn).not.toContain("Save night");
+    expect(checkIn).not.toMatch(/Erase the latest morning/);
+    expect(insights).not.toMatch(/Erase the latest morning/);
+    expect(store).toContain("upsertMorningReport");
+    expect(store).not.toContain("removeLatestReport");
   });
 });

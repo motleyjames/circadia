@@ -1,5 +1,6 @@
 import { consultMessages } from "@/lib/consult-threads";
 import { medicationClasses } from "@/lib/metrics";
+import { dedupeReportsByMorningDate } from "@/lib/morning-file";
 import { bmiKgM, DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG, overnightDuration } from "@/lib/time";
 import type {
   AgeBand,
@@ -62,9 +63,7 @@ export function buildStudyPack(state: CircadiaState): StudyPack {
   if (!profile) throw new Error("No profile.");
   if (!participantId) throw new Error("No participant number.");
 
-  const nights: StudyNight[] = [...state.reports]
-    .sort((a, b) => a.morningDate.localeCompare(b.morningDate))
-    .map((report, nightIndex) => {
+  const nights: StudyNight[] = dedupeReportsByMorningDate(state.reports).map((report, nightIndex) => {
       const night: StudyNight = {
         nightIndex,
         fellAsleepAt: report.fellAsleepAt,

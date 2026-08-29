@@ -15,7 +15,7 @@ import { suggestMorningReadingForLogs } from "@/lib/morning-reading";
 import { buildWeekReview, formatMorningDate, lastSevenReports } from "@/lib/week-review";
 
 export function InsightsView() {
-  const { state, loadSampleWeek, removeLatestReport } = useCircadia();
+  const { state, loadSampleWeek } = useCircadia();
   const profile = state.profile;
   const windowReports = useMemo(() => lastSevenReports(state.reports), [state.reports]);
   const notes = useMemo(
@@ -115,16 +115,6 @@ export function InsightsView() {
               ))}
             </div>
           </div>
-          <button
-            type="button"
-            className="mt-3 text-[13px] text-zinc-500 underline-offset-4 hover:text-zinc-300 hover:underline"
-            onClick={() => {
-              if (!window.confirm("Erase the latest morning so you can fill it out again?")) return;
-              removeLatestReport();
-            }}
-          >
-            Erase the latest morning
-          </button>
 
           {reading ? <MorningReadingCard reading={reading} className="mt-10" /> : null}
         </>
