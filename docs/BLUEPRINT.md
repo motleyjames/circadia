@@ -112,7 +112,7 @@ Chat is not a model. It is a **deterministic consult**: question → topic → l
 
 The corpus is generated paraphrases + follow-ups (thousands per `npm test`). It asserts **routing and safety**, not frozen essays. When a real utterance withholds, add a library note and a stem. Do not rent a chatbot.
 
-**Library** (`src/lib/research.ts`) is the answer key. Chat (`chat.ts`, `consult-extra.ts`) is the mouth. `chat-history.ts` is the follow-up fold. Matching uses word boundaries (`dating` must not hit `sedating`).
+**Library** (`src/lib/research.ts`) is the answer key. Chat (`chat.ts`, `consult-extra.ts`) is the mouth. `chat-history.ts` is the follow-up fold. Matching uses word boundaries (`dating` must not hit `sedating`). Each note carries `reviewedThrough` (YYYY-MM), `confidence`, and `sources[]`. Freshness is that stamp plus `staleResearchIds` in CI — not a PubMed scrape. Bodies may name AASM / CBT-I / SCN; `say` may not.
 
 The consult rail is the **live desk**. It opens empty. A question files a thread into dated history on this computer. Close the app and the desk resets; the thread is still in History, sorted by day, continuable, deletable. You is the file, not a second copy of the chat.
 

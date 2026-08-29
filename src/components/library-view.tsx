@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { MorningReadingCard } from "@/components/morning-reading";
 import { suggestMorningReadingForLogs } from "@/lib/morning-reading";
-import { RESEARCH, type ResearchArticle } from "@/lib/research";
+import {
+  RESEARCH,
+  formatReviewedThrough,
+  researchSourceLine,
+  type ResearchArticle,
+} from "@/lib/research";
 import { exportState } from "@/lib/storage";
 
 function hashId(): string {
@@ -70,9 +75,11 @@ export function LibraryView() {
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">What we are willing to say.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
         Conservative sleep science, written twice: first in plain language, then the note with
-        sources. After a morning I pin the one page that night actually earned. The rest of the
-        shelf stays here to browse. Upload your own notes or a Circadia JSON export — stays on this
-        device, not a cloud.
+        sources. Each note is stamped with the month a person last checked it against current
+        guidelines. Tests fail if a stamp is more than a year old. This is not a live paper feed —
+        Circadia does not scrape PubMed. After a morning I pin the one page that night actually
+        earned. The rest of the shelf stays here to browse. Upload your own notes or a Circadia JSON
+        export — stays on this device, not a cloud.
       </p>
 
       {reading ? (
@@ -156,13 +163,23 @@ function LibraryArticle({
       <button type="button" className="w-full px-4 py-3 text-left hover:bg-white/5" onClick={onToggle}>
         <p className="text-sm text-zinc-100">{article.title}</p>
         <p className="mt-1 text-xs text-zinc-500">{article.summary}</p>
+        <p className="mt-2 text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
+          Reviewed through {formatReviewedThrough(article.reviewedThrough)}
+          {article.confidence === "low" ? " · mixed evidence" : ""}
+        </p>
       </button>
       {open ? (
         <div className="border-t border-white/8 px-4 py-3">
           <p className="text-[13px] leading-[1.55] text-zinc-200">{article.say ?? article.summary}</p>
           <p className="mt-4 text-[10px] tracking-[0.2em] text-zinc-600 uppercase">The note</p>
           <p className="mt-1 text-xs leading-relaxed text-zinc-400">{article.body}</p>
-          <p className="mt-3 text-[10px] leading-relaxed text-zinc-600">{article.source}</p>
+          {article.confidence === "low" ? (
+            <p className="mt-3 text-[11px] leading-relaxed text-amber-200/70">
+              Evidence is mixed. Circadia will not overclaim this.
+            </p>
+          ) : null}
+          <p className="mt-3 text-[10px] tracking-[0.2em] text-zinc-600 uppercase">Sources</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-zinc-600">{researchSourceLine(article)}</p>
         </div>
       ) : null}
     </article>
