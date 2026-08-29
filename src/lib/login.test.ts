@@ -5,6 +5,7 @@ import {
   LAST_LOGIN_KEY,
   LOCKS_KEY,
   SESSION_KEY,
+  SESSION_UNLOCK_KEY,
   STORAGE_KEY,
   VAULT_KEY,
   attachLoginToCurrent,
@@ -13,6 +14,7 @@ import {
   closeFile,
   createFile,
   eraseCurrentFile,
+  flushVaultWrites,
   getSessionLogin,
   hydrateState,
   loadState,
@@ -142,6 +144,7 @@ describe("local file vault", () => {
     expect(getSessionLogin()).toBeNull();
     expect(loadState().profile).toBeNull();
     expect(localStorage.getItem(SESSION_KEY)).toBeNull();
+    expect(localStorage.getItem(SESSION_UNLOCK_KEY)).toBeNull();
     expect(JSON.stringify(localStorage.getItem(VAULT_KEY))).not.toMatch(/keep me/);
     const sealed = JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")["email:ada@example.com"] as { enc?: boolean };
     expect(sealed.enc).toBe(true);
@@ -161,6 +164,41 @@ describe("local file vault", () => {
     await bootVaultFromDisk();
     expect(getSessionLogin()).toBeNull();
     expect(loadState().researchNotes).toBe("");
+  });
+
+  it("stays signed in after process death using the persisted unlock, not a login-name flag", async () => {
+    const created = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    created.state.researchNotes = "still here after quit";
+    saveState(created.state);
+    await flushVaultWrites();
+    const unlockRaw = localStorage.getItem(SESSION_UNLOCK_KEY);
+    expect(unlockRaw).toBeTruthy();
+    const unlock = JSON.parse(unlockRaw ?? "null") as { v?: number; login?: string; master?: string };
+    expect(unlock.v).toBe(1);
+    expect(unlock.login).toBe("email:ada@example.com");
+    expect(unlock.master).toMatch(/^[A-Za-z0-9+/]+=*$/);
+    expect(unlockRaw).not.toMatch(/correct-horse/);
+    const diskShape = JSON.stringify({
+      files: JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}"),
+      locks: JSON.parse(localStorage.getItem(LOCKS_KEY) ?? "{}"),
+      session: JSON.parse(localStorage.getItem(LAST_LOGIN_KEY) ?? "null"),
+    });
+    expect(diskShape).not.toContain(unlock.master);
+    expect(diskShape).not.toMatch(/still here after quit/);
+
+    resetVaultMemoryForTests();
+    expect(getSessionLogin()).toBeNull();
+    expect(loadState().researchNotes).toBe("");
+    await bootVaultFromDisk();
+    expect(getSessionLogin()).toBe("email:ada@example.com");
+    expect(loadState().researchNotes).toBe("still here after quit");
   });
 
   it("refuses a second file for the same login and a missing login", async () => {
@@ -366,6 +404,10 @@ describe("local file vault", () => {
     created.state.researchNotes = "after rotate";
     saveState(created.state);
     expect(await changePassword(PASS, NEXT_PASS, NEXT_PASS)).toEqual({ ok: true });
+    resetVaultMemoryForTests();
+    await bootVaultFromDisk();
+    expect(getSessionLogin()).toBe("email:ada@example.com");
+    expect(loadState().researchNotes).toBe("after rotate");
     await closeFile();
     expect(await openFile("ada@example.com", PASS)).toEqual({
       ok: false,

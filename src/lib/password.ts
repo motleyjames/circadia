@@ -10,7 +10,8 @@ export type PasswordLock = {
   hash: string;
   /**
    * 2 = `hash` is SHA-256(master). 1 or omitted = `hash` is the master itself (0.6.19).
-   * NEW: never persist the AES key. The verifier cannot decrypt the diary.
+   * The lock file never stores the AES key — the verifier cannot decrypt the diary.
+   * Stay-signed-in holds the master in this origin's WebKit data until Log out.
    */
   kdf?: 1 | 2;
 };
@@ -30,7 +31,7 @@ export function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
-function b64ToBytes(value: string): Uint8Array {
+export function bytesFromBase64(value: string): Uint8Array {
   const bin = atob(value);
   const out = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
@@ -96,7 +97,8 @@ async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
 
 /**
  * Stretch the password into a 256-bit master, then store SHA-256(master) as the verifier.
- * The master stays in process memory after unlock. It is not written to disk.
+ * After unlock, the master is in RAM. Stay-signed-in also writes it to this origin's
+ * WebKit data — not to Application Support vault.json.
  */
 export async function newPasswordLock(password: string): Promise<{ lock: PasswordLock; master: Uint8Array }> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -130,8 +132,8 @@ export async function unlockMaster(password: string, lock: PasswordLock): Promis
   if (!lock.salt || !lock.hash) return null;
   const iterations = Number(lock.iterations);
   if (!Number.isFinite(iterations) || iterations < 10_000) return null;
-  const salt = b64ToBytes(lock.salt);
-  const expected = b64ToBytes(lock.hash);
+  const salt = bytesFromBase64(lock.salt);
+  const expected = bytesFromBase64(lock.hash);
   const master = await derive(password, salt, iterations);
   if (lock.kdf === 2) {
     const verifier = await sha256(master);
@@ -173,8 +175,8 @@ export async function encryptPayload(payload: unknown, master: Uint8Array): Prom
 
 export async function decryptPayload(envelope: VaultEnvelope, master: Uint8Array): Promise<unknown> {
   if (!hasWebCrypto()) throw cryptoUnavailable();
-  const iv = b64ToBytes(envelope.iv);
-  const ct = b64ToBytes(envelope.ct);
+  const iv = bytesFromBase64(envelope.iv);
+  const ct = bytesFromBase64(envelope.ct);
   const key = await crypto.subtle.importKey("raw", asBufferSource(master), { name: "AES-GCM" }, false, ["decrypt"]);
   const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: asBufferSource(iv) }, key, asBufferSource(ct));
   return JSON.parse(new TextDecoder().decode(pt)) as unknown;

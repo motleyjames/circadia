@@ -29,4 +29,20 @@ describe("disk vault", () => {
     expect(merged.files["email:james@colorado.edu"]).toBeTruthy();
     expect(merged.session).toBe("email:james@colorado.edu");
   });
+
+  it("does not copy a stay-signed-in master onto the disk vault", () => {
+    const parsed = parseDiskVault({
+      v: 1,
+      files: {},
+      locks: {},
+      session: "email:ada@example.com",
+      master: "THIS-IS-NOT-A-SESSION",
+      unlock: { master: "SECRET-MASTER" },
+    });
+    expect(parsed.session).toBe("email:ada@example.com");
+    expect(JSON.stringify(parsed)).not.toContain("SECRET-MASTER");
+    expect(JSON.stringify(parsed)).not.toContain("THIS-IS-NOT-A-SESSION");
+    expect(parsed).not.toHaveProperty("master");
+    expect(parsed).not.toHaveProperty("unlock");
+  });
 });
