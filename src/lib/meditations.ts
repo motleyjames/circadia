@@ -115,4 +115,5 @@ export {
   spokenBeats,
   spokenLine,
   unlockVoice,
+  guideIsPlaying,
 } from "./voice";

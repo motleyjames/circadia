@@ -23,6 +23,7 @@ describe("sleep audio graph", () => {
     expect(wind).toContain("startBreathBed");
     expect(wind).toContain("playGuide");
     expect(wind).toContain("prefetchGuide");
+    expect(wind).toContain("primeGuide");
     expect(wind).toContain("hushVoice");
     expect(wind).toContain("unlockAudio");
     expect(wind).not.toContain("speechSynthesis");
@@ -35,9 +36,12 @@ describe("sleep audio graph", () => {
     const voice = readFileSync("src/lib/voice.ts", "utf8");
     const playGuide = voice.slice(voice.indexOf("export async function playGuide"));
     const untilSpeak = playGuide.slice(0, playGuide.indexOf("export function speak"));
+    expect(untilSpeak).toContain("el.play(");
     expect(untilSpeak).toContain("playSample");
     expect(untilSpeak).not.toContain("speakBedside");
     expect(untilSpeak).not.toContain("speechSynthesis");
-    expect(voice).not.toMatch(/new Audio\(/);
+    expect(voice).toContain("new Audio");
+    expect(voice).toContain("/voice/silence.mp3");
+    expect(voice).toContain('setAttribute("playsinline"');
   });
 });

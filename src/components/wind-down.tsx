@@ -18,6 +18,8 @@ import {
   meditationById,
   playGuide,
   prefetchGuide,
+  primeGuide,
+  guideIsPlaying,
 } from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -97,8 +99,10 @@ export function WindDown() {
               key={m.id}
               type="button"
               onClick={() => {
-                void unlockAudio();
+                primeGuide();
                 prefetchGuide(m.id);
+                void playGuide(m.id, 0);
+                startBreathBed();
                 setMeditationId(m.id);
                 setMode("meditate");
               }}
@@ -171,7 +175,9 @@ function MeditationPlayer({
     const bed = startBreathBed();
     bedRef.current = bed;
     spokenAt.current = 0;
-    void playGuide(id, 0);
+    // Opening line starts in the tap. Re-calling playGuide here would pause that play()
+    // and retry outside the gesture. Replay only if the tap's clip is not already running.
+    if (!guideIsPlaying()) void playGuide(id, 0);
     return () => {
       hushVoice();
       bed.stop();
@@ -225,7 +231,10 @@ function MeditationPlayer({
           type="button"
           variant="outline"
           className="rounded-full border-white/15"
-          onClick={() => setRunning((r) => !r)}
+          onClick={() => {
+            if (!running || done) primeGuide();
+            setRunning((r) => !r);
+          }}
         >
           {running && !done ? "Pause" : "Resume"}
         </Button>
