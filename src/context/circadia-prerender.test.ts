@@ -73,8 +73,13 @@ describe("useCircadia during prerender", () => {
     const insights = readFileSync(join(process.cwd(), "src/components/insights-view.tsx"), "utf8");
     const store = readFileSync(join(process.cwd(), "src/context/circadia-store.tsx"), "utf8");
     expect(filed).toContain("This morning is filed");
+    expect(filed).toContain("The interview is closed");
+    expect(filed).toContain("Change an answer");
+    expect(filed).not.toContain("Correct this morning");
     expect(checkIn).toContain("File this morning");
+    expect(checkIn).toContain("reportForMorning(state.reports, today)");
     expect(checkIn).not.toContain("Save night");
+    expect(checkIn).not.toContain("this morning is already logged");
     expect(checkIn).not.toMatch(/Erase the latest morning/);
     expect(insights).not.toMatch(/Erase the latest morning/);
     expect(store).toContain("upsertMorningReport");
