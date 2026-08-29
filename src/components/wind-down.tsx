@@ -17,7 +17,6 @@ import {
   hushVoice,
   MEDITATIONS,
   meditationById,
-  prefetchGuide,
   primeGuide,
   startGuideFromTap,
   warmGuides,
@@ -37,15 +36,24 @@ export function WindDown() {
   const [mode, setMode] = useState<"pick" | "meditate" | "sound">("pick");
   const [meditationId, setMeditationId] = useState<MeditationId>("478");
   const [soundId, setSoundId] = useState<SoundscapeId>("brown");
+  const [guides, setGuides] = useState<"warming" | "ready" | "failed">("warming");
 
   function logSession(session: Parameters<typeof addSession>[0]) {
     addSession(session);
     setMode("pick");
   }
 
+  function prepareGuides() {
+    setGuides("warming");
+    void warmGuides()
+      .then(() => setGuides("ready"))
+      .catch(() => setGuides("failed"));
+  }
+
   useEffect(() => {
-    primeGuide();
-    warmGuides();
+    void warmGuides()
+      .then(() => setGuides("ready"))
+      .catch(() => setGuides("failed"));
     return () => {
       hushVoice();
       stopBreathBed();
@@ -61,20 +69,35 @@ export function WindDown() {
           A quiet recorded guide over a low tone. Close your eyes — you do not have to read the
           orb.
         </p>
+        {guides === "warming" ? (
+          <p className="mt-2 text-xs text-zinc-500">Preparing the guide…</p>
+        ) : null}
+        {guides === "failed" ? (
+          <p className="mt-2 text-xs text-rose-300/90">
+            The recordings did not load.{" "}
+            <button type="button" className="underline underline-offset-2" onClick={prepareGuides}>
+              Try again
+            </button>
+          </p>
+        ) : null}
         <div className="mt-3 grid gap-2">
           {MEDITATIONS.map((m) => (
             <button
               key={m.id}
               type="button"
+              disabled={guides !== "ready"}
               onClick={() => {
                 primeGuide();
-                prefetchGuide(m.id);
                 startBreathBed();
-                startGuideFromTap(m.id, 0);
+                if (!startGuideFromTap(m.id, 0)) {
+                  setGuides("failed");
+                  stopBreathBed();
+                  return;
+                }
                 setMeditationId(m.id);
                 setMode("meditate");
               }}
-              className="rounded-3xl border border-white/10 bg-white/4 px-4 py-3 text-left transition-colors hover:border-white/20 hover:bg-white/8 active:bg-white/10"
+              className="rounded-3xl border border-white/10 bg-white/4 px-4 py-3 text-left transition-colors hover:border-white/20 hover:bg-white/8 active:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <p className="text-sm text-zinc-100">{m.title}</p>
               <p className="text-xs text-zinc-500">
@@ -86,7 +109,7 @@ export function WindDown() {
       </section>
       <section>
         <p className="text-[11px] tracking-[0.22em] text-sky-300/80 uppercase">Calm noise</p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid gap-2 grid-cols-2">
           {SOUNDSCAPES.map((s) => (
             <button
               key={s.id}
@@ -107,45 +130,34 @@ export function WindDown() {
     </div>
   );
 
-  return (
-    <>
-      <audio
-        id="circadia-guide"
-        playsInline
-        preload="auto"
-        aria-hidden
-        className="pointer-events-none fixed right-0 bottom-0 h-2 w-2 opacity-[0.02]"
-      />
-      {mode === "meditate" ? (
-        <MeditationPlayer
-          id={meditationId}
-          onExit={(elapsed, completed) => {
-            logSession({
-              startedAt: new Date().toISOString(),
-              kind: "meditation",
-              meditationId,
-              durationSeconds: elapsed,
-              completed,
-            });
-          }}
-        />
-      ) : mode === "sound" ? (
-        <SoundPlayer
-          id={soundId}
-          onExit={(elapsed) => {
-            logSession({
-              startedAt: new Date().toISOString(),
-              kind: "soundscape",
-              soundscapeId: soundId,
-              durationSeconds: elapsed,
-              completed: elapsed >= 60,
-            });
-          }}
-        />
-      ) : (
-        picker
-      )}
-    </>
+  return mode === "meditate" ? (
+    <MeditationPlayer
+      id={meditationId}
+      onExit={(elapsed, completed) => {
+        logSession({
+          startedAt: new Date().toISOString(),
+          kind: "meditation",
+          meditationId,
+          durationSeconds: elapsed,
+          completed,
+        });
+      }}
+    />
+  ) : mode === "sound" ? (
+    <SoundPlayer
+      id={soundId}
+      onExit={(elapsed) => {
+        logSession({
+          startedAt: new Date().toISOString(),
+          kind: "soundscape",
+          soundscapeId: soundId,
+          durationSeconds: elapsed,
+          completed: elapsed >= 60,
+        });
+      }}
+    />
+  ) : (
+    picker
   );
 }
 
@@ -232,6 +244,7 @@ function MeditationPlayer({
               setRunning(false);
               return;
             }
+            primeGuide();
             startGuideFromTap(id, elapsedRef.current);
             setRunning(true);
           }}

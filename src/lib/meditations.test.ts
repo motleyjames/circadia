@@ -72,23 +72,33 @@ describe("meditation guide copy", () => {
   });
 
   it("ships a recorded clip for every spoken line", () => {
-    expect(existsSync("public/voice/silence.mp3")).toBe(true);
+    expect(existsSync("public/voice/silence.wav")).toBe(true);
     for (const script of MEDITATIONS) {
       for (const row of spokenBeats(script.id)) {
-        const path = `public/voice/${script.id}/${row.atSeconds}.mp3`;
+        const path = `public/voice/${script.id}/${row.atSeconds}.wav`;
         expect(existsSync(path), path).toBe(true);
       }
     }
   });
 
-  it("ships 44.1 kHz clips WebKit can decode", () => {
+  it("ships mono 16-bit PCM WebKit does not have to decode", () => {
     const probe = spawnSync(
       "ffprobe",
-      ["-v", "error", "-show_entries", "stream=sample_rate", "-of", "csv=p=0", "public/voice/478/0.mp3"],
+      [
+        "-v",
+        "error",
+        "-show_entries",
+        "stream=codec_name,sample_rate,channels,sample_fmt",
+        "-of",
+        "csv=p=0",
+        "public/voice/478/0.wav",
+      ],
       { encoding: "utf8" },
     );
     expect(probe.status).toBe(0);
-    expect(probe.stdout.trim()).toBe("44100");
+    expect(probe.stdout).toContain("pcm_s16le");
+    expect(probe.stdout).toContain("22050");
+    expect(probe.stdout).toContain("s16");
   });
 
   it("advances the orb through the script", () => {
