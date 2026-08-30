@@ -96,7 +96,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return (
       <CircadiaSafeTree>
         <NativeChrome />
-        <div className="night-sky min-h-dvh text-zinc-100">{children}</div>
+        <div className="operator-board min-h-dvh text-zinc-100">
+          <div className="native-drag" aria-hidden />
+          {children}
+        </div>
       </CircadiaSafeTree>
     );
   }

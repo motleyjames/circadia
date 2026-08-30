@@ -231,6 +231,19 @@ select,
   height: 0;
 }
 
+.operator-board {
+  background: #07060c;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.operator-board::before {
+  content: "";
+  display: block;
+  height: 1px;
+  background: #c4a574;
+  opacity: 0.7;
+}
+
 .native-drag {
   height: 0;
   flex-shrink: 0;
@@ -245,6 +258,7 @@ html.circadia-native a,
 html.circadia-native button,
 html.circadia-native input,
 html.circadia-native textarea,
+html.circadia-native summary,
 html.circadia-native [role="button"] {
   -webkit-app-region: no-drag;
 }
