@@ -37,6 +37,11 @@ export type ModeratorNightPack = {
   flags: string[];
 };
 
+export type ModeratorNightPerson = {
+  participantId: string;
+  packs: ModeratorNightPack[];
+};
+
 export type ModeratorFault = {
   participantId: string;
   at: string;
@@ -44,6 +49,71 @@ export type ModeratorFault = {
   href: string | null;
   appVersion: string;
 };
+
+export type ModeratorFaultPerson = {
+  participantId: string;
+  faults: ModeratorFault[];
+};
+
+/**
+ * Inbox filenames are `{kind}-{id}-{iso}.json` with `:` and `.` folded to `-`.
+ * Sort on the stamp, not the whole name — otherwise participant ids reorder history.
+ */
+export function inboxStampKey(file: string): string {
+  const m = file.match(/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}(?:-\d+)?Z/);
+  return m?.[0] ?? file;
+}
+
+export function formatInboxReceived(file: string): string {
+  const key = inboxStampKey(file);
+  const m = key.match(/^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})/);
+  if (!m) return "—";
+  return `${m[1]} ${m[2]}:${m[3]}`;
+}
+
+function newestFirstByStamp(a: string, b: string): number {
+  return inboxStampKey(b).localeCompare(inboxStampKey(a));
+}
+
+/** One row per person. Packs inside are newest first. */
+export function groupNightsByParticipant(nights: ModeratorNightPack[]): ModeratorNightPerson[] {
+  const sorted = [...nights].sort((a, b) => newestFirstByStamp(a.receivedAt, b.receivedAt));
+  const map = new Map<string, ModeratorNightPack[]>();
+  const order: string[] = [];
+  for (const pack of sorted) {
+    const list = map.get(pack.participantId);
+    if (!list) {
+      map.set(pack.participantId, [pack]);
+      order.push(pack.participantId);
+    } else {
+      list.push(pack);
+    }
+  }
+  return order.map((participantId) => ({
+    participantId,
+    packs: map.get(participantId) ?? [],
+  }));
+}
+
+/** One row per person. Faults inside are newest first. */
+export function groupFaultsByParticipant(faults: ModeratorFault[]): ModeratorFaultPerson[] {
+  const sorted = [...faults].sort((a, b) => b.at.localeCompare(a.at));
+  const map = new Map<string, ModeratorFault[]>();
+  const order: string[] = [];
+  for (const fault of sorted) {
+    const list = map.get(fault.participantId);
+    if (!list) {
+      map.set(fault.participantId, [fault]);
+      order.push(fault.participantId);
+    } else {
+      list.push(fault);
+    }
+  }
+  return order.map((participantId) => ({
+    participantId,
+    faults: map.get(participantId) ?? [],
+  }));
+}
 
 export type ModeratorSnapshot = {
   userCount: number;
@@ -167,7 +237,7 @@ export function summarizeInbox(files: InboxFile[]): ModeratorSnapshot {
     a.participantId.localeCompare(b.participantId),
   );
   faults.sort((a, b) => b.at.localeCompare(a.at));
-  nights.sort((a, b) => b.receivedAt.localeCompare(a.receivedAt));
+  nights.sort((a, b) => newestFirstByStamp(a.receivedAt, b.receivedAt));
 
   return {
     userCount: peopleList.length,
