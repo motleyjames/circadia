@@ -71,6 +71,21 @@ export function formatLoginForDisplay(login: string | null): string {
   return "";
 }
 
+/** You-page / identity row. Emails stay as-is; US phones get punctuation. */
+export function prettyContactDisplay(login: string | null): string {
+  const raw = formatLoginForDisplay(login);
+  if (!raw) return "";
+  if (raw.includes("@")) return raw;
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  return raw;
+}
+
 export function sessionAllowsLogout(login: string | null): boolean {
   return Boolean(login && login !== LOCAL_FILE_KEY);
 }
