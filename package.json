@@ -2,6 +2,16 @@
   "name": "circadia",
   "version": "0.6.25",
   "private": true,
+  "license": "UNLICENSED",
+  "author": "James Motley",
+  "description": "Local-first Mac sleep companion for people who cannot fall asleep, cannot stay asleep, or both.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/motleyjames/circadia.git"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "next dev --port 43147 --hostname 127.0.0.1",
@@ -21,8 +31,9 @@
     "reveal:mod": "node electron/install-mac.cjs --operator --reveal",
     "dist": "node electron/build-ui.cjs && electron-builder --mac dir zip --publish never",
     "lint": "eslint",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "test": "vitest run --exclude src/lib/static-surface.test.ts && vitest run src/lib/static-surface.test.ts",
+    "typecheck": "tsc --noEmit",
+    "typegen": "next typegen"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

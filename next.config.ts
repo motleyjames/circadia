@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
   distDir: operator ? ".next-mod" : ".next",
   output: nextOutput(env),
   images: nextImagesUnoptimized(env) ? { unoptimized: true } : undefined,
+  typescript: packStatic ? { tsconfigPath: "tsconfig.static.json" } : undefined,
   devIndicators: false,
   logging: {
     browserToTerminal: false,

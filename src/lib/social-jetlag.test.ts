@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 import {
@@ -171,5 +172,91 @@ describe("social jet lag", () => {
     const free = ["2026-09-05", "2026-09-06"].map((d) => night(d, "01:30", "10:00"));
     expect(sjlWithhold([...copies, ...free], DEFAULT_SCHEDULED_DAYS, NOW)).toBe("few-scheduled");
     expect(computeSocialJetLag([...copies, ...free], DEFAULT_SCHEDULED_DAYS, NOW)).toBeNull();
+  });
+});
+
+describe("MSFsc week-weighted SD (Finding A3)", () => {
+  it("test 3 vector A is still 323.57 when logged nights match the calendar week", () => {
+    const scheduled = ["2026-08-31", "2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"].map(
+      (d) => night(d, "23:30", "07:00"),
+    );
+    const free = ["2026-09-05", "2026-09-06"].map((d) => night(d, "01:30", "10:00"));
+    expect(msfSc([...scheduled, ...free], DEFAULT_SCHEDULED_DAYS, NOW)).toBeCloseTo(323.57, 2);
+  });
+
+  it("vector B uses obligatedMorningCount, not logged-night mean — 302.14, not 295.0", () => {
+    // Mon–Thu obligated (WD=4, FD=3). Four work nights @ 360 min, two free @ 510.
+    // SDweek = (4×360 + 3×510) / 7 = 2970/7
+    // MSF = 345; MSFsc = 345 − 0.5 × (510 − 2970/7) = 2115/7
+    // Logged-mean trap: (4×360 + 2×510) / 6 = 410 → 345 − 50 = 295.0
+    const monThu: ScheduledDays = [false, true, true, true, true, false, false];
+    const scheduled = ["2026-08-31", "2026-09-01", "2026-09-02", "2026-09-03"].map((d) =>
+      night(d, "00:00", "06:00"),
+    );
+    const free = ["2026-09-05", "2026-09-06"].map((d) => night(d, "01:30", "10:00"));
+    const reports = [...scheduled, ...free];
+
+    expect(sleepDurationMinutes(scheduled[0]!)).toBe(360);
+    expect(sleepDurationMinutes(free[0]!)).toBe(510);
+    expect(midSleepMinutes(free[0]!)).toBe(345);
+
+    const sdWeek = (4 * 360 + 3 * 510) / 7;
+    expect(sdWeek).toBeCloseTo(2970 / 7, 10);
+    const independent = 2115 / 7;
+    expect(independent).toBeCloseTo(302.14, 2);
+
+    const loggedMeanTrap = 345 - 0.5 * (510 - (4 * 360 + 2 * 510) / 6);
+    expect(loggedMeanTrap).toBe(295);
+
+    const got = msfSc(reports, monThu, NOW);
+    expect(got).not.toBeNull();
+    expect(got!).toBeCloseTo(302.14, 2);
+    expect(got!).toBeCloseTo(independent, 10);
+    expect(got!).not.toBeCloseTo(295.0, 1);
+  });
+});
+
+describe("circular mean keeps fractional minutes", () => {
+  it("does not round mid-sleep through HH:MM before averaging", () => {
+    // 23:30 → 07:01: duration 451; mid = 1410 + 225.5 = 195.5
+    // minutesToClock(195.5) is 03:16 — the string path would land on 196.
+    const scheduled = ["2026-08-31", "2026-09-01", "2026-09-02"].map((d) =>
+      night(d, "23:30", "07:01"),
+    );
+    const free = ["2026-09-05", "2026-09-06"].map((d) => night(d, "01:30", "10:01"));
+    const reports = [...scheduled, ...free];
+
+    expect(midSleepMinutes(scheduled[0]!)).toBe(195.5);
+    expect(minutesToClock(195.5)).toBe("03:16");
+    expect(midSleepMinutes(free[0]!)).toBe(345.5);
+
+    const work = msw(reports, DEFAULT_SCHEDULED_DAYS, NOW);
+    const rest = msf(reports, DEFAULT_SCHEDULED_DAYS, NOW);
+    expect(work).toBeCloseTo(195.5, 10);
+    expect(rest).toBeCloseTo(345.5, 10);
+    expect(work).not.toBeCloseTo(196, 5);
+
+    const bundled = computeSocialJetLag(reports, DEFAULT_SCHEDULED_DAYS, NOW);
+    expect(bundled).not.toBeNull();
+    expect(bundled!.mswMinutes).toBeCloseTo(195.5, 10);
+    expect(bundled!.msfMinutes).toBeCloseTo(345.5, 10);
+  });
+});
+
+describe("computeSocialJetLag partitions once", () => {
+  it("does not re-enter msw/msf/msfSc from the bundle path", () => {
+    const src = readFileSync("src/lib/social-jetlag.ts", "utf8");
+    const start = src.indexOf("export function computeSocialJetLag");
+    const body = src.slice(start);
+    expect(body.match(/partitionWindow\(/g)?.length).toBe(1);
+    expect(body).not.toMatch(/\bmsw\(/);
+    expect(body).not.toMatch(/\bmsf\(/);
+    expect(body).not.toMatch(/\bmsfSc\(/);
+    expect(body).not.toMatch(/\bsocialJetLagMinutes\(/);
+    expect(body).not.toMatch(/\bsjlWithhold\(/);
+    expect(src).toContain("obligatedMorningCount(scheduledDays)");
+    expect(src).toContain("circularMeanOfMinutes");
+    expect(src).not.toContain("circularMeanMinutes(");
+    expect(src).not.toContain("minutesToClock");
   });
 });

@@ -111,6 +111,7 @@ function buildDiary() {
   const env = { ...process.env };
   delete env.CIRCADIA_ELECTRON;
   delete env.CIRCADIA_PACK_STATIC;
+  delete env.CIRCADIA_SESSION_TOKEN;
   if (operator) {
     env.CIRCADIA_SURFACE = "mod";
     env.NEXT_PUBLIC_CIRCADIA_SURFACE = "mod";

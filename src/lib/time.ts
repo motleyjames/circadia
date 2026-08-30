@@ -111,14 +111,24 @@ export function circularSpreadMinutes(clocks: string[]): number {
   return (circStd / (2 * Math.PI)) * 24 * 60;
 }
 
-export function circularMeanMinutes(clocks: string[]): number {
-  if (clocks.length === 0) return 0;
-  const angles = clocks.map((c) => (clockToMinutes(c) / (24 * 60)) * 2 * Math.PI);
+const MINUTES_PER_DAY = 24 * 60;
+
+/** Circular mean of clock minutes on a 24h circle. Keeps fractional minutes. */
+export function circularMeanOfMinutes(minutes: number[]): number {
+  if (minutes.length === 0) return 0;
+  const angles = minutes.map((value) => {
+    const wrapped = ((value % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+    return (wrapped / MINUTES_PER_DAY) * 2 * Math.PI;
+  });
   const sin = mean(angles.map(Math.sin));
   const cos = mean(angles.map(Math.cos));
   let angle = Math.atan2(sin, cos);
   if (angle < 0) angle += 2 * Math.PI;
-  return (angle / (2 * Math.PI)) * 24 * 60;
+  return (angle / (2 * Math.PI)) * MINUTES_PER_DAY;
+}
+
+export function circularMeanMinutes(clocks: string[]): number {
+  return circularMeanOfMinutes(clocks.map((clock) => clockToMinutes(clock)));
 }
 
 /** Intake placeholders. BMI notes must treat these as unmeasured until You is edited. */

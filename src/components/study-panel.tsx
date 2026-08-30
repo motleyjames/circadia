@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export function StudyPanel() {
   const { state, joinStudy, leaveStudy, sendStudyNow } = useCircadia();
   const study = state.study;
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   return (
     <section className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 sm:p-6">
@@ -56,19 +59,20 @@ export function StudyPanel() {
             <button
               type="button"
               className="h-10 px-1 text-[13px] text-zinc-500 hover:text-zinc-300"
-              onClick={() => {
-                if (
-                  window.confirm(
-                    "Stop sending nights? The diary stays here. The participant number stays unless you erase this device.",
-                  )
-                ) {
-                  leaveStudy();
-                }
-              }}
+              onClick={() => setLeaveOpen(true)}
             >
               Leave the study
             </button>
           </div>
+          <ConfirmDialog
+            open={leaveOpen}
+            onOpenChange={setLeaveOpen}
+            title="Leave the study"
+            description="Stop sending nights. The diary stays here. The participant number stays unless you erase this device."
+            confirmLabel="Leave"
+            destructive
+            onConfirm={leaveStudy}
+          />
         </>
       )}
     </section>

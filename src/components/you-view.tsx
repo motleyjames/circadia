@@ -5,6 +5,10 @@ import { Eye, EyeOff } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup } from "@/components/bubbles";
 import { StudyPanel } from "@/components/study-panel";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { CrisisLine } from "@/components/crisis-line";
+import { ERASE_CONFIRM_WORD } from "@/lib/confirm-word";
+import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { ensureNotificationPermission } from "@/lib/notifications";
@@ -57,6 +61,8 @@ export function YouView() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [medDraft, setMedDraft] = useState("");
   const [supDraft, setSupDraft] = useState("");
+  const [sampleOpen, setSampleOpen] = useState(false);
+  const [eraseOpen, setEraseOpen] = useState(false);
 
   if (!profile) return null;
   const current = profile;
@@ -454,7 +460,8 @@ export function YouView() {
               type="button"
               className="text-zinc-400 hover:text-zinc-200"
               onClick={() => {
-                if (state.reports.length > 0 && !window.confirm("Replace your mornings with a labeled sample week?")) {
+                if (state.reports.length > 0) {
+                  setSampleOpen(true);
                   return;
                 }
                 loadSampleWeek();
@@ -468,18 +475,34 @@ export function YouView() {
             <button
               type="button"
               className="text-red-300/70 hover:text-red-200"
-              onClick={() => {
-                if (window.confirm("Erase Circadia on this device?")) resetAll();
-              }}
+              onClick={() => setEraseOpen(true)}
             >
               Erase this device
             </button>
           </div>
           <p className="mt-4 max-w-[52ch] text-[12px] leading-relaxed text-zinc-600">
-            Educational tool. Not medical care. If you stop breathing at night, fall asleep while
-            driving, or cannot stay awake, that is a clinic, not a chat bar.
+            {MEDICAL_DISCLAIMER}
           </p>
+          <CrisisLine className="mt-2 max-w-[52ch] text-[12px] leading-relaxed text-zinc-600" />
         </section>
+        <ConfirmDialog
+          open={sampleOpen}
+          onOpenChange={setSampleOpen}
+          title="Load a sample week"
+          description="This replaces mornings already on this device with a labeled sample week. It is fake data."
+          confirmLabel="Replace mornings"
+          onConfirm={loadSampleWeek}
+        />
+        <ConfirmDialog
+          open={eraseOpen}
+          onOpenChange={setEraseOpen}
+          title="Erase this device"
+          description="Mornings, the password, and the stay-signed-in key leave this computer. Type erase to confirm."
+          confirmLabel="Erase"
+          destructive
+          confirmWord={ERASE_CONFIRM_WORD}
+          onConfirm={resetAll}
+        />
       </div>
     </div>
   );

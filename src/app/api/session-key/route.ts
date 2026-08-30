@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { keychain } from "@/lib/keychain";
 import { bytesFromBase64 } from "@/lib/password";
+import { sessionTokenOk } from "@/lib/session-token";
 import { isOperatorSurface } from "@/lib/surface";
 import { isLocalRequest } from "@/lib/vault";
 
@@ -8,6 +9,10 @@ export const runtime = "nodejs";
 
 function deny() {
   return NextResponse.json({ ok: false, error: "Not found." }, { status: 404 });
+}
+
+function blocked(request: Request) {
+  return isOperatorSurface() || !isLocalRequest(request) || !sessionTokenOk(request, true);
 }
 
 function loginOf(value: unknown): string | null {
@@ -30,7 +35,7 @@ function masterOf(value: unknown): string | null {
 }
 
 export async function GET(request: Request) {
-  if (isOperatorSurface() || !isLocalRequest(request)) return deny();
+  if (blocked(request)) return deny();
   const url = new URL(request.url);
   const login = loginOf(url.searchParams.get("login"));
   if (!login) return NextResponse.json({ ok: false, error: "Invalid login." }, { status: 400 });
@@ -40,7 +45,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (isOperatorSurface() || !isLocalRequest(request)) return deny();
+  if (blocked(request)) return deny();
   let raw: unknown;
   try {
     raw = await request.json();
@@ -63,7 +68,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (isOperatorSurface() || !isLocalRequest(request)) return deny();
+  if (blocked(request)) return deny();
   const url = new URL(request.url);
   const login = loginOf(url.searchParams.get("login"));
   if (!login) return NextResponse.json({ ok: false, error: "Invalid login." }, { status: 400 });

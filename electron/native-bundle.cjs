@@ -8,7 +8,6 @@
 
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
-const os = require("node:os");
 const path = require("node:path");
 
 const APP_KINDS = {
@@ -165,6 +164,7 @@ function nextBuildEnv(kindKey) {
   const env = { ...process.env };
   delete env.CIRCADIA_ELECTRON;
   delete env.CIRCADIA_PACK_STATIC;
+  delete env.CIRCADIA_SESSION_TOKEN;
   if (kind.surface === "mod") {
     env.CIRCADIA_SURFACE = "mod";
     env.NEXT_PUBLIC_CIRCADIA_SURFACE = "mod";

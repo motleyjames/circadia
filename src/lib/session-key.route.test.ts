@@ -15,16 +15,27 @@ vi.mock("@/lib/keychain", () => ({
 }));
 
 import { bytesToBase64 } from "@/lib/password";
+import { SESSION_HEADER } from "@/lib/session-token-shared";
 import { DELETE, GET, POST } from "@/app/api/session-key/route";
 
-function localRequest(url: string, init?: RequestInit): Request {
-  return new Request(url, {
-    ...init,
-    headers: { origin: "http://127.0.0.1:43147", ...(init?.headers ?? {}) },
-  });
+const MASTER = bytesToBase64(new Uint8Array(32));
+const TOKEN = "test-launch-token";
+const LOGIN = "email:ada@example.com";
+
+function makeRequest(
+  url: string,
+  init: RequestInit & { origin?: string | null; token?: string } = {},
+): Request {
+  const { origin = "http://127.0.0.1:43147", token, headers: initHeaders, ...rest } = init;
+  const headers = new Headers(initHeaders);
+  if (origin !== null) headers.set("origin", origin);
+  if (token) headers.set(SESSION_HEADER, token);
+  return new Request(url, { ...rest, headers });
 }
 
-const MASTER = bytesToBase64(new Uint8Array(32));
+function authed(url: string, init: RequestInit & { origin?: string | null } = {}): Request {
+  return makeRequest(url, { ...init, token: TOKEN });
+}
 
 describe("session-key route", () => {
   afterEach(() => {
@@ -32,39 +43,89 @@ describe("session-key route", () => {
     vi.unstubAllEnvs();
   });
 
-  it("stores and returns a 32-byte master for a local request", async () => {
+  it("404s when CIRCADIA_SESSION_TOKEN is unset", async () => {
     const posted = await POST(
-      localRequest("http://127.0.0.1:43147/api/session-key", {
+      makeRequest("http://127.0.0.1:43147/api/session-key", {
         method: "POST",
-        body: JSON.stringify({ login: "email:ada@example.com", master: MASTER }),
+        token: "anything",
+        body: JSON.stringify({ login: LOGIN, master: MASTER }),
+      }),
+    );
+    expect(posted.status).toBe(404);
+    expect(store.size).toBe(0);
+  });
+
+  it("404s a local request with no header once the env is set", async () => {
+    vi.stubEnv("CIRCADIA_SESSION_TOKEN", TOKEN);
+    const posted = await POST(
+      makeRequest("http://127.0.0.1:43147/api/session-key", {
+        method: "POST",
+        body: JSON.stringify({ login: LOGIN, master: MASTER }),
+      }),
+    );
+    expect(posted.status).toBe(404);
+    expect(store.size).toBe(0);
+  });
+
+  it("404s a wrong header", async () => {
+    vi.stubEnv("CIRCADIA_SESSION_TOKEN", TOKEN);
+    const posted = await POST(
+      makeRequest("http://127.0.0.1:43147/api/session-key", {
+        method: "POST",
+        token: "not-the-launch-token",
+        body: JSON.stringify({ login: LOGIN, master: MASTER }),
+      }),
+    );
+    expect(posted.status).toBe(404);
+    expect(store.size).toBe(0);
+  });
+
+  it("stores and returns a 32-byte master when the header matches", async () => {
+    vi.stubEnv("CIRCADIA_SESSION_TOKEN", TOKEN);
+    const posted = await POST(
+      authed("http://127.0.0.1:43147/api/session-key", {
+        method: "POST",
+        body: JSON.stringify({ login: LOGIN, master: MASTER }),
       }),
     );
     expect(posted.status).toBe(200);
-    const got = await GET(
-      localRequest("http://127.0.0.1:43147/api/session-key?login=email%3Aada%40example.com"),
-    );
+    const got = await GET(authed(`http://127.0.0.1:43147/api/session-key?login=${encodeURIComponent(LOGIN)}`));
     expect(got.status).toBe(200);
     const body = (await got.json()) as { master?: string };
     expect(body.master).toBe(MASTER);
   });
 
-  it("404s on the operator surface", async () => {
+  it("allows a matching token when Origin is absent", async () => {
+    vi.stubEnv("CIRCADIA_SESSION_TOKEN", TOKEN);
+    const posted = await POST(
+      authed("http://127.0.0.1:43147/api/session-key", {
+        method: "POST",
+        origin: null,
+        body: JSON.stringify({ login: LOGIN, master: MASTER }),
+      }),
+    );
+    expect(posted.status).toBe(200);
+  });
+
+  it("404s on the operator surface even with a matching token", async () => {
+    vi.stubEnv("CIRCADIA_SESSION_TOKEN", TOKEN);
     vi.stubEnv("CIRCADIA_SURFACE", "mod");
     const posted = await POST(
-      localRequest("http://127.0.0.1:43149/api/session-key", {
+      authed("http://127.0.0.1:43149/api/session-key", {
         method: "POST",
-        body: JSON.stringify({ login: "email:ada@example.com", master: MASTER }),
+        body: JSON.stringify({ login: LOGIN, master: MASTER }),
       }),
     );
     expect(posted.status).toBe(404);
   });
 
-  it("404s a cross-site request", async () => {
+  it("404s a cross-site request even with a matching token", async () => {
+    vi.stubEnv("CIRCADIA_SESSION_TOKEN", TOKEN);
     const posted = await POST(
-      new Request("http://127.0.0.1:43147/api/session-key", {
+      authed("http://127.0.0.1:43147/api/session-key", {
         method: "POST",
-        headers: { origin: "https://evil.example" },
-        body: JSON.stringify({ login: "email:ada@example.com", master: MASTER }),
+        origin: "https://evil.example",
+        body: JSON.stringify({ login: LOGIN, master: MASTER }),
       }),
     );
     expect(posted.status).toBe(404);
@@ -72,19 +133,18 @@ describe("session-key route", () => {
   });
 
   it("deletes the key on logout", async () => {
+    vi.stubEnv("CIRCADIA_SESSION_TOKEN", TOKEN);
     await POST(
-      localRequest("http://127.0.0.1:43147/api/session-key", {
+      authed("http://127.0.0.1:43147/api/session-key", {
         method: "POST",
-        body: JSON.stringify({ login: "email:ada@example.com", master: MASTER }),
+        body: JSON.stringify({ login: LOGIN, master: MASTER }),
       }),
     );
     const gone = await DELETE(
-      localRequest("http://127.0.0.1:43147/api/session-key?login=email%3Aada%40example.com"),
+      authed(`http://127.0.0.1:43147/api/session-key?login=${encodeURIComponent(LOGIN)}`),
     );
     expect(gone.status).toBe(200);
-    const got = await GET(
-      localRequest("http://127.0.0.1:43147/api/session-key?login=email%3Aada%40example.com"),
-    );
+    const got = await GET(authed(`http://127.0.0.1:43147/api/session-key?login=${encodeURIComponent(LOGIN)}`));
     expect(got.status).toBe(404);
   });
 });

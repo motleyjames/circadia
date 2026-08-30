@@ -18,6 +18,7 @@ import {
 } from "@/lib/time";
 import { ScheduledDaysPicker } from "@/components/scheduled-days-picker";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS } from "@/lib/schedule";
+import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
 import type { Profile, Struggle } from "@/lib/types";
 import { normalizeClock } from "@/lib/windows";
 import { useCircadia } from "@/context/circadia-store";
@@ -306,6 +307,9 @@ export function Onboarding() {
             <p className="mt-8 border-t border-white/8 pt-6 text-[13px] leading-relaxed text-zinc-500">
               Next you choose whether nights can leave this computer. The diary itself stays here
               either way.
+            </p>
+            <p className="mt-4 max-w-[52ch] text-[12px] leading-relaxed text-zinc-600">
+              {MEDICAL_DISCLAIMER}
             </p>
             {error ? <p className="mt-4 text-[13px] text-red-300">{error}</p> : null}
           </section>

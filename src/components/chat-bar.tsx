@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowUp, ChevronDown } from "lucide-react";
+import { CrisisLine } from "@/components/crisis-line";
 import { useCircadia } from "@/context/circadia-store";
 import { CLINIC_STARTERS } from "@/lib/chat";
 import {
@@ -310,6 +311,8 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
       </div>
     );
 
+  const crisis = <CrisisLine className="mt-2 shrink-0" />;
+
   const controls = (
     <div className="flex shrink-0 items-center gap-3">
       {empty && pane === "desk" ? null : (
@@ -355,6 +358,7 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
         </header>
         {body}
         <div className="mt-4">{composer}</div>
+        {crisis}
       </aside>
     );
   }
@@ -410,6 +414,7 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
           </form>
         </div>
       )}
+      {crisis}
     </div>
   );
 }

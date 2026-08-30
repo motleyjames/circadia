@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import Security
 import WebKit
 
 /// Native Dock shell. Production `next start` on 43148 — never `next dev`.
@@ -20,6 +21,31 @@ struct Install: Decodable {
 let defaultPort = 43148
 var activeURL = URL(string: "http://127.0.0.1:43148/")!
 var nextProcess: Process?
+
+func makeSessionToken() -> String {
+  var bytes = [UInt8](repeating: 0, count: 32)
+  let status = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
+  if status != errSecSuccess {
+    return UUID().uuidString.replacingOccurrences(of: "-", with: "")
+      + UUID().uuidString.replacingOccurrences(of: "-", with: "")
+  }
+  return bytes.map { String(format: "%02x", $0) }.joined()
+}
+
+let sessionToken = makeSessionToken()
+
+func jsonString(_ value: String) -> String {
+  guard let data = try? JSONEncoder().encode(value),
+        let encoded = String(data: data, encoding: .utf8) else {
+    return "\"\""
+  }
+  return encoded
+}
+
+func sessionBridgeScript() -> String {
+  let token = jsonString(sessionToken)
+  return "document.documentElement.classList.add('circadia-native');Object.defineProperty(window,'circadiaDesktop',{value:{native:true,token:\(token)},writable:false,enumerable:true,configurable:false});"
+}
 
 func installPort(_ install: Install?) -> Int {
   install?.port ?? defaultPort
@@ -100,6 +126,7 @@ func startNext(_ install: Install) throws {
   let captured = install.path ?? ""
   env["PATH"] = "\(nodeDir):\(captured):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
   env["CIRCADIA_DOCK_PORT"] = String(bound)
+  env["CIRCADIA_SESSION_TOKEN"] = sessionToken
   if let surface = install.surface, surface == "mod" {
     env["CIRCADIA_SURFACE"] = "mod"
     env["NEXT_PUBLIC_CIRCADIA_SURFACE"] = "mod"
@@ -140,7 +167,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     // HTML5 <audio> is gated; speechSynthesis was not. Empty set = play from a timer.
     config.mediaTypesRequiringUserActionForPlayback = []
     // Inline media playback is an iOS WKWebView flag. macOS WebKit has no such property; setting it fails swiftc.
-    let js = "document.documentElement.classList.add('circadia-native');"
+    let js = sessionBridgeScript()
     config.userContentController.addUserScript(
       WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true)
     )
