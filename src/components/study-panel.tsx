@@ -8,8 +8,8 @@ export function StudyPanel() {
   const study = state.study;
 
   return (
-    <section className="rounded-3xl border border-white/8 bg-white/[0.03] px-5 py-5">
-      <p className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase">Study</p>
+    <section className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 sm:p-6">
+      <p className="text-[10px] font-medium tracking-[0.22em] text-zinc-500 uppercase">Study</p>
       {!study.consented ? (
         <>
           <p className="mt-2 text-[15px] text-zinc-200">Diary stays on this computer.</p>

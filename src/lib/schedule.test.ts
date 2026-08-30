@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_SCHEDULED_DAYS,
   coerceScheduledDays,
+  compactScheduledDays,
   describeScheduledDays,
   isCivilDate,
   isScheduledMorning,
@@ -73,5 +74,15 @@ describe("scheduled days", () => {
     expect(describeScheduledDays([true, true, true, true, true, true, true])).toBe(
       "Every morning is obligated.",
     );
+  });
+
+  it("compacts the default week to Mon–Fri for headers", () => {
+    expect(compactScheduledDays(DEFAULT_SCHEDULED_DAYS)).toBe("Mon–Fri");
+    expect(compactScheduledDays([false, false, false, false, false, false, false])).toBe(
+      "no obligated mornings",
+    );
+    expect(compactScheduledDays([true, true, true, true, true, true, true])).toBe("every morning");
+    expect(compactScheduledDays([false, true, true, true, true, true, true])).toBe("Mon–Sat");
+    expect(compactScheduledDays([false, true, false, true, false, true, false])).toBe("Mo · We · Fr");
   });
 });

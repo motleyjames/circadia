@@ -35,6 +35,18 @@ export function describeScheduledDays(days: ScheduledDays): string {
   return names.join(" · ");
 }
 
+/** Short label for a header — not the picker caption. */
+export function compactScheduledDays(days: ScheduledDays): string {
+  const count = obligatedMorningCount(days);
+  if (count === 0) return "no obligated mornings";
+  if (count === 7) return "every morning";
+  const monFri = !days[0] && days[1] && days[2] && days[3] && days[4] && days[5] && !days[6];
+  if (monFri) return "Mon–Fri";
+  const monSat = !days[0] && days[1] && days[2] && days[3] && days[4] && days[5] && days[6];
+  if (monSat) return "Mon–Sat";
+  return WEEKDAY_SHORT.filter((_, i) => days[i]).join(" · ");
+}
+
 function parseIsoDate(iso: string): { year: number; month: number; day: number } | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!match) return null;

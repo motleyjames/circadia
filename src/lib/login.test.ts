@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { bytesToBase64, newPasswordLock } from "./password";
-import { AUTH_ERRORS, LOCAL_FILE_KEY, defaultAuthMode, defaultContactField, identitiesFromVaultKeys, loginKeyCandidates, loginKeyFromInput, loginKeyFromProfile } from "./login";
+import { AUTH_ERRORS, LOCAL_FILE_KEY, defaultAuthMode, defaultContactField, formatLoginForDisplay, identitiesFromVaultKeys, loginKeyCandidates, loginKeyFromInput, loginKeyFromProfile, prettyContactDisplay } from "./login";
 import {
   LAST_LOGIN_KEY,
   LOCKS_KEY,
@@ -68,6 +68,14 @@ describe("login keys", () => {
     expect(defaultAuthMode(named)).toBe("login");
     expect(defaultContactField(named)).toBe("jbmotley06@icloud.com");
     expect(defaultAuthMode(identitiesFromVaultKeys([LOCAL_FILE_KEY]))).toBe("signup");
+  });
+
+  it("pretty-prints a US phone for identity rows without changing the vault key", () => {
+    expect(formatLoginForDisplay("phone:2037078503")).toBe("2037078503");
+    expect(prettyContactDisplay("phone:2037078503")).toBe("(203) 707-8503");
+    expect(prettyContactDisplay("phone:12037078503")).toBe("+1 (203) 707-8503");
+    expect(prettyContactDisplay("email:james@colorado.edu")).toBe("james@colorado.edu");
+    expect(prettyContactDisplay(LOCAL_FILE_KEY)).toBe("");
   });
 
   it("prefers email on a profile when both exist", () => {
