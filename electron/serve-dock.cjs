@@ -70,6 +70,26 @@ try {
   console.error("Circadia Dock update crashed; starting current tree.", err && err.message ? err.message : err);
 }
 
+try {
+  const { rebuildIfStale } = require("./rebuild-launcher.cjs");
+  const rebuilt = rebuildIfStale({
+    repo: root,
+    operator,
+    relaunch: process.platform === "darwin",
+  });
+  if (rebuilt.ok && rebuilt.updated) {
+    console.log("Circadia Dock recompiled the native launcher.");
+  } else if (!rebuilt.ok) {
+    console.error("Circadia launcher rebuild failed; starting current window.", rebuilt.error);
+  }
+  if (rebuilt.relaunched) {
+    console.log("Circadia Dock relaunching so the new window process can start.");
+    process.exit(0);
+  }
+} catch (err) {
+  console.error("Circadia launcher rebuild skipped.", err && err.message ? err.message : err);
+}
+
 if (!fs.existsSync(nextBin)) {
   console.error("Next is missing. Run npm install inside this Circadia folder.");
   process.exit(1);
