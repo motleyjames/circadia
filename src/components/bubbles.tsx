@@ -13,11 +13,13 @@ export function BubbleGroup<T extends string | number>({
   onChange,
   options,
   columns = 2,
+  size = "default",
 }: {
   value: T | undefined;
   onChange: (value: T) => void;
   options: BubbleOption<T>[];
   columns?: 2 | 3 | 4 | 5;
+  size?: "default" | "compact";
 }) {
   const col =
     columns === 5
@@ -27,9 +29,10 @@ export function BubbleGroup<T extends string | number>({
         : columns === 3
           ? "grid-cols-3"
           : "grid-cols-2";
+  const compact = size === "compact";
 
   return (
-    <div className={cn("grid gap-2", col)}>
+    <div className={cn("grid", compact ? "gap-1.5" : "gap-2", col)}>
       {options.map((option) => {
         const selected = value === option.value;
         return (
@@ -39,9 +42,12 @@ export function BubbleGroup<T extends string | number>({
             aria-pressed={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              "min-h-11 cursor-pointer rounded-full border px-3 py-3 text-sm transition-all",
+              "cursor-pointer rounded-full border px-3 transition-all",
+              compact ? "min-h-9 py-2 text-[13px]" : "min-h-11 py-3 text-sm",
               selected
-                ? "border-violet-300/70 bg-violet-400/20 text-violet-50 shadow-[0_0_24px_-8px_rgba(167,139,250,0.9)]"
+                ? compact
+                  ? "border-violet-300/65 bg-violet-400/18 text-violet-50"
+                  : "border-violet-300/70 bg-violet-400/20 text-violet-50 shadow-[0_0_24px_-8px_rgba(167,139,250,0.9)]"
                 : "border-white/10 bg-white/4 text-zinc-300 hover:border-white/20 hover:bg-white/8",
             )}
           >
