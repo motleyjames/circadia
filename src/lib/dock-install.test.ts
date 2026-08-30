@@ -47,6 +47,7 @@ describe("Dock install invariants", () => {
     expect(existsSync("src/app/api/session-key/route.ts")).toBe(true);
     expect(nextConfig).toContain("/((?!api/).*)");
     expect(serve).toContain("needsBuild");
+    expect(serve).toContain("rebuildIfStale");
     expect(serve).toContain('path.join(root, "public")');
     expect(main).toContain("serve-dock.cjs");
   });
