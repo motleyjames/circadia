@@ -2,10 +2,9 @@ import { dedupeReportsByMorningDate } from "@/lib/morning-file";
 import type { MorningReport, ScheduledDays } from "@/lib/types";
 import { isScheduledMorning, obligatedMorningCount, shiftIsoDate } from "@/lib/schedule";
 import {
-  circularMeanMinutes,
+  circularMeanOfMinutes,
   mean,
   midpointMinutes,
-  minutesToClock,
   overnightDuration,
   todayIsoDate,
 } from "@/lib/time";
@@ -15,6 +14,7 @@ export const SJL_WINDOW_DAYS = 28;
 export const SJL_MIN_SCHEDULED_NIGHTS = 3;
 export const SJL_MIN_FREE_NIGHTS = 2;
 export const MINUTES_PER_DAY = 24 * 60;
+const DAYS_PER_WEEK = 7;
 
 export type SjlWithhold = "school-break" | "few-scheduled" | "few-free";
 
@@ -94,8 +94,33 @@ export function sjlWithhold(
 
 function circularMeanMidSleepMinutes(nights: MorningReport[]): number | null {
   if (nights.length === 0) return null;
-  const clocks = nights.map((night) => minutesToClock(midSleepMinutes(night)));
-  return circularMeanMinutes(clocks);
+  return circularMeanOfMinutes(nights.map(midSleepMinutes));
+}
+
+/** MCTQ SDweek: means of logged nights, weights from the typical week on the calendar. */
+function weekWeightedSleepDuration(
+  scheduled: MorningReport[],
+  free: MorningReport[],
+  scheduledDays: ScheduledDays,
+): number | null {
+  if (scheduled.length === 0 || free.length === 0) return null;
+  const workDays = obligatedMorningCount(scheduledDays);
+  const freeDays = DAYS_PER_WEEK - workDays;
+  const sdWork = mean(scheduled.map(sleepDurationMinutes));
+  const sdFree = mean(free.map(sleepDurationMinutes));
+  return (sdWork * workDays + sdFree * freeDays) / DAYS_PER_WEEK;
+}
+
+function msfScFromPartition(
+  scheduled: MorningReport[],
+  free: MorningReport[],
+  scheduledDays: ScheduledDays,
+  msfMinutes: number,
+): number | null {
+  const sdWeek = weekWeightedSleepDuration(scheduled, free, scheduledDays);
+  if (sdWeek === null) return null;
+  const sdFree = mean(free.map(sleepDurationMinutes));
+  return msfMinutes - 0.5 * (sdFree - sdWeek);
 }
 
 export function msw(
@@ -138,9 +163,7 @@ export function msfSc(
   const { scheduled, free } = partitionWindow(reports, scheduledDays, now);
   const msfMinutes = circularMeanMidSleepMinutes(free);
   if (msfMinutes === null) return null;
-  const sdFreeMinutes = mean(free.map(sleepDurationMinutes));
-  const sdWeekMinutes = mean([...scheduled, ...free].map(sleepDurationMinutes));
-  return msfMinutes - 0.5 * (sdFreeMinutes - sdWeekMinutes);
+  return msfScFromPartition(scheduled, free, scheduledDays, msfMinutes);
 }
 
 export function computeSocialJetLag(
@@ -148,18 +171,19 @@ export function computeSocialJetLag(
   scheduledDays: ScheduledDays,
   now = new Date(),
 ): SocialJetLag | null {
-  const mswMinutes = msw(reports, scheduledDays, now);
-  const msfMinutes = msf(reports, scheduledDays, now);
-  const lagMinutes = socialJetLagMinutes(reports, scheduledDays, now);
-  const msfScMinutes = msfSc(reports, scheduledDays, now);
-  if (mswMinutes === null || msfMinutes === null || lagMinutes === null || msfScMinutes === null) {
-    return null;
-  }
+  if (obligatedMorningCount(scheduledDays) === 0) return null;
   const { scheduled, free } = partitionWindow(reports, scheduledDays, now);
+  if (scheduled.length < SJL_MIN_SCHEDULED_NIGHTS) return null;
+  if (free.length < SJL_MIN_FREE_NIGHTS) return null;
+  const mswMinutes = circularMeanMidSleepMinutes(scheduled);
+  const msfMinutes = circularMeanMidSleepMinutes(free);
+  if (mswMinutes === null || msfMinutes === null) return null;
+  const msfScMinutes = msfScFromPartition(scheduled, free, scheduledDays, msfMinutes);
+  if (msfScMinutes === null) return null;
   return {
     mswMinutes,
     msfMinutes,
-    socialJetLagMinutes: lagMinutes,
+    socialJetLagMinutes: circularDistanceMinutes(msfMinutes, mswMinutes),
     msfScMinutes,
     scheduledCount: scheduled.length,
     freeCount: free.length,

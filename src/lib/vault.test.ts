@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeDiskVault, parseDiskVault } from "./vault";
+import { mergeDiskVault, parseDiskVault, isLocalRequest } from "./vault";
 
 describe("disk vault", () => {
   it("merges a WKWebView-wiped origin with the file on disk without dropping mornings", () => {
@@ -44,5 +44,29 @@ describe("disk vault", () => {
     expect(JSON.stringify(parsed)).not.toContain("THIS-IS-NOT-A-SESSION");
     expect(parsed).not.toHaveProperty("master");
     expect(parsed).not.toHaveProperty("unlock");
+  });
+});
+
+describe("isLocalRequest", () => {
+  it("treats a missing Origin as local", () => {
+    expect(isLocalRequest(new Request("http://127.0.0.1:43148/api/vault"))).toBe(true);
+  });
+
+  it("allows loopback Origin and rejects anywhere else", () => {
+    expect(
+      isLocalRequest(
+        new Request("http://127.0.0.1:43148/api/vault", { headers: { origin: "http://127.0.0.1:43148" } }),
+      ),
+    ).toBe(true);
+    expect(
+      isLocalRequest(
+        new Request("http://127.0.0.1:43148/api/vault", { headers: { origin: "http://localhost:43147" } }),
+      ),
+    ).toBe(true);
+    expect(
+      isLocalRequest(
+        new Request("http://127.0.0.1:43148/api/vault", { headers: { origin: "https://evil.example" } }),
+      ),
+    ).toBe(false);
   });
 });

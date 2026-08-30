@@ -38,6 +38,7 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("startBreathBed");
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("startGuideFromTap");
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("primeGuide");
+    expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("aria-pressed");
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).not.toContain("speakBedside");
     expect(launcher).toContain("websiteDataStore");
     expect(launcher).not.toMatch(/config\.allowsInlineMediaPlayback/);
@@ -76,11 +77,18 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("SESSION_UNLOCK_KEY");
     expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("restorePersistedSession");
     expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("/api/session-key");
+    expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("SESSION_HEADER");
+    expect(readFileSync("src/lib/session-token-shared.ts", "utf8")).toContain("x-circadia-session");
     expect(readFileSync("src/lib/storage.ts", "utf8")).not.toMatch(
       /localStorage\.setItem\(\s*SESSION_UNLOCK_KEY/,
     );
     expect(readFileSync("src/lib/keychain.ts", "utf8")).toContain("add-generic-password");
     expect(readFileSync("src/app/api/session-key/route.ts", "utf8")).toContain("isLocalRequest");
+    expect(readFileSync("src/app/api/session-key/route.ts", "utf8")).toContain("sessionTokenOk");
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain("CIRCADIA_SESSION_TOKEN");
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain("circadiaDesktop");
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain("SecRandomCopyBytes");
+    expect(readFileSync("electron/launcher.swift", "utf8")).not.toMatch(/logLine\([^)]*sessionToken/);
     expect(onboarding).not.toContain("James can reach");
     expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("Closing the app does not log you out");
     expect(readFileSync("README.md", "utf8")).toContain("stays signed in");
@@ -102,8 +110,10 @@ describe("Dock install invariants", () => {
     expect(mw).toContain("NextResponse.redirect");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("isOperatorSurface");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).not.toContain("operatorPage");
-    expect(readFileSync("src/app/page.tsx", "utf8")).toContain("ModeratorPage");
-    expect(readFileSync("src/app/layout.tsx", "utf8")).toContain('force-dynamic');
+    expect(readFileSync("src/app/page.tsx", "utf8")).not.toContain('from "./mod/page"');
+    expect(readFileSync("src/app/page.tsx", "utf8")).toContain("isOperatorSurface");
+    expect(readFileSync("src/app/mod/page.tsx", "utf8")).toContain("ModeratorPage");
+    expect(readFileSync("src/app/layout.tsx", "utf8")).not.toContain("force-dynamic");
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
     expect(pkg.scripts.dock).toBe("node electron/install-both-native.cjs");

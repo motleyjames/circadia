@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   circularMeanMinutes,
+  circularMeanOfMinutes,
   clockToMinutes,
   formatDuration,
   minutesToClock,
@@ -32,6 +33,18 @@ describe("time", () => {
     const mean = circularMeanMinutes(["07:00", "07:10", "07:20"]);
     expect(mean).toBeGreaterThan(7 * 60 - 5);
     expect(mean).toBeLessThan(7 * 60 + 25);
+  });
+
+  it("string circularMeanMinutes delegates to circularMeanOfMinutes", () => {
+    expect(circularMeanOfMinutes([])).toBe(0);
+    expect(circularMeanMinutes(["07:00"])).toBeCloseTo(circularMeanOfMinutes([7 * 60]), 10);
+    expect(circularMeanMinutes(["07:00", "07:10", "07:20"])).toBeCloseTo(
+      circularMeanOfMinutes([7 * 60, 7 * 60 + 10, 7 * 60 + 20]),
+      10,
+    );
+    expect(circularMeanOfMinutes([195.5, 195.5])).toBeCloseTo(195.5, 10);
+    expect(minutesToClock(195.5)).toBe("03:16");
+    expect(circularMeanMinutes([minutesToClock(195.5), minutesToClock(195.5)])).toBeCloseTo(196, 10);
   });
 
   it("bands sleep need by age", () => {

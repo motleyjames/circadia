@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
 import { MorningFile } from "@/components/morning-file";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type {
@@ -29,34 +30,35 @@ export function CheckInFlow() {
   const today = todayIsoDate();
   const existing = reportForMorning(state.reports, today);
   const [revising, setRevising] = useState(false);
-
-  if (existing && !revising) {
-    return (
-      <MorningFile
-        report={existing}
-        units={state.profile?.units ?? "imperial"}
-        demoWeek={state.demoWeek}
-        onCorrect={() => setRevising(true)}
-        onWithdraw={() => {
-          if (
-            !window.confirm(
-              "Withdraw this morning’s page? You can file it again today. Other mornings stay.",
-            )
-          ) {
-            return;
-          }
-          withdrawMorning(today);
-        }}
-      />
-    );
-  }
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   return (
-    <MorningInterview
-      key={existing ? `revise-${existing.id}` : "fresh"}
-      existing={existing}
-      onCancel={existing ? () => setRevising(false) : undefined}
-    />
+    <>
+      {existing && !revising ? (
+        <MorningFile
+          report={existing}
+          units={state.profile?.units ?? "imperial"}
+          demoWeek={state.demoWeek}
+          onCorrect={() => setRevising(true)}
+          onWithdraw={() => setWithdrawOpen(true)}
+        />
+      ) : (
+        <MorningInterview
+          key={existing ? `revise-${existing.id}` : "fresh"}
+          existing={existing}
+          onCancel={existing ? () => setRevising(false) : undefined}
+        />
+      )}
+      <ConfirmDialog
+        open={withdrawOpen}
+        onOpenChange={setWithdrawOpen}
+        title="Withdraw this morning"
+        description="You can file it again today. Other mornings stay."
+        confirmLabel="Withdraw"
+        destructive
+        onConfirm={() => withdrawMorning(today)}
+      />
+    </>
   );
 }
 

@@ -16,6 +16,7 @@ import {
   unlockMaster,
   type PasswordLock,
 } from "@/lib/password";
+import { SESSION_HEADER } from "@/lib/session-token-shared";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS, isCivilDate } from "@/lib/schedule";
@@ -204,6 +205,14 @@ function dropLegacyUnlock(): void {
   window.localStorage.removeItem(SESSION_UNLOCK_KEY);
 }
 
+function sessionHeaders(init?: HeadersInit): Headers {
+  const headers = new Headers(init);
+  if (typeof window === "undefined") return headers;
+  const token = window.circadiaDesktop?.token;
+  if (typeof token === "string" && token.length > 0) headers.set(SESSION_HEADER, token);
+  return headers;
+}
+
 async function persistUnlockNow(login: string): Promise<void> {
   if (typeof window === "undefined") return;
   dropLegacyUnlock();
@@ -212,7 +221,7 @@ async function persistUnlockNow(login: string): Promise<void> {
   try {
     const res = await fetch("/api/session-key", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: sessionHeaders({ "content-type": "application/json" }),
       body: JSON.stringify({ login, master: bytesToBase64(master) }),
     });
     if (!res.ok) return;
@@ -223,7 +232,10 @@ async function persistUnlockNow(login: string): Promise<void> {
 
 async function fetchPersistedUnlock(login: string): Promise<{ login: string; master: Uint8Array } | null> {
   try {
-    const res = await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, { cache: "no-store" });
+    const res = await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, {
+      cache: "no-store",
+      headers: sessionHeaders(),
+    });
     if (!res.ok) return null;
     const body = (await res.json()) as Partial<PersistedUnlock> & { ok?: boolean };
     if (!body?.ok || typeof body.login !== "string" || typeof body.master !== "string") return null;
@@ -238,7 +250,10 @@ async function fetchPersistedUnlock(login: string): Promise<{ login: string; mas
 async function deletePersistedUnlock(login: string): Promise<void> {
   dropLegacyUnlock();
   try {
-    await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, { method: "DELETE" });
+    await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, {
+      method: "DELETE",
+      headers: sessionHeaders(),
+    });
   } catch {
     /* localStorage already dropped */
   }
@@ -324,7 +339,7 @@ export async function pushVaultToDisk(): Promise<void> {
   try {
     await fetch("/api/vault", {
       method: "PUT",
-      headers: { "content-type": "application/json" },
+      headers: sessionHeaders({ "content-type": "application/json" }),
       body: JSON.stringify(captureDisk()),
     });
   } catch {
@@ -338,7 +353,7 @@ export async function bootVaultFromDisk(): Promise<void> {
   migrateToVault();
   let disk = emptyDiskVault();
   try {
-    const res = await fetch("/api/vault", { cache: "no-store" });
+    const res = await fetch("/api/vault", { cache: "no-store", headers: sessionHeaders() });
     if (res.ok) disk = parseDiskVault(await res.json());
   } catch {
     /* localStorage only until the API is up */

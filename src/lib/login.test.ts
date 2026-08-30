@@ -163,6 +163,23 @@ describe("local file vault", () => {
     expect(JSON.parse(localStorage.getItem(VAULT_KEY) ?? "{}")).toEqual({});
   });
 
+  it("sends the Dock launch token on vault and session-key fetches", async () => {
+    window.circadiaDesktop = { native: true, token: "launch-token" };
+    const seen: Array<{ path: string; token: string | null }> = [];
+    const inner = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), "http://127.0.0.1");
+      seen.push({ path: url.pathname, token: new Headers(init?.headers).get("x-circadia-session") });
+      return inner(input, init);
+    }) as typeof fetch;
+    try {
+      await bootVaultFromDisk();
+      expect(seen.some((row) => row.path === "/api/vault" && row.token === "launch-token")).toBe(true);
+    } finally {
+      delete window.circadiaDesktop;
+    }
+  });
+
   it("creates a file, encrypts it, and does not unlock from a leftover session key", async () => {
     const created = await createFile({
       firstName: "Ada",

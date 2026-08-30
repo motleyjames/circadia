@@ -52,3 +52,4 @@ next-env.d.ts
 /.circadia-update.lock
 /src/app/.api-parked
 /.api-parked
+/.mod-parked

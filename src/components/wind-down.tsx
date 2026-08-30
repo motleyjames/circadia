@@ -23,6 +23,7 @@ import {
 } from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/lib/motion";
 
 const SOUNDSCAPES: Array<{ id: SoundscapeId; title: string; blurb: string }> = [
   { id: "brown", title: "Brown noise", blurb: "Low, heavy. Less hiss than white." },
@@ -70,10 +71,12 @@ export function WindDown() {
           orb.
         </p>
         {guides === "warming" ? (
-          <p className="mt-2 text-xs text-zinc-500">Preparing the guide…</p>
+          <p className="mt-2 text-xs text-zinc-500" aria-live="polite">
+            Preparing the guide…
+          </p>
         ) : null}
         {guides === "failed" ? (
-          <p className="mt-2 text-xs text-rose-300/90">
+          <p className="mt-2 text-xs text-rose-300/90" role="alert">
             The recordings did not load.{" "}
             <button type="button" className="underline underline-offset-2" onClick={prepareGuides}>
               Try again
@@ -86,6 +89,7 @@ export function WindDown() {
               key={m.id}
               type="button"
               disabled={guides !== "ready"}
+              aria-label={`${m.title}, ${Math.round(m.durationSeconds / 60)} minutes`}
               onClick={() => {
                 primeGuide();
                 startBreathBed();
@@ -114,6 +118,7 @@ export function WindDown() {
             <button
               key={s.id}
               type="button"
+              aria-label={`${s.title}. ${s.blurb}`}
               onClick={() => {
                 void unlockAudio();
                 setSoundId(s.id);
@@ -216,16 +221,18 @@ function MeditationPlayer({
 
   const scale =
     beat.breath === "in" ? 1.22 : beat.breath === "hold" ? 1.22 : beat.breath === "out" ? 0.84 : 1;
+  const reduceMotion = usePrefersReducedMotion();
+  const orbScale = reduceMotion ? 1 : scale;
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center" role="region" aria-label={script.title}>
       <div
         className={cn(
           "relative mb-8 flex aspect-square w-full max-w-72 items-center justify-center rounded-full border border-violet-300/30 bg-[radial-gradient(circle_at_center,rgba(167,139,250,0.4),rgba(14,12,28,0.15)_68%)] shadow-[0_0_80px_-10px_rgba(125,211,252,0.45)] transition-transform duration-[4000ms] ease-in-out",
         )}
-        style={{ transform: `scale(${scale})` }}
+        style={{ transform: `scale(${orbScale})` }}
       >
-        <div className="absolute inset-8 rounded-full border border-sky-300/15" />
+        <div className="absolute inset-8 rounded-full border border-sky-300/15" aria-hidden />
         <p className="relative px-8 text-center text-sm leading-relaxed text-zinc-100">{beat.text}</p>
       </div>
       <p className="text-xs text-zinc-500">
@@ -238,6 +245,8 @@ function MeditationPlayer({
           type="button"
           variant="outline"
           className="rounded-full border-white/15"
+          aria-pressed={running && !done}
+          aria-label={running && !done ? "Pause the guide" : "Resume the guide"}
           onClick={() => {
             if (running && !done) {
               hushVoice();
@@ -254,6 +263,7 @@ function MeditationPlayer({
         <Button
           type="button"
           className="rounded-full bg-violet-400 text-zinc-950 hover:bg-violet-300"
+          aria-label="End the guide"
           onClick={() => finish()}
         >
           End
@@ -298,16 +308,26 @@ function SoundPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  const reduceMotion = usePrefersReducedMotion();
+  const title = SOUNDSCAPES.find((s) => s.id === id)?.title ?? "Calm noise";
+
   return (
-    <div className="flex flex-col items-center py-6">
-      <div className="mb-6 size-44 animate-pulse rounded-full bg-[radial-gradient(circle_at_center,rgba(125,211,252,0.4),transparent_70%)]" />
-      <p className="text-sm text-zinc-200">{SOUNDSCAPES.find((s) => s.id === id)?.title}</p>
+    <div className="flex flex-col items-center py-6" role="region" aria-label={title}>
+      <div
+        className={cn(
+          "mb-6 size-44 rounded-full bg-[radial-gradient(circle_at_center,rgba(125,211,252,0.4),transparent_70%)]",
+          !reduceMotion && "animate-pulse",
+        )}
+        aria-hidden
+      />
+      <p className="text-sm text-zinc-200">{title}</p>
       <p className="mt-1 text-xs text-zinc-500">
         {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")} · keep the phone face down
       </p>
       <Button
         type="button"
         className="mt-6 rounded-full bg-sky-300 text-zinc-950 hover:bg-sky-200"
+        aria-label="Stop the noise"
         onClick={() => finish()}
       >
         Stop

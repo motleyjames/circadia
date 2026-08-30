@@ -4,7 +4,6 @@ import type {
   NightWakingDuration,
   ScreenOffMinutes,
   SleepRating,
-  SupplementKind,
   Units,
   WindDownHelp,
 } from "@/lib/types";

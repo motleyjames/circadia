@@ -1,0 +1,51 @@
+import { existsSync, readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+
+const CONFIRM_SITES = [
+  "src/components/you-view.tsx",
+  "src/components/check-in-flow.tsx",
+  "src/components/study-panel.tsx",
+  "src/components/insights-view.tsx",
+];
+
+describe("touch targets, confirms, and fault screens", () => {
+  it("removes window.confirm from the five diary sites", () => {
+    for (const file of CONFIRM_SITES) {
+      expect(readFileSync(file, "utf8"), file).not.toContain("window.confirm");
+      expect(readFileSync(file, "utf8"), file).toContain("ConfirmDialog");
+    }
+    expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("confirmWord");
+    expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("ERASE_CONFIRM_WORD");
+    expect(readFileSync("src/components/bubbles.tsx", "utf8")).not.toContain("ConfirmDialog");
+  });
+
+  it("sets 44px min targets on coarse pointers and honors reduced motion", () => {
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toContain("@media (pointer: coarse)");
+    expect(css).toContain("min-height: 44px");
+    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(css).toContain("animation-duration: 0.01ms");
+  });
+
+  it("ships generic fault screens with retry only", () => {
+    expect(existsSync("src/app/error.tsx")).toBe(true);
+    expect(existsSync("src/app/global-error.tsx")).toBe(true);
+    for (const file of ["src/app/error.tsx", "src/app/global-error.tsx", "src/components/fault-screen.tsx"]) {
+      const src = readFileSync(file, "utf8");
+      expect(src, file).not.toMatch(/error\.message|error\.stack|JSON\.stringify\(\s*error/);
+      expect(src, file).not.toMatch(/\{error\}/);
+    }
+    expect(readFileSync("src/components/fault-screen.tsx", "utf8")).toContain("Try again");
+    expect(readFileSync("src/components/fault-screen.tsx", "utf8")).not.toContain("window.confirm");
+    expect(readFileSync("src/app/global-error.tsx", "utf8")).toContain("<html");
+  });
+
+  it("names wind-down controls and exposes pause state", () => {
+    const wind = readFileSync("src/components/wind-down.tsx", "utf8");
+    expect(wind).toContain("aria-pressed");
+    expect(wind).toContain("aria-label");
+    expect(wind).toContain('role="region"');
+    expect(wind).toContain("usePrefersReducedMotion");
+    expect(wind).not.toContain("speakBedside");
+  });
+});

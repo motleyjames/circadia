@@ -95,6 +95,18 @@ describe("diary vs operator Dock kinds", () => {
     ).toBe("standalone");
   });
 
+  it("does not bake a launch session token into the Dock compile", () => {
+    const prev = process.env.CIRCADIA_SESSION_TOKEN;
+    process.env.CIRCADIA_SESSION_TOKEN = "should-not-compile";
+    try {
+      expect(bundle.nextBuildEnv("diary").CIRCADIA_SESSION_TOKEN).toBeUndefined();
+      expect(bundle.nextBuildEnv("mod").CIRCADIA_SESSION_TOKEN).toBeUndefined();
+    } finally {
+      if (prev === undefined) delete process.env.CIRCADIA_SESSION_TOKEN;
+      else process.env.CIRCADIA_SESSION_TOKEN = prev;
+    }
+  });
+
   it("installs both kinds by default", () => {
     const prev = process.argv.slice();
     try {

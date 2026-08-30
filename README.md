@@ -11,7 +11,7 @@ Two native apps. Same Swift binary. Different `install.json`. Not Electron.
 - **Circadia** — ice clock, port 43148. Sign up / Log in, then the diary.
 - **Circadia Operator** — gold clock, port 43149. Your inbox. Testers never see this.
 
-Clone **this** tree (0.6.5+). Do not run Dock commands in `/Users/jamesmotley/rest-ai` — that copy is 0.5.0 and rebuilds the broken Electron app.
+Clone **this** tree (0.6.5+). Do not run Dock commands from an older rest-ai checkout — that copy is 0.5.0 and rebuilds the broken Electron app.
 
 ```bash
 git clone https://github.com/motleyjames/circadia.git ~/circadia

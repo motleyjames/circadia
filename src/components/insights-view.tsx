@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { buildSleepNotes } from "@/lib/advisor";
 import { readDream } from "@/lib/dreams";
 import { weekBreakdown } from "@/lib/metrics";
@@ -17,6 +18,7 @@ import { buildWeekReview, formatMorningDate, lastSevenReports } from "@/lib/week
 
 export function InsightsView() {
   const { state, loadSampleWeek } = useCircadia();
+  const [sampleOpen, setSampleOpen] = useState(false);
   const profile = state.profile;
   const windowReports = useMemo(() => lastSevenReports(state.reports), [state.reports]);
   const notes = useMemo(
@@ -90,10 +92,8 @@ export function InsightsView() {
               variant="outline"
               className="rounded-full border-white/15"
               onClick={() => {
-                if (
-                  state.reports.length > 0 &&
-                  !window.confirm("Replace your mornings with a labeled sample week?")
-                ) {
+                if (state.reports.length > 0) {
+                  setSampleOpen(true);
                   return;
                 }
                 loadSampleWeek();
@@ -217,6 +217,14 @@ export function InsightsView() {
           spread ~{Math.round(week.wakeSpreadMinutes)} min.
         </p>
       ) : null}
+      <ConfirmDialog
+        open={sampleOpen}
+        onOpenChange={setSampleOpen}
+        title="Load a sample week"
+        description="This replaces mornings already on this device with a labeled sample week. It is fake data."
+        confirmLabel="Replace mornings"
+        onConfirm={loadSampleWeek}
+      />
     </div>
   );
 }

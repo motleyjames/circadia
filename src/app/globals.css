@@ -178,6 +178,54 @@ select,
   cursor: pointer;
 }
 
+@media (pointer: coarse) {
+  button,
+  a,
+  summary,
+  label[for],
+  select,
+  [role="button"],
+  [role="link"],
+  input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+  textarea {
+    min-height: 44px;
+  }
+
+  button,
+  a,
+  summary,
+  select,
+  [role="button"],
+  [role="link"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 44px;
+  }
+
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .brand-breathe {
+    animation: none !important;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 0;
   height: 0;
