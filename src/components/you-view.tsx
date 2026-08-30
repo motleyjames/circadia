@@ -210,6 +210,7 @@ export function YouView() {
                       <Input
                         inputMode="numeric"
                         value={feet}
+                        placeholder="ft"
                         onChange={(e) => setFeet(e.target.value)}
                         onBlur={() =>
                           persist({ heightCm: feetInchesToCm(Number(feet) || 0, Number(inches) || 0) })
@@ -220,6 +221,7 @@ export function YouView() {
                       <Input
                         inputMode="numeric"
                         value={inches}
+                        placeholder="in"
                         onChange={(e) => setInches(e.target.value)}
                         onBlur={() =>
                           persist({ heightCm: feetInchesToCm(Number(feet) || 0, Number(inches) || 0) })
@@ -390,7 +392,7 @@ export function YouView() {
                       onChange={setNextConfirm}
                       autoComplete="new-password"
                     />
-                    {passwordMsg ? (
+                    {passwordMsg && passwordMsg !== "Password updated." ? (
                       <p className="mt-2 text-[13px] text-amber-200/90">{passwordMsg}</p>
                     ) : null}
                     <Button
@@ -412,6 +414,8 @@ export function YouView() {
                       Save password
                     </Button>
                   </div>
+                ) : passwordMsg === "Password updated." ? (
+                  <p className="mt-3 text-[12px] text-zinc-400">Password updated.</p>
                 ) : null}
 
                 <p className="mt-3 text-[12px] leading-relaxed text-zinc-600">
