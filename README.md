@@ -99,29 +99,25 @@ npm run build
 
 ## iPhone (diary only)
 
-Same diary. Not a second product. **Operator is never in this binary.**
+Same diary. Not a second product. **Operator is never in this binary.** Tonight is the clock. **Ask** is a word, not a sixth tab. Five tabs: Tonight, Morning, Notes, Library, You.
 
-The phone chrome is not the Mac window squeezed down. Tonight is the clock. **Ask** is a word, not a sixth tab. Consult is a full screen. Five tabs underneath: Tonight, Morning, Notes, Library, You.
+Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
-```bash
-npm install
-npm run phone:sync
-```
+1. **Your phone today** (free Apple ID, USB). In a GitHub `main` clone at 0.7.0+:
 
-That runs `pack:static` (parks `src/app/api` and `src/app/mod`, writes `out/`, restores them), then `npx cap sync ios` from `phone/`. Circadia.app on the Mac still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`.
+   ```bash
+   git clone https://github.com/motleyjames/circadia.git ~/circadia
+   cd ~/circadia
+   npm run put-on-phone
+   ```
 
-First time on a Mac, if `phone/ios` is missing:
+   That packs the diary, syncs Capacitor, and opens Xcode. Pick **your iPhone**, not a simulator. Signing → your Team. Run. Enable Developer Mode if iOS asks. Trust the developer cert on the phone. Simulator, Safari “Add to Home Screen,” and sideloading skip Keychain or skip real users — they are not this path.
 
-```bash
-cd phone
-npx cap add ios
-npm run sync
-npx cap open ios
-```
+2. **Other people’s phones** (paid [Apple Developer Program](https://developer.apple.com/programs/), then TestFlight). Start enrollment before or while you cable-run; review can sit in the background. Then: Xcode → Product → Archive → Distribute → App Store Connect. Internal TestFlight is only for people already on your App Store Connect team (up to 100). Paid testers are an **external** group (email or public link) after the first TestFlight beta review. Builds last 90 days.
 
-In Xcode: team signing, bundle id `app.circadia.diary`, run on a device. Wind-down copy is honest — locking the phone may pause Web Audio even with `UIBackgroundModes=audio`. The iOS audio spike under `spikes/` is a local experiment, not this app, and not lock-screen proof.
+`npm run put-on-phone` runs `pack:static` (parks `src/app/api` and `src/app/mod`, writes `out/`, restores them) then `cap sync`. Circadia.app on the Mac still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Bundle id is `app.circadia.diary`. Wind-down copy is honest — locking the phone may pause Web Audio. The iOS audio spike under `spikes/` is a local experiment, not this app.
 
-Stay-signed-in on the phone: ciphertext in the app sandbox, AES key in iOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). If Keychain writes fail, the next launch asks for the password. The Mac diary and the iPhone diary are separate files — there is no cloud account to merge them. There is no Android slice in this version.
+Stay-signed-in: ciphertext in the app sandbox, AES key in iOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). If Keychain writes fail, the next launch asks for the password. The Mac diary and the iPhone diary are separate files. App Store Connect will ask about encryption: **yes** — the diary uses AES-GCM on device. Do not tick “HTTPS only.” No Android slice in this version.
 
 CI YAML is `scripts/github-ci.yml`. Copy it to `.github/workflows/ci.yml` when the GitHub token has `workflow` scope.
 
