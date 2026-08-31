@@ -21,22 +21,26 @@ const nextConfig: NextConfig = {
   logging: {
     browserToTerminal: false,
   },
-  async headers() {
-    if (packStatic) return [];
-    return [
-      {
-        source: "/((?!api/).*)",
-        headers: [
-          { key: "Access-Control-Allow-Origin", value: "*" },
-          { key: "Cache-Control", value: "no-store" },
-        ],
-      },
-      {
-        source: "/api/:path*",
-        headers: [{ key: "Cache-Control", value: "no-store" }],
-      },
-    ];
-  },
+  // Static export warns if the `headers` key exists at all, even as `() => []`.
+  ...(packStatic
+    ? {}
+    : {
+        async headers() {
+          return [
+            {
+              source: "/((?!api/).*)",
+              headers: [
+                { key: "Access-Control-Allow-Origin", value: "*" },
+                { key: "Cache-Control", value: "no-store" },
+              ],
+            },
+            {
+              source: "/api/:path*",
+              headers: [{ key: "Cache-Control", value: "no-store" }],
+            },
+          ];
+        },
+      }),
 };
 
 export default nextConfig;

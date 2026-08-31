@@ -95,7 +95,7 @@ export function YouView() {
   const loginLabel = prettyContactDisplay(session);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-24 md:px-8">
+    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-24 md:px-8">
       <div className="mx-auto w-full max-w-5xl">
         <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">You</p>
         <h1 className="font-heading mt-1 text-[2.35rem] leading-none tracking-tight text-zinc-50">

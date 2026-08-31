@@ -34,7 +34,9 @@ describe("Dock install invariants", () => {
     expect(launcher).not.toContain('"dev"');
     expect(serve).toContain("next");
     expect(serve).toContain("start");
-    expect(readFileSync("src/middleware.ts", "utf8")).toContain("voice/");
+    expect(existsSync("src/middleware.ts")).toBe(false);
+    expect(readFileSync("src/proxy.ts", "utf8")).toContain("export function proxy");
+    expect(readFileSync("src/proxy.ts", "utf8")).toContain("voice/");
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("startBreathBed");
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("startGuideFromTap");
     expect(readFileSync("src/components/wind-down.tsx", "utf8")).toContain("primeGuide");
@@ -46,6 +48,7 @@ describe("Dock install invariants", () => {
     expect(existsSync("src/app/api/vault/route.ts")).toBe(true);
     expect(existsSync("src/app/api/session-key/route.ts")).toBe(true);
     expect(nextConfig).toContain("/((?!api/).*)");
+    expect(nextConfig).toMatch(/\.\.\.\(packStatic\s*\?/);
     expect(serve).toContain("needsBuild");
     expect(serve).toContain("rebuildIfStale");
     expect(serve).toContain('path.join(root, "public")');
@@ -104,7 +107,7 @@ describe("Dock install invariants", () => {
     expect(runMod).toContain("43149");
     expect(runMod).toContain('CIRCADIA_SURFACE = "mod"');
     expect(readFileSync("next.config.ts", "utf8")).toContain(".next-mod");
-    const mw = readFileSync("src/middleware.ts", "utf8");
+    const mw = readFileSync("src/proxy.ts", "utf8");
     expect(mw).toContain('CIRCADIA_SURFACE === "mod"');
     expect(mw).toContain("/api/moderator");
     expect(mw).toContain("/api/session-key");
@@ -115,6 +118,7 @@ describe("Dock install invariants", () => {
     expect(readFileSync("src/app/page.tsx", "utf8")).toContain("isOperatorSurface");
     expect(readFileSync("src/app/mod/page.tsx", "utf8")).toContain("ModeratorPage");
     expect(readFileSync("src/app/layout.tsx", "utf8")).not.toContain("force-dynamic");
+    expect(readFileSync("src/app/layout.tsx", "utf8")).not.toContain("LayoutProps");
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toContain("/mod");
     expect(readFileSync("src/components/sidebar-nav.tsx", "utf8")).not.toContain("/mod");
     expect(pkg.scripts.dock).toBe("node electron/install-both-native.cjs");

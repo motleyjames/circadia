@@ -9,7 +9,7 @@ function notFound(message: string) {
   return new NextResponse(message, { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (operatorMode()) {

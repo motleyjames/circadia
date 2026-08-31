@@ -28,4 +28,7 @@ Local-first Next.js sleep companion. No database and no cloud auth. Profile, mor
 - This Linux VM cannot write the Mac Dock. After a change, `git push` to GitHub. Opening Circadia.app pulls `main` via `electron/dock-update.cjs`. Do not tell James to `put-on-dock` unless `launcher.swift` or the `.app` bundle layout changed.
 - Operator never displays names, email, phone, or body measurements. Signups stitch on `participantId`. Sleep stats only. `summarizeInbox` must drop PII even if a legacy roster file still has a name.
 - Library notes in `src/lib/research.ts` carry `reviewedThrough`. `staleResearchIds(RESEARCH)` must stay empty. Do not add a PubMed fetch. Mouth (`say`) still cannot contain AASM / CBT-I / SCN.
+- Surface isolation is `src/proxy.ts` (Next 16 renamed middleware). Diary 404s `/mod`. Operator 404s vault, study, and session-key.
+- Static pack: `npm run pack:static` parks `src/app/api` and `src/app/mod`, then writes `out/`. Never set `CIRCADIA_PACK_STATIC` in `.env.local`. Operator Next builds stay `standalone`.
+- Circadia.app pulls GitHub `main`. Pushing `.github/workflows/*.yml` needs the GitHub `workflow` OAuth scope; without it, `npm test` on that clone fails because `ci-workflow.test.ts` expects the file.
 

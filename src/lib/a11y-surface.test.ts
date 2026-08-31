@@ -48,4 +48,22 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(wind).toContain("usePrefersReducedMotion");
     expect(wind).not.toContain("speakBedside");
   });
+
+  it("keeps in-app diary views off the notch", () => {
+    for (const file of [
+      "src/components/tonight-view.tsx",
+      "src/components/you-view.tsx",
+      "src/components/insights-view.tsx",
+      "src/components/library-view.tsx",
+      "src/components/check-in-flow.tsx",
+      "src/components/morning-file.tsx",
+      "src/components/study-gate.tsx",
+      "src/components/fault-screen.tsx",
+      "src/components/auth-gate.tsx",
+      "src/components/onboarding.tsx",
+      "src/components/bottom-nav.tsx",
+    ]) {
+      expect(readFileSync(file, "utf8"), file).toMatch(/safe-area-inset-(top|bottom)/);
+    }
+  });
 });
