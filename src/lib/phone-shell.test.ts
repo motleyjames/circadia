@@ -82,6 +82,8 @@ describe("phone diary shell", () => {
       "PRODUCT_BUNDLE_IDENTIFIER = app.circadia.diary",
     );
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
+    expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
+    expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
     expect(existsSync("src/app/mod/page.tsx")).toBe(true);
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain(".mod-parked");
   });
@@ -93,7 +95,8 @@ describe("phone diary shell", () => {
     expect(script).toContain("0.7.0");
     expect(script).toContain("phone:sync");
     expect(script).toContain("phone:open");
-    expect(script).toContain("app.circadia.diary");
+    expect(script).toContain("@capacitor/core");
+    expect(script).toContain("npm install");
     expect(script).toContain("Not Operator");
     expect(script).not.toContain("Circadia Operator");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });

@@ -37,7 +37,8 @@ if [[ ! -d phone/ios/App/App.xcodeproj ]]; then
   exit 6
 fi
 
-if [[ ! -d node_modules/next ]]; then
+if [[ ! -d node_modules/next ]] || [[ ! -d node_modules/@capacitor/core ]]; then
+  echo "Installing dependencies (including Capacitor for the phone pack)…"
   npm install
 fi
 
