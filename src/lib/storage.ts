@@ -26,6 +26,7 @@ import {
   writePhoneVault,
 } from "@/lib/phone-vault";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
+import { fetchPackedDiary, resetPackedDiaryCacheForTests } from "@/lib/packed-diary";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS, isCivilDate } from "@/lib/schedule";
 import { dedupeReportsByMorningDate } from "@/lib/morning-file";
@@ -72,6 +73,7 @@ export function resetVaultMemoryForTests(): void {
   writeGen.clear();
   persistChain = Promise.resolve();
   dropAllMasters();
+  resetPackedDiaryCacheForTests();
 }
 
 export const emptyStudy = (): StudyState => ({
@@ -384,6 +386,89 @@ export async function installLockedVault(
   return { ok: true };
 }
 
+/** Phone pack only. If this device has no diary, install the locked copy baked into the iPhone build. */
+export async function applyPackedDiaryIfEmpty(): Promise<boolean> {
+  if (!phoneVaultActive() || !isVaultEmpty()) return false;
+  const packed = await fetchPackedDiary();
+  if (!packed) return false;
+  const result = await installLockedVault(packed);
+  return result.ok;
+}
+
+async function decryptPackedLogin(
+  packed: DiskVault,
+  login: string,
+  password: string,
+): Promise<{ master: Uint8Array; state: CircadiaState; migratedLock: PasswordLock | null } | null> {
+  const file = packed.files[login];
+  if (!file) return null;
+  const lock = packed.locks[login];
+  try {
+    let master: Uint8Array;
+    let migratedLock: PasswordLock | null = null;
+    if (lock) {
+      const unlocked = await unlockMaster(password, lock);
+      if (!unlocked) return null;
+      master = unlocked.master;
+      migratedLock = unlocked.migratedLock;
+    } else {
+      const pwd = passwordIssue(password);
+      if (pwd) return null;
+      const minted = await newPasswordLock(password);
+      master = minted.master;
+      migratedLock = minted.lock;
+    }
+    const state = isVaultEnvelope(file)
+      ? hydrateState(await decryptPayload(file, master))
+      : hydrateState(file);
+    return { master, state, migratedLock };
+  } catch {
+    return null;
+  }
+}
+
+async function adoptPackedDiary(
+  packed: DiskVault,
+  login: string,
+  password: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | null> {
+  const unlocked = await decryptPackedLogin(packed, login, password);
+  if (!unlocked) return null;
+  const installed = await installLockedVault(packed);
+  if (!installed.ok) {
+    unlocked.master.fill(0);
+    return null;
+  }
+  if (unlocked.migratedLock) setLock(login, unlocked.migratedLock);
+  holdMaster(login, unlocked.master);
+  unlocked.master.fill(0);
+  plainByLogin.set(login, unlocked.state);
+  rememberOpen(login);
+  const gen = bumpGen(login);
+  await persistEncrypted(login, cloneState(unlocked.state), gen);
+  await persistUnlockNow(login);
+  schedulePersistDisk();
+  return { ok: true, login, state: unlocked.state };
+}
+
+/**
+ * Log in with Mac credentials even if this phone already has a leftover signup.
+ * Password is checked against the packed ciphertext first — a typo does not replace the diary here.
+ */
+async function openPackedDiaryIfPresent(
+  contact: string,
+  password: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | null> {
+  const packed = await fetchPackedDiary();
+  if (!packed) return null;
+  const candidates = loginKeyCandidates(contact);
+  const hinted = candidates.find((key) => packed.files[key]) ?? null;
+  if (hinted) return adoptPackedDiary(packed, hinted, password);
+  const keys = Object.keys(packed.files).filter((key) => key !== LOCAL_FILE_KEY);
+  if (keys.length === 1) return adoptPackedDiary(packed, keys[0]!, password);
+  return null;
+}
+
 let persistTimer: number | null = null;
 
 export function schedulePersistDisk() {
@@ -433,6 +518,7 @@ export async function bootVaultFromDisk(): Promise<void> {
   writeRawVault(merged.files);
   writeLocks(merged.locks);
   writeLastLogin(merged.session);
+  if (await applyPackedDiaryIfEmpty()) return;
   await restorePersistedSession();
   await pushVaultToDisk();
 }
@@ -584,6 +670,8 @@ export async function openFile(
   migrateToVault();
   const candidates = loginKeyCandidates(contact);
   if (!candidates.length) return { ok: false, error: AUTH_ERRORS.contact };
+  const packedHit = await openPackedDiaryIfPresent(contact, password);
+  if (packedHit) return packedHit;
   const files = readRawVault();
   const login = candidates.find((key) => files[key]) ?? null;
   if (!login) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   DIARY_PACK_ERRORS,
@@ -9,6 +9,7 @@ import {
   serializeLockedDiary,
 } from "@/lib/diary-pack";
 import { isPhoneNative } from "@/lib/phone-native";
+import { fetchPackedDiary } from "@/lib/packed-diary";
 import { SESSION_HEADER } from "@/lib/session-token-shared";
 import { flushVaultWrites, installLockedVault, isVaultEmpty, snapshotDisk } from "@/lib/storage";
 import { cn } from "@/lib/utils";
@@ -187,6 +188,70 @@ export function BringLockedDiaryButton({
           setPending(null);
           if (vault) void apply(vault);
         }}
+        />
+    </span>
+  );
+}
+
+export function UsePackedDiaryButton({
+  onInstalled,
+  className,
+}: {
+  onInstalled: () => void;
+  className?: string;
+}) {
+  const [vault, setVault] = useState<DiskVault | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    void fetchPackedDiary().then((packed) => {
+      if (packed) setVault(packed);
+    });
+  }, []);
+
+  if (!vault) return null;
+
+  async function apply() {
+    if (!vault) return;
+    setBusy(true);
+    const result = await installLockedVault(vault);
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setError(null);
+    onInstalled();
+  }
+
+  return (
+    <span className="block">
+      <button
+        type="button"
+        disabled={busy}
+        className={cn("cursor-pointer disabled:opacity-50", className)}
+        onClick={() => {
+          if (busy) return;
+          if (!isVaultEmpty()) {
+            setConfirmOpen(true);
+            return;
+          }
+          void apply();
+        }}
+      >
+        {busy ? "Opening…" : "Use the packed diary"}
+      </button>
+      {error ? <p className="mt-2 text-[13px] text-amber-200/90">{error}</p> : null}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Replace the diary on this device?"
+        description="The diary already here will be replaced by the locked copy packed in this app. You will log in again with the same email or phone and password."
+        confirmLabel="Replace diary"
+        destructive
+        onConfirm={() => void apply()}
       />
     </span>
   );

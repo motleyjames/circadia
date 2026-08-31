@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { BringLockedDiaryButton } from "@/components/locked-diary-controls";
+import { BringLockedDiaryButton, UsePackedDiaryButton } from "@/components/locked-diary-controls";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { useCircadia } from "@/context/circadia-store";
-import { AUTH_ERRORS, defaultAuthMode, defaultContactField } from "@/lib/login";
+import { AUTH_ERRORS, defaultAuthMode, defaultContactField, identitiesFromVaultKeys } from "@/lib/login";
+import { fetchPackedDiary } from "@/lib/packed-diary";
 import { isVaultEmpty, listDiaryLogins } from "@/lib/storage";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,15 @@ export function AuthGate() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [brought, setBrought] = useState(false);
+
+  useEffect(() => {
+    void fetchPackedDiary().then((packed) => {
+      if (!packed || !isVaultEmpty()) return;
+      const next = identitiesFromVaultKeys(Object.keys(packed.files));
+      setMode("login");
+      setContact(defaultContactField(next));
+    });
+  }, []);
 
   async function submit() {
     if (busy) return;
@@ -70,7 +80,7 @@ export function AuthGate() {
             : named.length
               ? "Log in to the diary on this device. After that, Circadia stays signed in here until you log out. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
               : empty
-                ? "There is no diary on this device yet. Circadia lives here, not in the cloud — a password from another Circadia will not find it. Sign up to start one here, or bring a locked copy."
+                ? "There is no diary on this device yet. Circadia lives here, not in the cloud. If this app was packed from another Circadia, log in with that same email or phone and password. Otherwise sign up here, or bring a locked copy."
                 : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this device — not a way for anyone to reach you. Circadia stays signed in here until you log out."}
         </p>
 
@@ -194,6 +204,17 @@ export function AuthGate() {
           </button>
         </form>
 
+        <UsePackedDiaryButton
+          className="mt-6 h-12 w-full justify-center rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 hover:bg-white/4"
+          onInstalled={() => {
+            const next = listDiaryLogins();
+            setMode("login");
+            setContact(defaultContactField(next));
+            setPassword("");
+            setError(null);
+            setBrought(true);
+          }}
+        />
         <BringLockedDiaryButton
           className="mt-6 h-12 w-full justify-center rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 hover:bg-white/4"
           onInstalled={() => {
