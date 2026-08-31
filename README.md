@@ -97,6 +97,16 @@ npm run build
 
 `npm test` includes a generated consult corpus — thousands of paraphrases plus follow-ups. It checks routing and safety, not frozen essays. The library in `src/lib/research.ts` is the source of truth. Every note there has a `reviewedThrough` month. If that month is more than 12 months behind today, the suite fails — that is how the shelf stays current without a network call. When a guideline moves, update the note and bump the stamp.
 
+## Static pack (phone wrap is later)
+
+The diary can emit a folder of HTML/CSS/JS with no Operator and no API routes:
+
+```bash
+npm run pack:static
+```
+
+That parks `src/app/api` and `src/app/mod` for the compile, writes `out/`, then puts those folders back. Circadia.app still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Capacitor is not in this repo yet. The iOS audio spike under `spikes/` is a local experiment, not part of the app.
+
 ## What this is not
 
 Not medical care. Not a diagnosis. Not a prescription. If you snore and gasp, fall asleep while driving, or cannot stay awake, that is a clinic.

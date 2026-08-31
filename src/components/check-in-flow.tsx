@@ -191,7 +191,7 @@ function MorningInterview({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-5 pt-8 pb-3">
+    <div className="flex min-h-0 flex-1 flex-col px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-3">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">
         {existing ? "Correcting this morning" : "Morning interview"}
       </p>

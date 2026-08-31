@@ -1,18 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Outfit } from "next/font/google";
+import localFont from "next/font/local";
 import { AppShell } from "@/components/app-shell";
 import { CircadiaSafeTree } from "@/context/circadia-store";
 import "./globals.css";
 
-const outfit = Outfit({
+const outfit = localFont({
+  src: "./fonts/Outfit-Variable-latin.woff2",
   variable: "--font-sans",
-  subsets: ["latin"],
+  display: "swap",
+  weight: "100 900",
+  adjustFontFallback: "Arial",
 });
 
-const fraunces = Fraunces({
+const fraunces = localFont({
+  src: "./fonts/Fraunces-Variable-latin.woff2",
   variable: "--font-heading",
-  subsets: ["latin"],
-  axes: ["SOFT", "WONK", "opsz"],
+  display: "swap",
+  weight: "100 900",
+  adjustFontFallback: "Times New Roman",
 });
 
 export const metadata: Metadata = {
@@ -44,7 +49,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${outfit.variable} ${fraunces.variable} h-full antialiased`}>
       <body className="min-h-full bg-[#05040a] font-sans text-zinc-100">

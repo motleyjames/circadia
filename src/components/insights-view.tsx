@@ -49,7 +49,7 @@ export function InsightsView() {
   const empty = state.reports.length === 0;
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-8 pb-8">
+    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-8">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Notes</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">The week.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">

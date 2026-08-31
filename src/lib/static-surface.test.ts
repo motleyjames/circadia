@@ -45,6 +45,9 @@ describe("static pack parks Operator and API routes", () => {
     expect(buildUi).not.toContain("pageExtensions");
     expect(nextConfig).not.toContain("pageExtensions");
     expect(nextConfig).toContain("tsconfig.static.json");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["pack:static"]).toBe(
+      "node electron/build-ui.cjs",
+    );
     expect(readFileSync("src/app/page.tsx", "utf8")).not.toContain('from "./mod/page"');
     expect(existsSync("src/app/mod/page.tsx")).toBe(true);
     expect(existsSync("src/app/api/vault/route.ts")).toBe(true);
@@ -98,6 +101,9 @@ describe("static pack parks Operator and API routes", () => {
       expect(existsSync(".mod-parked")).toBe(false);
 
       expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(`${result.stdout}\n${result.stderr}`).not.toContain(
+        'Specified "headers" will not automatically work with "output: export"',
+      );
       expect(existsSync("out/index.html")).toBe(true);
       expect(existsSync("out/mod")).toBe(false);
       expect(existsSync("out/mod.html")).toBe(false);

@@ -7,7 +7,7 @@ export function StudyGate() {
   const { joinStudy, declineStudy } = useCircadia();
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-8 pt-16 pb-10">
+    <div className="flex min-h-0 flex-1 flex-col px-8 pt-[max(4rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
       <Mark className="size-7" />
       <p className="mt-10 text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">
         Optional study

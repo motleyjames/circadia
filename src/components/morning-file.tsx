@@ -21,7 +21,7 @@ export function MorningFile({
   const night = filedNight(report, units);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-10 pb-12">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-[max(2.5rem,env(safe-area-inset-top))] pb-12">
       <div className="mx-auto w-full max-w-[22rem]">
         <p className="text-center text-[12px] text-zinc-500">{night.dateLabel}</p>
         <p className="font-heading mt-4 text-center text-[3.4rem] leading-none tracking-tight text-zinc-50">
