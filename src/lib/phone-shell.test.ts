@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.7.3 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.7.3");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.3");
+  it("is version 0.7.4 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.7.4");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.4");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -85,6 +85,9 @@ describe("phone diary shell", () => {
     );
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.7.4");
+    expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
     expect(existsSync("src/app/mod/page.tsx")).toBe(true);
@@ -104,9 +107,10 @@ describe("phone diary shell", () => {
     expect(script).toContain("Connect via network");
     expect(script).toContain("never needs a cable");
     expect(script).not.toContain("Circadia Operator");
-    expect(script).not.toMatch(/live.?reload/i);
+    expect(script).toContain('__CIRCADIA_PACK_STATUS__="packed"');
+    expect(script).toContain("exit 8");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.7.3");
+    expect(run.stdout).toContain("0.7.4");
     if (process.platform === "darwin") {
       expect([0, 5, 6]).toContain(run.status);
     } else {
@@ -117,7 +121,15 @@ describe("phone diary shell", () => {
 
   it("lets an empty iPhone log in with a packed Mac diary, or bring a locked copy", () => {
     const gate = readFileSync("src/components/auth-gate.tsx", "utf8");
+    const unlock = readFileSync("src/components/phone-unlock.tsx", "utf8");
     const bring = readFileSync("src/components/locked-diary-controls.tsx", "utf8");
+    expect(gate).toContain("PhoneUnlock");
+    expect(gate).toContain("PhoneEmptyPack");
+    expect(unlock).toContain("A locked diary is in this app");
+    expect(unlock).toContain("diary packed");
+    expect(unlock).toContain("no diary packed");
+    expect(unlock).toContain("BringLockedDiaryButton");
+    expect(unlock).toContain("Start a new diary on this device");
     expect(gate).toContain("BringLockedDiaryButton");
     expect(gate).toContain("bring a locked copy");
     expect(gate).toContain('autoCapitalize="none"');
@@ -133,6 +145,8 @@ describe("phone diary shell", () => {
     expect(bring).toContain("fetchPackedDiary");
     expect(readFileSync("scripts/pack-mac-diary.cjs", "utf8")).toContain("circadia-locked.json");
     expect(readFileSync("scripts/pack-mac-diary.cjs", "utf8")).toContain("session: null");
+    expect(readFileSync("scripts/pack-mac-diary.cjs", "utf8")).toContain("__CIRCADIA_LOCKED_DIARY__");
+    expect(readFileSync("src/lib/packed-diary.ts", "utf8")).toContain("readInlinePackedDiary");
     expect(bring).toContain("<label");
     expect(bring).toContain("opacity-0");
     expect(bring).toContain("isPhoneNative");
@@ -150,6 +164,7 @@ describe("phone diary shell", () => {
       "src/components/study-gate.tsx",
       "src/components/you-view.tsx",
       "src/components/locked-diary-controls.tsx",
+      "src/components/phone-unlock.tsx",
       "src/lib/login.ts",
     ]) {
       const src = readFileSync(file, "utf8");
