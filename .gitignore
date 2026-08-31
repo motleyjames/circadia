@@ -17,6 +17,8 @@
 /.next/
 /.next-mod/
 /out/
+/public/circadia-locked.json
+/circadia-locked.json
 
 # production
 /dist

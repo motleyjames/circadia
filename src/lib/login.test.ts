@@ -104,6 +104,9 @@ describe("local file vault", () => {
     Object.defineProperty(globalThis, "window", { value: globalThis, configurable: true });
     globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input), "http://127.0.0.1");
+      if (url.pathname === "/circadia-locked.json" || url.pathname.endsWith("/circadia-locked.json")) {
+        return new Response("", { status: 404 });
+      }
       if (url.pathname === "/api/session-key") {
         const method = (init?.method ?? "GET").toUpperCase();
         if (method === "POST") {

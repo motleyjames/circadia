@@ -64,7 +64,7 @@ Wireless (same Wi-Fi, phone unlocked):
 1. Xcode → Window → Devices and Simulators → pick James-iPhone → Connect via network.
 2. Destination: James-iPhone. Not a simulator. A globe/network icon next to the phone is the wireless path.
 3. Signing & Capabilities → Team → your Apple ID, if Xcode cleared it after git pull.
-4. Run. Unplug when the app is on the home screen.
+4. Run. Unplug when the app is on the home screen. If this Mac had a diary, it is packed in the build — log in with the same password.
 
 First pair only: a USB cable once, Unlock, Trust. After that, Wi-Fi is enough.
 If Xcode says the device is disconnected, plug in once, tick Connect via network, then unplug.

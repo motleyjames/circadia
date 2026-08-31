@@ -1,6 +1,6 @@
 {
   "name": "circadia",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "private": true,
   "license": "UNLICENSED",
   "author": "James Motley",
@@ -35,7 +35,7 @@
     "typecheck": "tsc --noEmit",
     "typegen": "next typegen",
     "pack:static": "node electron/build-ui.cjs",
-    "phone:sync": "npm run pack:static && npm --prefix phone install && npm --prefix phone run sync",
+    "phone:sync": "npm run pack:static && node scripts/pack-mac-diary.cjs && npm --prefix phone install && npm --prefix phone run sync",
     "phone:open": "npm --prefix phone run open",
     "put-on-phone": "bash scripts/put-on-phone.sh"
   },

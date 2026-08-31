@@ -101,20 +101,19 @@ npm run build
 
 Same diary. Not a second product. **Operator is never in this binary.** Tonight is the clock. **Ask** is a word, not a sixth tab. Five tabs: Tonight, Morning, Notes, Library, You.
 
-The iPhone starts empty. Circadia is local-first: there is no cloud account, so the email and password from your Mac will not find a diary on the phone until you bring a locked copy over.
+The iPhone starts empty unless this Mac's locked diary was packed into the build. Circadia is local-first: there is no cloud account. `npm run put-on-phone` copies the encrypted Mac diary into the iPhone app — still locked. Log in with the same email or phone and password. AirDrop a locked copy if this Mac had no diary to pack.
 
 **Move nights from the Mac to the phone**
 
-1. On the Mac, open Circadia → **You** → **Save a locked copy**. That writes `circadia-locked.circadia` to Downloads (or the share sheet). The file is still encrypted. Stay-signed-in does not travel.
-2. AirDrop that file to the iPhone.
-3. On the iPhone gate, **Bring a locked diary**, pick the file, then **Log in** with the same email or phone and password.
-4. If you already signed up a new empty diary on the phone, You → Bring a locked diary replaces it (it asks first).
+1. Preferred: `npm run put-on-phone` on the Mac that has the nights, then Run on James-iPhone. Open Circadia. **Log in** with the same password.
+2. Or: Circadia → **You** → **Save a locked copy**. AirDrop `circadia-locked.circadia`. On the phone gate, **Bring a locked diary** (or **Use the packed diary** if this build contains one).
+3. If you already signed up a new empty diary on the phone, Use the packed diary / Bring replaces it (it asks first).
 
 Mac nights and iPhone nights stay separate until that handoff. Signing up on the phone starts a second diary; it does not pull the Mac file.
 
 Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
-1. **Your phone today** (free Apple ID). Cable is optional after the first pair — Xcode talks to the iPhone over Wi-Fi. In a GitHub `main` clone at 0.7.2+:
+1. **Your phone today** (free Apple ID). Cable is optional after the first pair — Xcode talks to the iPhone over Wi-Fi. In a GitHub `main` clone at 0.7.3+:
 
    ```bash
    git clone https://github.com/motleyjames/circadia.git ~/circadia
@@ -126,7 +125,7 @@ Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
 2. **Other people’s phones** (paid [Apple Developer Program](https://developer.apple.com/programs/), then TestFlight). Start enrollment before or while you cable-run; review can sit in the background. Then: Xcode → Product → Archive → Distribute → App Store Connect. Internal TestFlight is only for people already on your App Store Connect team (up to 100). Paid testers are an **external** group (email or public link) after the first TestFlight beta review. Builds last 90 days.
 
-`npm run put-on-phone` runs `pack:static` (parks `src/app/api` and `src/app/mod`, writes `out/`, restores them) then `cap sync`. Circadia.app on the Mac still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Bundle id is `app.circadia.diary`. Wind-down copy is honest — locking the phone may pause Web Audio. The iOS audio spike under `spikes/` is a local experiment, not this app.
+`npm run put-on-phone` runs `pack:static`, packs the locked Mac diary into `out/circadia-locked.json` when one exists, then `cap sync`. Circadia.app on the Mac still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Bundle id is `app.circadia.diary`. Wind-down copy is honest — locking the phone may pause Web Audio. The iOS audio spike under `spikes/` is a local experiment, not this app.
 
 Stay-signed-in: ciphertext in the app sandbox, AES key in iOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). If Keychain writes fail, the next launch asks for the password. App Store Connect will ask about encryption: **yes** — the diary uses AES-GCM on device. Do not tick “HTTPS only.” No Android slice in this version.
 
