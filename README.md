@@ -101,9 +101,20 @@ npm run build
 
 Same diary. Not a second product. **Operator is never in this binary.** Tonight is the clock. **Ask** is a word, not a sixth tab. Five tabs: Tonight, Morning, Notes, Library, You.
 
+The iPhone starts empty. Circadia is local-first: there is no cloud account, so the email and password from your Mac will not find a diary on the phone until you bring a locked copy over.
+
+**Move nights from the Mac to the phone**
+
+1. On the Mac, open Circadia → **You** → **Save a locked copy**. That writes `circadia-locked.circadia` to Downloads (or the share sheet). The file is still encrypted. Stay-signed-in does not travel.
+2. AirDrop that file to the iPhone.
+3. On the iPhone gate, **Bring a locked diary**, pick the file, then **Log in** with the same email or phone and password.
+4. If you already signed up a new empty diary on the phone, You → Bring a locked diary replaces it (it asks first).
+
+Mac nights and iPhone nights stay separate until that handoff. Signing up on the phone starts a second diary; it does not pull the Mac file.
+
 Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
-1. **Your phone today** (free Apple ID, USB). In a GitHub `main` clone at 0.7.0+:
+1. **Your phone today** (free Apple ID, USB). In a GitHub `main` clone at 0.7.1+:
 
    ```bash
    git clone https://github.com/motleyjames/circadia.git ~/circadia
@@ -117,7 +128,7 @@ Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
 `npm run put-on-phone` runs `pack:static` (parks `src/app/api` and `src/app/mod`, writes `out/`, restores them) then `cap sync`. Circadia.app on the Mac still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Bundle id is `app.circadia.diary`. Wind-down copy is honest — locking the phone may pause Web Audio. The iOS audio spike under `spikes/` is a local experiment, not this app.
 
-Stay-signed-in: ciphertext in the app sandbox, AES key in iOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). If Keychain writes fail, the next launch asks for the password. The Mac diary and the iPhone diary are separate files. App Store Connect will ask about encryption: **yes** — the diary uses AES-GCM on device. Do not tick “HTTPS only.” No Android slice in this version.
+Stay-signed-in: ciphertext in the app sandbox, AES key in iOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). If Keychain writes fail, the next launch asks for the password. App Store Connect will ask about encryption: **yes** — the diary uses AES-GCM on device. Do not tick “HTTPS only.” No Android slice in this version.
 
 CI YAML is `scripts/github-ci.yml`. Copy it to `.github/workflows/ci.yml` when the GitHub token has `workflow` scope.
 
