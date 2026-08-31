@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parseLockedDiary, serializeLockedDiary } from "./diary-pack";
-import { fetchPackedDiary, PACKED_DIARY_HREF, resetPackedDiaryCacheForTests } from "./packed-diary";
+import { fetchPackedDiary, PACKED_DIARY_HREF, readInlinePackedDiary, resetPackedDiaryCacheForTests } from "./packed-diary";
 import {
   applyPackedDiaryIfEmpty,
   closeFile,
@@ -68,7 +68,36 @@ describe("pack-mac-diary", () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  it("exits 0 with no dest file when the Mac vault is missing", () => {
+  it("inlines the pack into index.html so WKWebView does not have to fetch", () => {
+    const root = mkdtempSync(join(tmpdir(), "circadia-pack-inline-"));
+    const outDir = join(root, "out");
+    mkdirSync(outDir);
+    writeFileSync(join(outDir, "index.html"), "<!doctype html><html><head></head><body></body></html>");
+    const vault = join(root, "vault.json");
+    writeFileSync(
+      vault,
+      JSON.stringify({
+        v: 1,
+        files: { "email:ada@example.com": { enc: true } },
+        locks: { "email:ada@example.com": { v: 2, salt: "YQ==", hash: "Yg==" } },
+        session: "email:ada@example.com",
+      }),
+    );
+    const run = spawnSync(process.execPath, [join(process.cwd(), "scripts/pack-mac-diary.cjs")], {
+      cwd: root,
+      encoding: "utf8",
+      env: { ...process.env, CIRCADIA_VAULT_FILE: vault },
+    });
+    expect(run.status).toBe(0);
+    const html = readFileSync(join(outDir, "index.html"), "utf8");
+    expect(html).toContain('__CIRCADIA_PACK_STATUS__="packed"');
+    expect(html).toContain("__CIRCADIA_LOCKED_DIARY__");
+    expect(html).toContain("circadia.locked-diary");
+    expect(html).toContain("<!--circadia-locked-diary-->");
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("exits 8 when the Mac vault is missing", () => {
     const root = mkdtempSync(join(tmpdir(), "circadia-pack-empty-"));
     mkdirSync(join(root, "out"));
     const run = spawnSync(process.execPath, [join(process.cwd(), "scripts/pack-mac-diary.cjs")], {
@@ -76,8 +105,28 @@ describe("pack-mac-diary", () => {
       encoding: "utf8",
       env: { ...process.env, CIRCADIA_VAULT_FILE: join(root, "nope.json") },
     });
+    expect(run.status).toBe(8);
+    expect(run.stderr).toMatch(/No locked diary/);
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("writes an empty pack marker when --allow-empty", () => {
+    const root = mkdtempSync(join(tmpdir(), "circadia-pack-allow-"));
+    const outDir = join(root, "out");
+    mkdirSync(outDir);
+    writeFileSync(join(outDir, "index.html"), "<html><head></head></html>");
+    const run = spawnSync(
+      process.execPath,
+      [join(process.cwd(), "scripts/pack-mac-diary.cjs"), "--allow-empty"],
+      {
+        cwd: root,
+        encoding: "utf8",
+        env: { ...process.env, CIRCADIA_VAULT_FILE: join(root, "nope.json") },
+      },
+    );
     expect(run.status).toBe(0);
-    expect(run.stdout).toMatch(/No Mac diary/);
+    const html = readFileSync(join(outDir, "index.html"), "utf8");
+    expect(html).toContain('__CIRCADIA_PACK_STATUS__="empty"');
     rmSync(root, { recursive: true, force: true });
   });
 });
@@ -117,6 +166,8 @@ describe("packed diary on an empty phone", () => {
     setPhoneVaultIoForTests(null);
     resetVaultMemoryForTests();
     globalThis.fetch = previousFetch;
+    delete (window as Window & { __CIRCADIA_LOCKED_DIARY__?: unknown }).__CIRCADIA_LOCKED_DIARY__;
+    delete (window as Window & { __CIRCADIA_PACK_STATUS__?: unknown }).__CIRCADIA_PACK_STATUS__;
   });
 
   it("installs a packed locked diary without unlocking it", async () => {
@@ -287,6 +338,35 @@ describe("packed diary on an empty phone", () => {
 
     mockPacked(vault);
     const opened = await openFile("phone@example.com", PASS);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.state.researchNotes).toBe("nights from the Mac");
+  });
+
+  it("logs in from the inline index.html pack without fetch", async () => {
+    const mac = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(mac.ok).toBe(true);
+    if (!mac.ok) return;
+    mac.state.researchNotes = "nights from the Mac";
+    saveState(mac.state);
+    await flushVaultWrites();
+    const vault = parseLockedDiary(serializeLockedDiary(snapshotDisk()));
+    expect(vault).not.toBeNull();
+    if (!vault) return;
+
+    eraseCurrentFile();
+    mockPacked(null);
+    window.__CIRCADIA_PACK_STATUS__ = "packed";
+    window.__CIRCADIA_LOCKED_DIARY__ = { kind: "circadia.locked-diary", v: 1, vault };
+    resetPackedDiaryCacheForTests();
+    expect(readInlinePackedDiary()?.files["email:ada@example.com"]).toBeTruthy();
+
+    const opened = await openFile("ada@example.com", PASS);
     expect(opened.ok).toBe(true);
     if (!opened.ok) return;
     expect(opened.state.researchNotes).toBe("nights from the Mac");

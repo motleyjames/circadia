@@ -44,6 +44,17 @@ if [[ ! -d node_modules/next ]] || [[ ! -d node_modules/@capacitor/core ]]; then
 fi
 
 npm run phone:sync
+
+INDEX="phone/ios/App/App/public/index.html"
+if [[ ! -f "$INDEX" ]] || ! grep -q '__CIRCADIA_PACK_STATUS__="packed"' "$INDEX"; then
+  echo
+  echo "Stopped. This iPhone build has no locked diary in it — login would miss."
+  echo "Open Circadia.app, log in, wait a few seconds, then run this again."
+  echo "Looked for ~/Library/Application Support/Circadia/vault.json"
+  echo "Empty iPhone (no nights): CIRCADIA_ALLOW_EMPTY_PHONE=1 npm run put-on-phone"
+  exit 8
+fi
+
 npm run phone:open
 
 if command -v xcrun >/dev/null 2>&1; then
@@ -64,7 +75,7 @@ Wireless (same Wi-Fi, phone unlocked):
 1. Xcode → Window → Devices and Simulators → pick James-iPhone → Connect via network.
 2. Destination: James-iPhone. Not a simulator. A globe/network icon next to the phone is the wireless path.
 3. Signing & Capabilities → Team → your Apple ID, if Xcode cleared it after git pull.
-4. Run. Unplug when the app is on the home screen. If this Mac had a diary, it is packed in the build — log in with the same password.
+4. Run. Unplug when the app is on the home screen. Footer must read 0.7.4 · diary packed. Then Log in with the same password.
 
 First pair only: a USB cable once, Unlock, Trust. After that, Wi-Fi is enough.
 If Xcode says the device is disconnected, plug in once, tick Connect via network, then unplug.

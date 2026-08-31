@@ -1,20 +1,58 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { BringLockedDiaryButton, UsePackedDiaryButton } from "@/components/locked-diary-controls";
+import { PhoneEmptyPack, PhoneUnlock } from "@/components/phone-unlock";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { useCircadia } from "@/context/circadia-store";
 import { AUTH_ERRORS, defaultAuthMode, defaultContactField, identitiesFromVaultKeys } from "@/lib/login";
-import { fetchPackedDiary } from "@/lib/packed-diary";
+import { fetchPackedDiary, packedDiaryStatus, readInlinePackedDiary } from "@/lib/packed-diary";
+import { isPhoneNative } from "@/lib/phone-native";
 import { isVaultEmpty, listDiaryLogins } from "@/lib/storage";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
 type Mode = "signup" | "login";
 
+function useClientLive() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
+
 export function AuthGate() {
+  const live = useClientLive();
+  const [rev, setRev] = useState(0);
+  const [startNew, setStartNew] = useState(false);
+  if (!live) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+          <Mark className="size-8" />
+          <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">Circadia</h1>
+        </div>
+      </div>
+    );
+  }
+  void rev;
+  if (!startNew && (packedDiaryStatus() === "packed" || readInlinePackedDiary())) return <PhoneUnlock />;
+  if (!isVaultEmpty()) return <DesktopAuthGate />;
+  if (!startNew && (isPhoneNative() || process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK === "1")) {
+    return (
+      <PhoneEmptyPack
+        onBrought={() => setRev((n) => n + 1)}
+        onStartNew={() => setStartNew(true)}
+      />
+    );
+  }
+  return <DesktopAuthGate />;
+}
+
+function DesktopAuthGate() {
   const { signUp, logIn } = useCircadia();
   const identities = listDiaryLogins();
   const named = identities.filter((row) => !row.orphan);

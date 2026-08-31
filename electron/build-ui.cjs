@@ -49,7 +49,12 @@ function packStatic(root = defaultRoot) {
       {
         cwd: root,
         stdio: "inherit",
-        env: { ...process.env, CIRCADIA_ELECTRON: "1", CIRCADIA_PACK_STATIC: "1" },
+        env: {
+          ...process.env,
+          CIRCADIA_ELECTRON: "1",
+          CIRCADIA_PACK_STATIC: "1",
+          NEXT_PUBLIC_CIRCADIA_PHONE_PACK: "1",
+        },
       },
     );
     if (result.status) code = result.status;
