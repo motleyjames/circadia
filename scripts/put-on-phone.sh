@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Put the Circadia diary on a plugged-in iPhone via Xcode.
-# Diary only. Not Operator. Not the simulator.
+# Put the Circadia diary on an iPhone via Xcode.
+# USB is optional after the first pair. The installed app never needs a cable.
+# Diary only. Not Operator. Not the simulator. Not a Circadia server.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -45,17 +46,32 @@ fi
 npm run phone:sync
 npm run phone:open
 
+if command -v xcrun >/dev/null 2>&1; then
+  echo
+  echo "Phones this Mac can already see (USB or Wi-Fi):"
+  xcrun devicectl list devices 2>/dev/null || true
+fi
+
 cat <<'EOF'
 
 Xcode should be open on the Circadia diary (app.circadia.diary). Not Operator.
 
-1. Plug in the iPhone. Unlock it. Trust this computer if it asks.
-2. iPhone: Settings → Privacy & Security → Developer Mode → on, then reboot if iOS asks.
-3. In Xcode, pick the App target. Signing & Capabilities → Team → your Apple ID.
-4. Destination: your iPhone. Not any simulator — Keychain and lock-screen audio lie there.
-5. Run. First launch: the phone may say Untrusted Developer. Settings → General → VPN & Device Management → trust.
+Circadia on the iPhone does not use a cable and does not call a Circadia server.
+The cable (or Wi-Fi to this Mac) is only how Xcode puts a new build on the phone.
+After Run finishes, unplug. Open Circadia from the home screen like any app.
 
-That is Circadia on YOUR phone. Other people need TestFlight and a paid Apple Developer Program
-membership (start that at https://developer.apple.com/programs/ if it is not already running).
-Simulator, Safari, and sideloading are not this path.
+Wireless (same Wi-Fi, phone unlocked):
+1. Xcode → Window → Devices and Simulators → pick James-iPhone → Connect via network.
+2. Destination: James-iPhone. Not a simulator. A globe/network icon next to the phone is the wireless path.
+3. Signing & Capabilities → Team → your Apple ID, if Xcode cleared it after git pull.
+4. Run. Unplug when the app is on the home screen.
+
+First pair only: a USB cable once, Unlock, Trust. After that, Wi-Fi is enough.
+If Xcode says the device is disconnected, plug in once, tick Connect via network, then unplug.
+
+First launch on the phone: Settings → General → VPN & Device Management → trust the developer cert.
+Developer Mode if iOS asks.
+
+Other people need TestFlight and a paid Apple Developer Program
+membership (https://developer.apple.com/programs/). Simulator, Safari, and sideloading are not this path.
 EOF

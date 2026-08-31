@@ -114,7 +114,7 @@ Mac nights and iPhone nights stay separate until that handoff. Signing up on the
 
 Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
-1. **Your phone today** (free Apple ID, USB). In a GitHub `main` clone at 0.7.2+:
+1. **Your phone today** (free Apple ID). Cable is optional after the first pair — Xcode talks to the iPhone over Wi-Fi. In a GitHub `main` clone at 0.7.2+:
 
    ```bash
    git clone https://github.com/motleyjames/circadia.git ~/circadia
@@ -122,7 +122,7 @@ Apple is the remaining gate, not more app code. Two tracks, started in parallel:
    npm run put-on-phone
    ```
 
-   That packs the diary, syncs Capacitor, and opens Xcode. Pick **your iPhone**, not a simulator. Signing → your Team. Run. Enable Developer Mode if iOS asks. Trust the developer cert on the phone. Simulator, Safari “Add to Home Screen,” and sideloading skip Keychain or skip real users — they are not this path.
+   That packs the diary, syncs Capacitor, and opens Xcode. Destination: **your iPhone**, not a simulator. Signing → your Team. **Window → Devices and Simulators → Connect via network.** Same Wi-Fi, phone unlocked. Run. Unplug when Circadia is on the home screen — the installed app does not use the Mac, and Circadia has no cloud. First pair only: USB once, Trust This Computer. Enable Developer Mode if iOS asks. Trust the developer cert on the phone. Simulator, Safari “Add to Home Screen,” and sideloading skip Keychain or skip real users — they are not this path.
 
 2. **Other people’s phones** (paid [Apple Developer Program](https://developer.apple.com/programs/), then TestFlight). Start enrollment before or while you cable-run; review can sit in the background. Then: Xcode → Product → Archive → Distribute → App Store Connect. Internal TestFlight is only for people already on your App Store Connect team (up to 100). Paid testers are an **external** group (email or public link) after the first TestFlight beta review. Builds last 90 days.
 

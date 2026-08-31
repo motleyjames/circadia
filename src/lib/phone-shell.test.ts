@@ -67,6 +67,8 @@ describe("phone diary shell", () => {
     expect(cap).toContain('appId: "app.circadia.diary"');
     expect(cap).not.toMatch(/operator|audiospike/i);
     expect(cap).toContain('webDir: "../out"');
+    expect(cap).not.toMatch(/server\s*:/);
+    expect(JSON.parse(readFileSync("phone/ios/App/App/capacitor.config.json", "utf8"))).not.toHaveProperty("server");
     expect(phonePkg.description?.toLowerCase()).toMatch(/diary/);
     expect(phonePkg.description?.toLowerCase()).toMatch(/not the operator/);
     expect(phonePkg.dependencies?.["circadia-keychain"]).toBe("file:./plugins/circadia-keychain");
@@ -88,7 +90,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain(".mod-parked");
   });
 
-  it("put-on-phone is the Mac cable path and refuses Linux", () => {
+  it("put-on-phone opens Xcode for a real iPhone over USB or Wi-Fi, and refuses Linux", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
     expect(pkg.scripts["put-on-phone"]).toBe("bash scripts/put-on-phone.sh");
     const script = readFileSync("scripts/put-on-phone.sh", "utf8");
@@ -98,9 +100,12 @@ describe("phone diary shell", () => {
     expect(script).toContain("@capacitor/core");
     expect(script).toContain("npm install");
     expect(script).toContain("Not Operator");
+    expect(script).toContain("Connect via network");
+    expect(script).toContain("never needs a cable");
     expect(script).not.toContain("Circadia Operator");
+    expect(script).not.toMatch(/live.?reload/i);
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.7.0");
+    expect(run.stdout).toContain("0.7.2");
     if (process.platform === "darwin") {
       expect([0, 5, 6]).toContain(run.status);
     } else {
