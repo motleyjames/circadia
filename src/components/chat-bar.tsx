@@ -311,7 +311,10 @@ export function ChatBar({
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Falling asleep, 3 a.m., a bottle on the aisle…"
             aria-label="Ask Circadia"
-            className="h-11 min-w-0 flex-1 border border-white/12 bg-white/[0.04] px-3 text-[13px] text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-300/40"
+            className={cn(
+              "h-11 min-w-0 flex-1 border border-white/12 bg-white/[0.04] px-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-300/40",
+              sheet ? "text-base" : "text-[13px]",
+            )}
           />
           <button
             type="submit"

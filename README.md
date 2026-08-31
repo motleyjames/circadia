@@ -114,7 +114,7 @@ Mac nights and iPhone nights stay separate until that handoff. Signing up on the
 
 Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
-1. **Your phone today** (free Apple ID, USB). In a GitHub `main` clone at 0.7.1+:
+1. **Your phone today** (free Apple ID, USB). In a GitHub `main` clone at 0.7.2+:
 
    ```bash
    git clone https://github.com/motleyjames/circadia.git ~/circadia

@@ -182,13 +182,14 @@ select,
   button,
   a,
   summary,
-  label[for],
+  label,
   select,
   [role="button"],
   [role="link"],
   input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
   textarea {
     min-height: 44px;
+    touch-action: manipulation;
   }
 
   button,

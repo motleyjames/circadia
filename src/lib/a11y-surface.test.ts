@@ -23,6 +23,7 @@ describe("touch targets, confirms, and fault screens", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
     expect(css).toContain("@media (pointer: coarse)");
     expect(css).toContain("min-height: 44px");
+    expect(css).toContain("touch-action: manipulation");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain("animation-duration: 0.01ms");
   });
