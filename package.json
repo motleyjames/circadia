@@ -36,7 +36,8 @@
     "typegen": "next typegen",
     "pack:static": "node electron/build-ui.cjs",
     "phone:sync": "npm run pack:static && npm --prefix phone install && npm --prefix phone run sync",
-    "phone:open": "npm --prefix phone run open"
+    "phone:open": "npm --prefix phone run open",
+    "put-on-phone": "bash scripts/put-on-phone.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

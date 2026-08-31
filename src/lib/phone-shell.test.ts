@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { APP_VERSION } from "./version";
@@ -83,6 +84,26 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(existsSync("src/app/mod/page.tsx")).toBe(true);
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain(".mod-parked");
+  });
+
+  it("put-on-phone is the Mac cable path and refuses Linux", () => {
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
+    expect(pkg.scripts["put-on-phone"]).toBe("bash scripts/put-on-phone.sh");
+    const script = readFileSync("scripts/put-on-phone.sh", "utf8");
+    expect(script).toContain("0.7.0");
+    expect(script).toContain("phone:sync");
+    expect(script).toContain("phone:open");
+    expect(script).toContain("app.circadia.diary");
+    expect(script).toContain("Not Operator");
+    expect(script).not.toContain("Circadia Operator");
+    const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
+    expect(run.stdout).toContain("0.7.0");
+    if (process.platform === "darwin") {
+      expect([0, 5, 6]).toContain(run.status);
+    } else {
+      expect(run.status).toBe(4);
+      expect(run.stdout).toContain("macOS");
+    }
   });
 
   it("keeps user-facing copy on this device, not this computer", () => {
