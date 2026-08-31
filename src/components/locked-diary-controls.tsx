@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   DIARY_PACK_ERRORS,
@@ -8,6 +8,7 @@ import {
   readLockedDiaryFile,
   serializeLockedDiary,
 } from "@/lib/diary-pack";
+import { isPhoneNative } from "@/lib/phone-native";
 import { SESSION_HEADER } from "@/lib/session-token-shared";
 import { flushVaultWrites, installLockedVault, isVaultEmpty, snapshotDisk } from "@/lib/storage";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,7 @@ async function offerLockedCopy(): Promise<"share" | "downloads" | "file" | "abor
   const file = new File([blob], LOCKED_DIARY_FILENAME, { type: "application/json" });
 
   const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
-  if (typeof nav.share === "function") {
+  if (isPhoneNative() && typeof nav.share === "function") {
     try {
       if (!nav.canShare || nav.canShare({ files: [file] })) {
         await nav.share({ files: [file], title: "Circadia locked diary" });
@@ -110,7 +111,6 @@ export function BringLockedDiaryButton({
   className?: string;
   alwaysConfirm?: boolean;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<DiskVault | null>(null);
@@ -130,40 +130,47 @@ export function BringLockedDiaryButton({
 
   return (
     <span className="block">
-      <input
-        ref={inputRef}
-        type="file"
-        className="hidden"
-        aria-label="Locked Circadia diary"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          event.target.value = "";
-          if (!file || busy) return;
-          setBusy(true);
-          setError(null);
-          void readLockedDiaryFile(file)
-            .then(async (vault) => {
-              if (alwaysConfirm || !isVaultEmpty()) {
-                setPending(vault);
-                setConfirmOpen(true);
-                return;
-              }
-              await apply(vault);
-            })
-            .catch(() => {
-              setError(DIARY_PACK_ERRORS.notDiary);
-            })
-            .finally(() => setBusy(false));
-        }}
-      />
-      <button
-        type="button"
-        disabled={busy}
-        className={cn("cursor-pointer disabled:opacity-50", className)}
-        onClick={() => inputRef.current?.click()}
+      {/*
+        iOS WKWebView often ignores input.click() on a display:none file control.
+        The tap has to land on the <input> itself — opacity-0 over a <label>.
+      */}
+      <label
+        className={cn(
+          "relative inline-flex cursor-pointer items-center overflow-hidden",
+          busy && "pointer-events-none opacity-50",
+          className,
+        )}
       >
-        {busy ? "Opening…" : "Bring a locked diary"}
-      </button>
+        <input
+          type="file"
+          disabled={busy}
+          aria-label="Bring a locked diary"
+          className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file || busy) return;
+            setBusy(true);
+            setError(null);
+            void readLockedDiaryFile(file)
+              .then(async (vault) => {
+                if (alwaysConfirm || !isVaultEmpty()) {
+                  setPending(vault);
+                  setConfirmOpen(true);
+                  return;
+                }
+                await apply(vault);
+              })
+              .catch(() => {
+                setError(DIARY_PACK_ERRORS.notDiary);
+              })
+              .finally(() => setBusy(false));
+          }}
+        />
+        <span className="pointer-events-none">
+          {busy ? "Opening…" : "Bring a locked diary"}
+        </span>
+      </label>
       {error ? <p className="mt-2 text-[13px] text-amber-200/90">{error}</p> : null}
       <ConfirmDialog
         open={confirmOpen}

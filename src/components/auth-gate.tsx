@@ -6,7 +6,7 @@ import { BringLockedDiaryButton } from "@/components/locked-diary-controls";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { useCircadia } from "@/context/circadia-store";
-import { defaultAuthMode, defaultContactField } from "@/lib/login";
+import { AUTH_ERRORS, defaultAuthMode, defaultContactField } from "@/lib/login";
 import { isVaultEmpty, listDiaryLogins } from "@/lib/storage";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,7 @@ export function AuthGate() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [brought, setBrought] = useState(false);
 
   async function submit() {
     if (busy) return;
@@ -43,7 +44,7 @@ export function AuthGate() {
       const result = await logIn(contact, password);
       if (!result.ok) {
         setError(result.error);
-        if (result.error.includes("Sign up")) setMode("signup");
+        if (result.error === AUTH_ERRORS.orphan) setMode("signup");
       }
     } catch {
       setError("Could not check the password on this device. Try again.");
@@ -62,7 +63,9 @@ export function AuthGate() {
           Circadia
         </h1>
         <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-          {orphan && !named.length
+          {brought
+            ? "The locked diary is on this device. Log in with the same email or phone and password."
+            : orphan && !named.length
             ? "This device already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. The diary is encrypted here. Circadia will not contact you."
             : named.length
               ? "Log in to the diary on this device. After that, Circadia stays signed in here until you log out. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
@@ -158,6 +161,7 @@ export function AuthGate() {
             value={password}
             onChange={setPassword}
             autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            autoFocus={brought && mode === "login"}
             className="mt-4"
           />
 
@@ -191,13 +195,14 @@ export function AuthGate() {
         </form>
 
         <BringLockedDiaryButton
-          className="mt-6 h-12 w-full rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 hover:bg-white/4"
+          className="mt-6 h-12 w-full justify-center rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 hover:bg-white/4"
           onInstalled={() => {
             const next = listDiaryLogins();
             setMode("login");
             setContact(defaultContactField(next));
             setPassword("");
             setError(null);
+            setBrought(true);
           }}
         />
 
@@ -215,12 +220,14 @@ function SecretField({
   value,
   onChange,
   autoComplete,
+  autoFocus,
   className,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   autoComplete: string;
+  autoFocus?: boolean;
   className?: string;
 }) {
   const [show, setShow] = useState(false);
@@ -231,6 +238,7 @@ function SecretField({
         <Input
           type={show ? "text" : "password"}
           autoComplete={autoComplete}
+          autoFocus={autoFocus}
           name="password"
           value={value}
           onChange={(e) => onChange(e.target.value.slice(0, 128))}
@@ -266,7 +274,7 @@ function ModeTab({
       type="button"
       onClick={onClick}
       className={cn(
-        "h-10 cursor-pointer rounded-full text-[13px] font-medium transition-colors",
+        "h-11 cursor-pointer rounded-full text-[13px] font-medium transition-colors",
         active ? "bg-zinc-50 text-zinc-950" : "text-zinc-400 hover:text-zinc-200",
       )}
     >

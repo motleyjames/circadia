@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.7.1 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.7.1");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.1");
+  it("is version 0.7.2 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.7.2");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.2");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -110,13 +110,25 @@ describe("phone diary shell", () => {
   });
 
   it("lets an empty iPhone bring a locked diary instead of pretending Mac login will find it", () => {
-    expect(readFileSync("src/components/auth-gate.tsx", "utf8")).toContain("BringLockedDiaryButton");
-    expect(readFileSync("src/components/auth-gate.tsx", "utf8")).toContain("bring a locked copy");
-    expect(readFileSync("src/components/auth-gate.tsx", "utf8")).toContain('autoCapitalize="none"');
+    const gate = readFileSync("src/components/auth-gate.tsx", "utf8");
+    const bring = readFileSync("src/components/locked-diary-controls.tsx", "utf8");
+    expect(gate).toContain("BringLockedDiaryButton");
+    expect(gate).toContain("bring a locked copy");
+    expect(gate).toContain('autoCapitalize="none"');
+    expect(gate).toContain("AUTH_ERRORS.orphan");
+    expect(gate).not.toContain('includes("Sign up")');
+    expect(gate).toContain("The locked diary is on this device");
     expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("SaveLockedCopyButton");
-    expect(readFileSync("src/components/locked-diary-controls.tsx", "utf8")).toContain("Bring a locked diary");
+    expect(bring).toContain("Bring a locked diary");
+    expect(bring).toContain("<label");
+    expect(bring).toContain("opacity-0");
+    expect(bring).toContain("isPhoneNative");
+    expect(bring).not.toContain('className="hidden"');
+    expect(bring).not.toContain("inputRef");
     expect(readFileSync("src/lib/login.ts", "utf8")).toContain("emptyDevice");
     expect(readFileSync("src/lib/login.ts", "utf8")).toContain("bring a locked copy");
+    expect(readFileSync("src/app/layout.tsx", "utf8")).toContain('interactiveWidget: "resizes-content"');
+    expect(readFileSync("src/components/chat-bar.tsx", "utf8")).toContain('sheet ? "text-base"');
   });
 
   it("keeps user-facing copy on this device, not this computer", () => {
