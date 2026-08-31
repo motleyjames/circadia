@@ -17,12 +17,16 @@ import {
   flushVaultWrites,
   getSessionLogin,
   hydrateState,
+  installLockedVault,
+  isVaultEmpty,
   loadState,
   migrateToVault,
   openFile,
   resetVaultMemoryForTests,
   saveState,
+  snapshotDisk,
 } from "./storage";
+import { parseLockedDiary, serializeLockedDiary } from "./diary-pack";
 
 const PASS = "correct-horse";
 const NEXT_PASS = "new-correct-horse";
@@ -371,9 +375,10 @@ describe("local file vault", () => {
     expect(created.ok).toBe(true);
     eraseCurrentFile();
     expect(getSessionLogin()).toBeNull();
+    expect(isVaultEmpty()).toBe(true);
     expect(await openFile("ada@example.com", PASS)).toEqual({
       ok: false,
-      error: AUTH_ERRORS.missing,
+      error: AUTH_ERRORS.emptyDevice,
     });
 
     const again = await createFile({
@@ -420,13 +425,55 @@ describe("local file vault", () => {
     });
     expect(mail.ok).toBe(true);
     await closeFile();
-    const pasted = await openFile("James Motley <jbmotley06@icloud.com>", PASS);
-    expect(pasted.ok).toBe(true);
-
     expect(await openFile("nobody@example.com", PASS)).toEqual({
       ok: false,
       error: AUTH_ERRORS.missing,
     });
+  });
+
+  it("installs a locked copy without unlocking it, and names an empty device honestly", async () => {
+    expect(isVaultEmpty()).toBe(true);
+    expect(await openFile("ada@example.com", PASS)).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.emptyDevice,
+    });
+
+    const created = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    created.state.researchNotes = "nights from the other Circadia";
+    saveState(created.state);
+    await flushVaultWrites();
+    expect(await openFile("nobody@example.com", PASS)).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.missing,
+    });
+
+    const pack = serializeLockedDiary(snapshotDisk());
+    expect(pack.vault.session).toBeNull();
+    eraseCurrentFile();
+    expect(isVaultEmpty()).toBe(true);
+
+    const parsed = parseLockedDiary(pack);
+    expect(parsed).not.toBeNull();
+    if (!parsed) return;
+    const installed = await installLockedVault({
+      ...parsed,
+      session: "email:ada@example.com",
+    });
+    expect(installed).toEqual({ ok: true });
+    expect(getSessionLogin()).toBeNull();
+    expect(isVaultEmpty()).toBe(false);
+
+    const opened = await openFile("ada@example.com", PASS);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.state.researchNotes).toBe("nights from the other Circadia");
   });
 
   it("points login at sign up when the only file is an orphan", async () => {

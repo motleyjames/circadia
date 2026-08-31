@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { BringLockedDiaryButton } from "@/components/locked-diary-controls";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { useCircadia } from "@/context/circadia-store";
 import { defaultAuthMode, defaultContactField } from "@/lib/login";
-import { listDiaryLogins } from "@/lib/storage";
+import { isVaultEmpty, listDiaryLogins } from "@/lib/storage";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -51,8 +52,10 @@ export function AuthGate() {
     }
   }
 
+  const empty = isVaultEmpty();
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <Mark className="size-8" />
         <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">
@@ -63,7 +66,9 @@ export function AuthGate() {
             ? "This device already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. The diary is encrypted here. Circadia will not contact you."
             : named.length
               ? "Log in to the diary on this device. After that, Circadia stays signed in here until you log out. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
-              : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this device — not a way for anyone to reach you. Circadia stays signed in here until you log out."}
+              : empty
+                ? "There is no diary on this device yet. Circadia lives here, not in the cloud — a password from another Circadia will not find it. Sign up to start one here, or bring a locked copy."
+                : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this device — not a way for anyone to reach you. Circadia stays signed in here until you log out."}
         </p>
 
         {named.length ? (
@@ -111,7 +116,7 @@ export function AuthGate() {
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value.slice(0, 40))}
                   placeholder="First"
-                  className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-[15px] text-zinc-50"
+                  className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-base text-zinc-50"
                 />
               </label>
               <label className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
@@ -121,7 +126,7 @@ export function AuthGate() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value.slice(0, 40))}
                   placeholder="Last"
-                  className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-[15px] text-zinc-50"
+                  className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-base text-zinc-50"
                 />
               </label>
             </div>
@@ -136,12 +141,15 @@ export function AuthGate() {
             Email or phone
             <Input
               autoComplete={mode === "login" ? "username" : "email"}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               inputMode="email"
               name="username"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               placeholder="you@school.edu or a phone number"
-              className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-[15px] text-zinc-50"
+              className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-base text-zinc-50"
             />
           </label>
 
@@ -182,6 +190,17 @@ export function AuthGate() {
           </button>
         </form>
 
+        <BringLockedDiaryButton
+          className="mt-6 h-12 w-full rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 hover:bg-white/4"
+          onInstalled={() => {
+            const next = listDiaryLogins();
+            setMode("login");
+            setContact(defaultContactField(next));
+            setPassword("");
+            setError(null);
+          }}
+        />
+
         <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-600">
           The password is checked on this device. It is not sent to the person who built Circadia.
         </p>
@@ -215,7 +234,10 @@ function SecretField({
           name="password"
           value={value}
           onChange={(e) => onChange(e.target.value.slice(0, 128))}
-          className="h-12 rounded-2xl border-white/10 bg-white/4 px-4 pr-12 text-[15px] text-zinc-50"
+          className="h-12 rounded-2xl border-white/10 bg-white/4 px-4 pr-12 text-base text-zinc-50"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
         />
         <button
           type="button"

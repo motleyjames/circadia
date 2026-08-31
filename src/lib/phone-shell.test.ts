@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.7.0 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.7.0");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.0");
+  it("is version 0.7.1 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.7.1");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.1");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -109,11 +109,22 @@ describe("phone diary shell", () => {
     }
   });
 
+  it("lets an empty iPhone bring a locked diary instead of pretending Mac login will find it", () => {
+    expect(readFileSync("src/components/auth-gate.tsx", "utf8")).toContain("BringLockedDiaryButton");
+    expect(readFileSync("src/components/auth-gate.tsx", "utf8")).toContain("bring a locked copy");
+    expect(readFileSync("src/components/auth-gate.tsx", "utf8")).toContain('autoCapitalize="none"');
+    expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("SaveLockedCopyButton");
+    expect(readFileSync("src/components/locked-diary-controls.tsx", "utf8")).toContain("Bring a locked diary");
+    expect(readFileSync("src/lib/login.ts", "utf8")).toContain("emptyDevice");
+    expect(readFileSync("src/lib/login.ts", "utf8")).toContain("bring a locked copy");
+  });
+
   it("keeps user-facing copy on this device, not this computer", () => {
     for (const file of [
       "src/components/auth-gate.tsx",
       "src/components/study-gate.tsx",
       "src/components/you-view.tsx",
+      "src/components/locked-diary-controls.tsx",
       "src/lib/login.ts",
     ]) {
       const src = readFileSync(file, "utf8");

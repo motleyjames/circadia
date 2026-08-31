@@ -347,6 +347,43 @@ function captureDisk(): DiskVault {
   };
 }
 
+/** Copy for a locked-diary pack. Stay-signed-in is still in this snapshot until serialize strips it. */
+export function snapshotDisk(): DiskVault {
+  return parseDiskVault(captureDisk());
+}
+
+export function isVaultEmpty(): boolean {
+  if (typeof window === "undefined") return true;
+  return Object.keys(readRawVault()).length === 0;
+}
+
+/**
+ * Replace the diary on this device with a locked copy. Does not unlock it.
+ * Stay-signed-in does not travel — the destination types the password again.
+ */
+export async function installLockedVault(
+  incoming: DiskVault,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.crypto };
+  const vault = parseDiskVault(incoming);
+  if (Object.keys(vault.files).length === 0) {
+    return { ok: false, error: "That file has no diary in it." };
+  }
+  const previous = Object.keys(readRawVault());
+  openLogin = null;
+  plainByLogin.clear();
+  dropAllMasters();
+  writeRawVault({ ...vault.files });
+  writeLocks({ ...vault.locks });
+  writeLastLogin(null);
+  dropLegacyUnlock();
+  for (const login of previous) {
+    await deletePersistedUnlock(login);
+  }
+  await pushVaultToDisk();
+  return { ok: true };
+}
+
 let persistTimer: number | null = null;
 
 export function schedulePersistDisk() {
@@ -551,6 +588,7 @@ export async function openFile(
   const login = candidates.find((key) => files[key]) ?? null;
   if (!login) {
     if (hasOrphanLocalFile()) return { ok: false, error: AUTH_ERRORS.orphan };
+    if (Object.keys(files).length === 0) return { ok: false, error: AUTH_ERRORS.emptyDevice };
     return { ok: false, error: AUTH_ERRORS.missing };
   }
   const lock = readLocks()[login];

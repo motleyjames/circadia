@@ -8,6 +8,8 @@ export const AUTH_ERRORS = {
   contact: "Use an email or a phone number.",
   exists: "That email or phone already has a diary on this device. Log in instead.",
   missing: "No diary for that on this device.",
+  emptyDevice:
+    "There's no diary on this device yet. Sign up, or bring a locked copy from another Circadia.",
   credentials: "Wrong password.",
   crypto: "This page could not check a password. Open the Circadia app — not a file on disk.",
   noop: "This window is not the diary. Open Circadia, not the operator.",

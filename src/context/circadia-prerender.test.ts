@@ -60,6 +60,7 @@ describe("useCircadia during prerender", () => {
       "src/components/morning-file.tsx",
       "src/components/sidebar-nav.tsx",
       "src/components/bottom-nav.tsx",
+      "src/components/locked-diary-controls.tsx",
     ];
     for (const rel of files) {
       const text = readFileSync(join(process.cwd(), rel), "utf8");

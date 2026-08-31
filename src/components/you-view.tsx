@@ -6,6 +6,7 @@ import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup } from "@/components/bubbles";
 import { StudyPanel } from "@/components/study-panel";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { BringLockedDiaryButton, SaveLockedCopyButton } from "@/components/locked-diary-controls";
 import { CrisisLine } from "@/components/crisis-line";
 import { ERASE_CONFIRM_WORD } from "@/lib/confirm-word";
 import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
@@ -440,7 +441,7 @@ export function YouView() {
 
                   <p className="mt-4 text-[12px] leading-relaxed text-zinc-600">
                     Closing the app does not log you out. Log out here when you want the password gate
-                    back. This computer still has your diary — the same email or phone, plus the
+                    back. This device still has your diary — the same email or phone, plus the
                     password, opens it.
                   </p>
                 </div>
@@ -455,10 +456,16 @@ export function YouView() {
 
         <section className="mt-8 border-t border-white/[0.06] pt-6">
           <p className="text-[11px] tracking-[0.22em] text-zinc-600 uppercase">This device</p>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
+          <div className="mt-3 flex flex-col gap-2 text-[13px] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
+            <SaveLockedCopyButton className="min-h-11 text-left text-zinc-400 hover:text-zinc-200" />
+            <BringLockedDiaryButton
+              alwaysConfirm
+              className="min-h-11 text-left text-zinc-400 hover:text-zinc-200"
+              onInstalled={() => logOut()}
+            />
             <button
               type="button"
-              className="text-zinc-400 hover:text-zinc-200"
+              className="min-h-11 text-left text-zinc-400 hover:text-zinc-200"
               onClick={() => {
                 if (state.reports.length > 0) {
                   setSampleOpen(true);
@@ -469,12 +476,9 @@ export function YouView() {
             >
               Load sample week
             </button>
-            <span className="text-zinc-700" aria-hidden>
-              ·
-            </span>
             <button
               type="button"
-              className="text-red-300/70 hover:text-red-200"
+              className="min-h-11 text-left text-red-300/70 hover:text-red-200"
               onClick={() => setEraseOpen(true)}
             >
               Erase this device
