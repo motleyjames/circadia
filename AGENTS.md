@@ -30,5 +30,5 @@ Local-first Next.js sleep companion. No database and no cloud auth. Profile, mor
 - Library notes in `src/lib/research.ts` carry `reviewedThrough`. `staleResearchIds(RESEARCH)` must stay empty. Do not add a PubMed fetch. Mouth (`say`) still cannot contain AASM / CBT-I / SCN.
 - Surface isolation is `src/proxy.ts` (Next 16 renamed middleware). Diary 404s `/mod`. Operator 404s vault, study, and session-key.
 - Static pack: `npm run pack:static` parks `src/app/api` and `src/app/mod`, then writes `out/`. Never set `CIRCADIA_PACK_STATIC` in `.env.local`. Operator Next builds stay `standalone`.
-- Circadia.app pulls GitHub `main`. Pushing `.github/workflows/*.yml` needs the GitHub `workflow` OAuth scope; without it, `npm test` on that clone fails because `ci-workflow.test.ts` expects the file.
+- Circadia.app pulls GitHub `main`. The CI workflow lives at `scripts/github-ci.yml` because GitHub App tokens without `workflow` scope cannot create `.github/workflows/*.yml`. Copy it there once that scope exists.
 

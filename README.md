@@ -107,6 +107,8 @@ npm run pack:static
 
 That parks `src/app/api` and `src/app/mod` for the compile, writes `out/`, then puts those folders back. Circadia.app still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Capacitor is not in this repo yet. The iOS audio spike under `spikes/` is a local experiment, not part of the app.
 
+CI YAML is `scripts/github-ci.yml`. Copy it to `.github/workflows/ci.yml` when the GitHub token has `workflow` scope.
+
 ## What this is not
 
 Not medical care. Not a diagnosis. Not a prescription. If you snore and gasp, fall asleep while driving, or cannot stay awake, that is a clinic.
