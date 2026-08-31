@@ -17,6 +17,14 @@ import {
   type PasswordLock,
 } from "@/lib/password";
 import { SESSION_HEADER } from "@/lib/session-token-shared";
+import {
+  phoneSecureDelete,
+  phoneSecureGet,
+  phoneSecureSet,
+  phoneVaultActive,
+  readPhoneVault,
+  writePhoneVault,
+} from "@/lib/phone-vault";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS, isCivilDate } from "@/lib/schedule";
@@ -218,11 +226,16 @@ async function persistUnlockNow(login: string): Promise<void> {
   dropLegacyUnlock();
   const master = getMaster(login);
   if (!master) return;
+  const payload = bytesToBase64(master);
+  if (phoneVaultActive()) {
+    await phoneSecureSet(login, payload);
+    return;
+  }
   try {
     const res = await fetch("/api/session-key", {
       method: "POST",
       headers: sessionHeaders({ "content-type": "application/json" }),
-      body: JSON.stringify({ login, master: bytesToBase64(master) }),
+      body: JSON.stringify({ login, master: payload }),
     });
     if (!res.ok) return;
   } catch {
@@ -231,6 +244,13 @@ async function persistUnlockNow(login: string): Promise<void> {
 }
 
 async function fetchPersistedUnlock(login: string): Promise<{ login: string; master: Uint8Array } | null> {
+  if (phoneVaultActive()) {
+    const raw = await phoneSecureGet(login);
+    if (!raw) return null;
+    const master = bytesFromBase64(raw);
+    if (master.length !== 32) return null;
+    return { login, master };
+  }
   try {
     const res = await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, {
       cache: "no-store",
@@ -249,6 +269,10 @@ async function fetchPersistedUnlock(login: string): Promise<{ login: string; mas
 
 async function deletePersistedUnlock(login: string): Promise<void> {
   dropLegacyUnlock();
+  if (phoneVaultActive()) {
+    await phoneSecureDelete(login);
+    return;
+  }
   try {
     await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, {
       method: "DELETE",
@@ -336,14 +360,19 @@ export function schedulePersistDisk() {
 
 export async function pushVaultToDisk(): Promise<void> {
   if (typeof window === "undefined") return;
+  const disk = captureDisk();
+  if (phoneVaultActive()) {
+    await writePhoneVault(disk);
+    return;
+  }
   try {
     await fetch("/api/vault", {
       method: "PUT",
       headers: sessionHeaders({ "content-type": "application/json" }),
-      body: JSON.stringify(captureDisk()),
+      body: JSON.stringify(disk),
     });
   } catch {
-    /* disk is a backup */
+    /* disk is a backup; localStorage already has the ciphertext */
   }
 }
 
@@ -352,11 +381,15 @@ export async function bootVaultFromDisk(): Promise<void> {
   dropLegacyUnlock();
   migrateToVault();
   let disk = emptyDiskVault();
-  try {
-    const res = await fetch("/api/vault", { cache: "no-store", headers: sessionHeaders() });
-    if (res.ok) disk = parseDiskVault(await res.json());
-  } catch {
-    /* localStorage only until the API is up */
+  if (phoneVaultActive()) {
+    disk = await readPhoneVault();
+  } else {
+    try {
+      const res = await fetch("/api/vault", { cache: "no-store", headers: sessionHeaders() });
+      if (res.ok) disk = parseDiskVault(await res.json());
+    } catch {
+      /* localStorage only until the API is up */
+    }
   }
   const local: DiskVault = captureDisk();
   const merged = mergeDiskVault(local, disk);

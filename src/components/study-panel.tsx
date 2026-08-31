@@ -16,7 +16,7 @@ export function StudyPanel() {
       {!study.consented ? (
         <>
           <h2 className="font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50">
-            Diary stays on this computer
+            Diary stays on this device
           </h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">
             Join and nights, roster, and app faults leave on their own. Dreams and chat do not.

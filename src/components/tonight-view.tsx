@@ -43,15 +43,16 @@ export function TonightView() {
   const openingLine = openingCopy(profile.struggles, screensDown);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-[max(1.25rem,env(safe-area-inset-top))] pb-8">
-      <header className="flex items-center justify-between">
-        <Mark className="size-5 md:opacity-0" />
+    <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-10 md:pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <header className="hidden items-center justify-between md:flex">
+        <Mark className="size-5 opacity-0" />
         <p className="text-[11px] font-medium tracking-[0.2em] text-zinc-500 uppercase">
           {formatClock(clockFromDate(now), profile.units)}
         </p>
       </header>
 
       <CountdownHero
+        nowLabel={formatClock(clockFromDate(now), profile.units)}
         screensDown={screensDown}
         untilOff={untilOff}
         untilSleep={untilSleep}
@@ -63,35 +64,26 @@ export function TonightView() {
       />
 
       {firstOpen ? (
-        <p className="mt-8 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">{openingLine}</p>
+        <p className="mx-auto mt-8 max-w-[34ch] text-center text-[16px] leading-relaxed text-zinc-400 md:mx-0 md:text-left md:text-[15px]">
+          {openingLine}
+        </p>
       ) : headline ? (
-        <div className="mt-8">
-          <p className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">From your logs</p>
-          <p className="mt-2 text-[15px] leading-snug text-zinc-100">{headline.title}</p>
+        <div className="mx-auto mt-8 max-w-[40ch] text-center md:mx-0 md:text-left">
+          <p className="text-[13px] leading-snug text-zinc-100">{headline.title}</p>
           <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">{headline.body}</p>
         </div>
       ) : null}
 
-      {page === "filed" ? (
+      {page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
         <Link
           href="/check-in"
-          className="mt-6 block text-[13px] text-zinc-300 underline-offset-4 hover:underline"
+          className="mx-auto mt-7 flex min-h-11 max-w-[20rem] items-center justify-center rounded-full border border-white/12 px-5 text-[14px] text-zinc-200 md:mx-0 md:inline-flex md:max-w-none"
         >
-          This morning is filed
-        </Link>
-      ) : page === "unfiled-open" ? (
-        <Link
-          href="/check-in"
-          className="mt-6 block text-[13px] text-zinc-300 underline-offset-4 hover:underline"
-        >
-          Morning interview is open
-        </Link>
-      ) : page === "unfiled-late" ? (
-        <Link
-          href="/check-in"
-          className="mt-6 block text-[13px] text-zinc-300 underline-offset-4 hover:underline"
-        >
-          This morning is not filed
+          {page === "filed"
+            ? "This morning is filed"
+            : page === "unfiled-open"
+              ? "Morning interview is open"
+              : "This morning is not filed"}
         </Link>
       ) : null}
 
@@ -120,6 +112,7 @@ function openingCopy(struggles: Array<"falling" | "staying">, screensDown: boole
 }
 
 function CountdownHero({
+  nowLabel,
   screensDown,
   untilOff,
   untilSleep,
@@ -129,6 +122,7 @@ function CountdownHero({
   windowLabel,
   notificationsEnabled,
 }: {
+  nowLabel: string;
   screensDown: boolean;
   untilOff: number;
   untilSleep: number;
@@ -143,8 +137,9 @@ function CountdownHero({
   const degrees = t * 360;
 
   return (
-    <div className="mt-10 flex flex-col items-center">
-      <div className="relative size-[17.5rem] lg:size-[22rem]">
+    <div className="mt-2 flex flex-col items-center md:mt-10">
+      <p className="mb-5 text-[13px] tracking-[0.18em] text-zinc-500 uppercase md:hidden">{nowLabel}</p>
+      <div className="relative size-[13.5rem] sm:size-[17.5rem] lg:size-[22rem]">
         <div
           className="absolute inset-0 rounded-full opacity-90"
           style={{
@@ -154,14 +149,14 @@ function CountdownHero({
         <div className="absolute inset-[9px] flex flex-col items-center justify-center rounded-full bg-[#07060f]">
           {screensDown ? (
             <>
-              <p className="font-heading text-[2.4rem] leading-none tracking-tight text-zinc-50">
+              <p className="font-heading text-[2.1rem] leading-none tracking-tight text-zinc-50 md:text-[2.4rem]">
                 Screens down
               </p>
               <p className="mt-3 text-[13px] text-zinc-500">Asleep-by in {formatCountdown(untilSleep)}</p>
             </>
           ) : (
             <>
-              <p className="font-heading text-[3.35rem] leading-none tracking-tight text-zinc-50">
+              <p className="font-heading text-[2.65rem] leading-none tracking-tight text-zinc-50 md:text-[3.35rem]">
                 {formatCountdown(untilOff)}
               </p>
               <p className="mt-3 text-[13px] tracking-wide text-zinc-500">to screens down</p>
@@ -169,7 +164,7 @@ function CountdownHero({
           )}
         </div>
       </div>
-      <p className="mt-6 text-center text-[13px] leading-relaxed text-zinc-500">
+      <p className="mt-5 max-w-[28ch] text-center text-[13px] leading-relaxed text-zinc-500">
         {offLabel} ping · {sleepLabel}–{wakeLabel} ({windowLabel})
         {notificationsEnabled ? "" : " · pings off"}
       </p>

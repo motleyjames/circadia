@@ -45,7 +45,7 @@ export function AuthGate() {
         if (result.error.includes("Sign up")) setMode("signup");
       }
     } catch {
-      setError("Could not check the password on this computer. Try again.");
+      setError("Could not check the password on this device. Try again.");
     } finally {
       setBusy(false);
     }
@@ -60,17 +60,17 @@ export function AuthGate() {
         </h1>
         <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
           {orphan && !named.length
-            ? "This computer already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. The diary is encrypted on this computer. Circadia will not contact you."
+            ? "This device already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. The diary is encrypted here. Circadia will not contact you."
             : named.length
-              ? "Log in to the diary on this computer. After that, Circadia stays signed in here until you log out. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
-              : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this computer — not a way for anyone to reach you. Circadia stays signed in on this computer until you log out."}
+              ? "Log in to the diary on this device. After that, Circadia stays signed in here until you log out. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
+              : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this device — not a way for anyone to reach you. Circadia stays signed in here until you log out."}
         </p>
 
         {named.length ? (
           <p className="mt-4 text-[13px] leading-relaxed text-zinc-500">
             {named.length === 1
-              ? `Diary on this computer: ${named[0].display}`
-              : `Diaries on this computer: ${named.map((row) => row.display).join(", ")}`}
+              ? `Diary on this device: ${named[0].display}`
+              : `Diaries on this device: ${named.map((row) => row.display).join(", ")}`}
           </p>
         ) : null}
 
@@ -168,7 +168,7 @@ export function AuthGate() {
               ? orphan
                 ? "This does not start you over. It attaches a login to the diary already here."
                 : "At least 8 characters. Circadia will not email or text you."
-              : "Circadia cannot email a reset. If you forget it, the diary on this computer stays locked."}
+              : "Circadia cannot email a reset. If you forget it, the diary on this device stays locked."}
           </p>
 
           {error ? <p className="mt-4 text-[13px] text-amber-200/90">{error}</p> : null}
@@ -183,7 +183,7 @@ export function AuthGate() {
         </form>
 
         <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-600">
-          The password is checked on this computer. It is not sent to the person who built Circadia.
+          The password is checked on this device. It is not sent to the person who built Circadia.
         </p>
         <p className="mt-3 text-[11px] tracking-[0.18em] text-zinc-700 uppercase">{APP_VERSION}</p>
       </div>

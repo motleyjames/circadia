@@ -42,6 +42,8 @@
     "node_modules",
     "spikes",
     ".api-parked",
-    ".mod-parked"
+    ".mod-parked",
+    "phone/ios",
+    "phone/node_modules"
   ]
 }

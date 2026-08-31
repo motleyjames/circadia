@@ -1,8 +1,8 @@
 # Circadia
 
-A desktop sleep companion for people who **cannot fall asleep, cannot stay asleep, or both**. The job is a healthy, repeatable schedule — not a shop of powders.
+A local-first sleep companion for people who **cannot fall asleep, cannot stay asleep, or both**. The job is a healthy, repeatable schedule — not a shop of powders.
 
-Circadia is local-first. Profile, mornings, dreams, and chat live on this computer. Sign up with your name, an email or phone, and a password — that is how you log back in on this laptop, not a cloud account and not a way for James to reach you. The password is stretched with PBKDF2; the diary is encrypted with AES-GCM. After you log in, the AES key lives in the macOS Keychain (service `Circadia`), not in WebKit localStorage next to the ciphertext. If Keychain is unavailable, Circadia stays locked after quit — it will not write that key to disk. Circadia never sends the password anywhere, and there is no reset email — if you forget it, the diary on this computer stays locked. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
+One diary, two shells: **Circadia.app** on the Mac, and an iPhone wrap of the same diary (no Operator). Sign up with your name, an email or phone, and a password — that is how you log back in on this device, not a cloud account and not a way for James to reach you. The password is stretched with PBKDF2; the diary is encrypted with AES-GCM. After you log in, the AES key lives in the device Keychain (service `Circadia`), not next to the ciphertext. If Keychain is unavailable, Circadia stays locked after quit — it will not write that key to disk. Circadia never sends the password anywhere, and there is no reset email — if you forget it, the diary on this device stays locked. The advisor is a sleep-science engine that reads your bubbles and refuses to guess past the evidence.
 
 ## Put it on the Dock (Mac)
 
@@ -33,7 +33,7 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 
 ## What you do
 
-1. **Sign up / Log in** — first and last name, email or phone, and a password. Circadia will not email or text you. There is no company server holding passwords: unlock happens on this computer, then the diary is encrypted at rest. The stay-signed-in key is in the macOS Keychain, not beside `vault.json`. There is no reset email — if you forget it, the diary on this computer stays locked. If a diary is already on this Mac, the gate opens on **Log in** and names the email or phone. The file is stored on disk (`~/Library/Application Support/Circadia` on a Mac), not only in the window. After you log in, Circadia stays signed in on this computer until you log out — quitting the app is not logout. If Keychain cannot store the session key, the next launch will ask for the password again rather than keep a plaintext key on disk.
+1. **Sign up / Log in** — first and last name, email or phone, and a password. Circadia will not email or text you. There is no company server holding passwords: unlock happens on this device, then the diary is encrypted at rest. The stay-signed-in key is in the Keychain, not beside `vault.json`. There is no reset email — if you forget it, the diary on this device stays locked. If a diary is already here, the gate opens on **Log in** and names the email or phone. On a Mac the file is `~/Library/Application Support/Circadia`. On iPhone it is the app sandbox (`vault.json` in Capacitor `Directory.Data`). After you log in, Circadia stays signed in on this device until you log out — quitting the app is not logout. If Keychain cannot store the session key, the next launch will ask for the password again rather than keep a plaintext key on disk.
 2. **Sleep intake** — age, height, weight, the problem, wake time, which mornings you have to get up, meds, alerts.
 3. **Study gate** — yes turns the pipeline on. No Send button after that.
 4. **Tonight** — countdown to screens-down (one hour before sleep), then a guided meditation or calm noise. The guide is a quiet recording over a low tone. Close your eyes; you do not have to read the orb.
@@ -41,7 +41,7 @@ Keep this folder where it is. If you move it, run `npm run dock` once. After tha
 6. **Notes** — a week read from the first mornings: which dates were better, which were worse, and what I would try next. Honest when the window is thin. After each morning, one library page that night actually earned — not a tour of the shelf. Bottles stay in **Consult**, and only after about seven logs.
 7. **You** — the file. Clocks, meds, log out. Not a JSON dump. Not a second copy of chat.
 8. **Library** — conservative research. Plain language first, sources second. Each note is stamped with the month a person last checked it against current guidelines; `npm test` fails if a stamp is more than a year old. Circadia does not scrape PubMed (local-first). The morning’s page is pinned at the top; the rest of the shelf stays browseable. Not a JSON dump of the diary.
-9. **Consult** — the desk on the right (or the strip above the tab bar). Opens empty. Answers from the diary (a named morning, last night, this week) and the library. Citations open the note. Unknown → withhold. Past consults file to History, by day. Open one to continue. Delete if you want it gone.
+9. **Consult** — on a wide Mac window, the desk on the right. On a phone, the word **Ask** at the top right, which opens Consult as its own screen. Opens empty. Answers from the diary (a named morning, last night, this week) and the library. Citations open the note. Unknown → withhold. Past consults file to History, by day. Open one to continue. Delete if you want it gone.
 
 ## Paid testers and the pipeline
 
@@ -50,7 +50,7 @@ If you are paying people to use Circadia, payment happens **outside** the app.
 After signup they choose once:
 
 - **Join the study** — that is the send. A roster card leaves immediately (participant number, sleep window, falling/staying — not a name, not email or phone). After each real morning, a stripped night pack leaves on its own. If the app throws, a fault leaves too.
-- **Keep everything on this computer** — the app is unchanged. Nothing is sent.
+- **Keep everything on this device** — the app is unchanged. Nothing is sent.
 
 There is no Send now. Testers do not see JSON.
 
@@ -58,11 +58,11 @@ There is no Send now. Testers do not see JSON.
 
 **Night packs never contain:** name, email, phone, dream text, chat text, medication/supplement strings, height/weight, calendar dates, report ids, IP.
 
-**Roster cards contain** a participant number, sleep window, and struggle flags so testers still show up as users in the inbox. Names, email, phone, height, and weight stay on their computer. That is not a cloud backup of the diary, and it is not a number James can call. Dreams still live only on their machine.
+**Roster cards contain** a participant number, sleep window, and struggle flags so testers still show up as users in the inbox. Names, email, phone, height, and weight stay on their device. That is not a cloud backup of the diary, and it is not a number James can call. Dreams still live only on their machine.
 
 The operator app shows signup counts and sleep stats against that participant number. It does not show names or other personal information.
 
-Packs land in `data/study-inbox/` on the machine running Circadia. Testers on *their* computers only reach you if that app can POST to a host you control — set `STUDY_INGEST_URL` (and optional `STUDY_INGEST_TOKEN`) on their install, pointing at yours.
+Packs land in `data/study-inbox/` on the Mac running Circadia. Testers on *their* Macs only reach you if that app can POST to a host you control — set `STUDY_INGEST_URL` (and optional `STUDY_INGEST_TOKEN`) on their install, pointing at yours. The iPhone wrap has no `/api/study` route; if someone joins the study on the phone, packs stay on that phone until there is a hosted ingest. Do not bake a URL into the repo.
 
 Erase this device mints a new participant number. Pause and rejoin keeps the same number so nights still stitch.
 
@@ -97,15 +97,31 @@ npm run build
 
 `npm test` includes a generated consult corpus — thousands of paraphrases plus follow-ups. It checks routing and safety, not frozen essays. The library in `src/lib/research.ts` is the source of truth. Every note there has a `reviewedThrough` month. If that month is more than 12 months behind today, the suite fails — that is how the shelf stays current without a network call. When a guideline moves, update the note and bump the stamp.
 
-## Static pack (phone wrap is later)
+## iPhone (diary only)
 
-The diary can emit a folder of HTML/CSS/JS with no Operator and no API routes:
+Same diary. Not a second product. **Operator is never in this binary.**
+
+The phone chrome is not the Mac window squeezed down. Tonight is the clock. **Ask** is a word, not a sixth tab. Consult is a full screen. Five tabs underneath: Tonight, Morning, Notes, Library, You.
 
 ```bash
-npm run pack:static
+npm install
+npm run phone:sync
 ```
 
-That parks `src/app/api` and `src/app/mod` for the compile, writes `out/`, then puts those folders back. Circadia.app still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Capacitor is not in this repo yet. The iOS audio spike under `spikes/` is a local experiment, not part of the app.
+That runs `pack:static` (parks `src/app/api` and `src/app/mod`, writes `out/`, restores them), then `npx cap sync ios` from `phone/`. Circadia.app on the Mac still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`.
+
+First time on a Mac, if `phone/ios` is missing:
+
+```bash
+cd phone
+npx cap add ios
+npm run sync
+npx cap open ios
+```
+
+In Xcode: team signing, bundle id `app.circadia.diary`, run on a device. Wind-down copy is honest — locking the phone may pause Web Audio even with `UIBackgroundModes=audio`. The iOS audio spike under `spikes/` is a local experiment, not this app, and not lock-screen proof.
+
+Stay-signed-in on the phone: ciphertext in the app sandbox, AES key in iOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). If Keychain writes fail, the next launch asks for the password. The Mac diary and the iPhone diary are separate files — there is no cloud account to merge them. There is no Android slice in this version.
 
 CI YAML is `scripts/github-ci.yml`. Copy it to `.github/workflows/ci.yml` when the GitHub token has `workflow` scope.
 
@@ -119,4 +135,4 @@ Dream “meaning” is theme-tagging plus physiology (alcohol and REM rebound, m
 
 ## Why this way
 
-A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped. The roster is a participant number and sleep window, not a name and not a contact list. James reads stats in the operator app (`npm run mod`). The Mac wrap is a native window around that same local app — not a rewrite, not a store listing. See `docs/BLUEPRINT.md`.
+A remote model would be more fluent and less honest. Sleep data is intimate; the diary stays on-device unless someone joins the study. Join is the only send. Night packs stay stripped. The roster is a participant number and sleep window, not a name and not a contact list. James reads stats in the operator app (`npm run mod`) on a Mac — never on the phone. The Mac wrap is a native window around that same local app; the iPhone wrap is Capacitor around the static diary pack. See `docs/BLUEPRINT.md`.

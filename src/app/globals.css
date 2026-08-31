@@ -262,3 +262,7 @@ html.circadia-native summary,
 html.circadia-native [role="button"] {
   -webkit-app-region: no-drag;
 }
+
+html.circadia-phone .native-drag {
+  height: 0;
+}

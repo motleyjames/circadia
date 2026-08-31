@@ -164,7 +164,8 @@ src/app/          diary: /  /check-in  /insights  /library  /you  /api/study
 **Next, still this repo**
 
 - Apple Health / CSV import if we can keep it local
-- Quiet hours / Capacitor push; phone wrap after the desktop loop is stable
+- Quiet hours / Capacitor push once the iPhone diary is in testers' hands
+- TestFlight signing (Apple Developer). Not from the Linux agent.
 - Confirm body metrics before BMI/OSA notes treat them as measured
 - Optional hosted model behind an explicit key, grounded on the same notes object
 - Clinical red-flag copy (Epworth, STOP-BANG) as *questions*, not scores that pretend to diagnose

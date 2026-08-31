@@ -145,7 +145,7 @@ function markBlocked() {
     study: {
       ...prev.study,
       lastStatus: "blocked",
-      lastError: "Pack failed the anonymity check. Nothing left this computer.",
+      lastError: "Pack failed the anonymity check. Nothing left this device.",
     },
   }));
 }
