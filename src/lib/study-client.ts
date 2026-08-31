@@ -15,7 +15,7 @@ export async function postInbox(body: InboxBody): Promise<{ ok: boolean; error?:
     }
     return { ok: true };
   } catch {
-    return { ok: false, error: "Could not reach the study inbox. The pack is still on this computer." };
+    return { ok: false, error: "Could not reach the study inbox. The pack is still on this device." };
   }
 }
 

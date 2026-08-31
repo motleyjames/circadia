@@ -21,6 +21,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "next-env.d.ts",
     "spikes/**",
+    "phone/**",
   ]),
 ]);
 

@@ -16,7 +16,7 @@ export function StudyGate() {
         Yes is the only send.
       </h1>
       <p className="mt-5 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        If you join, this computer starts a pipeline. You will not press Send. After each morning, a
+        If you join, this device starts a pipeline. You will not press Send. After each morning, a
         stripped night log leaves on its own. If the app faults, that leaves too.
       </p>
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
@@ -42,7 +42,7 @@ export function StudyGate() {
           onClick={declineStudy}
           className="h-14 cursor-pointer rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 transition-colors hover:bg-white/6"
         >
-          Keep everything on this computer
+          Keep everything on this device
         </button>
       </div>
     </div>

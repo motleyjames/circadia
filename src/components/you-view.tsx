@@ -95,7 +95,7 @@ export function YouView() {
   const loginLabel = prettyContactDisplay(session);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-24 md:px-8">
+    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-24 md:px-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <div className="mx-auto w-full max-w-5xl">
         <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">You</p>
         <h1 className="font-heading mt-1 text-[2.35rem] leading-none tracking-tight text-zinc-50">
@@ -497,7 +497,7 @@ export function YouView() {
           open={eraseOpen}
           onOpenChange={setEraseOpen}
           title="Erase this device"
-          description="Mornings, the password, and the stay-signed-in key leave this computer. Type erase to confirm."
+          description="Mornings, the password, and the stay-signed-in key leave this device. Type erase to confirm."
           confirmLabel="Erase"
           destructive
           confirmWord={ERASE_CONFIRM_WORD}

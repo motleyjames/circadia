@@ -305,7 +305,7 @@ export function Onboarding() {
               countdown on Tonight still runs either way.
             </p>
             <p className="mt-8 border-t border-white/8 pt-6 text-[13px] leading-relaxed text-zinc-500">
-              Next you choose whether nights can leave this computer. The diary itself stays here
+              Next you choose whether nights can leave this device. The diary itself stays here
               either way.
             </p>
             <p className="mt-4 max-w-[52ch] text-[12px] leading-relaxed text-zinc-600">

@@ -191,7 +191,7 @@ function MorningInterview({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-3">
+    <div className="flex min-h-0 flex-1 flex-col px-5 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-3 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">
         {existing ? "Correcting this morning" : "Morning interview"}
       </p>
@@ -409,7 +409,7 @@ function MorningInterview({
                     <Input
                       value={supplementNote}
                       onChange={(e) => setSupplementNote(e.target.value.slice(0, 80))}
-                      placeholder="Name is fine. Stays on this computer."
+                      placeholder="Name is fine. Stays on this device."
                       className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-zinc-50"
                     />
                   </label>

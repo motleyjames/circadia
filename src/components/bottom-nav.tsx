@@ -13,7 +13,10 @@ export function BottomNav() {
   const morningDue = morningFileDue(state.reports, new Date(), state.profile?.targetWake);
 
   return (
-    <nav className="grid grid-cols-5 border-t border-white/8 bg-[#0b0914]/90 px-1 pb-[max(0.4rem,env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl md:hidden">
+    <nav
+      className="grid grid-cols-5 border-t border-white/[0.06] bg-[#0b0914]/92 px-2 pt-1.5 pb-[max(0.55rem,env(safe-area-inset-bottom))] backdrop-blur-xl md:hidden"
+      aria-label="Diary"
+    >
       {TABS.map((tab) => {
         const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
         const Icon = tab.icon;
@@ -23,17 +26,14 @@ export function BottomNav() {
             href={tab.href}
             prefetch={false}
             className={cn(
-              "flex cursor-pointer flex-col items-center gap-0.5 rounded-2xl py-2 text-[10px] tracking-wide",
-              active ? "text-violet-200" : "text-zinc-500",
+              "flex cursor-pointer flex-col items-center gap-1 rounded-2xl py-2 text-[11px] tracking-[0.01em]",
+              active ? "text-zinc-50" : "text-zinc-500",
             )}
           >
             <span className="relative">
-              <Icon className={cn("size-5", active && "drop-shadow-[0_0_10px_rgba(196,181,253,0.8)]")} />
+              <Icon className="size-[1.35rem]" strokeWidth={active ? 2 : 1.6} />
               {tab.href === "/check-in" && morningDue ? (
-                <span
-                  className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-sky-300"
-                  aria-hidden
-                />
+                <span className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-sky-300" aria-hidden />
               ) : null}
             </span>
             {tab.label}

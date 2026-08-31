@@ -64,3 +64,12 @@ next-env.d.ts
 /spikes/ios-audio/ios/DerivedData
 /spikes/ios-audio/ios/App/App.xcodeproj/xcuserdata
 /spikes/ios-audio/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata
+
+# iPhone diary shell (Capacitor). Commit the Xcode project; ignore CocoaPods and synced web assets.
+/phone/node_modules
+/phone/ios/App/Pods
+/phone/ios/App/App/public
+/phone/ios/DerivedData
+/phone/ios/App/App.xcodeproj/xcuserdata
+/phone/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata
+/phone/ios/App/App.xcworkspace/xcuserdata

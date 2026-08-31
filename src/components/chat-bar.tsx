@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ArrowUp, ChevronDown } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { CrisisLine } from "@/components/crisis-line";
 import { useCircadia } from "@/context/circadia-store";
 import { CLINIC_STARTERS } from "@/lib/chat";
@@ -148,20 +147,26 @@ function HistoryRow({
   );
 }
 
-export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
+export function ChatBar({
+  variant,
+  open: openProp = false,
+  onClose,
+}: {
+  variant: "rail" | "sheet";
+  open?: boolean;
+  onClose?: () => void;
+}) {
   const { state, sendChat, newConsult, openConsult, deleteConsult } = useCircadia();
-  const pathname = usePathname();
-  const [openFor, setOpenFor] = useState<string | null>(null);
   const [pane, setPane] = useState<"desk" | "files">("desk");
   const [draft, setDraft] = useState("");
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const rail = variant === "rail";
-  const open = rail || openFor === pathname;
+  const sheet = variant === "sheet";
+  const open = rail || (sheet && openProp);
   const live = state.chat;
   const empty = live.length === 0;
-  const lastReply = [...live].reverse().find((msg) => msg.role === "circadia");
   const groups = useMemo(
     () => groupConsultsByDay(state.consultHistory),
     [state.consultHistory],
@@ -178,13 +183,26 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
     endRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [live.length, open, pane]);
 
+  useEffect(() => {
+    if (!sheet || !openProp) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose?.();
+    }
+    window.addEventListener("keydown", onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [sheet, openProp, onClose]);
+
   function submit(text = draft) {
     const next = text.trim();
     if (!next) return;
     sendChat(next);
     setDraft("");
     setPane("desk");
-    setOpenFor(pathname);
     inputRef.current?.focus();
   }
 
@@ -199,7 +217,6 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
     openConsult(id);
     setPane("desk");
     setPendingDelete(null);
-    setOpenFor(pathname);
   }
 
   const files = (
@@ -221,8 +238,8 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
   const body = (
     <div
       className={cn(
-        "min-h-0 overflow-y-auto",
-        rail ? "flex-1 px-1" : "mb-3 max-h-[min(46vh,28rem)] px-1",
+        "min-h-0 flex-1 overflow-y-auto",
+        rail ? "px-1" : "px-5",
       )}
     >
       {showStarters ? (
@@ -292,7 +309,6 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
             ref={inputRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            onFocus={() => setOpenFor(pathname)}
             placeholder="Falling asleep, 3 a.m., a bottle on the aisle…"
             aria-label="Ask Circadia"
             className="h-11 min-w-0 flex-1 border border-white/12 bg-white/[0.04] px-3 text-[13px] text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-300/40"
@@ -363,58 +379,42 @@ export function ChatBar({ variant }: { variant: "dock" | "rail" }) {
     );
   }
 
+  if (!openProp) return null;
+
   return (
-    <div className="border-t border-sky-300/10 bg-[#07080f]/95 px-3 pt-2 pb-2 xl:hidden">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          className="flex min-w-0 items-center gap-2 text-left"
-          aria-expanded={open}
-          onClick={() => setOpenFor((current) => (current === pathname ? null : pathname))}
-        >
-          <span className="text-[10px] tracking-[0.22em] text-sky-300/70 uppercase">Consult</span>
-          <ChevronDown
-            className={cn("size-3.5 text-zinc-500 transition-transform", open && "rotate-180")}
-          />
-          {!open && lastReply ? (
-            <span className="truncate text-[12px] text-zinc-500">{lastReply.text}</span>
-          ) : !open && state.consultHistory.length > 0 ? (
-            <span className="truncate text-[12px] text-zinc-500">
-              {state.consultHistory.length} filed
-            </span>
-          ) : null}
-        </button>
-        {open ? controls : null}
-      </div>
-      {open ? body : null}
-      {open ? composer : (
-        <div className="shrink-0">
-          <form
-            className="flex items-end gap-2"
-            onSubmit={(e) => {
-              e.preventDefault();
-              submit();
-            }}
-          >
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onFocus={() => setOpenFor(pathname)}
-              placeholder="Falling asleep, 3 a.m., a bottle on the aisle…"
-              aria-label="Ask Circadia"
-              className="h-11 min-w-0 flex-1 border border-white/12 bg-white/[0.04] px-3 text-[13px] text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-300/40"
-            />
-            <button
-              type="submit"
-              aria-label="Send"
-              className="inline-flex size-11 shrink-0 items-center justify-center border border-sky-300/30 bg-sky-300 text-zinc-950 hover:bg-sky-200"
-            >
-              <ArrowUp className="size-4" strokeWidth={2.25} />
-            </button>
-          </form>
+    <div
+      className="fixed inset-0 z-50 flex flex-col overscroll-none bg-[#07060f] xl:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="consult-sheet-title"
+    >
+      <header className="flex items-start justify-between gap-3 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
+        <div>
+          <h2 id="consult-sheet-title" className="font-heading text-[1.85rem] leading-none text-zinc-50">
+            Consult
+          </h2>
+          <p className="mt-2 max-w-[28ch] text-[13px] leading-snug text-zinc-500">
+            {pane === "files"
+              ? "Filed by day. Open one to continue."
+              : continuingLabel ?? "Ask the actual problem. Silence when the note does not exist."}
+          </p>
         </div>
-      )}
-      {crisis}
+        <div className="flex items-center gap-3">
+          {controls}
+          <button
+            type="button"
+            className="inline-flex h-11 items-center text-[13px] text-zinc-400"
+            onClick={() => onClose?.()}
+          >
+            Close
+          </button>
+        </div>
+      </header>
+      {body}
+      <div className="px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {composer}
+        {crisis}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,22 @@
+{
+  "name": "circadia-keychain",
+  "version": "0.7.0",
+  "private": true,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "ios",
+    "Package.swift",
+    "CircadiaKeychain.podspec",
+    "index.js",
+    "index.d.ts"
+  ],
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}
