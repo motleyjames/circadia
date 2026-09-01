@@ -33,7 +33,8 @@ if ! command -v swiftc >/dev/null 2>&1; then
   exit 5
 fi
 
-if [[ ! -d node_modules/next ]]; then
+if ! node scripts/deps-missing.cjs; then
+  echo "Installing dependencies (new packages after git pull)…"
   npm install
 fi
 
