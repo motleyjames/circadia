@@ -30,6 +30,7 @@ describe("GitHub CI workflow", () => {
     expect(ci).toMatch(/timeout-minutes:\s*([2-9]\d|[1][5-9])/);
     expect(pkg.scripts.typecheck).toBe("tsc --noEmit");
     expect(pkg.scripts.lint).toBe("eslint");
+    expect(readFileSync("eslint.config.mjs", "utf8")).toContain("scripts/**");
     expect(pkg.scripts["pack:static"]).toBe("node electron/build-ui.cjs");
   });
 
