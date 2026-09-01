@@ -5,7 +5,7 @@
 # A signed-in Xcode 16 Apple ID with no stored team id is enough.
 # A keychain certificate alone is not automatic signing.
 #
-# USB: only this install, and only if the phone is unavailable.
+# USB: only this install, and only if the idle tunnel never comes back.
 # After Circadia is on the home screen, unplug. The app does not talk to the Mac.
 # Diary only. Not Operator. Not the simulator. Not a Circadia server. Not live-reload.
 
@@ -49,6 +49,14 @@ if ! node scripts/deps-missing.cjs; then
   npm install
 fi
 
+SYNCED=0
+if [[ "${CIRCADIA_FORCE_PHONE_SYNC:-}" == "1" ]] || ! node scripts/phone-pack-fresh.cjs; then
+  npm run phone:sync
+  SYNCED=1
+else
+  echo "iPhone pack already matches this commit, this version, and the locked diary. Skipping the Next.js rebuild."
+fi
+
 set +e
 TEAM="$(node scripts/ios-team.cjs)"
 TEAM_STATUS=$?
@@ -59,8 +67,6 @@ if [[ "$TEAM_STATUS" -ne 0 ]]; then
   TEAM=""
 fi
 
-npm run phone:sync
-
 INDEX="phone/ios/App/App/public/index.html"
 if [[ ! -f "$INDEX" ]] || ! grep -q '__CIRCADIA_PACK_STATUS__="packed"' "$INDEX"; then
   echo
@@ -69,6 +75,10 @@ if [[ ! -f "$INDEX" ]] || ! grep -q '__CIRCADIA_PACK_STATUS__="packed"' "$INDEX"
   echo "Looked for ~/Library/Application Support/Circadia/vault.json"
   echo "Empty iPhone (no nights): CIRCADIA_ALLOW_EMPTY_PHONE=1 npm run put-on-phone"
   exit 8
+fi
+
+if [[ "$SYNCED" -eq 1 ]]; then
+  node scripts/phone-pack-fresh.cjs --write || true
 fi
 
 if command -v xcrun >/dev/null 2>&1; then
@@ -83,17 +93,23 @@ echo "Signing does not open Xcode. The Team stays on this Mac, not in git."
 
 PICK="$(node scripts/ios-target.cjs)" || {
   echo
-  echo "James-iPhone is not reachable for this install."
-  echo "Unlock it. If the list said unavailable, plug in USB for this one install."
+  echo "No iPhone hardware UDID on this Mac. Pair James-iPhone (USB once, Trust)."
+  echo "Unlock it. Plug in USB for this one install if the list stays empty."
+  echo "The diary pack is already on disk. The next run skips the Next.js rebuild."
   echo "After Circadia is on the home screen, unplug. The app does not talk to the Mac."
   exit 10
 }
 
-NAME="${PICK%%$'\t'*}"
-ID="${PICK#*$'\t'}"
+NAME=""
+ID=""
+CORE=""
+IFS=$'\t' read -r NAME ID CORE <<< "$PICK"
 echo "Target: $NAME ($ID)"
 
 INSTALL_ARGS=(--target "$ID")
+if [[ -n "${CORE:-}" && "$CORE" != "$ID" ]]; then
+  INSTALL_ARGS+=(--core-device "$CORE")
+fi
 if [[ "$TEAM" =~ ^[A-Z0-9]{10}$ ]]; then
   INSTALL_ARGS+=(--fallback-team "$TEAM")
 fi
@@ -115,7 +131,8 @@ fi
 if [[ "$STATUS" -ne 0 ]]; then
   echo
   echo "Install did not finish. Circadia is not on the phone until this step succeeds."
-  echo "If the phone is unavailable, unlock it, plug in USB for this one install, run this again."
+  echo "Unlock James-iPhone and keep the screen on. Plug in USB for this one install if it stays idle."
+  echo "The diary pack is already on disk. The next run skips the Next.js rebuild."
   echo "Do not use destination Any iOS Device (arm64). Do not press Run in Xcode."
   exit 11
 fi

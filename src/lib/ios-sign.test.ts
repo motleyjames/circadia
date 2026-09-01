@@ -45,9 +45,12 @@ const install = require("../../scripts/ios-install.cjs") as {
     sign: { style: string; team?: string; profileUuid?: string; source?: string };
     targetId: string;
     derivedDataPath: string;
+    generic?: boolean;
   }) => string[];
   explainXcodebuildFailure: (text: string) => string | null;
-  parseCli: (argv: string[]) => { targetId: string; fallbackTeam: string | null };
+  destinationMissing: (text: string) => boolean;
+  parseCli: (argv: string[]) => { targetId: string; fallbackTeam: string | null; coreDeviceId: string };
+  installOnDevice: (input: { targetId: string; sign?: { style: string } }) => number;
 };
 
 const TEAM = "A1B2C3D4E5";
@@ -324,7 +327,38 @@ describe("ios-install signing args", () => {
     expect(install.parseCli(["node", "ios-install.cjs", "--target", DEVICE, "--fallback-team", TEAM])).toEqual({
       targetId: DEVICE,
       fallbackTeam: TEAM,
+      coreDeviceId: "",
     });
     expect(install.parseCli(["node", "ios-install.cjs", "--target", DEVICE]).fallbackTeam).toBeNull();
+    expect(
+      install.parseCli([
+        "node",
+        "ios-install.cjs",
+        "--target",
+        DEVICE,
+        "--core-device",
+        "3BF49769-5494-56B1-8F32-F329DC6F058F",
+      ]).coreDeviceId,
+    ).toBe("3BF49769-5494-56B1-8F32-F329DC6F058F");
+  });
+
+  it("compiles generic iOS without saying Any iOS Device, and refuses a CoreDevice UUID", () => {
+    const args = install.xcodebuildArgs({
+      sign: { style: "manual", team: TEAM, profileUuid: "profile-uuid" },
+      targetId: DEVICE,
+      derivedDataPath: "/tmp/derived",
+      generic: true,
+    });
+    expect(args).toContain("generic/platform=iOS");
+    expect(args.join(" ")).not.toMatch(/Any iOS Device/);
+    expect(args).not.toContain(`platform=iOS,id=${DEVICE}`);
+    expect(
+      install.destinationMissing(
+        "xcodebuild: error: Unable to find a destination matching the provided destination specifier",
+      ),
+    ).toBe(true);
+    expect(install.installOnDevice({ targetId: "3BF49769-5494-56B1-8F32-F329DC6F058F", sign: { style: "manual" } })).toBe(
+      11,
+    );
   });
 });

@@ -190,4 +190,13 @@ function main() {
   );
 }
 
-main();
+module.exports = {
+  pickVault,
+  vaultCandidates,
+  alreadyPacked,
+  LOCKED_KIND,
+};
+
+if (require.main === module) {
+  main();
+}
