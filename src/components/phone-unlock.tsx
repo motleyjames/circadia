@@ -79,13 +79,15 @@ export function PhoneUnlock() {
 
         {error ? <p className="mt-4 text-[13px] text-amber-200/90">{error}</p> : null}
 
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-8 h-14 w-full cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {busy ? "Logging in…" : "Log in"}
-        </button>
+        <div className="mt-auto pt-8">
+          <button
+            type="submit"
+            disabled={busy}
+            className="h-14 w-full rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950 disabled:opacity-50"
+          >
+            {busy ? "Logging in…" : "Log in"}
+          </button>
+        </div>
       </form>
 
       <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-600">
@@ -197,7 +199,7 @@ function SecretField({
         <button
           type="button"
           onClick={() => setShow((v) => !v)}
-          className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-zinc-500 hover:text-zinc-200"
+          className="absolute top-1/2 right-1 -translate-y-1/2 inline-flex size-11 items-center justify-center text-zinc-500"
           aria-label={show ? "Hide password" : "Show password"}
         >
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

@@ -7,6 +7,7 @@ import {
   toggleScheduledDay,
 } from "@/lib/schedule";
 import type { ScheduledDays } from "@/lib/types";
+import { hapticSelect } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 export function ScheduledDaysPicker({
@@ -27,7 +28,10 @@ export function ScheduledDaysPicker({
               type="button"
               aria-pressed={on}
               aria-label={`${WEEKDAY_FULL[index]} — ${on ? "have to get up" : "free morning"}`}
-              onClick={() => onChange(toggleScheduledDay(value, index))}
+              onClick={() => {
+                void hapticSelect();
+                onChange(toggleScheduledDay(value, index));
+              }}
               className={cn(
                 "flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-2xl border text-[11px] font-medium tracking-wide transition-colors",
                 on

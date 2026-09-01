@@ -43,7 +43,7 @@ export function TonightView() {
   const openingLine = openingCopy(profile.struggles, screensDown);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-10 md:pt-[max(1.25rem,env(safe-area-inset-top))]">
+    <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-6 pb-10 md:pt-[max(1.25rem,env(safe-area-inset-top))]">
       <header className="hidden items-center justify-between md:flex">
         <Mark className="size-5 opacity-0" />
         <p className="text-[11px] font-medium tracking-[0.2em] text-zinc-500 uppercase">

@@ -1,5 +1,6 @@
 "use client";
 
+import { hapticSelect } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 type BubbleOption<T extends string | number> = {
@@ -40,9 +41,12 @@ export function BubbleGroup<T extends string | number>({
             key={String(option.value)}
             type="button"
             aria-pressed={selected}
-            onClick={() => onChange(option.value)}
+            onClick={() => {
+              void hapticSelect();
+              onChange(option.value);
+            }}
             className={cn(
-              "cursor-pointer rounded-full border px-3 transition-all",
+              "rounded-full border px-3 transition-colors",
               compact ? "min-h-9 py-2 text-[13px]" : "min-h-11 py-3 text-sm",
               selected
                 ? compact

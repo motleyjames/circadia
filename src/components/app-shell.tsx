@@ -11,6 +11,7 @@ import { NativeChrome } from "@/components/native-chrome";
 import { Onboarding } from "@/components/onboarding";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { StudyGate } from "@/components/study-gate";
+import { hapticLight } from "@/lib/haptics";
 import { isOperatorSurface } from "@/lib/surface";
 
 function Stage({
@@ -40,14 +41,16 @@ function Stage({
 
 function PhoneAsk({ onAsk }: { onAsk: () => void }) {
   return (
-    <button
-      type="button"
-      className="absolute top-[max(0.35rem,env(safe-area-inset-top))] right-4 z-30 inline-flex h-11 items-center px-2 text-[15px] tracking-wide text-sky-200/85 xl:hidden"
-      onClick={onAsk}
-      aria-haspopup="dialog"
-    >
-      Ask
-    </button>
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-[calc(env(safe-area-inset-top)+2.75rem)] items-end justify-end bg-gradient-to-b from-[#05040a]/80 to-transparent px-1 xl:hidden">
+      <button
+        type="button"
+        className="pointer-events-auto inline-flex h-11 min-w-11 items-center justify-end px-3 text-[17px] font-medium text-sky-300"
+        onClick={onAsk}
+        aria-haspopup="dialog"
+      >
+        Ask
+      </button>
+    </header>
   );
 }
 
@@ -93,7 +96,10 @@ function ShellInner({ children }: { children: React.ReactNode }) {
     <Stage wide>
       <SidebarNav />
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        {consultOpen ? null : <PhoneAsk onAsk={() => setConsultPath(pathname)} />}
+        {consultOpen ? null : <PhoneAsk onAsk={() => {
+          void hapticLight();
+          setConsultPath(pathname);
+        }} />}
         <div className="flex min-h-0 flex-1">
           <main className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="pointer-events-none absolute inset-0 z-0 glow-veil" />

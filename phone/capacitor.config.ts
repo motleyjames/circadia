@@ -9,16 +9,21 @@ const config: CapacitorConfig = {
     backgroundColor: "#05040a",
     preferredContentMode: "mobile",
     scheme: "Circadia",
+    // WKWebView bounce is Safari. Diary panes scroll themselves.
+    scrollEnabled: false,
+    allowsLinkPreview: false,
+    zoomEnabled: false,
   },
   includePlugins: [
     "@capacitor/filesystem",
     "@capacitor/keyboard",
     "@capacitor/status-bar",
+    "@capacitor/haptics",
     "circadia-keychain",
   ],
   plugins: {
     Keyboard: {
-      resize: "body",
+      resize: "native",
       resizeOnFullScreen: true,
     },
   },

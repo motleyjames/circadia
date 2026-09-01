@@ -7,12 +7,12 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { typedWordMatches } from "@/lib/confirm-word";
+import { hapticLight } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 export { ERASE_CONFIRM_WORD, typedWordMatches } from "@/lib/confirm-word";
@@ -51,13 +51,14 @@ export function ConfirmDialog({
     if (!canConfirm) return;
     onConfirm();
     handleOpenChange(false);
+    void hapticLight();
   }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         showCloseButton={false}
-        className="rounded-3xl border border-white/10 bg-[#141022] p-5 sm:max-w-md"
+        className="w-[min(17.5rem,calc(100%-3rem))] overflow-hidden rounded-[14px] border-0 bg-[#1c1c1e] p-0 ring-0 sm:max-w-[17.5rem]"
       >
         <form
           onSubmit={(event) => {
@@ -65,14 +66,14 @@ export function ConfirmDialog({
             confirm();
           }}
         >
-          <DialogHeader>
-            <DialogTitle className="text-xl text-zinc-50">{title}</DialogTitle>
-            <DialogDescription className="text-[14px] leading-relaxed text-zinc-400">
+          <DialogHeader className="px-4 pt-5 pb-3 text-center">
+            <DialogTitle className="text-[17px] font-semibold text-zinc-50">{title}</DialogTitle>
+            <DialogDescription className="text-[13px] leading-relaxed text-zinc-400">
               {description}
             </DialogDescription>
           </DialogHeader>
           {confirmWord ? (
-            <label className="mt-4 block">
+            <label className="block px-4 pb-3">
               <span className="sr-only">Type {confirmWord} to confirm</span>
               <Input
                 value={typed}
@@ -81,34 +82,26 @@ export function ConfirmDialog({
                 autoCapitalize="none"
                 spellCheck={false}
                 placeholder={confirmWord}
-                className="h-12 rounded-2xl border-white/12 bg-white/4 px-4 text-zinc-50"
+                className="h-11 rounded-xl border-white/12 bg-white/4 px-3 text-center text-[17px] text-zinc-50"
               />
             </label>
           ) : null}
-          <DialogFooter className="mt-5 flex-col gap-2 sm:flex-row sm:justify-end">
-            <DialogClose
-              render={
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="min-h-11 rounded-full border-white/15"
-                />
-              }
-            >
+          <div className="flex border-t border-white/12">
+            <DialogClose type="button" className="min-h-11 flex-1 text-[17px] text-sky-300">
               {cancelLabel}
             </DialogClose>
             <Button
               type="submit"
-              variant={destructive ? "destructive" : "default"}
+              variant="ghost"
               disabled={!canConfirm}
               className={cn(
-                "min-h-11 rounded-full",
-                !destructive && "bg-zinc-50 text-zinc-950 hover:bg-zinc-200",
+                "min-h-11 flex-1 rounded-none border-l border-white/12 bg-transparent text-[17px] font-semibold hover:bg-transparent disabled:opacity-40",
+                destructive ? "text-red-400" : "text-sky-300",
               )}
             >
               {confirmLabel}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

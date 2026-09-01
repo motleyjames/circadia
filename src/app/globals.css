@@ -182,7 +182,40 @@ select,
   button,
   a,
   summary,
-  label,
+  label[for],
+  select,
+  [role="button"],
+  [role="link"] {
+    cursor: default;
+  }
+
+  button:active,
+  a:active,
+  summary:active,
+  [role="button"]:active,
+  [role="link"]:active {
+    opacity: 0.72;
+  }
+
+  /* Tab bars do not fade the whole item on press. */
+  nav[aria-label="Diary"] a:active {
+    opacity: 1;
+  }
+
+  a:hover {
+    text-decoration: none;
+  }
+
+  .overflow-y-auto,
+  .overflow-y-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* 44pt on controls — not on labels wrapping fields, not on in-field icons. */
+  button:not(.absolute),
+  a,
+  summary,
   select,
   [role="button"],
   [role="link"],
@@ -192,21 +225,28 @@ select,
     touch-action: manipulation;
   }
 
-  button,
-  a,
-  summary,
-  select,
-  [role="button"],
-  [role="link"],
-  input[type="checkbox"],
-  input[type="radio"] {
-    min-width: 44px;
-  }
-
   input[type="checkbox"],
   input[type="radio"] {
     min-height: 44px;
+    min-width: 44px;
   }
+}
+
+.phone-page-y {
+  padding-top: max(3.5rem, calc(env(safe-area-inset-top) + 2.85rem));
+}
+
+@keyframes circadia-sheet-in {
+  from {
+    transform: translateY(14%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.circadia-sheet {
+  animation: circadia-sheet-in 0.42s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -266,4 +306,25 @@ html.circadia-native [role="button"] {
 
 html.circadia-phone .native-drag {
   height: 0;
+}
+
+html.circadia-phone {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html.circadia-phone nav,
+html.circadia-phone button,
+html.circadia-phone [role="button"],
+html.circadia-phone [role="link"] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html.circadia-phone input,
+html.circadia-phone textarea {
+  -webkit-user-select: text;
+  user-select: text;
+  font-size: 16px;
 }

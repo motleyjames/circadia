@@ -6,6 +6,7 @@ import { ArrowUp } from "lucide-react";
 import { CrisisLine } from "@/components/crisis-line";
 import { useCircadia } from "@/context/circadia-store";
 import { CLINIC_STARTERS } from "@/lib/chat";
+import { hapticLight } from "@/lib/haptics";
 import {
   consultDayLabel,
   formatConsultTime,
@@ -200,6 +201,7 @@ export function ChatBar({
   function submit(text = draft) {
     const next = text.trim();
     if (!next) return;
+    void hapticLight();
     sendChat(next);
     setDraft("");
     setPane("desk");
@@ -312,14 +314,14 @@ export function ChatBar({
             placeholder="Falling asleep, 3 a.m., a bottle on the aisle…"
             aria-label="Ask Circadia"
             className={cn(
-              "h-11 min-w-0 flex-1 border border-white/12 bg-white/[0.04] px-3 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-300/40",
+              "h-11 min-w-0 flex-1 rounded-full border border-white/12 bg-white/[0.06] px-4 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-300/40",
               sheet ? "text-base" : "text-[13px]",
             )}
           />
           <button
             type="submit"
             aria-label="Send"
-            className="inline-flex size-11 shrink-0 items-center justify-center border border-sky-300/30 bg-sky-300 text-zinc-950 transition-colors hover:bg-sky-200"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-sky-300 text-zinc-950"
           >
             <ArrowUp className="size-4" strokeWidth={2.25} />
           </button>
@@ -361,6 +363,14 @@ export function ChatBar({
       : `Continuing · ${consultDayLabel(localDayKey(continuing.updatedAt))}`
     : null;
 
+  const headerLede =
+    pane === "files"
+      ? "Filed by day. Open one to continue."
+      : continuingLabel ??
+        (empty
+          ? "Silence when the note does not exist."
+          : "Ranked answers. Named sources. Silence when the note does not exist.");
+
   if (rail) {
     return (
       <aside className="relative z-20 hidden w-[23.5rem] shrink-0 flex-col border-l border-sky-300/10 bg-[#07080f]/95 px-5 pt-6 pb-4 xl:flex">
@@ -368,9 +378,7 @@ export function ChatBar({
           <div>
             <h2 className="font-heading text-[1.65rem] leading-none text-zinc-50">Consult</h2>
             <p className="mt-2 max-w-[28ch] text-[12px] leading-snug text-zinc-500">
-              {pane === "files"
-                ? "Filed by day. Open one to continue."
-                : continuingLabel ?? "Ranked answers. Named sources. Silence when the note does not exist."}
+              {headerLede}
             </p>
           </div>
           {controls}
@@ -385,38 +393,42 @@ export function ChatBar({
   if (!openProp) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col overscroll-none bg-[#07060f] xl:hidden"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="consult-sheet-title"
-    >
-      <header className="flex items-start justify-between gap-3 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
-        <div>
-          <h2 id="consult-sheet-title" className="font-heading text-[1.85rem] leading-none text-zinc-50">
-            Consult
-          </h2>
-          <p className="mt-2 max-w-[28ch] text-[13px] leading-snug text-zinc-500">
-            {pane === "files"
-              ? "Filed by day. Open one to continue."
-              : continuingLabel ?? "Ask the actual problem. Silence when the note does not exist."}
-          </p>
+    <div className="fixed inset-0 z-50 xl:hidden" role="dialog" aria-modal="true" aria-labelledby="consult-sheet-title">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Dismiss"
+        onClick={() => onClose?.()}
+      />
+      <div className="circadia-sheet absolute inset-x-0 bottom-0 top-[calc(env(safe-area-inset-top)+0.55rem)] flex flex-col overflow-hidden rounded-t-[1.35rem] bg-[#120f1c] shadow-[0_-12px_48px_rgba(0,0,0,0.5)]">
+        <div className="flex justify-center pt-2" aria-hidden>
+          <span className="h-1 w-10 rounded-full bg-white/25" />
         </div>
-        <div className="flex items-center gap-3">
-          {controls}
-          <button
-            type="button"
-            className="inline-flex h-11 items-center text-[13px] text-zinc-400"
-            onClick={() => onClose?.()}
-          >
-            Close
-          </button>
+        <header className="flex items-start justify-between gap-3 px-5 pt-2 pb-3">
+          <div className="min-w-0">
+            <h2 id="consult-sheet-title" className="font-heading text-[1.85rem] leading-none text-zinc-50">
+              Consult
+            </h2>
+            <p className="mt-2 max-w-[28ch] text-[13px] leading-snug text-zinc-500">
+              {headerLede}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {controls}
+            <button
+              type="button"
+              className="inline-flex h-11 items-center text-[17px] font-medium text-sky-300"
+              onClick={() => onClose?.()}
+            >
+              Done
+            </button>
+          </div>
+        </header>
+        {body}
+        <div className="px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {composer}
+          {crisis}
         </div>
-      </header>
-      {body}
-      <div className="px-5 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
-        {composer}
-        {crisis}
       </div>
     </div>
   );

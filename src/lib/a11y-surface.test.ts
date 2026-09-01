@@ -24,6 +24,11 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).toContain("@media (pointer: coarse)");
     expect(css).toContain("min-height: 44px");
     expect(css).toContain("touch-action: manipulation");
+    expect(css).toContain("cursor: default");
+    expect(css).toContain("-webkit-overflow-scrolling: touch");
+    expect(css).toContain("phone-page-y");
+    expect(css).toContain("circadia-sheet");
+    expect(css).toContain('nav[aria-label="Diary"]');
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain("animation-duration: 0.01ms");
   });

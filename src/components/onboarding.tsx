@@ -22,6 +22,7 @@ import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
 import type { Profile, Struggle } from "@/lib/types";
 import { normalizeClock } from "@/lib/windows";
 import { useCircadia } from "@/context/circadia-store";
+import { hapticSelect } from "@/lib/haptics";
 
 type Phase = "earlier" | "neither" | "later";
 type Problem = "falling" | "staying" | "both";
@@ -316,12 +317,15 @@ export function Onboarding() {
         )}
       </div>
 
-      <footer className="mt-auto flex gap-3 px-6 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+      <footer className="mt-auto flex gap-3 border-t border-white/[0.08] bg-[#0b0914]/70 px-6 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] backdrop-blur-2xl">
         {step > 0 ? (
           <button
             type="button"
-            onClick={() => setStep((s) => s - 1)}
-            className="h-14 min-w-24 cursor-pointer rounded-full border border-white/12 px-6 text-[15px] font-medium text-zinc-200"
+            onClick={() => {
+              void hapticSelect();
+              setStep((s) => s - 1);
+            }}
+            className="h-14 min-w-24 rounded-full border border-white/12 px-6 text-[17px] font-medium text-zinc-200"
           >
             Back
           </button>
@@ -331,9 +335,10 @@ export function Onboarding() {
             type="button"
             onClick={() => {
               if (step === 0 && !bodyReady) return;
+              void hapticSelect();
               setStep((s) => s + 1);
             }}
-            className="h-14 flex-1 cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950"
+            className="h-14 flex-1 rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950"
           >
             Continue
           </button>
@@ -347,7 +352,7 @@ export function Onboarding() {
                 setBusy(false);
               })
             }
-            className="h-14 flex-1 cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 disabled:opacity-50"
+            className="h-14 flex-1 rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950 disabled:opacity-50"
           >
             {busy ? "Opening…" : "Open Circadia"}
           </button>
@@ -394,7 +399,10 @@ function Choice({
     <li>
       <button
         type="button"
-        onClick={onSelect}
+        onClick={() => {
+          void hapticSelect();
+          onSelect();
+        }}
         className={cn(
           "w-full cursor-pointer rounded-2xl border px-4 py-4 text-left transition-colors",
           selected ? "border-white/20 bg-white/6" : "border-transparent bg-white/[0.03]",

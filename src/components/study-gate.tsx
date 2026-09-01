@@ -2,6 +2,7 @@
 
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
+import { hapticLight } from "@/lib/haptics";
 
 export function StudyGate() {
   const { joinStudy, declineStudy } = useCircadia();
@@ -32,15 +33,21 @@ export function StudyGate() {
       <div className="mt-auto flex flex-col gap-3 pt-10">
         <button
           type="button"
-          onClick={joinStudy}
-          className="h-14 cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 transition-opacity hover:opacity-90"
+          onClick={() => {
+            void hapticLight();
+            joinStudy();
+          }}
+          className="h-14 rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950"
         >
           Join the study
         </button>
         <button
           type="button"
-          onClick={declineStudy}
-          className="h-14 cursor-pointer rounded-full border border-white/12 text-[15px] font-medium text-zinc-200 transition-colors hover:bg-white/6"
+          onClick={() => {
+            void hapticLight();
+            declineStudy();
+          }}
+          className="h-14 rounded-full border border-white/12 text-[17px] font-medium text-zinc-200"
         >
           Keep everything on this device
         </button>

@@ -35,6 +35,17 @@ export function NativeChrome() {
         .catch(() => {
           /* web preview */
         });
+      void import("@capacitor/keyboard")
+        .then(async ({ Keyboard }) => {
+          try {
+            await Keyboard.setAccessoryBarVisible({ isVisible: false });
+          } catch {
+            /* plugin missing */
+          }
+        })
+        .catch(() => {
+          /* web preview */
+        });
     }
     disarmNextOverlay();
     const observer = new MutationObserver(disarmNextOverlay);
