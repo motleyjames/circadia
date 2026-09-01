@@ -27,6 +27,7 @@ import {
   type PhoneVaultRead,
 } from "@/lib/phone-vault";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
+import { mergeDiaryStates, morningsAdded } from "@/lib/diary-fold";
 import { fetchPackedDiary, resetPackedDiaryCacheForTests } from "@/lib/packed-diary";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS, isCivilDate } from "@/lib/schedule";
@@ -435,6 +436,44 @@ export async function installLockedVault(
   }
   await pushVaultToDisk();
   return { ok: true };
+}
+
+export const FOLD_ERRORS = {
+  session: "Log in on this device first, then fold the locked copy in.",
+  login: "That copy is a different login. Use the same email or phone as this diary.",
+  password: "That copy was locked with a different password. Fold a copy saved from the Circadia that has the night.",
+} as const;
+
+/**
+ * Fold a locked copy into the open diary. Stay signed in. Same-date mornings
+ * keep the later page. Does not send anything off this device.
+ */
+export async function foldLockedVaultIntoSession(
+  incoming: DiskVault,
+): Promise<
+  | { ok: true; login: string; state: CircadiaState; added: number }
+  | { ok: false; error: string }
+> {
+  if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.crypto };
+  const login = getSessionLogin();
+  const master = login ? getMaster(login) : null;
+  if (!login || !master) return { ok: false, error: FOLD_ERRORS.session };
+  const vault = parseDiskVault(incoming);
+  const file = vault.files[login];
+  if (!file) return { ok: false, error: FOLD_ERRORS.login };
+  try {
+    const incomingState = isVaultEnvelope(file)
+      ? hydrateState(await decryptPayload(file, master))
+      : hydrateState(file);
+    const local = loadState();
+    const merged = mergeDiaryStates(local, incomingState);
+    const added = morningsAdded(local, merged);
+    saveState(merged);
+    await flushVaultWrites();
+    return { ok: true, login, state: merged, added };
+  } catch {
+    return { ok: false, error: FOLD_ERRORS.password };
+  }
 }
 
 /** Phone pack only. If this device has no diary, install the locked copy baked into the iPhone build. */

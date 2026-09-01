@@ -76,8 +76,9 @@ export function InsightsView() {
           <p className="text-sm text-zinc-200">No mornings yet.</p>
           <p className="mt-1 text-xs text-zinc-500">
             Log tonight tomorrow. The week read starts on night one — honest, and labeled as a
-            sketch until there are a few mornings. Load a sample student week if you want to see
-            the shape first. It is clearly fake data.
+            sketch until there are a few mornings. Already filed on the other Circadia? Fold a
+            locked copy in You. The two files do not update each other on their own. Load a sample
+            student week if you want to see the shape first. It is clearly fake data.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <DiaryLink
@@ -85,6 +86,12 @@ export function InsightsView() {
               className="inline-flex items-center rounded-full bg-sky-300 px-4 py-2 text-sm text-zinc-950"
             >
               Morning interview
+            </DiaryLink>
+            <DiaryLink
+              href="/you"
+              className="inline-flex min-h-11 items-center rounded-full border border-white/15 px-4 text-[15px] text-zinc-200"
+            >
+              Fold nights in
             </DiaryLink>
             <button
               type="button"

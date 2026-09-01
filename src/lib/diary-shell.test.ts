@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  OPEN_COVER_MS,
+  OPEN_HOLD_MS,
   consumeOpenHold,
   diaryShellPhase,
   isOpenHoldConsumed,
   resetOpenHoldForTests,
+  takeSkyDebut,
 } from "./diary-shell";
 
 describe("diary shell phase", () => {
@@ -51,6 +54,17 @@ describe("diary shell phase", () => {
     expect(
       diaryShellPhase({ ready: true, session: null, reducedMotion: true, holdConsumed: false }),
     ).toBe("gate");
+  });
+
+  it("holds the open long enough for the mark to draw", () => {
+    expect(OPEN_HOLD_MS).toBeGreaterThanOrEqual(2400);
+    expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(700);
+    expect(OPEN_COVER_MS).toBeLessThan(1200);
+  });
+
+  it("plays the Tonight debut once, then leaves tab switches still", () => {
+    expect(takeSkyDebut()).toBe(true);
+    expect(takeSkyDebut()).toBe(false);
   });
 
   it("consumes the open hold once per JS lifetime so a tab remount is not a new login", () => {

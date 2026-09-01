@@ -8,6 +8,7 @@ import {
   bootVaultFromDisk,
   closeFile,
   createFile,
+  foldLockedVaultIntoSession,
   flushVaultWrites,
   getSessionLogin,
   isVaultEmpty,
@@ -16,6 +17,7 @@ import {
   resetVaultMemoryForTests,
   saveState,
   setVaultPauseForTests,
+  snapshotDisk,
 } from "./storage";
 import { setPhoneVaultIoForTests } from "./phone-vault";
 
@@ -142,6 +144,44 @@ describe("stay signed in across diary tabs", () => {
     setVaultPauseForTests(async () => undefined);
     await bootVaultFromDisk();
     expect(getSessionLogin()).toBeNull();
+  });
+
+  it("folds a locked copy into the open diary without asking for the password", async () => {
+    await signIn();
+    const live = loadState();
+    live.reports = [
+      {
+        id: "n1",
+        morningDate: "2026-09-01",
+        wokeAt: "07:00",
+        fellAsleepAt: "23:00",
+        rating: 3,
+        drank: false,
+        screenOffMinutes: 60,
+        sleepLatencyMinutes: 15,
+        wokeInNight: false,
+        nightWakingMinutes: 0,
+        usedSupplement: false,
+        windDownHelped: "did_not_use",
+        createdAt: "2026-09-01T12:00:00.000Z",
+      },
+    ];
+    saveState(live);
+    await flushVaultWrites();
+    const packed = snapshotDisk();
+    const wiped = loadState();
+    wiped.reports = [];
+    wiped.researchNotes = "cleared";
+    saveState(wiped);
+    await flushVaultWrites();
+    expect(loadState().reports).toHaveLength(0);
+    const folded = await foldLockedVaultIntoSession(packed);
+    expect(folded.ok).toBe(true);
+    if (!folded.ok) return;
+    expect(getSessionLogin()).toBe(LOGIN);
+    expect(folded.added).toBe(1);
+    expect(loadState().reports[0]?.morningDate).toBe("2026-09-01");
+    expect(loadState().researchNotes).toBe("nights still here");
   });
 });
 

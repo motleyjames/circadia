@@ -16,15 +16,15 @@ export function SidebarNav() {
   const morningDue = morningFileDue(state.reports, new Date(), state.profile?.targetWake);
 
   return (
-    <aside className="relative z-20 hidden w-56 shrink-0 flex-col border-r border-white/8 bg-[#080712]/90 md:flex">
-      <div className="flex items-center gap-3 px-5 pt-5 pb-8">
+    <aside className="relative z-20 hidden w-[13.5rem] shrink-0 flex-col md:flex">
+      <div className="flex items-center gap-3 px-5 pt-5 pb-10">
         <Mark className="size-6" />
         <div>
           <p className="font-heading text-lg leading-none text-zinc-50">Circadia</p>
-          <p className="mt-1 text-[10px] tracking-[0.2em] text-zinc-600 uppercase">v{APP_VERSION}</p>
+          <p className="mt-1 text-[10px] tracking-[0.22em] text-zinc-600 uppercase">{APP_VERSION}</p>
         </div>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 px-3">
+      <nav className="flex flex-1 flex-col gap-0.5 px-3">
         {TABS.map((tab) => {
           const active = tabIsActive(tab.href, path);
           const Icon = tab.icon;
@@ -33,8 +33,10 @@ export function SidebarNav() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] tracking-wide transition-colors",
-                active ? "bg-white/7 text-violet-100" : "text-zinc-500 hover:bg-white/4 hover:text-zinc-300",
+                "flex cursor-pointer items-center gap-3 rounded-full px-3 py-2.5 text-[13px] tracking-wide transition-colors",
+                active
+                  ? "font-medium text-zinc-50 [text-shadow:0_0_18px_rgba(196,181,253,0.35)]"
+                  : "text-zinc-500 hover:text-zinc-300",
               )}
             >
               <span className="relative">

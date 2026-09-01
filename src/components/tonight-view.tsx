@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { DiaryLink } from "@/components/diary-tab-link";
 import { InstallHint } from "@/components/install-hint";
-import { Mark } from "@/components/mark";
 import { WindDown } from "@/components/wind-down";
 import { buildSleepNotes } from "@/lib/advisor";
+import { isOpenHoldConsumed, subscribeOpenHold, takeSkyDebut } from "@/lib/diary-shell";
 import { shouldBeOffScreens } from "@/lib/notifications";
 import { morningPageStatus } from "@/lib/morning-file";
 import {
@@ -18,6 +18,9 @@ import {
   overnightDuration,
   screenOffClock,
 } from "@/lib/time";
+import { cn } from "@/lib/utils";
+
+const ORB_C = 2 * Math.PI * 46;
 
 export function TonightView() {
   const { state } = useCircadia();
@@ -43,55 +46,52 @@ export function TonightView() {
   const openingLine = openingCopy(profile.struggles, screensDown);
 
   return (
-    <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-6 pb-10 md:pt-[max(1.25rem,env(safe-area-inset-top))]">
-      <header className="hidden items-center justify-between md:flex">
-        <Mark className="size-5 opacity-0" />
-        <p className="text-[11px] font-medium tracking-[0.2em] text-zinc-500 uppercase">
-          {formatClock(clockFromDate(now), profile.units)}
-        </p>
-      </header>
+    <div className="phone-page-y flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-10">
+      <div className="mx-auto flex w-full max-w-[22rem] flex-1 flex-col sm:max-w-[26rem] lg:max-w-[28rem]">
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <CountdownHero
+            nowLabel={formatClock(clockFromDate(now), profile.units)}
+            screensDown={screensDown}
+            untilOff={untilOff}
+            untilSleep={untilSleep}
+            offLabel={formatClock(offClock, profile.units)}
+            sleepLabel={formatClock(profile.targetSleep, profile.units)}
+            wakeLabel={formatClock(profile.targetWake, profile.units)}
+            windowLabel={formatDuration(windowMin)}
+            notificationsEnabled={profile.notificationsEnabled}
+          />
 
-      <CountdownHero
-        nowLabel={formatClock(clockFromDate(now), profile.units)}
-        screensDown={screensDown}
-        untilOff={untilOff}
-        untilSleep={untilSleep}
-        offLabel={formatClock(offClock, profile.units)}
-        sleepLabel={formatClock(profile.targetSleep, profile.units)}
-        wakeLabel={formatClock(profile.targetWake, profile.units)}
-        windowLabel={formatDuration(windowMin)}
-        notificationsEnabled={profile.notificationsEnabled}
-      />
+          {firstOpen ? (
+            <p className="mt-8 max-w-[34ch] text-center text-[15px] leading-relaxed text-zinc-400">
+              {openingLine}
+            </p>
+          ) : headline ? (
+            <section className="mt-8 max-w-[36ch] text-center">
+              <p className="text-[16px] leading-snug font-medium text-zinc-50">{headline.title}</p>
+              <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">{headline.body}</p>
+            </section>
+          ) : null}
 
-      {firstOpen ? (
-        <p className="mx-auto mt-9 max-w-[32ch] text-center text-[15px] leading-relaxed text-zinc-400 md:mx-0 md:max-w-[40ch] md:text-left">
-          {openingLine}
-        </p>
-      ) : headline ? (
-        <section className="mx-auto mt-9 max-w-[32ch] text-center md:mx-0 md:max-w-[42ch] md:text-left">
-          <p className="text-[15px] leading-snug font-medium text-zinc-100">{headline.title}</p>
-          <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">{headline.body}</p>
-        </section>
-      ) : null}
+          {page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
+            <DiaryLink
+              href="/check-in"
+              className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full px-6 text-[15px] text-zinc-100 ring-1 ring-white/14"
+            >
+              {page === "filed"
+                ? "This morning is filed"
+                : page === "unfiled-open"
+                  ? "Morning interview is open"
+                  : "This morning is not filed"}
+            </DiaryLink>
+          ) : null}
+        </div>
 
-      {page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
-        <DiaryLink
-          href="/check-in"
-          className="mx-auto mt-8 flex min-h-11 max-w-[20rem] items-center justify-center rounded-full bg-white/[0.06] px-6 text-[15px] text-zinc-100 ring-1 ring-white/12 md:mx-0 md:inline-flex md:max-w-none"
-        >
-          {page === "filed"
-            ? "This morning is filed"
-            : page === "unfiled-open"
-              ? "Morning interview is open"
-              : "This morning is not filed"}
-        </DiaryLink>
-      ) : null}
+        <div className="mt-10 w-full shrink-0">
+          <WindDown />
+        </div>
 
-      <div className="mt-12">
-        <WindDown />
+        {firstOpen ? <InstallHint /> : null}
       </div>
-
-      {firstOpen ? <InstallHint /> : null}
     </div>
   );
 }
@@ -134,21 +134,70 @@ function CountdownHero({
 }) {
   const horizon = 12 * 60;
   const t = screensDown ? 1 : Math.max(0.06, Math.min(1, 1 - untilOff / horizon));
-  const degrees = t * 360;
+  const holdConsumed = useSyncExternalStore(subscribeOpenHold, isOpenHoldConsumed, () => false);
+  const [debuting, setDebuting] = useState(false);
+  const [drawn, setDrawn] = useState(false);
+  const progress = drawn ? t : 0;
+  const dashoffset = ORB_C * (1 - progress);
+
+  useEffect(() => {
+    if (!holdConsumed) return;
+    const reduced =
+      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const frame = window.requestAnimationFrame(() => {
+      if (reduced) {
+        setDrawn(true);
+        return;
+      }
+      if (takeSkyDebut()) setDebuting(true);
+      setDrawn(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [holdConsumed]);
 
   return (
-    <div className="mt-2 flex flex-col items-center md:mt-10">
-      <p className="mb-6 text-[12px] tracking-[0.22em] text-zinc-500 uppercase md:hidden">{nowLabel}</p>
+    <div className="mt-3 flex w-full flex-col items-center md:mt-2">
+      <p className="mb-5 text-[11px] tracking-[0.28em] text-zinc-500 uppercase">{nowLabel}</p>
       <div
-        className="countdown-orb countdown-orb-glow relative size-[13.5rem] sm:size-[17.5rem] lg:size-[22rem]"
-        style={{ ["--orb-progress" as string]: `${degrees}deg` }}
+        className={cn(
+          "countdown-orb countdown-orb-glow relative size-[13.5rem] overflow-visible rounded-full sm:size-[17.5rem] lg:size-[20rem]",
+          debuting && "countdown-orb-debut",
+        )}
       >
-        <div className="countdown-orb-track absolute inset-0 rounded-full" />
-        <div className="countdown-orb-progress absolute inset-0 rounded-full" />
-        <div className="absolute inset-[1.25rem] flex flex-col items-center justify-center overflow-hidden rounded-full bg-[#05040a] px-5 text-center sm:inset-[1.45rem]">
+        <div className="countdown-orb-core pointer-events-none absolute inset-0 rounded-full" aria-hidden />
+        <svg viewBox="0 0 128 128" className="absolute inset-0 size-full" aria-hidden>
+          <circle
+            cx="64"
+            cy="64"
+            r="46"
+            fill="none"
+            stroke="rgba(255,255,255,0.07)"
+            strokeWidth="1.65"
+          />
+          <circle
+            className="countdown-orb-arc"
+            cx="64"
+            cy="64"
+            r="46"
+            fill="none"
+            stroke="url(#orb-arc)"
+            strokeWidth="1.85"
+            strokeLinecap="round"
+            strokeDasharray={ORB_C}
+            strokeDashoffset={dashoffset}
+            transform="rotate(180 64 64)"
+          />
+          <defs>
+            <linearGradient id="orb-arc" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(196,181,253,0.95)" />
+              <stop offset="100%" stopColor="rgba(125,211,252,0.85)" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div className="absolute inset-[1.35rem] flex flex-col items-center justify-center overflow-hidden rounded-full px-5 text-center sm:inset-[1.55rem]">
           {screensDown ? (
             <>
-              <p className="font-heading text-[1.55rem] leading-[1.08] tracking-tight text-zinc-50 sm:text-[1.85rem] lg:text-[2.1rem]">
+              <p className="font-heading text-[1.55rem] leading-[1.08] tracking-tight text-zinc-50 sm:text-[1.85rem] lg:text-[2.05rem]">
                 Screens
                 <span className="block">down</span>
               </p>
@@ -159,7 +208,7 @@ function CountdownHero({
             </>
           ) : (
             <>
-              <p className="font-heading text-[2.05rem] leading-none tracking-tight text-zinc-50 tabular-nums sm:text-[2.55rem] lg:text-[3.05rem]">
+              <p className="font-heading text-[2.05rem] leading-none tracking-tight text-zinc-50 tabular-nums sm:text-[2.55rem] lg:text-[2.85rem]">
                 {formatCountdown(untilOff)}
               </p>
               <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-500">

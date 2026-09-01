@@ -66,7 +66,7 @@ function HistoryList({
         {groups.map((group) => (
           <section key={group.key}>
             <p className="text-[11px] text-zinc-500">{group.label}</p>
-            <ul className="mt-1 divide-y divide-white/8 border-y border-white/8">
+            <ul className="mt-1 space-y-0.5">
               {group.threads.map((thread) => (
                 <HistoryRow
                   key={thread.id}
@@ -105,7 +105,7 @@ function HistoryRow({
   onCancelDelete: () => void;
 }) {
   return (
-    <li className={cn("flex items-start gap-2 py-2.5", active && "bg-white/[0.03]")}>
+    <li className={cn("flex items-start gap-2 rounded-xl px-2 py-2.5", active && "bg-white/[0.03]")}>
       {pending ? (
         <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
           <p className="truncate text-[13px] text-zinc-400">Delete this consult?</p>
@@ -244,12 +244,12 @@ export function ChatBar({
             Ask the actual problem. I answer from your diary and the library. If I do not have a
             note, I say so — I will not invent a diagnosis.
           </p>
-          <ul className="mt-5 divide-y divide-white/8 border-y border-white/8">
+          <ul className="mt-6 space-y-1">
             {CLINIC_STARTERS.map((starter) => (
               <li key={starter.q}>
                 <button
                   type="button"
-                  className="flex w-full flex-col items-start gap-0.5 py-3 text-left transition-colors hover:bg-white/[0.03]"
+                  className="flex w-full flex-col items-start gap-0.5 rounded-2xl px-3 py-3 text-left transition-colors hover:bg-white/[0.04]"
                   onClick={() => submit(starter.q)}
                 >
                   <span className="text-[13px] text-zinc-100">{starter.q}</span>
@@ -367,11 +367,11 @@ export function ChatBar({
 
   if (rail) {
     return (
-      <aside className="relative z-20 hidden w-[23.5rem] shrink-0 flex-col border-l border-sky-300/10 bg-[#07080f]/95 px-5 pt-6 pb-4 xl:flex">
+      <aside className="relative z-20 hidden w-[23.5rem] shrink-0 flex-col px-5 pt-6 pb-4 xl:flex">
         <header className="mb-5 flex items-start justify-between gap-3">
           <div>
-            <h2 className="font-heading text-[1.65rem] leading-none text-zinc-50">Consult</h2>
-            <p className="mt-2 max-w-[28ch] text-[12px] leading-snug text-zinc-500">
+            <h2 className="font-heading text-[1.28rem] leading-none text-zinc-50">Consult</h2>
+            <p className="mt-2 max-w-[26ch] text-[12px] leading-snug text-zinc-500">
               {headerLede}
             </p>
           </div>
