@@ -101,14 +101,19 @@ npm run build
 
 Same diary. Not a second product. **Operator is never in this binary.** Tonight is the clock. **Ask** is a word, not a sixth tab. Five tabs: Tonight, Morning, Notes, Library, You.
 
-The iPhone starts empty unless the locked diary from the Circadia that installed it is packed into the build. Circadia is local-first: there is no cloud account. `npm run put-on-phone` **fails** if it cannot pack a diary — it will not open Xcode with an empty login. The pack is inlined into `index.html` (not a fetch of a sidecar JSON). Log in with the same email or phone and password. The gate footer must read `0.7.4 · diary packed`.
+The iPhone starts empty unless the locked diary from the Circadia that installed it is packed into the build. Circadia is local-first: there is no cloud account. `npm run put-on-phone` **fails** if it cannot pack a diary, and it **installs onto the connected iPhone** — it does not use Xcode destination Any iOS Device. The pack is inlined into `index.html`. Log in with the same email or phone and password. The gate footer must read `0.7.5 · diary packed`.
 
 **Move nights onto the phone**
 
-1. Open Circadia.app so it can write the locked file.
-2. `npm run put-on-phone` on that clone. If it stops with “No locked diary”, the file is not on disk yet — log in on Circadia.app, wait, run it again.
-3. Xcode destination **James-iPhone** (not Any iOS Device). Run. Every Run re-packs the current diary into the app.
-4. Open Circadia. Footer **0.7.4 · diary packed**. **Log in** with the same password.
+Unlock James-iPhone. Plug in USB if it recently showed as unavailable. Open Circadia.app so it can write the locked file. Then, with no comments on these lines:
+
+```bash
+cd ~/circadia
+git pull
+npm run put-on-phone
+```
+
+If it stops with “No locked diary”, log in on Circadia.app, wait, run it again. If it stops because the iPhone is unavailable, stay plugged in, phone unlocked, run it again. Do not `git restore` the Xcode project — that forgets your signing Team. Circadia should launch on the phone. Footer **0.7.5 · diary packed**. **Log in** with the same password.
 
 Or: Circadia → **You** → **Save a locked copy**. AirDrop `circadia-locked.circadia`. On the phone, **Bring a locked diary**.
 
@@ -116,7 +121,7 @@ Signing up on the phone starts a second diary. A leftover phone signup is replac
 
 Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
-1. **Your phone today** (free Apple ID). Cable is optional after the first pair — Xcode talks to the iPhone over Wi-Fi. In a GitHub `main` clone at 0.7.4+:
+1. **Your phone today** (free Apple ID). Cable is optional after the first pair. In a GitHub `main` clone at 0.7.5+:
 
    ```bash
    git clone https://github.com/motleyjames/circadia.git ~/circadia
@@ -124,11 +129,11 @@ Apple is the remaining gate, not more app code. Two tracks, started in parallel:
    npm run put-on-phone
    ```
 
-   That packs the diary, syncs Capacitor, and opens Xcode. Destination: **your iPhone**, not a simulator. Signing → your Team. **Window → Devices and Simulators → Connect via network.** Same Wi-Fi, phone unlocked. Run. Unplug when Circadia is on the home screen — the installed app does not use the Mac, and Circadia has no cloud. First pair only: USB once, Trust This Computer. Enable Developer Mode if iOS asks. Trust the developer cert on the phone. Simulator, Safari “Add to Home Screen,” and sideloading skip Keychain or skip real users — they are not this path.
+   That packs the diary, syncs Capacitor, and installs onto the connected iPhone. Not a simulator. Not Any iOS Device. Not “open Xcode and press Run.” If xcodebuild mentions signing: `npm run phone:open`, Signing → Team → your Apple ID, close Xcode, run `put-on-phone` again. **Window → Devices and Simulators → Connect via network** after the first USB pair. Same Wi-Fi, phone unlocked. Unplug when Circadia is on the home screen — the installed app does not use the Mac, and Circadia has no cloud. First pair only: USB once, Trust This Computer. Enable Developer Mode if iOS asks. Trust the developer cert on the phone. Simulator, Safari “Add to Home Screen,” and sideloading skip Keychain or skip real users — they are not this path.
 
 2. **Other people’s phones** (paid [Apple Developer Program](https://developer.apple.com/programs/), then TestFlight). Start enrollment before or while you cable-run; review can sit in the background. Then: Xcode → Product → Archive → Distribute → App Store Connect. Internal TestFlight is only for people already on your App Store Connect team (up to 100). Paid testers are an **external** group (email or public link) after the first TestFlight beta review. Builds last 90 days.
 
-`npm run put-on-phone` runs `pack:static`, inlines the locked diary into `out/index.html`, then `cap sync`. Xcode’s **Pack Mac diary** build phase does it again on every Run. Circadia.app on the Mac still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Bundle id is `app.circadia.diary`. Wind-down copy is honest — locking the phone may pause Web Audio. The iOS audio spike under `spikes/` is a local experiment, not this app.
+`npm run put-on-phone` runs `pack:static`, inlines the locked diary into `out/index.html`, `cap sync`, then `cap run ios` onto the connected phone. Circadia.app on the Mac still uses `next start` — do not set `CIRCADIA_PACK_STATIC` in `.env.local`. Bundle id is `app.circadia.diary`. Wind-down copy is honest — locking the phone may pause Web Audio. The iOS audio spike under `spikes/` is a local experiment, not this app.
 
 Stay-signed-in: ciphertext in the app sandbox, AES key in iOS Keychain (`kSecAttrAccessibleWhenUnlockedThisDeviceOnly`). If Keychain writes fail, the next launch asks for the password. App Store Connect will ask about encryption: **yes** — the diary uses AES-GCM on device. Do not tick “HTTPS only.” No Android slice in this version.
 

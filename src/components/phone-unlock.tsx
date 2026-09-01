@@ -114,7 +114,6 @@ export function PhoneEmptyPack({
         <li>
           In that clone: <span className="text-zinc-200">npm run put-on-phone</span>
         </li>
-        <li>Xcode destination this iPhone — not a simulator, not Any iOS Device. Run.</li>
         <li>
           This footer should read <span className="text-zinc-200">{APP_VERSION} · diary packed</span>, then
           log in with the same password.

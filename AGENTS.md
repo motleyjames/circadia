@@ -32,5 +32,5 @@ Local-first Next.js sleep companion. No database and no cloud auth. Profile, mor
 - Static pack: `npm run pack:static` parks `src/app/api` and `src/app/mod`, then writes `out/`. Never set `CIRCADIA_PACK_STATIC` in `.env.local`. Operator Next builds stay `standalone`.
 - Circadia.app pulls GitHub `main`. The CI workflow lives at `scripts/github-ci.yml` because GitHub App tokens without `workflow` scope cannot create `.github/workflows/*.yml`. Copy it there once that scope exists.
 - Phone is the diary only. Never Capacitor-wrap Operator. Bundle id `app.circadia.diary`. Static pack parks `/mod` and `/api`; phone vault is Filesystem `vault.json` plus the Keychain plugin (fail closed if Keychain writes fail).
-- iOS project lives in `phone/`. `npm run put-on-phone` packs, `cap sync`, opens Xcode. Destination is a real iPhone over USB or Wi-Fi (Connect via network) — not a simulator. This Linux VM cannot archive or codesign. Do not run `dock` / `put-on-dock` / `put-on-phone` here.
+- iOS project lives in `phone/`. `npm run put-on-phone` packs the Mac diary, `cap sync`, then `cap run ios` onto a connected physical iPhone. It does not open Xcode as the install path and it does not use destination Any iOS Device. This Linux VM cannot archive or codesign. Do not run `dock` / `put-on-dock` / `put-on-phone` here.
 

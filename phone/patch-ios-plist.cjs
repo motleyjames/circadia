@@ -32,6 +32,12 @@ if (!hasKey("UIBackgroundModes")) {
   changed = true;
 }
 
+if (!hasKey("UIRequiresFullScreen")) {
+  insertAtRoot(`	<key>UIRequiresFullScreen</key>
+	<true/>`);
+  changed = true;
+}
+
 if (!hasKey("UIViewControllerBasedStatusBarAppearance")) {
   insertAtRoot(`	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>`);
@@ -40,7 +46,7 @@ if (!hasKey("UIViewControllerBasedStatusBarAppearance")) {
 
 if (changed) {
   fs.writeFileSync(plistPath, src);
-  console.log("Patched Info.plist (audio background + status bar).");
+  console.log("Patched Info.plist (audio background + full screen + status bar).");
 } else {
   console.log("Info.plist already has phone keys.");
 }
