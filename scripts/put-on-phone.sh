@@ -110,6 +110,9 @@ CORE=""
 IFS=$'\t' read -r NAME ID CORE <<< "$PICK"
 echo "Target: $NAME ($ID)"
 
+echo "Copying the phone diary onto this Mac (ciphertext) so Circadia.app can fold those nights."
+node scripts/ios-pull-vault.cjs --target "$ID" || true
+
 INSTALL_ARGS=(--target "$ID")
 if [[ -n "${CORE:-}" && "$CORE" != "$ID" ]]; then
   INSTALL_ARGS+=(--core-device "$CORE")

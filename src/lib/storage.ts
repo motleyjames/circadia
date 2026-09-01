@@ -26,9 +26,9 @@ import {
   writePhoneVault,
   type PhoneVaultRead,
 } from "@/lib/phone-vault";
+import { fetchPackedDiary, resetPackedDiaryCacheForTests } from "@/lib/packed-diary";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
 import { mergeDiaryStates, morningsAdded } from "@/lib/diary-fold";
-import { fetchPackedDiary, resetPackedDiaryCacheForTests } from "@/lib/packed-diary";
 import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS, isCivilDate } from "@/lib/schedule";
 import { dedupeReportsByMorningDate } from "@/lib/morning-file";
@@ -45,6 +45,10 @@ export const LAST_LOGIN_KEY = "circadia:v1:last-login";
 export const LOCKS_KEY = "circadia:v1:locks";
 export const SESSION_UNLOCK_KEY = "circadia:v1:unlock";
 const LEGACY_SESSION_KEY = "circadia:v1:session";
+/** Packed Mac diary already folded into this device. Skip until the pack bytes change. */
+export const FOLDED_PACK_KEY = "circadia:folded-pack";
+/** USB/AirDrop inbox already folded. Skip until the drop-box bytes change. */
+export const FOLDED_INBOX_KEY = "circadia:folded-inbox";
 
 let openLogin: string | null = null;
 const plainByLogin = new Map<string, CircadiaState>();
@@ -431,6 +435,7 @@ export async function installLockedVault(
   writeLocks({ ...vault.locks });
   writeLastLogin(null);
   dropLegacyUnlock();
+  forgetPeerFolds();
   for (const login of previous) {
     await deletePersistedUnlock(login);
   }
@@ -470,10 +475,95 @@ export async function foldLockedVaultIntoSession(
     const added = morningsAdded(local, merged);
     saveState(merged);
     await flushVaultWrites();
+    await pushVaultToDisk();
     return { ok: true, login, state: merged, added };
   } catch {
     return { ok: false, error: FOLD_ERRORS.password };
   }
+}
+
+function peerVaultDigest(vault: DiskVault): string {
+  try {
+    const raw = JSON.stringify(vault);
+    return `${raw.length}:${raw.slice(0, 48)}:${raw.slice(-24)}`;
+  } catch {
+    return "";
+  }
+}
+
+function forgetPeerFolds(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(FOLDED_PACK_KEY);
+  window.localStorage.removeItem(FOLDED_INBOX_KEY);
+}
+
+function alreadyPeerFolded(key: string, digest: string): boolean {
+  if (typeof window === "undefined" || !digest) return false;
+  return window.localStorage.getItem(key) === digest;
+}
+
+function rememberPeerFold(key: string, digest: string): void {
+  if (typeof window === "undefined" || !digest) return;
+  window.localStorage.setItem(key, digest);
+}
+
+function diaryHasNights(state: CircadiaState): boolean {
+  return state.reports.length > 0 || state.sessions.length > 0 || state.consultHistory.length > 0;
+}
+
+/**
+ * Pull nights that already live on the other Circadia into this open session.
+ * Packed Mac diary on the phone, USB/AirDrop inbox on the Dock. Same-date
+ * pages keep the later write. A failed fold does not sign the user out.
+ */
+export async function absorbPeerNights(): Promise<{ added: number; state: CircadiaState | null }> {
+  if (typeof window === "undefined") return { added: 0, state: null };
+  if (!getSessionLogin() || !getMaster(getSessionLogin()!)) return { added: 0, state: null };
+  let added = 0;
+  let state: CircadiaState | null = null;
+  try {
+    const packed = await fetchPackedDiary();
+    if (packed) {
+      const digest = peerVaultDigest(packed);
+      if (!alreadyPeerFolded(FOLDED_PACK_KEY, digest)) {
+        const folded = await foldLockedVaultIntoSession(packed);
+        if (folded.ok) {
+          added += folded.added;
+          state = folded.state;
+          rememberPeerFold(FOLDED_PACK_KEY, digest);
+        }
+      }
+    }
+  } catch {
+    /* packed sidecar is optional */
+  }
+  if (phoneVaultActive()) return { added, state };
+  try {
+    const res = await fetch("/api/fold-inbox", { cache: "no-store", headers: sessionHeaders() });
+    if (!res.ok) return { added, state };
+    const body = (await res.json().catch(() => null)) as
+      | { vault?: DiskVault | null; source?: string | null; digest?: string | null }
+      | null;
+    if (!body?.vault) return { added, state };
+    const digest = typeof body.digest === "string" ? body.digest : "";
+    const seen = `${body.source ?? ""}:${digest}`;
+    if (alreadyPeerFolded(FOLDED_INBOX_KEY, seen)) return { added, state };
+    const folded = await foldLockedVaultIntoSession(body.vault);
+    if (!folded.ok) return { added, state };
+    added += folded.added;
+    state = folded.state;
+    rememberPeerFold(FOLDED_INBOX_KEY, seen);
+    if (body.source === "inbox") {
+      await fetch("/api/fold-inbox", {
+        method: "POST",
+        headers: sessionHeaders({ "content-type": "application/json" }),
+        body: JSON.stringify({ source: "inbox" }),
+      }).catch(() => undefined);
+    }
+  } catch {
+    /* no inbox on this origin */
+  }
+  return { added, state };
 }
 
 /** Phone pack only. If this device has no diary, install the locked copy baked into the iPhone build. */
@@ -810,8 +900,29 @@ export async function openFile(
   migrateToVault();
   const candidates = loginKeyCandidates(contact);
   if (!candidates.length) return { ok: false, error: AUTH_ERRORS.contact };
+  const local = await unlockLocalDiary(candidates, password);
+  if (local.ok) {
+    try {
+      await absorbPeerNights();
+    } catch {
+      /* leftover nights stay; a failed fold must not sign out */
+    }
+    const live = loadState();
+    if (!diaryHasNights(live)) {
+      const packedHit = await openPackedDiaryIfPresent(contact, password);
+      if (packedHit) return packedHit;
+    }
+    return { ok: true, login: local.login, state: loadState() };
+  }
   const packedHit = await openPackedDiaryIfPresent(contact, password);
   if (packedHit) return packedHit;
+  return local;
+}
+
+async function unlockLocalDiary(
+  candidates: string[],
+  password: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | { ok: false; error: string }> {
   const files = readRawVault();
   const login = candidates.find((key) => files[key]) ?? null;
   if (!login) {
@@ -889,6 +1000,7 @@ export function eraseCurrentFile(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(SESSION_KEY);
     window.localStorage.removeItem(LEGACY_SESSION_KEY);
+    forgetPeerFolds();
   }
   writeLastLogin(null);
   schedulePersistDisk();

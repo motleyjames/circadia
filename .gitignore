@@ -50,6 +50,7 @@ next-env.d.ts
 /data/study-inbox/*
 !/data/study-inbox/.gitkeep
 /data/vault.json
+/data/fold-inbox.circadia
 /data/vault/
 /.circadia-update.lock
 /src/app/.api-parked
