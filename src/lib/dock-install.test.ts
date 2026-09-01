@@ -126,6 +126,7 @@ describe("Dock install invariants", () => {
     expect(pkg.scripts["dock:diary"]).toBe("node electron/install-both-native.cjs --diary");
     expect(pkg.scripts["put-on-dock"]).toBe("bash scripts/put-on-dock.sh");
     expect(readFileSync("scripts/put-on-dock.sh", "utf8")).toContain("0.6.5");
+    expect(readFileSync("scripts/put-on-dock.sh", "utf8")).toContain("deps-missing.cjs");
     expect(readFileSync("scripts/put-on-dock.sh", "utf8")).toContain("npm run dock");
     expect(readFileSync("electron/install-both-native.cjs", "utf8")).toContain("Drag these onto the Dock");
     expect(pkg.scripts["fix-mac"]).toBe("node electron/fix-mac.cjs");
@@ -172,7 +173,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("File this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("Notes for this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).not.toContain("The interview is closed");
-    expect(APP_VERSION).toBe("0.8.0");
+    expect(APP_VERSION).toBe("0.8.1");
   });
 
   it("does not run diary views while compiling the operator", () => {

@@ -3,6 +3,8 @@ import { isPhoneNative } from "@/lib/phone-native";
 /**
  * Taptic Engine feedback. No-ops in the browser, tests, and until
  * `npx cap sync ios` has installed @capacitor/haptics on the phone.
+ * `await import("@capacitor/haptics")` is still typechecked by `next build`
+ * even inside try/catch — the package must be in root node_modules.
  * Never throws into the diary.
  */
 export async function hapticSelect(): Promise<void> {
