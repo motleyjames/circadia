@@ -28,7 +28,7 @@ export function MorningReadingCard({
         href={`/library#${reading.articleId}`}
         prefetch={false}
         onClick={onOpen}
-        className="mt-5 inline-flex text-[13px] text-sky-300/90 underline-offset-4 hover:text-sky-200 hover:underline"
+        className="mt-5 inline-flex min-h-11 items-center text-[17px] font-medium text-sky-300"
       >
         Open the note
       </Link>

@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { ensureNotificationPermission } from "@/lib/notifications";
 import { displayName, prettyContactDisplay } from "@/lib/login";
 import { compactScheduledDays } from "@/lib/schedule";
+import { hapticSelect } from "@/lib/haptics";
 import {
   bmiKgM,
   cmToFeetInches,
@@ -96,7 +97,7 @@ export function YouView() {
   const loginLabel = prettyContactDisplay(session);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-24 md:px-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
+    <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-24 md:px-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <div className="mx-auto w-full max-w-5xl">
         <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">You</p>
         <h1 className="font-heading mt-1 text-[2.35rem] leading-none tracking-tight text-zinc-50">
@@ -169,6 +170,7 @@ export function YouView() {
                 checked={profile.notificationsEnabled}
                 aria-label="Screen-off reminder"
                 onCheckedChange={(on) => {
+                  void hapticSelect();
                   void (async () => {
                     if (!on) {
                       persist({ notificationsEnabled: false });
@@ -454,40 +456,46 @@ export function YouView() {
           </div>
         </div>
 
-        <section className="mt-8 border-t border-white/[0.06] pt-6">
-          <p className="text-[11px] tracking-[0.22em] text-zinc-600 uppercase">This device</p>
-          <div className="mt-3 flex flex-col gap-2 text-[13px] sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
-            <SaveLockedCopyButton className="min-h-11 text-left text-zinc-400 hover:text-zinc-200" />
-            <BringLockedDiaryButton
-              alwaysConfirm
-              className="min-h-11 text-left text-zinc-400 hover:text-zinc-200"
-              onInstalled={() => logOut()}
-            />
+        <section className="mt-8">
+          <p className="px-1 text-[13px] text-zinc-500">This device</p>
+          <div className="mt-2 overflow-hidden rounded-[10px] bg-white/[0.055]">
+            <div className="border-b border-white/[0.08]">
+              <SaveLockedCopyButton className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-zinc-100" />
+            </div>
+            <div className="border-b border-white/[0.08]">
+              <BringLockedDiaryButton
+                alwaysConfirm
+                className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-zinc-100"
+                onInstalled={() => logOut()}
+              />
+            </div>
+            <div className="border-b border-white/[0.08]">
+              <button
+                type="button"
+                className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-zinc-100"
+                onClick={() => {
+                  if (state.reports.length > 0) {
+                    setSampleOpen(true);
+                    return;
+                  }
+                  loadSampleWeek();
+                }}
+              >
+                Load sample week
+              </button>
+            </div>
             <button
               type="button"
-              className="min-h-11 text-left text-zinc-400 hover:text-zinc-200"
-              onClick={() => {
-                if (state.reports.length > 0) {
-                  setSampleOpen(true);
-                  return;
-                }
-                loadSampleWeek();
-              }}
-            >
-              Load sample week
-            </button>
-            <button
-              type="button"
-              className="min-h-11 text-left text-red-300/70 hover:text-red-200"
+              className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-red-300/90"
               onClick={() => setEraseOpen(true)}
             >
               Erase this device
             </button>
           </div>
-          <p className="mt-4 max-w-[52ch] text-[12px] leading-relaxed text-zinc-600">
+          <p className="mt-4 max-w-[52ch] px-1 text-[12px] leading-relaxed text-zinc-600">
             {MEDICAL_DISCLAIMER}
           </p>
-          <CrisisLine className="mt-2 max-w-[52ch] text-[12px] leading-relaxed text-zinc-600" />
+          <CrisisLine className="mt-2 max-w-[52ch] px-1 text-[12px] leading-relaxed text-zinc-600" />
         </section>
         <ConfirmDialog
           open={sampleOpen}
@@ -627,7 +635,7 @@ function YouSecret({
         <button
           type="button"
           onClick={() => setShow((v) => !v)}
-          className="absolute top-1/2 right-3 -translate-y-1/2 text-zinc-500 hover:text-zinc-200"
+          className="absolute top-1/2 right-1 -translate-y-1/2 inline-flex size-11 items-center justify-center text-zinc-500"
           aria-label={show ? "Hide password" : "Show password"}
         >
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

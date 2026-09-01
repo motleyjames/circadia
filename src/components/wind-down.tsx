@@ -23,6 +23,7 @@ import {
 } from "@/lib/meditations";
 import type { MeditationId } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { hapticSelect } from "@/lib/haptics";
 import { usePrefersReducedMotion } from "@/lib/motion";
 
 const SOUNDSCAPES: Array<{ id: SoundscapeId; title: string; blurb: string }> = [
@@ -91,6 +92,7 @@ export function WindDown() {
               disabled={guides !== "ready"}
               aria-label={`${m.title}, ${Math.round(m.durationSeconds / 60)} minutes`}
               onClick={() => {
+                void hapticSelect();
                 primeGuide();
                 startBreathBed();
                 if (!startGuideFromTap(m.id, 0)) {
@@ -120,6 +122,7 @@ export function WindDown() {
               type="button"
               aria-label={`${s.title}. ${s.blurb}`}
               onClick={() => {
+                void hapticSelect();
                 void unlockAudio();
                 setSoundId(s.id);
                 setMode("sound");

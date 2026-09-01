@@ -24,7 +24,7 @@ export function StudyPanel() {
           <Button
             type="button"
             variant="outline"
-            className="mt-5 h-10 cursor-pointer rounded-full border-white/15 px-4"
+            className="mt-5 h-11 rounded-full border-white/15 px-4 text-[15px]"
             onClick={joinStudy}
           >
             Join the study

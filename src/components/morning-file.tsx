@@ -21,7 +21,7 @@ export function MorningFile({
   const night = filedNight(report, units);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-12 md:pt-[max(2.5rem,env(safe-area-inset-top))]">
+    <div className="phone-page-y flex min-h-0 flex-1 flex-col overflow-y-auto px-5 pb-12 md:pt-[max(2.5rem,env(safe-area-inset-top))]">
       <div className="mx-auto w-full max-w-[22rem]">
         <p className="text-center text-[12px] text-zinc-500">{night.dateLabel}</p>
         <p className="font-heading mt-4 text-center text-[3.4rem] leading-none tracking-tight text-zinc-50">
@@ -72,18 +72,15 @@ export function MorningFile({
           <Link
             href="/insights"
             prefetch={false}
-            className="text-[14px] text-sky-300/90 underline-offset-4 hover:text-sky-200 hover:underline"
+            className="inline-flex min-h-11 items-center text-[17px] font-medium text-sky-300"
           >
             Notes for this morning
           </Link>
-          <div className="mt-4 flex justify-center gap-x-3 text-[12px] text-zinc-600">
-            <button type="button" className="hover:text-zinc-400" onClick={onCorrect}>
+          <div className="mt-1 flex justify-center gap-x-4 text-[15px] text-zinc-500">
+            <button type="button" className="min-h-11" onClick={onCorrect}>
               Change an answer
             </button>
-            <span aria-hidden className="text-zinc-700">
-              ·
-            </span>
-            <button type="button" className="hover:text-zinc-400" onClick={onWithdraw}>
+            <button type="button" className="min-h-11" onClick={onWithdraw}>
               Withdraw
             </button>
           </div>

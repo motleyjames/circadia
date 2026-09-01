@@ -21,6 +21,7 @@ import { reportForMorning } from "@/lib/morning-file";
 import { formatMorningDate, shiftIsoDate } from "@/lib/schedule";
 import { clockFromDate, formatClock, todayIsoDate } from "@/lib/time";
 import { SLEEP_AID_QUESTION } from "@/lib/intake";
+import { hapticLight, hapticSelect } from "@/lib/haptics";
 
 const SLEEP_TIMES = ["21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00"];
 const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00"];
@@ -187,11 +188,12 @@ function MorningInterview({
       payload.dream = { text: dreamText.trim(), wantMeaning };
     }
     addReport(payload);
+    void hapticLight();
     router.push("/insights");
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col px-5 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-3 md:pt-[max(2rem,env(safe-area-inset-top))]">
+    <div className="phone-page-y flex min-h-0 flex-1 flex-col px-5 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">
         {existing ? "Correcting this morning" : "Morning interview"}
       </p>
@@ -458,12 +460,13 @@ function MorningInterview({
         ) : null}
       </div>
 
-      <div className="flex shrink-0 items-center justify-between border-t border-white/5 pt-3">
+      <div className="flex shrink-0 items-center justify-between border-t border-white/[0.08] bg-[#0b0914]/70 px-1 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-2xl">
         <button
           type="button"
-          className="rounded-full px-4 py-2 text-sm text-zinc-400 disabled:opacity-30"
+          className="rounded-full px-4 py-2 text-[17px] text-sky-300 disabled:opacity-30"
           disabled={step === 0 && !onCancel}
           onClick={() => {
+            void hapticSelect();
             if (step === 0 && onCancel) {
               onCancel();
               return;
@@ -476,16 +479,19 @@ function MorningInterview({
         {step < steps.length - 1 ? (
           <button
             type="button"
-            className="rounded-full bg-sky-300 px-5 py-2.5 text-sm font-medium text-zinc-950 disabled:opacity-40"
+            className="rounded-full bg-sky-300 px-5 py-2.5 text-[17px] font-semibold text-zinc-950 disabled:opacity-40"
             disabled={!canAdvance()}
-            onClick={advance}
+            onClick={() => {
+              void hapticSelect();
+              advance();
+            }}
           >
             Next
           </button>
         ) : (
           <button
             type="button"
-            className="rounded-full bg-sky-300 px-5 py-2.5 text-sm font-medium text-zinc-950"
+            className="rounded-full bg-sky-300 px-5 py-2.5 text-[17px] font-semibold text-zinc-950"
             onClick={save}
           >
             {existing ? "Save this page" : "File this morning"}

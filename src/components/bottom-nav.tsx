@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCircadia } from "@/context/circadia-store";
+import { hapticSelect } from "@/lib/haptics";
 import { TABS } from "@/lib/nav";
 import { morningFileDue } from "@/lib/morning-file";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="grid grid-cols-5 border-t border-white/[0.06] bg-[#0b0914]/92 px-2 pt-1.5 pb-[max(0.55rem,env(safe-area-inset-bottom))] backdrop-blur-xl md:hidden"
+      className="grid grid-cols-5 border-t border-white/[0.08] bg-[#0b0914]/80 px-1 pt-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden"
       aria-label="Diary"
     >
       {TABS.map((tab) => {
@@ -25,13 +26,21 @@ export function BottomNav() {
             key={tab.href}
             href={tab.href}
             prefetch={false}
+            aria-current={active ? "page" : undefined}
+            onClick={() => {
+              void hapticSelect();
+            }}
             className={cn(
-              "flex cursor-pointer flex-col items-center gap-1 rounded-2xl py-2 text-[11px] tracking-[0.01em]",
-              active ? "text-zinc-50" : "text-zinc-500",
+              "flex flex-col items-center justify-center gap-0.5 rounded-lg py-1 text-[10px] font-medium",
+              active ? "text-sky-300" : "text-zinc-500",
             )}
           >
             <span className="relative">
-              <Icon className="size-[1.35rem]" strokeWidth={active ? 2 : 1.6} />
+              <Icon
+                className="size-[25px]"
+                strokeWidth={active ? 2.1 : 1.6}
+                fill={active ? "currentColor" : "none"}
+              />
               {tab.href === "/check-in" && morningDue ? (
                 <span className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-sky-300" aria-hidden />
               ) : null}

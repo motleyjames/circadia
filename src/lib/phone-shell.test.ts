@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.7.9 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.7.9");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.9");
+  it("is version 0.8.0 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.0");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.0");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -16,6 +16,9 @@ describe("phone diary shell", () => {
     expect(TABS.map((tab) => tab.label)).toEqual(["Tonight", "Morning", "Notes", "Library", "You"]);
     expect(readFileSync("src/lib/nav.ts", "utf8")).not.toMatch(/Consult/);
     expect(readFileSync("src/components/bottom-nav.tsx", "utf8")).toContain("grid-cols-5");
+    expect(readFileSync("src/components/bottom-nav.tsx", "utf8")).toContain("aria-current");
+    expect(readFileSync("src/components/bottom-nav.tsx", "utf8")).toContain("hapticSelect");
+    expect(readFileSync("src/components/bottom-nav.tsx", "utf8")).toContain("text-sky-300");
     expect(readFileSync("src/components/bottom-nav.tsx", "utf8")).not.toContain("drop-shadow");
   });
 
@@ -31,6 +34,10 @@ describe("phone diary shell", () => {
     expect(chat).not.toContain('variant="dock"');
     expect(chat).not.toContain('"dock"');
     expect(chat).toContain('role="dialog"');
+    expect(chat).toContain("Done");
+    expect(chat).toContain("Dismiss");
+    expect(chat).toContain("circadia-sheet");
+    expect(chat).toContain("rounded-t-[1.35rem]");
     expect(chat).toContain("xl:hidden");
     expect(chat).toContain("hidden w-[23.5rem]");
     expect(chat).toContain("xl:flex");
@@ -39,19 +46,16 @@ describe("phone diary shell", () => {
   it("gives Tonight and the inner pages air under Ask, and hides the Mac install hint on a phone", () => {
     const tonight = readFileSync("src/components/tonight-view.tsx", "utf8");
     expect(tonight).toMatch(/safe-area-inset-(top|bottom)/);
+    expect(tonight).toContain("phone-page-y");
     expect(tonight).toContain("size-[13.5rem]");
     expect(tonight).toContain("md:hidden");
     expect(readFileSync("src/components/install-hint.tsx", "utf8")).toContain("hidden");
     expect(readFileSync("src/components/install-hint.tsx", "utf8")).toContain("md:block");
-    expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain(
-      "pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))]",
-    );
-    expect(readFileSync("src/components/library-view.tsx", "utf8")).toContain(
-      "pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))]",
-    );
-    expect(readFileSync("src/components/insights-view.tsx", "utf8")).toContain(
-      "pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))]",
-    );
+    expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("phone-page-y");
+    expect(readFileSync("src/components/library-view.tsx", "utf8")).toContain("phone-page-y");
+    expect(readFileSync("src/components/insights-view.tsx", "utf8")).toContain("phone-page-y");
+    expect(readFileSync("src/components/check-in-flow.tsx", "utf8")).toContain("phone-page-y");
+    expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("phone-page-y");
   });
 
   it("ships an iPhone diary shell that is not the Operator", () => {
@@ -67,11 +71,22 @@ describe("phone diary shell", () => {
     expect(cap).toContain('appId: "app.circadia.diary"');
     expect(cap).not.toMatch(/operator|audiospike/i);
     expect(cap).toContain('webDir: "../out"');
+    expect(cap).toContain("scrollEnabled: false");
+    expect(cap).toContain("allowsLinkPreview: false");
+    expect(cap).toContain("@capacitor/haptics");
     expect(cap).not.toMatch(/server\s*:/);
     expect(JSON.parse(readFileSync("phone/ios/App/App/capacitor.config.json", "utf8"))).not.toHaveProperty("server");
+    expect(JSON.parse(readFileSync("phone/ios/App/App/capacitor.config.json", "utf8")).ios).toMatchObject({
+      scrollEnabled: false,
+      allowsLinkPreview: false,
+    });
+    expect(JSON.parse(readFileSync("phone/ios/App/App/capacitor.config.json", "utf8")).plugins?.Keyboard?.resize).toBe(
+      "native",
+    );
     expect(phonePkg.description?.toLowerCase()).toMatch(/diary/);
     expect(phonePkg.description?.toLowerCase()).toMatch(/not the operator/);
     expect(phonePkg.dependencies?.["circadia-keychain"]).toBe("file:./plugins/circadia-keychain");
+    expect(phonePkg.dependencies?.["@capacitor/haptics"]).toMatch(/^8\./);
     expect(plugin).toContain('jsName = "CircadiaKeychain"');
     expect(plugin).toContain('service = "Circadia"');
     expect(plugin).toContain("kSecAttrAccessibleWhenUnlockedThisDeviceOnly");
@@ -89,13 +104,17 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.7.9");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 9");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.0");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 10");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
     expect(existsSync("src/app/mod/page.tsx")).toBe(true);
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain(".mod-parked");
+    expect(readFileSync("src/components/native-chrome.tsx", "utf8")).toContain("setOverlaysWebView");
+    expect(readFileSync("src/components/native-chrome.tsx", "utf8")).toContain("setAccessoryBarVisible");
+    expect(readFileSync("src/components/ui/dialog.tsx", "utf8")).toContain("bg-black/55");
+    expect(readFileSync("src/components/ui/dialog.tsx", "utf8")).not.toContain("bg-black/10");
   });
 
   it("put-on-phone signs from this Mac's cert, installs onto a reachable iPhone, and refuses Linux", () => {
@@ -141,7 +160,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/ios-target.cjs", "utf8")).toContain("native-run");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.7.9");
+    expect(run.stdout).toContain("0.8.0");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
@@ -169,6 +188,13 @@ describe("phone diary shell", () => {
     expect(gate).toContain("The locked diary is on this device");
     expect(gate).toContain("UsePackedDiaryButton");
     expect(gate).not.toContain("will not find it");
+    expect(gate).toContain("diaries on this device");
+    expect(gate).not.toContain("Diaries on this device:");
+    expect(readFileSync("src/components/bubbles.tsx", "utf8")).toContain("hapticSelect");
+    expect(readFileSync("src/components/ui/switch.tsx", "utf8")).toContain("w-[51px]");
+    expect(readFileSync("src/components/confirm-dialog.tsx", "utf8")).toContain("rounded-[14px]");
+    expect(readFileSync("src/app/globals.css", "utf8")).toContain("phone-page-y");
+    expect(readFileSync("src/app/globals.css", "utf8")).toContain("circadia-sheet");
     expect(readFileSync("src/lib/login.ts", "utf8")).toContain("this app was packed with");
     expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("SaveLockedCopyButton");
     expect(bring).toContain("Bring a locked diary");

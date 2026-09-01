@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useCircadia } from "@/context/circadia-store";
-import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { buildSleepNotes } from "@/lib/advisor";
 import { readDream } from "@/lib/dreams";
@@ -49,7 +48,7 @@ export function InsightsView() {
   const empty = state.reports.length === 0;
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
+    <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Notes</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">The week.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
@@ -87,10 +86,9 @@ export function InsightsView() {
             >
               Morning interview
             </Link>
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className="rounded-full border-white/15"
+              className="inline-flex min-h-11 items-center rounded-full border border-white/15 px-4 text-[15px] text-zinc-200"
               onClick={() => {
                 if (state.reports.length > 0) {
                   setSampleOpen(true);
@@ -100,7 +98,7 @@ export function InsightsView() {
               }}
             >
               Load sample week
-            </Button>
+            </button>
           </div>
         </div>
       ) : (
@@ -166,7 +164,7 @@ export function InsightsView() {
 
           <Link
             href="/"
-            className="mt-8 inline-flex rounded-full border border-sky-300/25 px-4 py-2 text-xs text-zinc-100"
+            className="mt-8 inline-flex min-h-11 items-center text-[17px] font-medium text-sky-300"
           >
             Open wind-down
           </Link>

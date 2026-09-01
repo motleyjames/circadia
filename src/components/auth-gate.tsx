@@ -12,6 +12,7 @@ import { fetchPackedDiary, packedDiaryStatus, readInlinePackedDiary } from "@/li
 import { isPhoneNative } from "@/lib/phone-native";
 import { isVaultEmpty, listDiaryLogins } from "@/lib/storage";
 import { APP_VERSION } from "@/lib/version";
+import { hapticSelect } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 type Mode = "signup" | "login";
@@ -126,7 +127,7 @@ function DesktopAuthGate() {
           <p className="mt-4 text-[13px] leading-relaxed text-zinc-500">
             {named.length === 1
               ? `Diary on this device: ${named[0].display}`
-              : `Diaries on this device: ${named.map((row) => row.display).join(", ")}`}
+              : `${named.length} diaries on this device`}
           </p>
         ) : null}
 
@@ -233,13 +234,15 @@ function DesktopAuthGate() {
 
           {error ? <p className="mt-4 text-[13px] text-amber-200/90">{error}</p> : null}
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="mt-8 h-14 w-full cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {busy ? (mode === "signup" ? "Signing up…" : "Logging in…") : mode === "signup" ? "Sign up" : "Log in"}
-          </button>
+          <div className="mt-auto pt-8">
+            <button
+              type="submit"
+              disabled={busy}
+              className="h-14 w-full rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950 disabled:opacity-50"
+            >
+              {busy ? (mode === "signup" ? "Signing up…" : "Logging in…") : mode === "signup" ? "Sign up" : "Log in"}
+            </button>
+          </div>
         </form>
 
         <UsePackedDiaryButton
@@ -309,7 +312,7 @@ function SecretField({
         <button
           type="button"
           onClick={() => setShow((v) => !v)}
-          className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-zinc-500 hover:text-zinc-200"
+          className="absolute top-1/2 right-1 -translate-y-1/2 inline-flex size-11 items-center justify-center text-zinc-500"
           aria-label={show ? "Hide password" : "Show password"}
         >
           {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -331,7 +334,10 @@ function ModeTab({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => {
+        void hapticSelect();
+        onClick();
+      }}
       className={cn(
         "h-11 cursor-pointer rounded-full text-[13px] font-medium transition-colors",
         active ? "bg-zinc-50 text-zinc-950" : "text-zinc-400 hover:text-zinc-200",

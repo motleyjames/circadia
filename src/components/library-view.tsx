@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
 import { Textarea } from "@/components/ui/textarea";
 import { MorningReadingCard } from "@/components/morning-reading";
@@ -43,7 +44,7 @@ export function LibraryView() {
   }, []);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-[max(3.25rem,calc(env(safe-area-inset-top)+2.4rem))] pb-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
+    <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Library</p>
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">What we are willing to say.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
@@ -101,14 +102,20 @@ function LibraryArticle({
   onToggle: () => void;
 }) {
   return (
-    <article id={article.id} className="scroll-mt-24 border border-white/8 bg-white/[0.03]">
-      <button type="button" className="w-full px-4 py-3 text-left hover:bg-white/5" onClick={onToggle}>
-        <p className="text-sm text-zinc-100">{article.title}</p>
-        <p className="mt-1 text-xs text-zinc-500">{article.summary}</p>
-        <p className="mt-2 text-[10px] tracking-[0.16em] text-zinc-600 uppercase">
-          Reviewed through {formatReviewedThrough(article.reviewedThrough)}
-          {article.confidence === "low" ? " · mixed evidence" : ""}
-        </p>
+    <article id={article.id} className="scroll-mt-24 overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03]">
+      <button type="button" className="flex w-full items-start gap-3 px-4 py-3.5 text-left active:bg-white/[0.06]" onClick={onToggle}>
+        <span className="min-w-0 flex-1">
+          <p className="text-[17px] leading-snug text-zinc-100">{article.title}</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">{article.summary}</p>
+          <p className="mt-2 text-[11px] text-zinc-600">
+            Reviewed through {formatReviewedThrough(article.reviewedThrough)}
+            {article.confidence === "low" ? " · mixed evidence" : ""}
+          </p>
+        </span>
+        <ChevronRight
+          className={`mt-0.5 size-5 shrink-0 text-zinc-600 transition-transform ${open ? "rotate-90" : ""}`}
+          aria-hidden
+        />
       </button>
       {open ? (
         <div className="border-t border-white/8 px-4 py-3">
