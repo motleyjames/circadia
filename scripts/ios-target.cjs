@@ -102,10 +102,16 @@ function parseDevicectlTable(text) {
   return { devices, virtualDevices: [] };
 }
 
-function tunnelReachable(conn = {}) {
+function connectionLive(conn = {}) {
   const tunnel = String(conn.tunnelState || conn.state || "").toLowerCase();
+  if (tunnel === "disconnected" || tunnel === "unavailable") return false;
   if (tunnel === "connected" || tunnel === "available") return true;
-  return false;
+  const transport = String(conn.transportType || "").toLowerCase();
+  return transport === "wired" || transport === "usb";
+}
+
+function usbSeesIphone(text) {
+  return /^\s*iPhone:/m.test(String(text || ""));
 }
 
 function parseDevicectlJson(payload) {
@@ -139,7 +145,7 @@ function parseDevicectlJson(payload) {
       pairingState: conn.pairingState || "",
       transportType: conn.transportType || "",
       tunnelState: conn.tunnelState || "",
-      reachable: tunnelReachable(conn),
+      reachable: connectionLive(conn),
     };
     if (mapped.virtual) continue;
     if (!isIphone(mapped)) continue;
@@ -175,7 +181,7 @@ function parseXctraceList(text) {
       name,
       virtual: false,
       model: detail,
-      reachable: true,
+      reachable: false,
       source: "xctrace",
     });
   }
@@ -238,11 +244,14 @@ function mergeDeviceRows(rows) {
       pairingState: row.pairingState || prev.pairingState,
       transportType: row.transportType || prev.transportType,
       tunnelState: row.tunnelState || prev.tunnelState,
-      reachable: Boolean(prev.reachable || row.reachable),
       virtual: prev.virtual === true || row.virtual === true,
     });
   }
-  return [...byId.values()];
+  return [...byId.values()].map((row) => ({
+    ...row,
+    reachable:
+      row.tunnelState || row.transportType ? connectionLive(row) : Boolean(row.reachable),
+  }));
 }
 
 function scanInstallableIphones({ nativeRunJson, devicectlJson, xctraceText } = {}) {
@@ -380,6 +389,8 @@ module.exports = {
   wakeDevice,
   idsEqual,
   collectSources,
+  connectionLive,
+  usbSeesIphone,
 };
 
 if (require.main === module) {
@@ -387,34 +398,30 @@ if (require.main === module) {
   const root = path.join(__dirname, "..");
   const bin = nativeRunBin(root);
   const waitMs = resolveWaitMs();
-  const poll = () => {
+  const scan = () => {
     const src = collectSources({ root, nativeRun: bin });
     return { pick: scanInstallableIphones(src), table: src.table };
   };
-  let scanned = { pick: null, table: "" };
-  const picked = waitForInstallTarget({
-    deadlineMs: waitMs,
-    pollMs: 3000,
-    poll: () => {
-      scanned = poll();
-      return scanned.pick;
-    },
-    log: (last, remain) => {
-      const name = last?.name || "James-iPhone";
-      const sec = Math.max(1, Math.ceil(remain / 1000));
-      if (last?.id) {
-        console.error(
-          `${name} is paired but idle. Unlock it and keep the screen on. ${sec}s left. Plug in USB if it stays idle.`,
-        );
-      } else {
-        console.error(`No iPhone UDID yet. Unlock James-iPhone. ${sec}s left. Plug in USB if it is not on this list.`);
-      }
-    },
-    nudge: (last) => {
-      wakeDevice(last?.coreDeviceId || last?.id);
-    },
-  });
-  const pick = picked || scanned.pick;
+  let scanned = scan();
+  let pick = scanned.pick;
+  if (!pick || !isHardwareUdid(pick.id)) {
+    pick =
+      waitForInstallTarget({
+        deadlineMs: waitMs,
+        pollMs: 3000,
+        poll: () => {
+          scanned = scan();
+          return scanned.pick;
+        },
+        log: (_last, remain) => {
+          const sec = Math.max(1, Math.ceil(remain / 1000));
+          console.error(`No iPhone UDID yet. Unlock James-iPhone. ${sec}s left. Plug in USB if it is not on this list.`);
+        },
+        nudge: (last) => {
+          wakeDevice(last?.coreDeviceId || last?.id);
+        },
+      }) || scanned.pick;
+  }
   if (!pick || !isHardwareUdid(pick.id)) {
     if (unavailableHint(scanned.table)) {
       console.error("James-iPhone is listed but idle. Unlock it and plug in USB, then run this again.");
@@ -426,7 +433,7 @@ if (require.main === module) {
   }
   if (!pick.reachable) {
     console.error(
-      `${pick.name || "James-iPhone"} is paired but idle (the device list said unavailable). Using the hardware UDID, not the CoreDevice list id.`,
+      `${pick.name || "James-iPhone"} is paired but idle. Compile will use the hardware UDID. Install waits for a live CoreDevice tunnel.`,
     );
   }
   console.log(formatTargetLine(pick));
