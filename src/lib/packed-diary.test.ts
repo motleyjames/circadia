@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,6 +39,12 @@ function mockPacked(vault: DiskVault | null): void {
 }
 
 describe("pack-mac-diary", () => {
+  it("does not pack when required as a library", () => {
+    const require = createRequire(import.meta.url);
+    const mod = require("../../scripts/pack-mac-diary.cjs") as { pickVault: (root: string) => unknown };
+    expect(typeof mod.pickVault).toBe("function");
+  });
+
   it("writes a locked pack from a vault.json and strips session", () => {
     const root = mkdtempSync(join(tmpdir(), "circadia-pack-mac-"));
     const outDir = join(root, "out");

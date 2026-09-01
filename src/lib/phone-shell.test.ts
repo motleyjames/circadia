@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.1 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.1");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.1");
+  it("is version 0.8.2 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.2");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.2");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -104,8 +104,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.1");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 11");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.2");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 12");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -134,6 +134,10 @@ describe("phone diary shell", () => {
     expect(script).toContain("deps-missing.cjs");
     expect(script).toContain("new packages after git pull");
     expect(script).toContain("npm install");
+    expect(script).toContain("phone-pack-fresh.cjs");
+    expect(script).toContain("Skipping the Next.js rebuild");
+    expect(script).toContain("--core-device");
+    expect(script).toContain("hardware UDID");
     expect(readFileSync("scripts/deps-missing.cjs", "utf8")).toContain("pkg.dependencies");
     expect(spawnSync("node", ["scripts/deps-missing.cjs"]).status).toBe(0);
     expect(script).toContain("Not Operator");
@@ -151,19 +155,27 @@ describe("phone diary shell", () => {
     expect(script).toContain("this one install");
     expect(script).not.toContain("exit 12");
     expect(gitignore).toContain("/phone/ios/signing.xcconfig");
+    expect(gitignore).toContain("/phone/ios/.pack-stamp");
     expect(debugXc).toContain('#include? "signing.xcconfig"');
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("resolveSignForDevice");
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("CODE_SIGN_STYLE=Manual");
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("automatic-session");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("generic/platform=iOS");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("devicectl");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("isHardwareUdid");
     expect(readFileSync("scripts/ios-sign.cjs", "utf8")).toContain("app.circadia.diary");
     expect(readFileSync("scripts/ios-sign.cjs", "utf8")).toContain("automatic-session");
     expect(readFileSync("scripts/ios-team.cjs", "utf8")).toContain("Apple Development");
     expect(readFileSync("scripts/ios-team.cjs", "utf8")).toContain("IDEProvisioningTeamByIdentifier");
     expect(readFileSync("scripts/ios-team.cjs", "utf8")).toContain("process.exit(12)");
     expect(readFileSync("scripts/ios-target.cjs", "utf8")).toContain("native-run");
+    expect(readFileSync("scripts/ios-target.cjs", "utf8")).toContain("isHardwareUdid");
+    expect(readFileSync("scripts/ios-target.cjs", "utf8")).toContain("parseDevicectlJson");
+    expect(readFileSync("scripts/pack-mac-diary.cjs", "utf8")).toContain("require.main === module");
+    expect(readFileSync("scripts/phone-pack-fresh.cjs", "utf8")).toContain("vaultFingerprint");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.1");
+    expect(run.stdout).toContain("0.8.2");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {

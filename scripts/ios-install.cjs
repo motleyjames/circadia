@@ -6,6 +6,10 @@
  * Xcode Accounts has the team, or a signed-in Xcode 16 session with no
  * stored team id. Does not open Xcode. Not live-reload. Never destination
  * Any iOS Device. Never passes a keychain-only team on the first try.
+ *
+ * --target is the hardware UDID. CoreDevice list UUIDs are refused.
+ * If Xcode cannot see an idle phone, compile generic iOS (arm64) and
+ * install with native-run, then `devicectl device install app`.
  */
 
 const fs = require("node:fs");
@@ -13,6 +17,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { normalizeTeam } = require("./ios-team.cjs");
 const { resolveSignForDevice, nextSignAfterSessionFailure } = require("./ios-sign.cjs");
+const { isHardwareUdid, isCoreDeviceUuid, wakeDevice } = require("./ios-target.cjs");
 
 function repoRoot() {
   return path.join(__dirname, "..");
@@ -26,7 +31,8 @@ function nativeRunBin(root = repoRoot()) {
   return candidates.find((file) => fs.existsSync(file)) || null;
 }
 
-function xcodebuildArgs({ sign, targetId, derivedDataPath }) {
+function xcodebuildArgs({ sign, targetId, derivedDataPath, generic = false }) {
+  const destination = generic ? "generic/platform=iOS" : `platform=iOS,id=${targetId}`;
   const args = [
     "-project",
     "App.xcodeproj",
@@ -35,7 +41,7 @@ function xcodebuildArgs({ sign, targetId, derivedDataPath }) {
     "-configuration",
     "Debug",
     "-destination",
-    `platform=iOS,id=${targetId}`,
+    destination,
     "-derivedDataPath",
     derivedDataPath,
     "CODE_SIGN_IDENTITY=Apple Development",
@@ -98,7 +104,19 @@ function explainXcodebuildFailure(text) {
   if (/Communication with Apple failed|Unable to log in|Authentication/i.test(src)) {
     return "Xcode could not talk to Apple to create a profile. That is Apple's session, not USB and not the packed diary.";
   }
+  if (destinationMissing(src)) {
+    return "Xcode could not see that iPhone as a live destination. Circadia will compile generic iOS (arm64) and install onto the hardware UDID.";
+  }
   return null;
+}
+
+function destinationMissing(text) {
+  const src = String(text || "");
+  return (
+    /Unable to find a destination matching/i.test(src) ||
+    /The requested device could not be found/i.test(src) ||
+    /Failed to find a device matching/i.test(src)
+  );
 }
 
 function runXcodebuild(args, cwd) {
@@ -122,14 +140,87 @@ function run(cmd, args, opts) {
   return result.status ?? 1;
 }
 
+function buildApp({ sign, targetId, derivedDataPath, nativeDir, generic = false }) {
+  const args = xcodebuildArgs({ sign, targetId, derivedDataPath, generic });
+  if (args.join(" ").includes("Any iOS Device")) {
+    return { status: 11, log: "refused Any iOS Device destination" };
+  }
+  return runXcodebuild(args, nativeDir);
+}
+
+function compileForPhone({ decided, fallbackTeam, targetId, derivedDataPath, nativeDir }) {
+  let sign = decided;
+  let built = buildApp({ sign, targetId, derivedDataPath, nativeDir, generic: false });
+  if (built.status !== 0 && destinationMissing(built.log)) {
+    const hint = explainXcodebuildFailure(built.log);
+    if (hint) console.error(hint);
+    console.error("Phone is idle for Xcode. Compiling generic iOS (arm64), then installing onto the hardware UDID.");
+    built = buildApp({ sign, targetId, derivedDataPath, nativeDir, generic: true });
+  }
+  if (built.status !== 0) {
+    const retry = nextSignAfterSessionFailure(sign, fallbackTeam, built.log);
+    const hint = explainXcodebuildFailure(built.log);
+    if (hint) console.error(hint);
+    if (!retry) return { sign, built };
+    sign = retry;
+    console.error(describeSign(sign));
+    built = buildApp({ sign, targetId, derivedDataPath, nativeDir, generic: false });
+    if (built.status !== 0 && destinationMissing(built.log)) {
+      console.error("Phone is idle for Xcode. Compiling generic iOS (arm64), then installing onto the hardware UDID.");
+      built = buildApp({ sign, targetId, derivedDataPath, nativeDir, generic: true });
+    }
+    if (built.status !== 0) {
+      const again = explainXcodebuildFailure(built.log);
+      if (again) console.error(again);
+    }
+  }
+  return { sign, built };
+}
+
+function installWithDevicectl(app, device, spawn = spawnSync) {
+  if (!device) return 11;
+  const result = spawn("xcrun", ["devicectl", "device", "install", "app", "--device", device, app], {
+    encoding: "utf8",
+    stdio: "inherit",
+  });
+  return result.status ?? 1;
+}
+
+function deployApp({ app, targetId, coreDeviceId, root }) {
+  const phone = path.join(root, "phone");
+  const nativeRun = nativeRunBin(root);
+  if (nativeRun) {
+    const deployed = run(nativeRun, ["ios", "--app", app, "--target", targetId], { cwd: phone });
+    if (deployed === 0) return 0;
+    console.error("native-run could not reach the phone. Trying Apple's installer with the same UDID.");
+  } else {
+    console.error("native-run is missing. Installing with Apple's installer.");
+  }
+  const first = coreDeviceId && isCoreDeviceUuid(coreDeviceId) ? coreDeviceId : targetId;
+  let status = installWithDevicectl(app, first);
+  if (status === 0) return 0;
+  if (first !== targetId) {
+    status = installWithDevicectl(app, targetId);
+    if (status === 0) return 0;
+  }
+  return status || 11;
+}
+
 function installOnDevice({
   root = repoRoot(),
   targetId,
+  coreDeviceId,
   sign,
   fallbackTeam,
   diagnosis,
 } = {}) {
   if (!targetId) return 11;
+  if (isCoreDeviceUuid(targetId) || !isHardwareUdid(targetId)) {
+    console.error(
+      "That id is not an iPhone hardware UDID. CoreDevice list ids cannot be passed to native-run or xcodebuild.",
+    );
+    return 11;
+  }
   const resolved =
     sign != null
       ? { sign, diagnosis: diagnosis || "" }
@@ -142,47 +233,36 @@ function installOnDevice({
   const phone = path.join(root, "phone");
   const nativeDir = path.join(phone, "ios", "App");
   const derivedDataPath = path.join(phone, "ios", "DerivedData", targetId);
+  wakeDevice(coreDeviceId || targetId);
   console.error(describeSign(decided));
-  const args = xcodebuildArgs({ sign: decided, targetId, derivedDataPath });
-  if (args.join(" ").includes("Any iOS Device")) return 11;
-  let built = runXcodebuild(args, nativeDir);
-  if (built.status !== 0) {
-    const retry = nextSignAfterSessionFailure(decided, fallbackTeam, built.log);
-    const hint = explainXcodebuildFailure(built.log);
-    if (hint) console.error(hint);
-    if (retry) {
-      decided = retry;
-      console.error(describeSign(decided));
-      built = runXcodebuild(xcodebuildArgs({ sign: decided, targetId, derivedDataPath }), nativeDir);
-      if (built.status !== 0) {
-        const again = explainXcodebuildFailure(built.log);
-        if (again) console.error(again);
-        return built.status || 11;
-      }
-    } else {
-      return built.status || 11;
-    }
-  }
+  const compiled = compileForPhone({
+    decided,
+    fallbackTeam,
+    targetId,
+    derivedDataPath,
+    nativeDir,
+  });
+  decided = compiled.sign;
+  const built = compiled.built;
+  if (built.status !== 0) return built.status || 11;
   const app = appPathForTarget(derivedDataPath);
   if (!fs.existsSync(app)) {
     console.error(`xcodebuild finished but ${app} is missing.`);
     return 11;
   }
-  const nativeRun = nativeRunBin(root);
-  if (!nativeRun) {
-    console.error("native-run is missing. From the Circadia clone: npm --prefix phone install");
-    return 11;
-  }
-  const deployed = run(nativeRun, ["ios", "--app", app, "--target", targetId], { cwd: phone });
-  return deployed === 0 ? 0 : deployed || 11;
+  wakeDevice(coreDeviceId || targetId);
+  return deployApp({ app, targetId, coreDeviceId, root });
 }
 
 function parseCli(argv = process.argv) {
   const targetFlag = argv.indexOf("--target");
   const teamFlag = argv.indexOf("--fallback-team");
+  const coreFlag = argv.indexOf("--core-device");
   const targetId = targetFlag !== -1 ? argv[targetFlag + 1] : "";
   const fallbackTeam = teamFlag !== -1 ? normalizeTeam(argv[teamFlag + 1]) : null;
-  return { targetId, fallbackTeam };
+  const rawCore = coreFlag !== -1 ? argv[coreFlag + 1] : "";
+  const coreDeviceId = rawCore && !String(rawCore).startsWith("-") ? rawCore : "";
+  return { targetId, fallbackTeam, coreDeviceId };
 }
 
 module.exports = {
@@ -191,16 +271,21 @@ module.exports = {
   nativeRunBin,
   installOnDevice,
   explainXcodebuildFailure,
+  destinationMissing,
   parseCli,
   describeSign,
+  deployApp,
+  installWithDevicectl,
 };
 
 if (require.main === module) {
-  const { targetId, fallbackTeam } = parseCli();
+  const { targetId, fallbackTeam, coreDeviceId } = parseCli();
   if (!targetId || targetId.startsWith("-")) {
-    console.error("usage: node scripts/ios-install.cjs --target DEVICE_ID [--fallback-team TEAM]");
+    console.error(
+      "usage: node scripts/ios-install.cjs --target HARDWARE_UDID [--core-device CORE_ID] [--fallback-team TEAM]",
+    );
     process.exit(11);
   }
-  const status = installOnDevice({ targetId, fallbackTeam });
+  const status = installOnDevice({ targetId, fallbackTeam, coreDeviceId });
   process.exit(status);
 }
