@@ -15,6 +15,8 @@ const {
   waitForInstallTarget,
   resolveWaitMs,
   formatTargetLine,
+  connectionLive,
+  usbSeesIphone,
 } = require("../../scripts/ios-target.cjs") as {
   pickConnectedIphone: (payload: unknown) => { id: string; name?: string; reachable?: boolean } | null;
   parseDevicectlTable: (text: string) => unknown;
@@ -39,6 +41,8 @@ const {
   }) => { id?: string; reachable?: boolean } | null;
   resolveWaitMs: (env?: Record<string, string | undefined>, tty?: boolean) => number;
   formatTargetLine: (pick: { name?: string; id: string; coreDeviceId?: string }) => string;
+  connectionLive: (conn: { tunnelState?: string; transportType?: string }) => boolean;
+  usbSeesIphone: (text: string) => boolean;
 };
 
 const HARDWARE = "00008140-001201901A93001C";
@@ -147,6 +151,26 @@ James-iPhone   James-iPhone.coredevice.local   ${CORE}   unavailable   iPhone 16
     expect(formatTargetLine(pick!)).toBe(`James-iPhone\t${HARDWARE}\t${CORE}`);
   });
 
+  it("does not treat an xctrace listing or a native-run UDID as a live tunnel", () => {
+    const pick = scanInstallableIphones({
+      nativeRunJson: `{"devices":[{"id":"${HARDWARE}","name":"James-iPhone"}],"virtualDevices":[]}`,
+      devicectlJson: JAMES_IDLE_JSON,
+      xctraceText: `
+== Devices ==
+James-iPhone (26.6) (${HARDWARE})
+== Simulators ==
+iPhone 16 Pro (26.0) (AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE)
+`,
+    });
+    expect(pick?.id).toBe(HARDWARE);
+    expect(pick?.reachable).toBe(false);
+    expect(connectionLive({ tunnelState: "disconnected", transportType: "localNetwork" })).toBe(false);
+    expect(connectionLive({ tunnelState: "connected", transportType: "localNetwork" })).toBe(true);
+    expect(connectionLive({ transportType: "wired" })).toBe(true);
+    expect(usbSeesIphone("USB:\n\n    iPhone:\n      Product ID: 0x12a8\n")).toBe(true);
+    expect(usbSeesIphone("USB:\n\n    Hub:\n      Product ID: 0x0000\n")).toBe(false);
+  });
+
   it("parses xctrace hardware UDIDs and skips Macs and simulators", () => {
     const text = `
 == Devices ==
@@ -158,6 +182,7 @@ iPhone 16 Pro (26.0) (AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE)
     const parsed = parseXctraceList(text);
     expect(parsed.devices.map((row) => row.id)).toEqual([HARDWARE]);
     expect(parsed.devices[0]?.name).toBe("James-iPhone");
+    expect(parsed.devices[0]?.reachable).toBe(false);
   });
 
   it("does not wait when the first poll is reachable", () => {

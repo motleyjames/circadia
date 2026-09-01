@@ -58,8 +58,10 @@ const install = require("../../scripts/ios-install.cjs") as {
     root?: string;
     nativeRun?: string | null;
     waitMs?: number;
+    poll?: () => { id: string; name?: string; reachable?: boolean; coreDeviceId?: string } | null;
     spawn: (cmd: string, args: string[]) => { status: number; stdout?: string; stderr?: string };
     log?: (line: string) => void;
+    usbText?: string;
   }) => number;
 };
 
@@ -372,7 +374,36 @@ describe("ios-install signing args", () => {
     );
   });
 
-  it("tries Apple's installer with the hardware UDID before the CoreDevice UUID", () => {
+  it("does not call Apple's installer while the CoreDevice tunnel is idle", () => {
+    let spawned = 0;
+    const logs: string[] = [];
+    const status = install.deployApp({
+      app: "/tmp/Circadia.app",
+      targetId: DEVICE,
+      coreDeviceId: "3BF49769-5494-56B1-8F32-F329DC6F058F",
+      root: "/tmp",
+      nativeRun: null,
+      waitMs: 0,
+      usbText: "",
+      poll: () => ({
+        id: DEVICE,
+        name: "James-iPhone",
+        reachable: false,
+        coreDeviceId: "3BF49769-5494-56B1-8F32-F329DC6F058F",
+      }),
+      log: (line) => logs.push(line),
+      spawn: () => {
+        spawned += 1;
+        return { status: 1, stdout: "", stderr: "should not run" };
+      },
+    });
+    expect(spawned).toBe(0);
+    expect(status).toBe(11);
+    expect(logs.join("\n")).toMatch(/No live CoreDevice tunnel/);
+    expect(logs.join("\n")).not.toMatch(/Trying Apple's installer/);
+  });
+
+  it("installs with the hardware UDID once CoreDevice is live, and does not retry the UUID", () => {
     const devices: string[] = [];
     const logs: string[] = [];
     const status = install.deployApp({
@@ -382,6 +413,13 @@ describe("ios-install signing args", () => {
       root: "/tmp",
       nativeRun: null,
       waitMs: 0,
+      usbText: "    iPhone:\n",
+      poll: () => ({
+        id: DEVICE,
+        name: "James-iPhone",
+        reachable: true,
+        coreDeviceId: "3BF49769-5494-56B1-8F32-F329DC6F058F",
+      }),
       log: (line) => logs.push(line),
       spawn: (_cmd, args) => {
         const i = args.indexOf("--device");
@@ -394,10 +432,9 @@ describe("ios-install signing args", () => {
         };
       },
     });
-    expect(devices[0]).toBe(DEVICE);
-    expect(devices[1]).toBe("3BF49769-5494-56B1-8F32-F329DC6F058F");
+    expect(devices).toEqual([DEVICE]);
     expect(logs.join("\n")).toMatch(/Trying Apple's installer with the hardware UDID|Installing with Apple's installer/);
-    expect(logs.join("\n")).toMatch(/Install did not finish|CoreDevice still cannot see James-iPhone/);
+    expect(logs.join("\n")).toMatch(/CoreDevice still cannot see James-iPhone/);
     expect(status).toBe(1);
   });
 });

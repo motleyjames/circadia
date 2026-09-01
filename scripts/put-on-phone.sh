@@ -33,6 +33,10 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 4
 fi
 
+if [[ -z "${CIRCADIA_IPHONE_WAIT_MS:-}" ]]; then
+  export CIRCADIA_IPHONE_WAIT_MS=600000
+fi
+
 if ! command -v xcodebuild >/dev/null 2>&1; then
   echo "Xcode is missing. Install Xcode from the App Store, then: xcode-select --install"
   echo "Then run this script again."
@@ -130,8 +134,8 @@ if [[ "$STATUS" -eq 13 ]]; then
 fi
 if [[ "$STATUS" -ne 0 ]]; then
   echo
-  echo "Install did not finish. Circadia is not on the phone until this step succeeds."
-  echo "Unlock James-iPhone and keep the screen on. Plug in USB for this one install if it stays idle."
+    echo "Install did not finish. Circadia is not on the phone until this step succeeds."
+    echo "CoreDevice needs a live tunnel, not just a paired row. Unlock James-iPhone, keep the screen on, plug in USB."
   echo "The diary pack is already on disk. The next run skips the Next.js rebuild."
   echo "Do not use destination Any iOS Device (arm64). Do not press Run in Xcode."
   exit 11

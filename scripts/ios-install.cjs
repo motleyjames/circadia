@@ -17,7 +17,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { normalizeTeam } = require("./ios-team.cjs");
 const { resolveSignForDevice, nextSignAfterSessionFailure } = require("./ios-sign.cjs");
-const { isHardwareUdid, isCoreDeviceUuid, wakeDevice, waitForInstallTarget, resolveWaitMs, scanInstallableIphones, collectSources } = require("./ios-target.cjs");
+const { isHardwareUdid, isCoreDeviceUuid, wakeDevice, waitForInstallTarget, resolveWaitMs, scanInstallableIphones, collectSources, usbSeesIphone } = require("./ios-target.cjs");
 
 function repoRoot() {
   return path.join(__dirname, "..");
@@ -186,6 +186,23 @@ function installWithDevicectl(app, device, spawn = spawnSync) {
   return result.status ?? 1;
 }
 
+function readUsbProfiler(spawn = spawnSync) {
+  if (process.platform !== "darwin") return "";
+  try {
+    const listed = spawn("system_profiler", ["SPUSBDataType"], { encoding: "utf8", timeout: 8_000 });
+    return `${listed.stdout || ""}\n${listed.stderr || ""}`;
+  } catch {
+    return "";
+  }
+}
+
+function idleInstallMessage(usb) {
+  if (usb) {
+    return "USB sees an iPhone, but CoreDevice has no live tunnel. Unlock James-iPhone, tap Trust, keep the screen on. The .app is already compiled — the next run skips the Next.js pack.";
+  }
+  return "No live CoreDevice tunnel. Plug in USB, unlock James-iPhone, keep the screen on. Apple cannot install while the Wi-Fi row is disconnected. The .app is already compiled — the next run skips the Next.js pack.";
+}
+
 function deployApp({
   app,
   targetId,
@@ -196,29 +213,35 @@ function deployApp({
   poll,
   spawn = spawnSync,
   log = (msg) => console.error(msg),
+  usbText,
 } = {}) {
   const phone = path.join(root, "phone");
   const bin = nativeRun === undefined ? nativeRunBin(root) : nativeRun;
-  const deadline = waitMs != null ? waitMs : resolveWaitMs();
-  if (deadline > 0) {
-    waitForInstallTarget({
-      deadlineMs: deadline,
-      poll:
-        poll ||
-        (() => {
-          const src = collectSources({ root, nativeRun: bin, spawn });
-          const pick = scanInstallableIphones(src);
-          return pick;
-        }),
-      log: (_last, remain) => {
-        log(
-          `Unlock James-iPhone, keep the screen on, plug in USB. ${Math.max(1, Math.ceil(remain / 1000))}s left before install.`,
-        );
-      },
-      nudge: (last) => {
-        wakeDevice(last?.coreDeviceId || coreDeviceId || targetId, spawn);
-      },
+  const pickNow =
+    poll ||
+    (() => {
+      const src = collectSources({ root, nativeRun: bin, spawn });
+      return scanInstallableIphones(src);
     });
+  const deadline = waitMs != null ? waitMs : resolveWaitMs();
+  let live = waitForInstallTarget({
+    deadlineMs: deadline,
+    poll: pickNow,
+    log: (_last, remain) => {
+      log(
+        `Unlock James-iPhone, keep the screen on, plug in USB. Waiting for a live CoreDevice tunnel. ${Math.max(1, Math.ceil(remain / 1000))}s left.`,
+      );
+    },
+    nudge: (last) => {
+      wakeDevice(last?.coreDeviceId || coreDeviceId, spawn);
+      wakeDevice(last?.id || targetId, spawn);
+    },
+  });
+  if (!live || !live.reachable) live = pickNow() || live;
+  if (!live || !live.reachable) {
+    const usb = usbText != null ? usbSeesIphone(usbText) : usbSeesIphone(readUsbProfiler(spawn));
+    log(idleInstallMessage(usb));
+    return 11;
   }
   if (bin) {
     const deployed = run(bin, ["ios", "--app", app, "--target", targetId], { cwd: phone });
@@ -227,12 +250,8 @@ function deployApp({
   } else {
     log("native-run is missing. Installing with Apple's installer.");
   }
-  let status = installWithDevicectl(app, targetId, spawn);
+  const status = installWithDevicectl(app, targetId, spawn);
   if (status === 0) return 0;
-  if (coreDeviceId && isCoreDeviceUuid(coreDeviceId) && coreDeviceId !== targetId) {
-    status = installWithDevicectl(app, coreDeviceId, spawn);
-    if (status === 0) return 0;
-  }
   log(
     "CoreDevice still cannot see James-iPhone. Unlock it, keep the screen on, plug in USB, then run this again. The .app is already compiled — the next run skips the Next.js pack.",
   );
