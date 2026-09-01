@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# Put the Circadia diary on a connected iPhone.
-# Does not use Xcode destination Any iOS Device — that never installs on glass.
-# USB is optional after the first pair. The installed app never needs a cable.
+# Put the Circadia diary on a reachable iPhone.
+# Signing Team comes from this Mac's Apple Development certificate, not from Xcode's picker
+# and not from git. Destination is never Any iOS Device.
+#
+# USB: only this install, and only if the phone is unavailable.
+# After Circadia is on the home screen, unplug. The app does not talk to the Mac.
 # Diary only. Not Operator. Not the simulator. Not a Circadia server. Not live-reload.
 
 set -euo pipefail
@@ -44,6 +47,14 @@ if [[ ! -d node_modules/next ]] || [[ ! -d node_modules/@capacitor/core ]]; then
   npm install
 fi
 
+TEAM="$(node scripts/ios-team.cjs)" || {
+  echo
+  echo "Stopped. This Mac has no Apple Development certificate, so the iPhone build cannot be signed."
+  echo "Xcode → Settings → Accounts → your Apple ID. Close Xcode. Do not press Run."
+  echo "Then: npm run put-on-phone"
+  exit 12
+}
+
 npm run phone:sync
 
 INDEX="phone/ios/App/App/public/index.html"
@@ -64,13 +75,13 @@ fi
 
 echo
 echo "Installing onto the iPhone. This will not use destination Any iOS Device (arm64)."
-echo "Do not git restore the Xcode project — that forgets your signing Team."
+echo "Signing does not open Xcode. The Team stays on this Mac, not in git."
 
 PICK="$(node scripts/ios-target.cjs)" || {
   echo
-  echo "James-iPhone is not connected. Unlock it. Plug in USB if the list said unavailable."
-  echo "Xcode → Window → Devices and Simulators → James-iPhone → Connect via network."
-  echo "Do not press Run with destination Any iOS Device (arm64). That never puts Circadia on the phone."
+  echo "James-iPhone is not reachable for this install."
+  echo "Unlock it. If the list said unavailable, plug in USB for this one install."
+  echo "After Circadia is on the home screen, unplug. The app does not talk to the Mac."
   exit 10
 }
 
@@ -78,14 +89,11 @@ NAME="${PICK%%$'\t'*}"
 ID="${PICK#*$'\t'}"
 echo "Target: $NAME ($ID)"
 
-npm --prefix phone run run-device -- --target "$ID" || {
+node scripts/ios-install.cjs --team "$TEAM" --target "$ID" || {
   echo
   echo "Install did not finish. Circadia is not on the phone until this step succeeds."
-  echo "If the log mentioned signing or a development team: npm run phone:open"
-  echo "then Signing & Capabilities → Team → your Apple ID. Close Xcode. Do not press Run."
-  echo "Then: npm run put-on-phone"
-  echo "If the phone is unavailable, unlock it, plug in USB, run this again."
-  echo "Do not use destination Any iOS Device (arm64)."
+  echo "If the phone is unavailable, unlock it, plug in USB for this one install, run this again."
+  echo "Do not use destination Any iOS Device (arm64). Do not press Run in Xcode."
   exit 11
 }
 
@@ -93,7 +101,7 @@ VERSION="$(node -p 'require("./package.json").version')"
 echo
 echo "Circadia should now open on $NAME. Footer must read ${VERSION} · diary packed."
 echo "Then Log in with the same email or phone and password."
-echo "The installed app does not need a cable after that."
+echo "Unplug. The installed app does not need the Mac after that."
 echo
-echo "If the footer is still 0.7.2 or 0.7.3 or 0.7.4, this install did not reach the phone. Plug in USB and run this again."
+echo "If the footer is not ${VERSION} · diary packed, this install did not reach the phone."
 echo "First launch: Settings → General → VPN & Device Management → trust the developer cert."

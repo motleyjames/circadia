@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.7.5 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.7.5");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.5");
+  it("is version 0.7.6 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.7.6");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.6");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -86,7 +86,7 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.7.5");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.7.6");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -94,23 +94,23 @@ describe("phone diary shell", () => {
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain(".mod-parked");
   });
 
-  it("put-on-phone installs onto a connected iPhone, not Any iOS Device, and refuses Linux", () => {
+  it("put-on-phone signs from this Mac's cert, installs onto a reachable iPhone, and refuses Linux", () => {
     const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { scripts: Record<string, string> };
-    const phonePkg = JSON.parse(readFileSync("phone/package.json", "utf8")) as { scripts: Record<string, string> };
     expect(pkg.scripts["put-on-phone"]).toBe("bash scripts/put-on-phone.sh");
-    expect(phonePkg.scripts["run-device"]).toBe("cap run ios --no-sync --scheme App");
-    expect(phonePkg.scripts["run-device"]).not.toMatch(/live.?reload/i);
     const script = readFileSync("scripts/put-on-phone.sh", "utf8");
+    const gitignore = readFileSync(".gitignore", "utf8");
+    const debugXc = readFileSync("phone/ios/debug.xcconfig", "utf8");
     expect(script).toContain("0.7.0");
     expect(script).toContain("phone:sync");
     expect(script).toContain("ios-target.cjs");
-    expect(script).toContain("run-device");
-    expect(script).toContain("--target");
+    expect(script).toContain("ios-team.cjs");
+    expect(script).toContain("ios-install.cjs");
     expect(script).toContain("Any iOS Device");
     expect(script).toContain("@capacitor/core");
     expect(script).toContain("npm install");
     expect(script).toContain("Not Operator");
     expect(script).not.toContain("Circadia Operator");
+    expect(script).not.toContain("run-device");
     expect(script).not.toMatch(/cap open/);
     expect(script).not.toMatch(/--live-reload/);
     expect(script).toContain("Not live-reload");
@@ -118,11 +118,17 @@ describe("phone diary shell", () => {
     expect(script).toContain("exit 8");
     expect(script).toContain("exit 10");
     expect(script).toContain("exit 11");
-    expect(script).toContain("git restore");
+    expect(script).toContain("exit 12");
+    expect(script).toContain("this one install");
+    expect(gitignore).toContain("/phone/ios/signing.xcconfig");
+    expect(debugXc).toContain('#include? "signing.xcconfig"');
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("DEVELOPMENT_TEAM=");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("-allowProvisioningUpdates");
+    expect(readFileSync("scripts/ios-team.cjs", "utf8")).toContain("Apple Development");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.7.5");
+    expect(run.stdout).toContain("0.7.6");
     if (process.platform === "darwin") {
-      expect([0, 5, 6, 8, 10, 11]).toContain(run.status);
+      expect([0, 5, 6, 8, 10, 11, 12]).toContain(run.status);
     } else {
       expect(run.status).toBe(4);
       expect(run.stdout).toContain("macOS");

@@ -72,6 +72,7 @@ next-env.d.ts
 /phone/ios/App/Pods
 /phone/ios/App/App/public
 /phone/ios/DerivedData
+/phone/ios/signing.xcconfig
 /phone/ios/App/App.xcodeproj/xcuserdata
 /phone/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata
 /phone/ios/App/App.xcworkspace/xcuserdata
