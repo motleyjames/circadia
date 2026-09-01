@@ -25,6 +25,7 @@ import {
   emptyState,
   eraseCurrentFile,
   foldLockedVaultIntoSession,
+  absorbPeerNights,
   getSessionLogin,
   importStateJson,
   loadState,
@@ -317,6 +318,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
   const ready = useSyncExternalStore(subscribeReady, snapshotReady, serverReady);
   const rosterCatchUp = useRef(false);
 
+  const peerFold = useRef(false);
+
   useEffect(() => {
     void finishVaultBoot();
   }, []);
@@ -346,6 +349,20 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     if (state.study.lastStatus !== "error") return;
     markHeld(STUDY_HELD_ERROR);
   }, [ready, state.study.consented, state.study.lastStatus]);
+
+  useEffect(() => {
+    if (!ready || !session || peerFold.current) return;
+    peerFold.current = true;
+    void absorbPeerNights()
+      .then((result) => {
+        if (!result.state) return;
+        memory = result.state;
+        emit();
+      })
+      .catch(() => {
+        /* leftover nights stay */
+      });
+  }, [ready, session]);
 
   const saveProfile = useCallback((profile: Profile) => {
     const prev = snapshot();

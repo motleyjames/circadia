@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.11 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.11");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.11");
+  it("is version 0.8.12 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.12");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.12");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -211,8 +211,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.11");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 21");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.12");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 22");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -286,8 +286,24 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/pack-mac-diary.cjs", "utf8")).toContain("require.main === module");
     expect(readFileSync("scripts/phone-pack-fresh.cjs", "utf8")).toContain("vaultFingerprint");
     expect(script).toContain("[A-Z0-9]{10}");
+    expect(script).toContain("ios-pull-vault.cjs");
+    expect(script.indexOf("ios-pull-vault.cjs")).toBeGreaterThan(script.indexOf("ios-target.cjs"));
+    expect(script.indexOf("ios-pull-vault.cjs")).toBeLessThan(script.indexOf("ios-install.cjs"));
+    expect(script).toContain("node scripts/ios-pull-vault.cjs --target");
+    expect(gitignore).toContain("/data/fold-inbox.circadia");
+    const storage = readFileSync("src/lib/storage.ts", "utf8");
+    expect(storage).toContain("absorbPeerNights");
+    expect(storage).toContain("unlockLocalDiary");
+    expect(storage).toContain("circadia:folded-pack");
+    expect(storage).toContain("circadia:folded-inbox");
+    expect(storage).toContain("diaryHasNights");
+    expect(storage).toContain("await pushVaultToDisk()");
+    expect(readFileSync("src/app/api/fold-inbox/route.ts", "utf8")).toContain("parseLockedDiary");
+    expect(readFileSync("src/app/api/fold-inbox/route.ts", "utf8")).toContain("source !== \"inbox\"");
+    expect(readFileSync("src/lib/locked-diary-file.ts", "utf8")).toContain("foldInboxFilePath");
+    expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("absorbPeerNights");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.11");
+    expect(run.stdout).toContain("0.8.12");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {

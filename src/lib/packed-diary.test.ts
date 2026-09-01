@@ -7,11 +7,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { parseLockedDiary, serializeLockedDiary } from "./diary-pack";
 import { fetchPackedDiary, PACKED_DIARY_HREF, readInlinePackedDiary, resetPackedDiaryCacheForTests } from "./packed-diary";
 import {
+  absorbPeerNights,
   applyPackedDiaryIfEmpty,
   closeFile,
   createFile,
   eraseCurrentFile,
   flushVaultWrites,
+  FOLDED_PACK_KEY,
   isVaultEmpty,
   loadState,
   openFile,
@@ -22,9 +24,28 @@ import {
 import { setPhoneVaultIoForTests } from "./phone-vault";
 import { AUTH_ERRORS } from "./login";
 import type { DiskVault } from "./vault";
+import type { MorningReport } from "./types";
 
 const PASS = "correct-horse";
 const creds = { password: PASS, confirm: PASS };
+
+function night(morningDate: string, createdAt: string): MorningReport {
+  return {
+    id: `n-${morningDate}`,
+    morningDate,
+    wokeAt: "07:00",
+    fellAsleepAt: "23:00",
+    rating: 3,
+    drank: false,
+    screenOffMinutes: 60,
+    sleepLatencyMinutes: 15,
+    wokeInNight: false,
+    nightWakingMinutes: 0,
+    usedSupplement: false,
+    windDownHelped: "did_not_use",
+    createdAt,
+  };
+}
 
 function mockPacked(vault: DiskVault | null): void {
   globalThis.fetch = (async (input: RequestInfo | URL) => {
@@ -403,5 +424,205 @@ describe("packed diary on an empty phone", () => {
     expect(opened.ok).toBe(true);
     if (!opened.ok) return;
     expect(opened.state.researchNotes).toBe("nights from the Mac");
+  });
+});
+
+describe("packed diary into a phone that already filed a morning", () => {
+  let disk = "";
+  const previousFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    resetVaultMemoryForTests();
+    disk = "";
+    const mem = new Map<string, string>();
+    Object.defineProperty(globalThis, "localStorage", {
+      value: {
+        getItem: (k: string) => (mem.has(k) ? mem.get(k)! : null),
+        setItem: (k: string, v: string) => mem.set(k, String(v)),
+        removeItem: (k: string) => mem.delete(k),
+        clear: () => mem.clear(),
+      },
+      configurable: true,
+    });
+    Object.defineProperty(globalThis, "window", { value: globalThis, configurable: true });
+    setPhoneVaultIoForTests({
+      native: () => true,
+      readFile: async () => disk || null,
+      writeFile: async (data) => {
+        disk = data;
+      },
+      secureGet: async () => null,
+      secureSet: async () => true,
+      secureDelete: async () => {},
+    });
+    mockPacked(null);
+  });
+
+  afterEach(() => {
+    setPhoneVaultIoForTests(null);
+    resetVaultMemoryForTests();
+    globalThis.fetch = previousFetch;
+    delete (window as Window & { __CIRCADIA_LOCKED_DIARY__?: unknown }).__CIRCADIA_LOCKED_DIARY__;
+    delete (window as Window & { __CIRCADIA_PACK_STATUS__?: unknown }).__CIRCADIA_PACK_STATUS__;
+  });
+
+  it("keeps Sep 1 on the phone and folds Aug 31 from the packed Mac diary", async () => {
+    const started = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    started.state.reports = [night("2026-08-31", "2026-08-31T12:00:00.000Z")];
+    started.state.researchNotes = "aug 31 on the Mac";
+    saveState(started.state);
+    await flushVaultWrites();
+    const packed = parseLockedDiary(serializeLockedDiary(snapshotDisk()));
+    expect(packed).not.toBeNull();
+    if (!packed) return;
+
+    const phone = loadState();
+    phone.reports = [night("2026-09-01", "2026-09-01T12:00:00.000Z")];
+    phone.researchNotes = "sep 1 on the phone";
+    saveState(phone);
+    await flushVaultWrites();
+    await closeFile();
+
+    mockPacked(packed);
+    const opened = await openFile("ada@example.com", PASS);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.state.reports.map((row) => row.morningDate).sort()).toEqual(["2026-08-31", "2026-09-01"]);
+    expect(loadState().reports.map((row) => row.morningDate).sort()).toEqual(["2026-08-31", "2026-09-01"]);
+    expect(localStorage.getItem(FOLDED_PACK_KEY)).toBeTruthy();
+
+    const again = await absorbPeerNights();
+    expect(again.added).toBe(0);
+    expect(loadState().reports.map((row) => row.morningDate).sort()).toEqual(["2026-08-31", "2026-09-01"]);
+  });
+
+  it("does not replace a leftover morning when the packed diary is a different lock", async () => {
+    const mac = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(mac.ok).toBe(true);
+    if (!mac.ok) return;
+    mac.state.reports = [night("2026-08-31", "2026-08-31T12:00:00.000Z")];
+    saveState(mac.state);
+    await flushVaultWrites();
+    const packed = parseLockedDiary(serializeLockedDiary(snapshotDisk()));
+    expect(packed).not.toBeNull();
+    if (!packed) return;
+
+    eraseCurrentFile();
+    const leftover = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(leftover.ok).toBe(true);
+    if (!leftover.ok) return;
+    leftover.state.reports = [night("2026-09-01", "2026-09-01T12:00:00.000Z")];
+    leftover.state.researchNotes = "keep the phone morning";
+    saveState(leftover.state);
+    await flushVaultWrites();
+    await closeFile();
+
+    mockPacked(packed);
+    const opened = await openFile("ada@example.com", PASS);
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    expect(opened.state.reports.map((row) => row.morningDate)).toEqual(["2026-09-01"]);
+    expect(opened.state.researchNotes).toBe("keep the phone morning");
+  });
+});
+
+describe("absorb peer nights from the Mac fold inbox", () => {
+  const previousFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    resetVaultMemoryForTests();
+    const mem = new Map<string, string>();
+    Object.defineProperty(globalThis, "localStorage", {
+      value: {
+        getItem: (k: string) => (mem.has(k) ? mem.get(k)! : null),
+        setItem: (k: string, v: string) => mem.set(k, String(v)),
+        removeItem: (k: string) => mem.delete(k),
+        clear: () => mem.clear(),
+      },
+      configurable: true,
+    });
+    Object.defineProperty(globalThis, "window", { value: globalThis, configurable: true });
+  });
+
+  afterEach(() => {
+    resetVaultMemoryForTests();
+    globalThis.fetch = previousFetch;
+  });
+
+  it("folds a USB inbox morning into the open Dock diary and consumes only the inbox", async () => {
+    const started = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    started.state.reports = [night("2026-09-01", "2026-09-01T12:00:00.000Z")];
+    saveState(started.state);
+    await flushVaultWrites();
+    const inboxVault = parseLockedDiary(serializeLockedDiary(snapshotDisk()));
+    expect(inboxVault).not.toBeNull();
+    if (!inboxVault) return;
+
+    const dock = loadState();
+    dock.reports = [night("2026-08-31", "2026-08-31T12:00:00.000Z")];
+    saveState(dock);
+    await flushVaultWrites();
+
+    let consumed = 0;
+    let postedSource: unknown = null;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input), "http://127.0.0.1");
+      if (url.pathname === PACKED_DIARY_HREF || url.pathname.endsWith("/circadia-locked.json")) {
+        return new Response("", { status: 404 });
+      }
+      if (url.pathname === "/api/fold-inbox") {
+        const method = (init?.method ?? "GET").toUpperCase();
+        if (method === "POST") {
+          consumed += 1;
+          postedSource = JSON.parse(String(init?.body ?? "{}")) as { source?: unknown };
+          return new Response(JSON.stringify({ ok: true, consumed: true }), { status: 200 });
+        }
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            source: "inbox",
+            digest: "usb-sep1",
+            vault: inboxVault,
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }) as typeof fetch;
+    resetPackedDiaryCacheForTests();
+
+    const folded = await absorbPeerNights();
+    expect(folded.added).toBe(1);
+    expect(loadState().reports.map((row) => row.morningDate).sort()).toEqual(["2026-08-31", "2026-09-01"]);
+    expect(consumed).toBe(1);
+    expect(postedSource).toEqual({ source: "inbox" });
+
+    const again = await absorbPeerNights();
+    expect(again.added).toBe(0);
+    expect(consumed).toBe(1);
   });
 });
