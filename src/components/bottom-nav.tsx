@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { DiaryTabLink } from "@/components/diary-tab-link";
 import { useCircadia } from "@/context/circadia-store";
 import { hapticSelect } from "@/lib/haptics";
 import { TABS } from "@/lib/nav";
@@ -22,10 +22,9 @@ export function BottomNav() {
         const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
         const Icon = tab.icon;
         return (
-          <Link
+          <DiaryTabLink
             key={tab.href}
             href={tab.href}
-            prefetch={false}
             aria-current={active ? "page" : undefined}
             onClick={() => {
               void hapticSelect();
@@ -46,7 +45,7 @@ export function BottomNav() {
               ) : null}
             </span>
             {tab.label}
-          </Link>
+          </DiaryTabLink>
         );
       })}
     </nav>

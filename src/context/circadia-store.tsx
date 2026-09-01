@@ -87,6 +87,7 @@ function serverSession(): string | null {
 
 let bootReady = false;
 const readyListeners = new Set<() => void>();
+let bootInFlight: Promise<void> | null = null;
 
 function subscribeReady(listener: () => void) {
   readyListeners.add(listener);
@@ -104,16 +105,30 @@ function serverReady() {
 }
 
 async function finishVaultBoot() {
-  try {
-    await bootVaultFromDisk();
-  } catch {
-    /* localStorage still holds whatever this origin has */
+  if (bootInFlight) {
+    await bootInFlight;
+    return;
   }
-  bootReady = true;
-  sessionMemory = undefined;
-  memory = null;
-  readyListeners.forEach((listener) => listener());
-  emit();
+  bootInFlight = (async () => {
+    try {
+      // A remount of CircadiaProvider must not reboot-wipe a live unlock.
+      if (!getSessionLogin()) {
+        await bootVaultFromDisk();
+      }
+    } catch {
+      /* localStorage still holds whatever this origin has */
+    }
+    bootReady = true;
+    sessionMemory = undefined;
+    memory = null;
+    readyListeners.forEach((listener) => listener());
+    emit();
+  })();
+  try {
+    await bootInFlight;
+  } finally {
+    bootInFlight = null;
+  }
 }
 
 function write(next: CircadiaState) {

@@ -7,10 +7,12 @@ import { AuthGate } from "@/components/auth-gate";
 import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
 import { ChatBar } from "@/components/chat-bar";
+import { DiaryNavLock } from "@/components/diary-nav-lock";
 import { NativeChrome } from "@/components/native-chrome";
 import { Onboarding } from "@/components/onboarding";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { StudyGate } from "@/components/study-gate";
+import { consumeOpenHold, diaryShellPhase, isOpenHoldConsumed, subscribeOpenHold } from "@/lib/diary-shell";
 import { hapticLight } from "@/lib/haptics";
 import { isOperatorSurface } from "@/lib/surface";
 import { cn } from "@/lib/utils";
@@ -71,22 +73,35 @@ function PhoneAsk({ onAsk }: { onAsk: () => void }) {
   );
 }
 
+function useOpenHoldConsumed(): boolean {
+  return useSyncExternalStore(subscribeOpenHold, isOpenHoldConsumed, () => false);
+}
+
 function ShellInner({ children }: { children: React.ReactNode }) {
   const { ready, state, session } = useCircadia();
   const pathname = usePathname();
   const [consultPath, setConsultPath] = useState<string | null>(null);
-  const [openHoldDone, setOpenHoldDone] = useState(false);
   const reducedMotion = useReducedMotion();
+  const holdConsumed = useOpenHoldConsumed();
   const consultOpen = consultPath === pathname;
-  const opening = !reducedMotion && !openHoldDone;
+  const phase = diaryShellPhase({
+    ready,
+    session,
+    reducedMotion,
+    holdConsumed,
+  });
 
   useEffect(() => {
-    if (reducedMotion) return;
-    const hold = window.setTimeout(() => setOpenHoldDone(true), OPEN_HOLD_MS);
+    if (reducedMotion) {
+      consumeOpenHold();
+      return;
+    }
+    if (isOpenHoldConsumed()) return;
+    const hold = window.setTimeout(() => consumeOpenHold(), OPEN_HOLD_MS);
     return () => window.clearTimeout(hold);
   }, [reducedMotion]);
 
-  if (!ready || opening) {
+  if (phase === "opening") {
     return (
       <Stage>
         <BrandStage />
@@ -94,7 +109,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session) {
+  if (phase === "gate") {
     return (
       <Stage enter>
         <AuthGate />
@@ -156,6 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <CircadiaProvider>
       <NativeChrome />
+      <DiaryNavLock />
       <ShellInner>{children}</ShellInner>
     </CircadiaProvider>
   );

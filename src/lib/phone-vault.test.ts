@@ -6,6 +6,7 @@ import {
   phoneSecureSet,
   phoneVaultActive,
   readPhoneVault,
+  readPhoneVaultDetailed,
   setPhoneVaultIoForTests,
   writePhoneVault,
 } from "./phone-vault";
@@ -60,5 +61,27 @@ describe("phone vault adapter", () => {
     });
     expect(await readPhoneVault()).toEqual(emptyDiskVault());
     expect(await writePhoneVault(emptyDiskVault())).toBe(false);
+  });
+
+  it("names a plugin miss as unavailable, not an empty diary", async () => {
+    setPhoneVaultIoForTests({
+      native: () => true,
+      readFile: async () => ({ status: "unavailable" }),
+      writeFile: async () => undefined,
+      secureGet: async () => null,
+      secureSet: async () => false,
+      secureDelete: async () => undefined,
+    });
+    expect(await readPhoneVaultDetailed()).toEqual({ status: "unavailable", vault: emptyDiskVault() });
+
+    setPhoneVaultIoForTests({
+      native: () => true,
+      readFile: async () => null,
+      writeFile: async () => undefined,
+      secureGet: async () => null,
+      secureSet: async () => false,
+      secureDelete: async () => undefined,
+    });
+    expect(await readPhoneVaultDetailed()).toEqual({ status: "missing", vault: emptyDiskVault() });
   });
 });
