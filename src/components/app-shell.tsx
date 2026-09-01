@@ -23,7 +23,7 @@ function Stage({
 }) {
   if (wide) {
     return (
-      <div className="night-sky flex min-h-dvh flex-col">
+      <div className="night-sky flex h-full max-h-full flex-col overflow-hidden">
         <div className="native-drag" aria-hidden />
         <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
       </div>
@@ -31,7 +31,7 @@ function Stage({
   }
 
   return (
-    <div className="night-sky relative flex min-h-dvh flex-col">
+    <div className="night-sky relative flex h-full max-h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0 glow-veil" />
       <div className="native-drag relative z-10" aria-hidden />
       <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col">{children}</div>

@@ -9,8 +9,10 @@ const config: CapacitorConfig = {
     backgroundColor: "#05040a",
     preferredContentMode: "mobile",
     scheme: "Circadia",
-    // WKWebView bounce is Safari. Diary panes scroll themselves.
-    scrollEnabled: false,
+    // Capacitor already sets scrollView.bounces = false. Turning WKWebView
+    // scrolling off also makes KeyboardPlugin take the scroll delegate and
+    // pin contentOffset to zero — swipe dies on the whole diary.
+    scrollEnabled: true,
     allowsLinkPreview: false,
     zoomEnabled: false,
   },

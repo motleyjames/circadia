@@ -52,8 +52,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${outfit.variable} ${fraunces.variable} h-full antialiased`}>
-      <body className="min-h-full bg-[#05040a] font-sans text-zinc-100">
+    <html lang="en" className={`dark ${outfit.variable} ${fraunces.variable} h-full overflow-hidden antialiased`}>
+      <body className="h-full overflow-hidden bg-[#05040a] font-sans text-zinc-100">
         <CircadiaSafeTree>
           <AppShell>{children}</AppShell>
         </CircadiaSafeTree>

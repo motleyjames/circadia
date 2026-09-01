@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { isPhoneNative } from "@/lib/phone-native";
 
 function disarmNextOverlay() {
@@ -12,12 +12,17 @@ function disarmNextOverlay() {
 }
 
 export function NativeChrome() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (window.circadiaDesktop?.native) {
       document.documentElement.classList.add("circadia-native");
     }
     if (isPhoneNative()) {
       document.documentElement.classList.add("circadia-phone");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isPhoneNative()) {
       void import("@capacitor/status-bar")
         .then(async ({ StatusBar, Style }) => {
           try {
