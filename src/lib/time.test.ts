@@ -3,10 +3,13 @@ import {
   circularMeanMinutes,
   circularMeanOfMinutes,
   clockToMinutes,
+  formatCountdownHms,
   formatDuration,
+  formatWallClock,
   minutesToClock,
   overnightDuration,
   screenOffClock,
+  secondsUntilClock,
   sleepFromWake,
   sleepNeedHours,
   targetDurationMinutes,
@@ -45,6 +48,15 @@ describe("time", () => {
     expect(circularMeanOfMinutes([195.5, 195.5])).toBeCloseTo(195.5, 10);
     expect(minutesToClock(195.5)).toBe("03:16");
     expect(circularMeanMinutes([minutesToClock(195.5), minutesToClock(195.5)])).toBeCloseTo(196, 10);
+  });
+
+  it("counts live seconds to a clock and formats wall time", () => {
+    const now = new Date(2026, 0, 1, 21, 0, 5);
+    expect(secondsUntilClock("22:30", now)).toBe(1 * 3600 + 30 * 60 - 5);
+    expect(formatCountdownHms(65)).toBe("1:05");
+    expect(formatCountdownHms(3661)).toBe("1:01:01");
+    expect(formatWallClock(now, "imperial")).toBe("9:00:05 pm");
+    expect(formatWallClock(now, "metric")).toBe("21:00:05");
   });
 
   it("bands sleep need by age", () => {

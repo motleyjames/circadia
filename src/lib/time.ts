@@ -79,12 +79,48 @@ export function minutesUntilClock(clock: string, now = new Date()): number {
   return delta;
 }
 
+/** Whole seconds until an HH:MM clock, wrapping past midnight. Uses the wall clock, including seconds. */
+export function secondsUntilClock(clock: string, now = new Date()): number {
+  const target = clockToMinutes(clock) * 60;
+  const current = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  let delta = target - current;
+  if (delta < 0) delta += 24 * 3600;
+  return delta;
+}
+
 export function formatCountdown(totalMinutes: number): string {
   const mins = Math.max(0, Math.round(totalMinutes));
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   if (h <= 0) return `${m}m`;
   return `${h}h ${m}m`;
+}
+
+/** Live countdown from wall-clock seconds. `12:05` or `1:02:05`. */
+export function formatCountdownHms(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(sec).padStart(2, "0");
+  if (h > 0) return `${h}:${mm}:${ss}`;
+  return `${m}:${ss}`;
+}
+
+/** Current time with seconds, same 12/24 convention as formatClock. */
+export function formatWallClock(date: Date, units: "imperial" | "metric" = "imperial"): string {
+  const h24 = date.getHours();
+  const m = date.getMinutes();
+  const s = date.getSeconds();
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  if (units === "metric") {
+    return `${String(h24).padStart(2, "0")}:${mm}:${ss}`;
+  }
+  const suffix = h24 >= 12 ? "pm" : "am";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${mm}:${ss} ${suffix}`;
 }
 
 export function mean(values: number[]): number {

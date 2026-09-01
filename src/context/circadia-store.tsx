@@ -32,8 +32,9 @@ import {
   saveState,
   bootVaultFromDisk,
 } from "@/lib/storage";
+import { isPhoneNative } from "@/lib/phone-native";
 import { assertSendable, buildStudyPack } from "@/lib/study";
-import { postInbox } from "@/lib/study-client";
+import { postInbox, STUDY_HELD_ERROR } from "@/lib/study-client";
 import {
   reportForMorning,
   upsertMorningReport,
@@ -338,6 +339,13 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       void transmitRoster();
     }
   }, [ready, state.study.consented, state.study.rosterSentAt, state.profile]);
+
+  useEffect(() => {
+    if (!ready || !isPhoneNative()) return;
+    if (!state.study.consented) return;
+    if (state.study.lastStatus !== "error") return;
+    markHeld(STUDY_HELD_ERROR);
+  }, [ready, state.study.consented, state.study.lastStatus]);
 
   const saveProfile = useCallback((profile: Profile) => {
     const prev = snapshot();

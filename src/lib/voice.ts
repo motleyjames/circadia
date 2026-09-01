@@ -3,6 +3,7 @@ import {
   audioNow,
   loadWavPcm,
   peekDecoded,
+  peekPcm,
   scheduleBufferAt,
   stopSample,
   stopScheduledBuffers,
@@ -116,13 +117,24 @@ export async function prefetchGuide(id: MeditationId): Promise<void> {
 }
 
 export async function warmGuides(): Promise<void> {
-  for (const id of Object.keys(LINES) as MeditationId[]) {
-    await prefetchGuide(id);
+  const ids = Object.keys(LINES) as MeditationId[];
+  const results = await Promise.allSettled(ids.map((id) => prefetchGuide(id)));
+  if (results.length === 0 || results.every((row) => row.status === "rejected")) {
+    const first = results[0];
+    throw first && first.status === "rejected"
+      ? first.reason instanceof Error
+        ? first.reason
+        : new Error(String(first.reason))
+      : new Error("guides missing");
   }
 }
 
 export function guideIsWarm(id: MeditationId, fromSeconds = 0): boolean {
   return remainingBeats(id, fromSeconds).every((row) => peekDecoded(guideClipUrl(id, row.atSeconds)));
+}
+
+export function guidePcmWarm(id: MeditationId, fromSeconds = 0): boolean {
+  return remainingBeats(id, fromSeconds).every((row) => peekPcm(guideClipUrl(id, row.atSeconds)));
 }
 
 export function primeGuide() {

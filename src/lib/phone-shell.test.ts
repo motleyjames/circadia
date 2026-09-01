@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.10 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.10");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.10");
+  it("is version 0.8.11 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.11");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.11");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -89,9 +89,14 @@ describe("phone diary shell", () => {
     expect(shell).toContain("waitForOpenSurface");
     expect(shell).toContain("play={surfaceReady}");
     expect(shell).not.toContain("showCover = !reducedMotion");
+    expect(shell).toContain("brand-open-wait");
+    expect(shell).toContain('aria-label="Circadia, Tonight"');
+    expect(shell).toContain("<Mark className=\"size-7 shrink-0\" />");
+    expect(shell).toContain(">Circadia</span>");
     expect(audio).toContain("export async function loadWavPcm");
     expect(audio).toContain("pcmCache");
     expect(voice).toContain("loadWavPcm");
+    expect(voice).toContain("guidePcmWarm");
     expect(voice).not.toContain("loadWavUrl");
     expect(study).toContain("held: true");
     expect(study).toContain("isPhoneNative");
@@ -99,6 +104,19 @@ describe("phone diary shell", () => {
     expect(panel).toContain("Pipeline waiting");
     expect(panel).toContain("STUDY_HELD_ERROR");
     expect(store).toContain("result.held");
+    expect(store).toContain("markHeld");
+    expect(store).toContain("isPhoneNative()");
+    expect(store).toContain("lastStatus !== \"error\"");
+    expect(store).toContain("STUDY_HELD_ERROR");
+    expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain("circadia:");
+    expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain("PHONE_CLASS_BOOT");
+    expect(readFileSync("src/app/layout.tsx", "utf8")).toContain("dangerouslySetInnerHTML");
+    expect(readFileSync("src/app/layout.tsx", "utf8")).toContain("PHONE_CLASS_BOOT");
+    expect(readFileSync("src/lib/study-client.ts", "utf8")).toContain("payload?.inbox === true");
+    expect(audio).toContain("isRiffWav");
+    expect(audio).toContain("data.byteLength >= 12");
+    expect(audio).not.toMatch(/if \(res\.ok\) \{/);
+    expect(audio).toContain("WKURLSchemeHandler");
     expect(store).toContain("markHeld");
     expect(readFileSync("src/lib/types.ts", "utf8")).toContain('"held"');
     expect(readFileSync("src/lib/storage.ts", "utf8")).toContain('s.lastStatus === "held"');
@@ -111,7 +129,11 @@ describe("phone diary shell", () => {
     expect(tonight).toContain("size-[13.5rem]");
     expect(tonight).toContain("countdown-orb");
     expect(tonight).toContain("rounded-full");
-    expect(tonight).toContain("takeSkyDebut");
+    expect(tonight).toContain("useWallClock");
+    expect(tonight).toContain("formatWallClock");
+    expect(tonight).toContain("secondsUntilClock");
+    expect(tonight).toContain("tabular-nums");
+    expect(tonight).not.toContain("30_000");
     expect(tonight).toContain("<span className=\"block\">down</span>");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OPEN_HOLD_MS");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OPEN_HOLD_REDUCED_MS");
@@ -120,7 +142,10 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("surfaceReady");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("brand-open-exit");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OpenCover");
-    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_HOLD_MS = 2800");
+    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_HOLD_MS = 2400");
+    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_COVER_MS = 800");
+    expect(readFileSync("src/lib/wall-clock.ts", "utf8")).toContain("pageshow");
+    expect(readFileSync("src/lib/wall-clock.ts", "utf8")).toContain("1000 - (Date.now() % 1000)");
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("waitForOpenSurface");
     expect(tonight).toContain("countdown-orb-core");
     expect(tonight).toContain("countdown-orb-svg");
@@ -186,8 +211,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.10");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 20");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.11");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 21");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -262,7 +287,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/phone-pack-fresh.cjs", "utf8")).toContain("vaultFingerprint");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.10");
+    expect(run.stdout).toContain("0.8.11");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
