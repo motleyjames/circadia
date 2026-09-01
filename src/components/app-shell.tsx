@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { usePathname } from "next/navigation";
 import { CircadiaProvider, CircadiaSafeTree, useCircadia } from "@/context/circadia-store";
 import { AuthGate } from "@/components/auth-gate";
 import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
 import { ChatBar } from "@/components/chat-bar";
 import { DiaryNavLock } from "@/components/diary-nav-lock";
+import { DiaryViews } from "@/components/diary-views";
 import { NativeChrome } from "@/components/native-chrome";
 import { Onboarding } from "@/components/onboarding";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { StudyGate } from "@/components/study-gate";
 import { consumeOpenHold, diaryShellPhase, isOpenHoldConsumed, subscribeOpenHold } from "@/lib/diary-shell";
+import { diaryPathname, useDiaryPath } from "@/lib/diary-route";
 import { hapticLight } from "@/lib/haptics";
 import { isOperatorSurface } from "@/lib/surface";
 import { cn } from "@/lib/utils";
@@ -77,9 +78,10 @@ function useOpenHoldConsumed(): boolean {
   return useSyncExternalStore(subscribeOpenHold, isOpenHoldConsumed, () => false);
 }
 
-function ShellInner({ children }: { children: React.ReactNode }) {
+function ShellInner() {
   const { ready, state, session } = useCircadia();
-  const pathname = usePathname();
+  const path = useDiaryPath();
+  const pathname = diaryPathname(path);
   const [consultPath, setConsultPath] = useState<string | null>(null);
   const reducedMotion = useReducedMotion();
   const holdConsumed = useOpenHoldConsumed();
@@ -144,7 +146,9 @@ function ShellInner({ children }: { children: React.ReactNode }) {
         <div className="flex min-h-0 flex-1">
           <main className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div className="pointer-events-none absolute inset-0 z-0 glow-veil" />
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+            <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+              <DiaryViews path={path} />
+            </div>
           </main>
           <ChatBar variant="rail" />
         </div>
@@ -172,7 +176,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <CircadiaProvider>
       <NativeChrome />
       <DiaryNavLock />
-      <ShellInner>{children}</ShellInner>
+      <ShellInner />
     </CircadiaProvider>
   );
 }

@@ -40,8 +40,8 @@ export function AuthGate() {
     );
   }
   void rev;
-  if (!startNew && (packedDiaryStatus() === "packed" || readInlinePackedDiary())) return <PhoneUnlock />;
   if (!isVaultEmpty()) return <DesktopAuthGate />;
+  if (!startNew && (packedDiaryStatus() === "packed" || readInlinePackedDiary())) return <PhoneUnlock />;
   if (!startNew && (isPhoneNative() || process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK === "1")) {
     return (
       <PhoneEmptyPack

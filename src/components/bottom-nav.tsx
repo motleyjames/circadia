@@ -1,15 +1,15 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { DiaryTabLink } from "@/components/diary-tab-link";
 import { useCircadia } from "@/context/circadia-store";
 import { hapticSelect } from "@/lib/haptics";
 import { TABS } from "@/lib/nav";
 import { morningFileDue } from "@/lib/morning-file";
+import { tabIsActive, useDiaryPath } from "@/lib/diary-route";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
-  const pathname = usePathname();
+  const path = useDiaryPath();
   const { state } = useCircadia();
   const morningDue = morningFileDue(state.reports, new Date(), state.profile?.targetWake);
 
@@ -19,7 +19,7 @@ export function BottomNav() {
       aria-label="Diary"
     >
       {TABS.map((tab) => {
-        const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
+        const active = tabIsActive(tab.href, path);
         const Icon = tab.icon;
         return (
           <DiaryTabLink

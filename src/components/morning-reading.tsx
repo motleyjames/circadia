@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { DiaryLink } from "@/components/diary-tab-link";
 import type { MorningReading } from "@/lib/morning-reading";
 import { cn } from "@/lib/utils";
 
@@ -29,14 +29,13 @@ export function MorningReadingCard({
         <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">The page</p>
         <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">{reading.note}</p>
       </div>
-      <Link
+      <DiaryLink
         href={`/library#${reading.articleId}`}
-        prefetch={false}
         onClick={onOpen}
         className="mt-5 inline-flex min-h-11 items-center text-[17px] font-medium text-sky-300"
       >
         Open the note
-      </Link>
+      </DiaryLink>
     </article>
   );
 }

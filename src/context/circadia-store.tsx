@@ -105,6 +105,7 @@ function serverReady() {
 }
 
 async function finishVaultBoot() {
+  if (bootReady) return;
   if (bootInFlight) {
     await bootInFlight;
     return;

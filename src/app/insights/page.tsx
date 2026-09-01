@@ -1,10 +1,6 @@
 import { DiaryPage } from "@/components/diary-page";
-import { InsightsView } from "@/components/insights-view";
 
+/** HTML entry. AppShell swaps Notes in without unloading the session. */
 export default function InsightsPage() {
-  return (
-    <DiaryPage>
-      <InsightsView />
-    </DiaryPage>
-  );
+  return <DiaryPage>{null}</DiaryPage>;
 }

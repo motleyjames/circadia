@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.5 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.5");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.5");
+  it("is version 0.8.6 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.6");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.6");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -20,15 +20,42 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/components/bottom-nav.tsx", "utf8")).toContain("hapticSelect");
     expect(readFileSync("src/components/bottom-nav.tsx", "utf8")).toContain("DiaryTabLink");
     expect(readFileSync("src/components/diary-tab-link.tsx", "utf8")).toContain("preventDefault");
-    expect(readFileSync("src/components/diary-tab-link.tsx", "utf8")).toContain("router.push");
+    expect(readFileSync("src/components/diary-tab-link.tsx", "utf8")).toContain("navigateDiary");
+    expect(readFileSync("src/components/diary-tab-link.tsx", "utf8")).not.toContain("useRouter");
+    expect(readFileSync("src/components/diary-tab-link.tsx", "utf8")).not.toContain("router.push");
     expect(readFileSync("src/components/diary-nav-lock.tsx", "utf8")).toContain("diaryClickTarget");
     expect(readFileSync("src/components/diary-nav-lock.tsx", "utf8")).toContain('addEventListener("click", onClick, true)');
+    expect(readFileSync("src/components/diary-nav-lock.tsx", "utf8")).not.toContain("useRouter");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("diaryShellPhase");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("consumeOpenHold");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("DiaryNavLock");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("<DiaryViews path={path} />");
     expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("readPhoneSourceWithRetry");
+    expect(readFileSync("src/lib/storage.ts", "utf8")).toContain("waitForDesktopToken");
     expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("if (!getSessionLogin())");
+    expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("if (bootReady) return");
     expect(readFileSync("src/components/bottom-nav.tsx", "utf8")).not.toContain("drop-shadow");
+    for (const file of [
+      "src/components/diary-tab-link.tsx",
+      "src/components/diary-nav-lock.tsx",
+      "src/components/diary-views.tsx",
+      "src/components/app-shell.tsx",
+      "src/components/bottom-nav.tsx",
+      "src/components/sidebar-nav.tsx",
+      "src/components/tonight-view.tsx",
+      "src/components/insights-view.tsx",
+      "src/components/check-in-flow.tsx",
+      "src/components/morning-file.tsx",
+      "src/components/morning-reading.tsx",
+      "src/components/library-view.tsx",
+      "src/components/you-view.tsx",
+      "src/components/chat-bar.tsx",
+    ]) {
+      const src = readFileSync(file, "utf8");
+      expect(src, file).not.toMatch(/from ["']next\/link["']/);
+      expect(src, file).not.toMatch(/from ["']next\/navigation["']/);
+      expect(src, file).not.toContain("useRouter");
+    }
   });
 
   it("uses a quiet Ask word and a full-screen sheet, not a consult dock", () => {
@@ -115,8 +142,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.5");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 15");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.6");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 16");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -186,7 +213,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/phone-pack-fresh.cjs", "utf8")).toContain("vaultFingerprint");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.5");
+    expect(run.stdout).toContain("0.8.6");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
@@ -201,6 +228,8 @@ describe("phone diary shell", () => {
     const bring = readFileSync("src/components/locked-diary-controls.tsx", "utf8");
     expect(gate).toContain("PhoneUnlock");
     expect(gate).toContain("PhoneEmptyPack");
+    expect(gate.indexOf("if (!isVaultEmpty())")).toBeGreaterThan(-1);
+    expect(gate.indexOf("if (!isVaultEmpty())")).toBeLessThan(gate.indexOf("return <PhoneUnlock />"));
     expect(unlock).toContain("A locked diary is in this app");
     expect(unlock).toContain("diary packed");
     expect(unlock).toContain("no diary packed");

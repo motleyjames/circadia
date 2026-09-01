@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { ArrowUp } from "lucide-react";
+import { DiaryLink } from "@/components/diary-tab-link";
 import { CrisisLine } from "@/components/crisis-line";
 import { useCircadia } from "@/context/circadia-store";
 import { CLINIC_STARTERS } from "@/lib/chat";
@@ -28,18 +28,12 @@ function LibraryCite({ ids }: { ids: string[] }) {
       <ul className="mt-1 space-y-0.5">
         {notes.map((note) => (
           <li key={note.id}>
-            <Link
+            <DiaryLink
               href={`/library#${note.id}`}
-              prefetch={false}
               className="text-[11px] text-sky-300/80 transition-colors hover:text-sky-200"
-              onClick={() => {
-                if (window.location.pathname === "/library") {
-                  queueMicrotask(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
-                }
-              }}
             >
               {note.title}
-            </Link>
+            </DiaryLink>
           </li>
         ))}
       </ul>
