@@ -4,7 +4,8 @@
   "description": "iOS WKWebView shell for the Circadia diary. Not the Operator.",
   "scripts": {
     "sync": "npx cap sync ios && node patch-ios-plist.cjs",
-    "open": "npx cap open ios"
+    "open": "npx cap open ios",
+    "run-device": "cap run ios --no-sync --scheme App"
   },
   "dependencies": {
     "@capacitor/core": "8.5.0",

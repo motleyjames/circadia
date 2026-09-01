@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Put the Circadia diary on an iPhone via Xcode.
+# Put the Circadia diary on a connected iPhone.
+# Does not use Xcode destination Any iOS Device — that never installs on glass.
 # USB is optional after the first pair. The installed app never needs a cable.
-# Diary only. Not Operator. Not the simulator. Not a Circadia server.
+# Diary only. Not Operator. Not the simulator. Not a Circadia server. Not live-reload.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -23,7 +24,7 @@ console.log("Circadia " + p.version);
 '
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
-  echo "This script opens Xcode on macOS. Run it on your Mac, in a 0.7.0+ clone."
+  echo "This script installs onto an iPhone from macOS. Run it on your Mac, in a 0.7.0+ clone."
   exit 4
 fi
 
@@ -55,34 +56,44 @@ if [[ ! -f "$INDEX" ]] || ! grep -q '__CIRCADIA_PACK_STATUS__="packed"' "$INDEX"
   exit 8
 fi
 
-npm run phone:open
-
 if command -v xcrun >/dev/null 2>&1; then
   echo
   echo "Phones this Mac can already see (USB or Wi-Fi):"
   xcrun devicectl list devices 2>/dev/null || true
 fi
 
-cat <<'EOF'
+echo
+echo "Installing onto the iPhone. This will not use destination Any iOS Device (arm64)."
+echo "Do not git restore the Xcode project — that forgets your signing Team."
 
-Xcode should be open on the Circadia diary (app.circadia.diary). Not Operator.
+PICK="$(node scripts/ios-target.cjs)" || {
+  echo
+  echo "James-iPhone is not connected. Unlock it. Plug in USB if the list said unavailable."
+  echo "Xcode → Window → Devices and Simulators → James-iPhone → Connect via network."
+  echo "Do not press Run with destination Any iOS Device (arm64). That never puts Circadia on the phone."
+  exit 10
+}
 
-Circadia on the iPhone does not use a cable and does not call a Circadia server.
-The cable (or Wi-Fi to this Mac) is only how Xcode puts a new build on the phone.
-After Run finishes, unplug. Open Circadia from the home screen like any app.
+NAME="${PICK%%$'\t'*}"
+ID="${PICK#*$'\t'}"
+echo "Target: $NAME ($ID)"
 
-Wireless (same Wi-Fi, phone unlocked):
-1. Xcode → Window → Devices and Simulators → pick James-iPhone → Connect via network.
-2. Destination: James-iPhone. Not a simulator. A globe/network icon next to the phone is the wireless path.
-3. Signing & Capabilities → Team → your Apple ID, if Xcode cleared it after git pull.
-4. Run. Unplug when the app is on the home screen. Footer must read 0.7.4 · diary packed. Then Log in with the same password.
+npm --prefix phone run run-device -- --target "$ID" || {
+  echo
+  echo "Install did not finish. Circadia is not on the phone until this step succeeds."
+  echo "If the log mentioned signing or a development team: npm run phone:open"
+  echo "then Signing & Capabilities → Team → your Apple ID. Close Xcode. Do not press Run."
+  echo "Then: npm run put-on-phone"
+  echo "If the phone is unavailable, unlock it, plug in USB, run this again."
+  echo "Do not use destination Any iOS Device (arm64)."
+  exit 11
+}
 
-First pair only: a USB cable once, Unlock, Trust. After that, Wi-Fi is enough.
-If Xcode says the device is disconnected, plug in once, tick Connect via network, then unplug.
-
-First launch on the phone: Settings → General → VPN & Device Management → trust the developer cert.
-Developer Mode if iOS asks.
-
-Other people need TestFlight and a paid Apple Developer Program
-membership (https://developer.apple.com/programs/). Simulator, Safari, and sideloading are not this path.
-EOF
+VERSION="$(node -p 'require("./package.json").version')"
+echo
+echo "Circadia should now open on $NAME. Footer must read ${VERSION} · diary packed."
+echo "Then Log in with the same email or phone and password."
+echo "The installed app does not need a cable after that."
+echo
+echo "If the footer is still 0.7.2 or 0.7.3 or 0.7.4, this install did not reach the phone. Plug in USB and run this again."
+echo "First launch: Settings → General → VPN & Device Management → trust the developer cert."
