@@ -31,6 +31,9 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).toContain('nav[aria-label="Diary"]');
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain("animation-duration: 0.01ms");
+    expect(css).toContain("brand-open-mark");
+    expect(css).toContain("countdown-orb");
+    expect(css).toContain("circadia-enter");
   });
 
   it("ships generic fault screens with retry only", () => {

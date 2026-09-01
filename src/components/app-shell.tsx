@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { CircadiaProvider, CircadiaSafeTree, useCircadia } from "@/context/circadia-store";
 import { AuthGate } from "@/components/auth-gate";
@@ -13,17 +13,34 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { StudyGate } from "@/components/study-gate";
 import { hapticLight } from "@/lib/haptics";
 import { isOperatorSurface } from "@/lib/surface";
+import { cn } from "@/lib/utils";
+
+const OPEN_HOLD_MS = 1650;
+
+function useReducedMotion(): boolean {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+      media.addEventListener("change", onStoreChange);
+      return () => media.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
+}
 
 function Stage({
   children,
   wide = false,
+  enter = false,
 }: {
   children: React.ReactNode;
   wide?: boolean;
+  enter?: boolean;
 }) {
   if (wide) {
     return (
-      <div className="night-sky flex h-full max-h-full flex-col overflow-hidden">
+      <div className={cn("night-sky flex h-full max-h-full flex-col overflow-hidden", enter && "circadia-enter")}>
         <div className="native-drag" aria-hidden />
         <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
       </div>
@@ -31,7 +48,7 @@ function Stage({
   }
 
   return (
-    <div className="night-sky relative flex h-full max-h-full flex-col overflow-hidden">
+    <div className={cn("night-sky relative flex h-full max-h-full flex-col overflow-hidden", enter && "circadia-enter")}>
       <div className="pointer-events-none absolute inset-0 glow-veil" />
       <div className="native-drag relative z-10" aria-hidden />
       <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col">{children}</div>
@@ -44,7 +61,7 @@ function PhoneAsk({ onAsk }: { onAsk: () => void }) {
     <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-[calc(env(safe-area-inset-top)+2.75rem)] items-end justify-end bg-gradient-to-b from-[#05040a]/80 to-transparent px-1 xl:hidden">
       <button
         type="button"
-        className="pointer-events-auto inline-flex h-11 min-w-11 items-center justify-end px-3 text-[17px] font-medium text-sky-300"
+        className="pointer-events-auto inline-flex h-11 min-w-11 items-center justify-end px-3 text-[15px] font-medium tracking-[0.04em] text-sky-300/90"
         onClick={onAsk}
         aria-haspopup="dialog"
       >
@@ -58,9 +75,18 @@ function ShellInner({ children }: { children: React.ReactNode }) {
   const { ready, state, session } = useCircadia();
   const pathname = usePathname();
   const [consultPath, setConsultPath] = useState<string | null>(null);
+  const [openHoldDone, setOpenHoldDone] = useState(false);
+  const reducedMotion = useReducedMotion();
   const consultOpen = consultPath === pathname;
+  const opening = !reducedMotion && !openHoldDone;
 
-  if (!ready) {
+  useEffect(() => {
+    if (reducedMotion) return;
+    const hold = window.setTimeout(() => setOpenHoldDone(true), OPEN_HOLD_MS);
+    return () => window.clearTimeout(hold);
+  }, [reducedMotion]);
+
+  if (!ready || opening) {
     return (
       <Stage>
         <BrandStage />
@@ -70,7 +96,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return (
-      <Stage>
+      <Stage enter>
         <AuthGate />
       </Stage>
     );
@@ -78,7 +104,7 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
   if (!state.profile?.onboardingComplete) {
     return (
-      <Stage>
+      <Stage enter>
         <Onboarding />
       </Stage>
     );
@@ -86,14 +112,14 @@ function ShellInner({ children }: { children: React.ReactNode }) {
 
   if (!state.study.asked) {
     return (
-      <Stage>
+      <Stage enter>
         <StudyGate />
       </Stage>
     );
   }
 
   return (
-    <Stage wide>
+    <Stage wide enter>
       <SidebarNav />
       <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         {consultOpen ? null : <PhoneAsk onAsk={() => {

@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import { sampleWeekState } from "./demo";
 import {
   NEVER_AUTO_IDS,
+  SAFETY_PIN_IDS,
   latestMorningReport,
+  morningReadingHistory,
+  orderLibraryArticles,
   suggestMorningReading,
   suggestMorningReadingForLogs,
 } from "./morning-reading";
-import { researchById } from "./research";
+import { RESEARCH, researchById } from "./research";
 import { emptyState } from "./storage";
 import type { MorningReport, Profile } from "./types";
 import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
@@ -111,7 +114,7 @@ describe("morning reading", () => {
         drank: false,
         usedSupplement: false,
         sleepLatencyMinutes: 15,
-        screenOffMinutes: 45,
+        screenOffMinutes: 60,
         windDownHelped: "yes",
       }),
     );
@@ -249,10 +252,15 @@ describe("morning reading", () => {
     expect(reading.why).toMatch(/clinician/);
   });
 
-  it("is deterministic for the same morning — no rotation for variety", () => {
+  it("is deterministic for the same morning and the same recency list", () => {
     const night = report({ morningDate: "2026-08-16", drank: true, drinkCount: 2 });
     expect(suggestMorningReading(profile, night).articleId).toBe(
       suggestMorningReading(profile, night).articleId,
+    );
+    const quiet = report({ morningDate: "2026-08-16" });
+    const recent = ["circadian-anchor", "morning-light"] as const;
+    expect(suggestMorningReading(profile, quiet, { recentIds: recent }).articleId).toBe(
+      suggestMorningReading(profile, quiet, { recentIds: recent }).articleId,
     );
   });
 
@@ -268,10 +276,86 @@ describe("morning reading", () => {
     expect(suggestMorningReadingForLogs(profile, [])).toBeNull();
   });
 
-  it("pins the clock note on the sample week's latest morning", () => {
+  it("still pins alcohol on a second drink night, even if that page was yesterday", () => {
+    const first = report({ morningDate: "2026-08-20", drank: true, drinkCount: 3, rating: 1 });
+    const second = report({ morningDate: "2026-08-21", drank: true, drinkCount: 2, rating: 2 });
+    expect(suggestMorningReadingForLogs(profile, [first, second])?.articleId).toBe("alcohol");
+  });
+
+  it("cycles still-justified quiet-night notes instead of repeating the clock page", () => {
+    const nights = [1, 2, 3, 4].map((day) =>
+      report({
+        morningDate: `2026-08-0${day}`,
+        rating: 4,
+        wokeAt: "07:30",
+        screenOffMinutes: 60,
+        sleepLatencyMinutes: 15,
+      }),
+    );
+    const ids = morningReadingHistory(profile, nights).map((row) => row.articleId);
+    expect(ids[0]).toBe("circadian-anchor");
+    expect(ids[1]).not.toBe(ids[0]);
+    expect(ids[2]).not.toBe(ids[1]);
+    expect(new Set(ids.slice(0, 3)).size).toBe(3);
+    expect(ids).toEqual(["circadian-anchor", "morning-light", "duration-age", "circadian-anchor"]);
+    for (const row of morningReadingHistory(profile, nights)) {
+      expect(mouth(row), row.articleId).not.toMatch(BAN);
+      expect(IRRELEVANT.has(row.articleId), row.articleId).toBe(false);
+    }
+  });
+
+  it("hands naps on a second late get-up after the clock note was already read", () => {
+    const first = report({
+      morningDate: "2026-08-10",
+      wokeAt: "11:20",
+      fellAsleepAt: "02:10",
+      screenOffMinutes: 60,
+      sleepLatencyMinutes: 15,
+      rating: 3,
+    });
+    const second = report({
+      morningDate: "2026-08-11",
+      wokeAt: "11:05",
+      fellAsleepAt: "02:00",
+      screenOffMinutes: 60,
+      sleepLatencyMinutes: 15,
+      rating: 3,
+    });
+    expect(suggestMorningReading(profile, first).articleId).toBe("circadian-anchor");
+    expect(suggestMorningReadingForLogs(profile, [first, second])?.articleId).toBe("naps");
+  });
+
+  it("hands screens when the hour was only half-parked, not the clock note", () => {
+    const reading = suggestMorningReading(
+      profile,
+      report({
+        morningDate: "2026-08-15",
+        screenOffMinutes: 45,
+        sleepLatencyMinutes: 15,
+        rating: 4,
+      }),
+    );
+    expect(reading.articleId).toBe("light-screens");
+  });
+
+  it("puts tonight's reading first on the shelf, then notes that have not been handed recently", () => {
+    const ordered = orderLibraryArticles(RESEARCH, "morning-light", ["circadian-anchor", "morning-light"]);
+    expect(ordered[0]?.id).toBe("morning-light");
+    expect(ordered.findIndex((article) => article.id === "duration-age")).toBeLessThan(
+      ordered.findIndex((article) => article.id === "circadian-anchor"),
+    );
+  });
+
+  it("does not auto-pin a sample week's latest morning to a recycled clock note if another page is waiting", () => {
     const sample = sampleWeekState(emptyState());
     const reading = suggestMorningReadingForLogs(sample.profile ?? profile, sample.reports);
-    expect(reading?.articleId).toBe("circadian-anchor");
+    expect(reading).not.toBeNull();
+    expect(IRRELEVANT.has(reading!.articleId)).toBe(false);
+    const history = morningReadingHistory(sample.profile ?? profile, sample.reports);
+    const unique = new Set(history.map((row) => row.articleId));
+    expect(unique.size).toBeGreaterThan(2);
+    expect(SAFETY_PIN_IDS).toContain("alcohol");
+    expect(history.some((row) => row.articleId === "alcohol")).toBe(true);
   });
 
   it("keeps the mouth free of engine jargon and never quotes the library body", () => {

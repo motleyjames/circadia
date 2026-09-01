@@ -34,6 +34,11 @@ describe("research match", () => {
     }
     expect(researchById("prescription-hypnotics")?.say).toMatch(/Belsomra|Dayvigo|Quviviq/);
     expect(researchById("alcohol")?.say).toMatch(/one or two drinks|dream sleep/);
+    expect(researchById("morning-light")?.say).toMatch(/Outdoor light/);
+    expect(researchById("sleep-regularity")?.say).toMatch(/moving target/);
+    expect(researchById("morning-light")?.say ?? "").not.toMatch(MOUTH_BAN);
+    expect(researchById("sleep-regularity")?.say ?? "").not.toMatch(/\b(MSFsc|MSF|MSW|chronotype)\b/i);
+    expect(researchById("sleep-regularity")?.body ?? "").not.toMatch(/\b(MSFsc|MSF|MSW|chronotype)\b/i);
   });
 });
 
@@ -116,6 +121,14 @@ describe("research freshness", () => {
     expect(note?.body).toMatch(/2026/);
     expect(note?.body).toMatch(/133 meta-analyses/);
     expect(note?.sources.some((source) => source.year === 2026 && /NSF/i.test(source.cite))).toBe(true);
+  });
+
+  it("maps morning light and irregular wake to the new notes, not travel jet lag", () => {
+    expect(matchResearch("morning light")?.id).toBe("morning-light");
+    expect(matchResearch("sleep regularity")?.id).toBe("sleep-regularity");
+    expect(matchResearch("irregular sleep")?.id).toBe("sleep-regularity");
+    expect(researchById("morning-light")?.reviewedThrough).toBe("2026-09");
+    expect(researchById("sleep-regularity")?.reviewedThrough).toBe("2026-09");
   });
 
   it("keeps social jet lag as its own note, not travel jet lag", () => {

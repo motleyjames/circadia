@@ -76,12 +76,56 @@ export const RESEARCH: ResearchArticle[] = [
     tags: ["schedule", "circadian", "wake", "light"],
     aliases: ["wake time", "get-up time", "getting up time"],
     say: "A stable get-up time, including weekends, is the strongest schedule lever most people have. Morning outdoor light helps. Sleeping in pushes tonight later.",
-    reviewedThrough: "2026-08",
+    reviewedThrough: "2026-09",
     confidence: "high",
     sources: [
       { year: 2016, cite: "ACP 2016 chronic insomnia CPG (CBT-I first-line)" },
       { year: 2021, cite: "AASM 2021 behavioral/psychological insomnia CPG" },
       { year: 2026, cite: "AASM 2026 combination-treatment CPG (Buysse et al., J Clin Sleep Med)" },
+    ],
+  },
+  {
+    id: "morning-light",
+    title: "Morning light is the other half of the clock",
+    summary:
+      "Outdoor light in the first hour after you get up advances tonight. A dim indoor morning does not count.",
+    aliases: ["morning light", "sunlight", "outdoor light", "get outside", "go outside"],
+    say: "Outdoor light in the first hour after you get up is the other half of a stable wake time. A dim indoor morning does not count. You do not need a gadget — a walk, a window, a few minutes outside.",
+    body: "Light is the main time cue for the clock in the brain (the SCN). Intrinsically photosensitive retinal ganglion cells (melanopsin) tell that clock it is daytime; outdoor illuminance in the morning is typically orders of magnitude brighter than indoor lamps. Timed morning light advances a late clock. Circadia will not sell you a 10,000-lux box as a requirement — daylight, even through open shade, is the usual tool. The pairing is deliberate: a stable get-up time, then light. One without the other is a weaker lesson. Evening bright light and a dim morning push the other way. Wearable 'circadian scores' are not a substitute for going outside.",
+    tags: ["light", "morning", "circadian", "wake"],
+    reviewedThrough: "2026-09",
+    confidence: "high",
+    sources: [
+      { year: 2002, cite: "Berson / Brainard melanopsin photoreception; outdoor vs indoor illuminance as a clock cue" },
+      { year: 2024, cite: "Timed morning light advances a late clock. Daylight first; a light box is a clinical tool, not a requirement from this app." },
+    ],
+  },
+  {
+    id: "sleep-regularity",
+    title: "A moving get-up time is a different clock every night",
+    summary:
+      "How much your wake time swings often matters as much as how long you slept. Irregular mornings are not a rounding error.",
+    aliases: [
+      "sleep regularity",
+      "irregular sleep",
+      "inconsistent wake",
+      "wake swing",
+      "variable wake",
+    ],
+    say: "If your get-up time swings by more than about an hour, the clock is learning a moving target. How long you slept is not the only score. Defend one morning.",
+    body: "Sleep duration is the number people track. Regularity is the one they skip. A Sleep Regularity Index (day-to-day overlap of sleep and wake) tracks how similar consecutive 24-hour patterns are; large cohort work (including Windred and colleagues, 2023–2024) reports that irregular sleep associates with worse cardiometabolic and mortality signals even after accounting for average duration. That is population data, not a diagnosis of this diary. Circadia will not invent an index score from a week of bubbles. It will say when get-up times are swinging hard enough that the clock cannot learn the morning. Social jet lag is the weekend version of the same idea. The lever is still one wake time you protect.",
+    tags: ["schedule", "regularity", "wake", "consistency"],
+    reviewedThrough: "2026-09",
+    confidence: "high",
+    sources: [
+      {
+        year: 2023,
+        cite: "Windred et al. 2023–2024 sleep regularity index / UK Biobank: irregular sleep associated with mortality and cardiometabolic markers independent of duration. Group findings, not a personal forecast.",
+      },
+      {
+        year: 2016,
+        cite: "Bei et al. and later regularity reviews: day-to-day timing variability is a sleep-health dimension, not a rounding error on duration.",
+      },
     ],
   },
   {

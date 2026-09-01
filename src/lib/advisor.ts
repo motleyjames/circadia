@@ -71,7 +71,7 @@ export function buildSleepNotes(profile: Profile, reports: MorningReport[]): Sle
         "Your get-up time is drifting",
         `Wake times are swinging by about ${Math.round(week.wakeSpreadMinutes)} minutes across logs. That is social jet lag in miniature. Pick ${formatClock(profile.targetWake, units)} and defend it — even after a rough night. The clock cannot learn a moving target.`,
         "high",
-        ["circadian-anchor"],
+        ["circadian-anchor", "sleep-regularity"],
         "lever",
       ),
     );

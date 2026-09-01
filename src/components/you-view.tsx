@@ -99,7 +99,7 @@ export function YouView() {
   return (
     <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-24 md:px-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <div className="mx-auto w-full max-w-5xl">
-        <p className="text-[11px] tracking-[0.28em] text-violet-300/80 uppercase">You</p>
+        <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">You</p>
         <h1 className="font-heading mt-1 text-[2.35rem] leading-none tracking-tight text-zinc-50">
           {profile.name}
         </h1>
