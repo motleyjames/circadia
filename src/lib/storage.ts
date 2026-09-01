@@ -22,8 +22,9 @@ import {
   phoneSecureGet,
   phoneSecureSet,
   phoneVaultActive,
-  readPhoneVault,
+  readPhoneVaultDetailed,
   writePhoneVault,
+  type PhoneVaultRead,
 } from "@/lib/phone-vault";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
 import { fetchPackedDiary, resetPackedDiaryCacheForTests } from "@/lib/packed-diary";
@@ -48,6 +49,17 @@ let openLogin: string | null = null;
 const plainByLogin = new Map<string, CircadiaState>();
 const writeGen = new Map<string, number>();
 let persistChain: Promise<void> = Promise.resolve();
+
+/** WKWebView document loads can miss the first native plugin call. Tests set this to a no-op. */
+let vaultPause: (ms: number) => Promise<void> = (ms) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+const VAULT_RETRY_MS = [40, 120];
+
+export function setVaultPauseForTests(fn: ((ms: number) => Promise<void>) | null): void {
+  vaultPause = fn ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+}
 
 function bumpGen(login: string): number {
   const next = (writeGen.get(login) ?? 0) + 1;
@@ -74,6 +86,7 @@ export function resetVaultMemoryForTests(): void {
   persistChain = Promise.resolve();
   dropAllMasters();
   resetPackedDiaryCacheForTests();
+  setVaultPauseForTests(null);
 }
 
 export const emptyStudy = (): StudyState => ({
@@ -245,14 +258,7 @@ async function persistUnlockNow(login: string): Promise<void> {
   }
 }
 
-async function fetchPersistedUnlock(login: string): Promise<{ login: string; master: Uint8Array } | null> {
-  if (phoneVaultActive()) {
-    const raw = await phoneSecureGet(login);
-    if (!raw) return null;
-    const master = bytesFromBase64(raw);
-    if (master.length !== 32) return null;
-    return { login, master };
-  }
+async function fetchSessionKeyOnce(login: string): Promise<{ login: string; master: Uint8Array } | null> {
   try {
     const res = await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, {
       cache: "no-store",
@@ -267,6 +273,28 @@ async function fetchPersistedUnlock(login: string): Promise<{ login: string; mas
   } catch {
     return null;
   }
+}
+
+async function fetchPersistedUnlock(login: string): Promise<{ login: string; master: Uint8Array } | null> {
+  if (phoneVaultActive()) {
+    let raw = await phoneSecureGet(login);
+    for (const ms of VAULT_RETRY_MS) {
+      if (raw) break;
+      await vaultPause(ms);
+      raw = await phoneSecureGet(login);
+    }
+    if (!raw) return null;
+    const master = bytesFromBase64(raw);
+    if (master.length !== 32) return null;
+    return { login, master };
+  }
+  let held = await fetchSessionKeyOnce(login);
+  for (const ms of VAULT_RETRY_MS) {
+    if (held) break;
+    await vaultPause(ms);
+    held = await fetchSessionKeyOnce(login);
+  }
+  return held;
 }
 
 async function deletePersistedUnlock(login: string): Promise<void> {
@@ -298,8 +326,9 @@ async function restorePersistedSession(): Promise<void> {
   if (!held) return;
   const file = readRawVault()[held.login];
   if (!file) {
+    // Disk/plugin may still be catching up after a WKWebView document load.
+    // Erase already deletes the key when the diary is actually gone.
     held.master.fill(0);
-    await deletePersistedUnlock(held.login);
     return;
   }
   try {
@@ -389,6 +418,8 @@ export async function installLockedVault(
 /** Phone pack only. If this device has no diary, install the locked copy baked into the iPhone build. */
 export async function applyPackedDiaryIfEmpty(): Promise<boolean> {
   if (!phoneVaultActive() || !isVaultEmpty()) return false;
+  // last-login means a diary already lived here — disk may not have answered yet.
+  if (readLastLogin()) return false;
   const packed = await fetchPackedDiary();
   if (!packed) return false;
   const result = await installLockedVault(packed);
@@ -498,29 +529,64 @@ export async function pushVaultToDisk(): Promise<void> {
   }
 }
 
+async function readPhoneSourceWithRetry(): Promise<PhoneVaultRead> {
+  let last = await readPhoneVaultDetailed();
+  if (last.status === "ok" && Object.keys(last.vault.files).length > 0) return last;
+  for (const ms of VAULT_RETRY_MS) {
+    await vaultPause(ms);
+    last = await readPhoneVaultDetailed();
+    if (last.status === "ok" && Object.keys(last.vault.files).length > 0) return last;
+  }
+  return last;
+}
+
+async function readMacVault(): Promise<{ status: "ok" | "unavailable"; vault: DiskVault }> {
+  try {
+    const res = await fetch("/api/vault", { cache: "no-store", headers: sessionHeaders() });
+    if (!res.ok) return { status: "unavailable", vault: emptyDiskVault() };
+    return { status: "ok", vault: parseDiskVault(await res.json()) };
+  } catch {
+    return { status: "unavailable", vault: emptyDiskVault() };
+  }
+}
+
 export async function bootVaultFromDisk(): Promise<void> {
   if (typeof window === "undefined") return;
   dropLegacyUnlock();
   migrateToVault();
   let disk = emptyDiskVault();
+  let diskStatus: "ok" | "missing" | "unavailable" = "ok";
   if (phoneVaultActive()) {
-    disk = await readPhoneVault();
+    const read = await readPhoneSourceWithRetry();
+    disk = read.vault;
+    diskStatus = read.status;
   } else {
-    try {
-      const res = await fetch("/api/vault", { cache: "no-store", headers: sessionHeaders() });
-      if (res.ok) disk = parseDiskVault(await res.json());
-    } catch {
-      /* localStorage only until the API is up */
-    }
+    const read = await readMacVault();
+    disk = read.vault;
+    diskStatus = read.status;
   }
   const local: DiskVault = captureDisk();
+  const priorLogin = readLastLogin();
   const merged = mergeDiskVault(local, disk);
   writeRawVault(merged.files);
   writeLocks(merged.locks);
-  writeLastLogin(merged.session);
-  if (await applyPackedDiaryIfEmpty()) return;
+  writeLastLogin(merged.session ?? priorLogin);
+  if (getSessionLogin()) {
+    if (!(diskStatus === "unavailable" && Object.keys(merged.files).length === 0)) {
+      await pushVaultToDisk();
+    }
+    return;
+  }
   await restorePersistedSession();
-  await pushVaultToDisk();
+  if (!getSessionLogin() && diskStatus !== "unavailable") {
+    if (await applyPackedDiaryIfEmpty()) {
+      await restorePersistedSession();
+    }
+  }
+  const mergedEmpty = Object.keys(readRawVault()).length === 0;
+  if (!(diskStatus === "unavailable" && mergedEmpty)) {
+    await pushVaultToDisk();
+  }
 }
 
 export function listDiaryLogins(): DiaryIdentity[] {

@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { DiaryTabLink } from "@/components/diary-tab-link";
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
 import { TABS } from "@/lib/nav";
@@ -29,10 +29,9 @@ export function SidebarNav() {
           const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
           const Icon = tab.icon;
           return (
-            <Link
+            <DiaryTabLink
               key={tab.href}
               href={tab.href}
-              prefetch={false}
               className={cn(
                 "flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] tracking-wide transition-colors",
                 active ? "bg-white/7 text-violet-100" : "text-zinc-500 hover:bg-white/4 hover:text-zinc-300",
@@ -48,7 +47,7 @@ export function SidebarNav() {
                 ) : null}
               </span>
               {tab.label}
-            </Link>
+            </DiaryTabLink>
           );
         })}
       </nav>
