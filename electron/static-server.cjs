@@ -14,6 +14,7 @@ const MIME = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
+  ".wav": "audio/wav",
   ".webp": "image/webp",
   ".woff": "font/woff",
   ".woff2": "font/woff2",
@@ -34,6 +35,7 @@ function fileFor(root, urlPath) {
   if (insideRoot(root, indexed) && fs.existsSync(indexed)) return indexed;
   const html = `${abs}.html`;
   if (insideRoot(root, html) && fs.existsSync(html)) return html;
+  if (clean === "/voice" || clean.startsWith("/voice/")) return null;
   const fallback = path.join(root, "index.html");
   return fs.existsSync(fallback) ? fallback : null;
 }
@@ -124,13 +126,22 @@ function createServer(options) {
 
   return http.createServer((req, res) => {
     const url = req.url || "/";
-    if (req.method === "POST" && url.split("?")[0] === "/api/study") {
-      handleStudy(req, res, inbox, ingest, ingestToken).catch(() => {
-        send(res, 500, JSON.stringify({ ok: false, error: "Could not store pack." }), {
+    const pathname = url.split("?")[0];
+    if (pathname === "/api/study") {
+      if (req.method === "GET" || req.method === "HEAD") {
+        send(res, 200, req.method === "HEAD" ? undefined : JSON.stringify({ ok: true, inbox: true }), {
           "content-type": "application/json",
         });
-      });
-      return;
+        return;
+      }
+      if (req.method === "POST") {
+        handleStudy(req, res, inbox, ingest, ingestToken).catch(() => {
+          send(res, 500, JSON.stringify({ ok: false, error: "Could not store pack." }), {
+            "content-type": "application/json",
+          });
+        });
+        return;
+      }
     }
     if (req.method !== "GET" && req.method !== "HEAD") {
       send(res, 405, "Method not allowed");

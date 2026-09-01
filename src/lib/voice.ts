@@ -1,7 +1,7 @@
 import type { MeditationId } from "./types";
 import {
   audioNow,
-  loadWavUrl,
+  loadWavPcm,
   peekDecoded,
   scheduleBufferAt,
   stopSample,
@@ -102,11 +102,23 @@ export function hushVoice() {
 }
 
 export async function prefetchGuide(id: MeditationId): Promise<void> {
-  await Promise.all(spokenBeats(id).map((row) => loadWavUrl(guideClipUrl(id, row.atSeconds))));
+  const beats = spokenBeats(id);
+  for (let i = 0; i < beats.length; i += 4) {
+    const slice = beats.slice(i, i + 4);
+    const results = await Promise.allSettled(
+      slice.map((row) => loadWavPcm(guideClipUrl(id, row.atSeconds))),
+    );
+    const failed = results.find((row) => row.status === "rejected");
+    if (failed && failed.status === "rejected") {
+      throw failed.reason instanceof Error ? failed.reason : new Error(String(failed.reason));
+    }
+  }
 }
 
 export async function warmGuides(): Promise<void> {
-  await Promise.all((Object.keys(LINES) as MeditationId[]).map((id) => prefetchGuide(id)));
+  for (const id of Object.keys(LINES) as MeditationId[]) {
+    await prefetchGuide(id);
+  }
 }
 
 export function guideIsWarm(id: MeditationId, fromSeconds = 0): boolean {

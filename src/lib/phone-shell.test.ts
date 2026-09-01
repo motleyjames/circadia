@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.9 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.9");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.9");
+  it("is version 0.8.10 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.10");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.10");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -79,6 +79,31 @@ describe("phone diary shell", () => {
     expect(chat).toContain("xl:flex");
   });
 
+  it("plays the open on a painted frame, warms guides as PCM, and holds the study pack on the phone", () => {
+    const shell = readFileSync("src/components/app-shell.tsx", "utf8");
+    const audio = readFileSync("src/lib/audio.ts", "utf8");
+    const voice = readFileSync("src/lib/voice.ts", "utf8");
+    const study = readFileSync("src/lib/study-client.ts", "utf8");
+    const panel = readFileSync("src/components/study-panel.tsx", "utf8");
+    const store = readFileSync("src/context/circadia-store.tsx", "utf8");
+    expect(shell).toContain("waitForOpenSurface");
+    expect(shell).toContain("play={surfaceReady}");
+    expect(shell).not.toContain("showCover = !reducedMotion");
+    expect(audio).toContain("export async function loadWavPcm");
+    expect(audio).toContain("pcmCache");
+    expect(voice).toContain("loadWavPcm");
+    expect(voice).not.toContain("loadWavUrl");
+    expect(study).toContain("held: true");
+    expect(study).toContain("isPhoneNative");
+    expect(study).toContain("STUDY_HELD_ERROR");
+    expect(panel).toContain("Pipeline waiting");
+    expect(panel).toContain("STUDY_HELD_ERROR");
+    expect(store).toContain("result.held");
+    expect(store).toContain("markHeld");
+    expect(readFileSync("src/lib/types.ts", "utf8")).toContain('"held"');
+    expect(readFileSync("src/lib/storage.ts", "utf8")).toContain('s.lastStatus === "held"');
+  });
+
   it("gives Tonight and the inner pages air under Ask, and hides the Mac install hint on a phone", () => {
     const tonight = readFileSync("src/components/tonight-view.tsx", "utf8");
     expect(tonight).toMatch(/safe-area-inset-(top|bottom)/);
@@ -89,10 +114,14 @@ describe("phone diary shell", () => {
     expect(tonight).toContain("takeSkyDebut");
     expect(tonight).toContain("<span className=\"block\">down</span>");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OPEN_HOLD_MS");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OPEN_HOLD_REDUCED_MS");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OPEN_COVER_MS");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("waitForOpenSurface");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("surfaceReady");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("brand-open-exit");
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OpenCover");
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_HOLD_MS = 2800");
+    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("waitForOpenSurface");
     expect(tonight).toContain("countdown-orb-core");
     expect(tonight).toContain("countdown-orb-svg");
     expect(tonight).toContain("overflow-hidden");
@@ -157,8 +186,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.9");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 19");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.10");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 20");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -233,7 +262,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/phone-pack-fresh.cjs", "utf8")).toContain("vaultFingerprint");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.9");
+    expect(run.stdout).toContain("0.8.10");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {

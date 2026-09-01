@@ -33,6 +33,14 @@ describe("static server", () => {
     expect(you.status).toBe(200);
     expect(await you.text()).toContain("You");
 
+    const probe = await fetch(`${url}/api/study`);
+    expect(probe.status).toBe(200);
+    expect(await probe.json()).toEqual({ ok: true, inbox: true });
+    expect(fs.existsSync(inbox)).toBe(false);
+
+    const missingVoice = await fetch(`${url}/voice/missing.wav`);
+    expect(missingVoice.status).toBe(404);
+
     const ok = await fetch(`${url}/api/study`, {
       method: "POST",
       headers: { "content-type": "application/json" },

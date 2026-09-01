@@ -2,8 +2,57 @@ export type DiaryShellPhase = "opening" | "gate" | "app";
 
 /** Long enough for the mark to draw and the wordmark to settle. */
 export const OPEN_HOLD_MS = 2800;
+/** Static mark beat when the system asked for no motion. Still an open, not a skip. */
+export const OPEN_HOLD_REDUCED_MS = 900;
 /** Cover stays opaque, then dissolves so the diary never dips to black. */
 export const OPEN_COVER_MS = 880;
+/** Do not hang the cover if splash/visibility never fires. */
+export const OPEN_SURFACE_WAIT_MS = 1200;
+
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      return;
+    }
+    resolve();
+  });
+}
+
+/**
+ * Native launch screen covers WKWebView. CSS open that starts under the splash
+ * is already finished when the user can see it. Clock the hold from a painted
+ * frame after the document is visible.
+ */
+export function waitForOpenSurface(): Promise<void> {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(watchdog);
+      void nextPaint().then(resolve);
+    };
+    const watchdog = window.setTimeout(finish, OPEN_SURFACE_WAIT_MS);
+    const start = () => {
+      if (document.visibilityState === "hidden") {
+        document.addEventListener("visibilitychange", function onVis() {
+          if (document.visibilityState !== "hidden") {
+            document.removeEventListener("visibilitychange", onVis);
+            finish();
+          }
+        });
+        return;
+      }
+      finish();
+    };
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+  });
+}
 
 /**
  * Once per JS lifetime. A tab remount of ShellInner must not replay the mark
@@ -53,9 +102,8 @@ export function diaryShellPhase(input: {
   reducedMotion: boolean;
   holdConsumed: boolean;
 }): DiaryShellPhase {
-  const holdDone = input.reducedMotion || input.holdConsumed;
   if (!input.ready) return "opening";
-  if (!holdDone) return "opening";
+  if (!input.holdConsumed) return "opening";
   if (input.session) return "app";
   return "gate";
 }

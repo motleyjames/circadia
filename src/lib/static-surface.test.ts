@@ -105,6 +105,8 @@ describe("static pack parks Operator and API routes", () => {
         'Specified "headers" will not automatically work with "output: export"',
       );
       expect(existsSync("out/index.html")).toBe(true);
+      expect(existsSync("out/voice/silence.wav")).toBe(true);
+      expect(existsSync("out/voice/478/0.wav")).toBe(true);
       expect(existsSync("out/mod")).toBe(false);
       expect(existsSync("out/mod.html")).toBe(false);
       expect(existsSync("out/api")).toBe(false);

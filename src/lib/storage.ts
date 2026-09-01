@@ -1007,7 +1007,12 @@ function coerceStudy(value: unknown): StudyState {
   if (!value || typeof value !== "object") return emptyStudy();
   const s = value as Partial<StudyState>;
   const lastStatus: StudyStatus | null =
-    s.lastStatus === "sent" || s.lastStatus === "error" || s.lastStatus === "blocked" ? s.lastStatus : null;
+    s.lastStatus === "sent" ||
+    s.lastStatus === "error" ||
+    s.lastStatus === "blocked" ||
+    s.lastStatus === "held"
+      ? s.lastStatus
+      : null;
   const participantId =
     typeof s.participantId === "string" && s.participantId.length >= 8 ? s.participantId : null;
   return {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { STUDY_HELD_ERROR } from "@/lib/study-client";
 
 export function StudyPanel() {
   const { state, joinStudy, leaveStudy, sendStudyNow } = useCircadia();
@@ -32,9 +33,13 @@ export function StudyPanel() {
         </>
       ) : (
         <>
-          <h2 className="font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50">Pipeline on</h2>
+          <h2 className="font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50">
+            {study.lastStatus === "held" ? "Pipeline waiting" : "Pipeline on"}
+          </h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">
-            Nights and faults leave after each morning. No Send button. Dreams and chat stay here.
+            {study.lastStatus === "held"
+              ? STUDY_HELD_ERROR
+              : "Nights and faults leave after each morning. No Send button. Dreams and chat stay here."}
           </p>
           <p className="mt-3 text-[12px] text-zinc-600">
             {study.lastStatus === "sent" && study.lastSentAt
@@ -43,9 +48,13 @@ export function StudyPanel() {
                 ? "Blocked — anonymity check. Nothing left."
                 : study.lastStatus === "error"
                   ? "Last send did not land. Circadia will try again after the next morning."
-                  : "Waiting on the first morning."}
+                  : study.lastStatus === "held"
+                    ? "Nothing has left this phone."
+                    : "Waiting on the first morning."}
           </p>
-          {study.lastError ? <p className="mt-1 text-[12px] text-red-300">{study.lastError}</p> : null}
+          {study.lastError && study.lastStatus === "error" ? (
+            <p className="mt-1 text-[12px] text-red-300">{study.lastError}</p>
+          ) : null}
           <div className="mt-5 flex flex-wrap gap-2">
             {study.lastStatus === "error" || study.lastStatus === "blocked" ? (
               <Button

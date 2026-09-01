@@ -111,7 +111,7 @@ export type ConsultThread = {
   messages: ChatMessage[];
 };
 
-export type StudyStatus = "sent" | "error" | "blocked";
+export type StudyStatus = "sent" | "error" | "blocked" | "held";
 
 export type StudyState = {
   asked: boolean;
