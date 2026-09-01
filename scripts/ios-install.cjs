@@ -14,6 +14,14 @@ function repoRoot() {
   return path.join(__dirname, "..");
 }
 
+function nativeRunBin(root = repoRoot()) {
+  const candidates = [
+    path.join(root, "phone", "node_modules", ".bin", "native-run"),
+    path.join(root, "phone", "node_modules", "native-run", "bin", "native-run"),
+  ];
+  return candidates.find((file) => fs.existsSync(file)) || null;
+}
+
 function xcodebuildArgs({ team, targetId, derivedDataPath }) {
   return [
     "-project",
@@ -23,19 +31,15 @@ function xcodebuildArgs({ team, targetId, derivedDataPath }) {
     "-configuration",
     "Debug",
     "-destination",
-    `id=${targetId}`,
+    `platform=iOS,id=${targetId}`,
     "-derivedDataPath",
     derivedDataPath,
     "-allowProvisioningUpdates",
     "-allowProvisioningDeviceRegistration",
     `DEVELOPMENT_TEAM=${team}`,
     "CODE_SIGN_STYLE=Automatic",
+    "CODE_SIGN_IDENTITY=Apple Development",
   ];
-}
-
-function nativeRunBin(root = repoRoot()) {
-  const bin = path.join(root, "phone", "node_modules", "native-run", "bin", "native-run");
-  return fs.existsSync(bin) ? bin : null;
 }
 
 function appPathForTarget(derivedDataPath) {
