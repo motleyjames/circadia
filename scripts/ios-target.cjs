@@ -379,6 +379,7 @@ module.exports = {
   formatTargetLine,
   wakeDevice,
   idsEqual,
+  collectSources,
 };
 
 if (require.main === module) {

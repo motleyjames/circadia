@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { DiaryLink } from "@/components/diary-tab-link";
 import { InstallHint } from "@/components/install-hint";
@@ -139,6 +139,9 @@ function CountdownHero({
   const [drawn, setDrawn] = useState(false);
   const progress = drawn ? t : 0;
   const dashoffset = ORB_C * (1 - progress);
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
+  const bloomId = `orb-bloom-${uid}`;
+  const arcId = `orb-arc-${uid}`;
 
   useEffect(() => {
     if (!holdConsumed) return;
@@ -160,41 +163,44 @@ function CountdownHero({
       <p className="mb-5 text-[11px] tracking-[0.28em] text-zinc-500 uppercase">{nowLabel}</p>
       <div
         className={cn(
-          "countdown-orb countdown-orb-glow relative size-[13.5rem] overflow-visible rounded-full sm:size-[17.5rem] lg:size-[20rem]",
+          "countdown-orb relative size-[13.5rem] overflow-hidden rounded-full sm:size-[17.5rem] lg:size-[20rem]",
           debuting && "countdown-orb-debut",
         )}
       >
-        <div className="countdown-orb-core pointer-events-none absolute inset-0 rounded-full" aria-hidden />
-        <svg viewBox="0 0 128 128" className="absolute inset-0 size-full" aria-hidden>
-          <circle
-            cx="64"
-            cy="64"
-            r="46"
-            fill="none"
-            stroke="rgba(255,255,255,0.07)"
-            strokeWidth="1.65"
-          />
+        <svg
+          viewBox="0 0 128 128"
+          fill="none"
+          className="countdown-orb-svg pointer-events-none absolute inset-0 size-full"
+          aria-hidden
+        >
+          <defs>
+            <radialGradient id={bloomId} cx="50%" cy="42%" r="58%">
+              <stop offset="0%" stopColor="rgba(168,150,230,0.34)" />
+              <stop offset="46%" stopColor="rgba(110,90,190,0.12)" />
+              <stop offset="78%" stopColor="rgba(80,60,150,0.04)" />
+              <stop offset="100%" stopColor="rgba(5,4,10,0)" />
+            </radialGradient>
+            <linearGradient id={arcId} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(196,181,253,0.95)" />
+              <stop offset="100%" stopColor="rgba(125,211,252,0.85)" />
+            </linearGradient>
+          </defs>
+          <circle className="countdown-orb-core" cx="64" cy="64" r="54" fill={`url(#${bloomId})`} />
+          <circle cx="64" cy="64" r="46" stroke="rgba(255,255,255,0.08)" strokeWidth="1.65" />
           <circle
             className="countdown-orb-arc"
             cx="64"
             cy="64"
             r="46"
-            fill="none"
-            stroke="url(#orb-arc)"
-            strokeWidth="1.85"
+            stroke={`url(#${arcId})`}
+            strokeWidth="1.9"
             strokeLinecap="round"
             strokeDasharray={ORB_C}
             strokeDashoffset={dashoffset}
             transform="rotate(180 64 64)"
           />
-          <defs>
-            <linearGradient id="orb-arc" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(196,181,253,0.95)" />
-              <stop offset="100%" stopColor="rgba(125,211,252,0.85)" />
-            </linearGradient>
-          </defs>
         </svg>
-        <div className="absolute inset-[1.35rem] flex flex-col items-center justify-center overflow-hidden rounded-full px-5 text-center sm:inset-[1.55rem]">
+        <div className="absolute inset-[1.35rem] flex flex-col items-center justify-center px-5 text-center sm:inset-[1.55rem]">
           {screensDown ? (
             <>
               <p className="font-heading text-[1.55rem] leading-[1.08] tracking-tight text-zinc-50 sm:text-[1.85rem] lg:text-[2.05rem]">

@@ -306,6 +306,21 @@
 
 .countdown-orb {
   --orb-progress: 0deg;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  transform: none;
+  border-radius: 50%;
+  overflow: hidden;
+  clip-path: circle(50%);
+  -webkit-clip-path: circle(50%);
+}
+
+.countdown-orb-svg {
+  background: transparent;
+  filter: none;
+  box-shadow: none;
+  display: block;
 }
 
 .countdown-orb-arc {
@@ -315,42 +330,14 @@
 @keyframes countdown-orb-debut {
   from {
     opacity: 0;
-    transform: scale(0.9);
   }
   to {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
 .countdown-orb-debut {
   animation: countdown-orb-debut 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.countdown-orb-glow {
-  /* Glow lives on the circular core so a square SVG never paints a box. */
-}
-
-.countdown-orb-core {
-  background: radial-gradient(circle at 50% 42%, rgba(130, 110, 210, 0.34), rgba(5, 4, 10, 0) 70%);
-  box-shadow: 0 0 72px 10px rgba(167, 139, 250, 0.22);
-  animation: orb-core-breathe 6.8s ease-in-out infinite;
-}
-
-@keyframes orb-core-breathe {
-  0%,
-  100% {
-    opacity: 0.72;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.045);
-  }
-}
-
-.countdown-orb-glow {
-  box-shadow: none;
 }
 
 .night-sky {

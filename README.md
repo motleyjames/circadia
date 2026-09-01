@@ -99,9 +99,9 @@ npm run build
 
 ## iPhone (diary only)
 
-Same diary. Not a second product. **Operator is never in this binary.** Tonight is the clock. **Ask** is a word, not a sixth tab. Five tabs: Tonight, Morning, Notes, Library, You. Layout is the only difference: phone is bottom tabs + Ask sheet, Dock is sidebar + rail. 0.8.7 is the open and the sky: the mark draws on launch, Tonight is one atmosphere instead of three boxes, and a night filed on the phone folds into Circadia.app from a locked copy — they are not a live cloud pair. 0.8.6 keeps stay-signed-in by swapping those five views inside one JS lifetime. Do not set `ios.scrollEnabled: false`.
+Same diary. Not a second product. **Operator is never in this binary.** Tonight is the clock. **Ask** is a word, not a sixth tab. Five tabs: Tonight, Morning, Notes, Library, You. Layout is the only difference: phone is bottom tabs + Ask sheet, Dock is sidebar + rail. 0.8.8 is the round clock: Tonight’s countdown is an SVG circle clipped to a circle, not a square glow box. 0.8.7 is the open and the sky: the mark draws on launch, Tonight is one atmosphere instead of three boxes, and a night filed on the phone folds into Circadia.app from a locked copy — they are not a live cloud pair. 0.8.6 keeps stay-signed-in by swapping those five views inside one JS lifetime. Do not set `ios.scrollEnabled: false`.
 
-The iPhone starts empty unless the locked diary from the Circadia that installed it is packed into the build. Circadia is local-first: there is no cloud account. `npm run put-on-phone` **fails** if it cannot pack a diary, then **installs onto James-iPhone's hardware UDID**. A device list that says `unavailable` is often an idle Wi-Fi tunnel, not a missing phone — the install still uses the UDID, waits for you to unlock, and does not rebuild Next.js on the next try. Signing uses a leftover development profile for this phone if one exists; otherwise the Apple ID in Xcode Accounts (including Xcode 16 team keys). It does not pass a keychain-only team into automatic signing, and it does not use destination Any iOS Device. Log in with the same email or phone and password. The gate footer must read `0.8.7 · diary packed`.
+The iPhone starts empty unless the locked diary from the Circadia that installed it is packed into the build. Circadia is local-first: there is no cloud account. `npm run put-on-phone` **fails** if it cannot pack a diary, then **installs onto James-iPhone's hardware UDID**. A device list that says `unavailable` is often an idle Wi-Fi tunnel, not a missing phone — compile can finish while the tunnel is still idle, so install waits again after `BUILD SUCCEEDED`, then tries native-run, then Apple’s installer with the hardware UDID (not the CoreDevice UUID first). Signing uses a leftover development profile for this phone if one exists; otherwise the Apple ID in Xcode Accounts (including Xcode 16 team keys). It does not pass a keychain-only team into automatic signing, and it does not use destination Any iOS Device. Log in with the same email or phone and password. The gate footer must read `0.8.8 · diary packed`.
 
 **Move nights onto the phone**
 
@@ -113,7 +113,7 @@ git pull
 npm run put-on-phone
 ```
 
-If it stops with “No locked diary”, log in on Circadia.app, wait, run it again. If install still cannot open a tunnel, stay plugged in and unlocked for that one run — the Next.js pack will not rebuild unless the diary or the commit changed. After the footer reads **0.8.7 · diary packed**, unplug — the installed app does not talk to the Mac. **Log in** with the same password.
+If it stops with “No locked diary”, log in on Circadia.app, wait, run it again. If install still cannot open a tunnel, stay plugged in and unlocked for that one run — the Next.js pack will not rebuild unless the diary or the commit changed. After the footer reads **0.8.8 · diary packed**, unplug — the installed app does not talk to the Mac. **Log in** with the same password.
 
 Or: Circadia → **You** → **Save a locked copy**. AirDrop `circadia-locked.circadia`. On the other Circadia, **Fold nights from a locked copy**. That keeps mornings already there. **Bring a locked diary** still replaces.
 
@@ -123,7 +123,7 @@ Signing up on the phone starts a second diary. A leftover phone signup is replac
 
 Apple is the remaining gate, not more app code. Two tracks, started in parallel:
 
-1. **Your phone today** (free Apple ID). In a GitHub `main` clone at 0.8.7+:
+1. **Your phone today** (free Apple ID). In a GitHub `main` clone at 0.8.8+:
 
    ```bash
    git clone https://github.com/motleyjames/circadia.git ~/circadia
