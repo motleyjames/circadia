@@ -1,10 +1,9 @@
 "use strict";
 
 /**
- * Pick a connected physical iPhone for `npx cap run ios --target`.
- * IDs must come from Capacitor/native-run — CoreDevice UUIDs from
- * `xcrun devicectl` do not match `--target`.
- * Never returns a simulator. Prefer James-iPhone when that name exists.
+ * Pick a connected physical iPhone for native-run / xcodebuild.
+ * IDs must come from native-run — CoreDevice UUIDs from `xcrun devicectl`
+ * do not match `--target`. Never returns a simulator. Prefer James-iPhone.
  */
 
 function asList(payload) {
@@ -114,11 +113,13 @@ module.exports = {
 if (require.main === module) {
   const { spawnSync } = require("node:child_process");
   const path = require("node:path");
-  const phone = path.join(__dirname, "..", "phone");
-  const listed = spawnSync("npx", ["cap", "run", "ios", "--list", "--json"], {
-    cwd: phone,
-    encoding: "utf8",
-  });
+  const { nativeRunBin } = require("./ios-install.cjs");
+  const root = path.join(__dirname, "..");
+  const phone = path.join(root, "phone");
+  const bin = nativeRunBin(root);
+  const listed = bin
+    ? spawnSync(bin, ["ios", "--list", "--json"], { cwd: phone, encoding: "utf8" })
+    : spawnSync("npx", ["cap", "run", "ios", "--list", "--json"], { cwd: phone, encoding: "utf8" });
   const raw = `${listed.stdout || ""}\n${listed.stderr || ""}`;
   const pick = pickConnectedIphone(extractJson(raw));
   if (!pick) {

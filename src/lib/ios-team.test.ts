@@ -74,7 +74,8 @@ describe("ios-install", () => {
     expect(args).toContain(`DEVELOPMENT_TEAM=${SAMPLE_TEAM}`);
     expect(args).toContain("-allowProvisioningUpdates");
     expect(args).toContain("-destination");
-    expect(args).toContain("id=00008140-001A");
+    expect(args).toContain("platform=iOS,id=00008140-001A");
+    expect(args).toContain("CODE_SIGN_IDENTITY=Apple Development");
     expect(args.join(" ")).not.toMatch(/live.?reload/i);
     expect(args.join(" ")).not.toContain("generic/platform=iOS");
   });

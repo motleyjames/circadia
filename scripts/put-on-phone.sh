@@ -54,6 +54,14 @@ TEAM="$(node scripts/ios-team.cjs)" || {
   echo "Then: npm run put-on-phone"
   exit 12
 }
+TEAM="$(printf '%s' "$TEAM" | tr -d '[:space:]')"
+if [[ ! "$TEAM" =~ ^[A-Z0-9]{10}$ ]]; then
+  echo
+  echo "Stopped. Could not read a development team id from this Mac."
+  echo "Xcode → Settings → Accounts → your Apple ID. Close Xcode. Do not press Run."
+  echo "Then: npm run put-on-phone"
+  exit 12
+fi
 
 npm run phone:sync
 

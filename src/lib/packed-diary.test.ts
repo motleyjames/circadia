@@ -129,6 +129,32 @@ describe("pack-mac-diary", () => {
     expect(html).toContain('__CIRCADIA_PACK_STATUS__="empty"');
     rmSync(root, { recursive: true, force: true });
   });
+
+  it("does not overwrite an already packed index.html when --allow-empty", () => {
+    const root = mkdtempSync(join(tmpdir(), "circadia-pack-keep-"));
+    const outDir = join(root, "out");
+    const iosPublic = join(root, "ios-public");
+    mkdirSync(outDir);
+    mkdirSync(iosPublic);
+    const packed =
+      '<html><head><!--circadia-locked-diary-->\n<script>window.__CIRCADIA_PACK_STATUS__="packed";window.__CIRCADIA_LOCKED_DIARY__={"kind":"circadia.locked-diary"};</script>\n<!--/circadia-locked-diary--></head></html>';
+    writeFileSync(join(outDir, "index.html"), packed);
+    writeFileSync(join(iosPublic, "index.html"), packed);
+    const run = spawnSync(
+      process.execPath,
+      [join(process.cwd(), "scripts/pack-mac-diary.cjs"), "--allow-empty", "--ios-public", iosPublic],
+      {
+        cwd: root,
+        encoding: "utf8",
+        env: { ...process.env, CIRCADIA_VAULT_FILE: join(root, "nope.json") },
+      },
+    );
+    expect(run.status).toBe(0);
+    expect(run.stdout).toMatch(/Left the locked diary/);
+    expect(readFileSync(join(outDir, "index.html"), "utf8")).toContain('__CIRCADIA_PACK_STATUS__="packed"');
+    expect(readFileSync(join(iosPublic, "index.html"), "utf8")).toContain('__CIRCADIA_PACK_STATUS__="packed"');
+    rmSync(root, { recursive: true, force: true });
+  });
 });
 
 describe("packed diary on an empty phone", () => {
