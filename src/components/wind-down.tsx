@@ -67,7 +67,7 @@ export function WindDown() {
     <div className="space-y-6">
       <section>
         <p className="text-[11px] tracking-[0.22em] text-sky-300/80 uppercase">Guided meditations</p>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">
           A quiet recorded guide over a low tone. Close your eyes — you do not have to read the
           orb. Leave the screen on; locking the phone may pause the sound.
         </p>

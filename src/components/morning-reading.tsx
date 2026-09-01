@@ -14,9 +14,14 @@ export function MorningReadingCard({
   className?: string;
 }) {
   return (
-    <article className={cn("border-t border-sky-300/20 pt-6", className)}>
+    <article
+      className={cn(
+        "rounded-3xl border border-sky-300/18 bg-sky-300/[0.045] px-4 py-5",
+        className,
+      )}
+    >
       <p className="text-[11px] tracking-[0.22em] text-sky-300/75 uppercase">{kicker ?? reading.kicker}</p>
-      <h2 className="font-heading mt-2 max-w-[22ch] text-[1.65rem] leading-tight text-zinc-50">
+      <h2 className="font-heading mt-2 max-w-[22ch] text-[1.55rem] leading-tight text-zinc-50">
         {reading.title}
       </h2>
       <p className="mt-3 max-w-[46ch] text-[15px] leading-relaxed text-zinc-200">{reading.why}</p>

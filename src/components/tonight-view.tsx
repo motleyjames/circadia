@@ -64,20 +64,20 @@ export function TonightView() {
       />
 
       {firstOpen ? (
-        <p className="mx-auto mt-8 max-w-[34ch] text-center text-[16px] leading-relaxed text-zinc-400 md:mx-0 md:text-left md:text-[15px]">
+        <p className="mx-auto mt-9 max-w-[32ch] text-center text-[15px] leading-relaxed text-zinc-400 md:mx-0 md:max-w-[40ch] md:text-left">
           {openingLine}
         </p>
       ) : headline ? (
-        <div className="mx-auto mt-8 max-w-[40ch] text-center md:mx-0 md:text-left">
-          <p className="text-[13px] leading-snug text-zinc-100">{headline.title}</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">{headline.body}</p>
-        </div>
+        <section className="mx-auto mt-9 max-w-[32ch] text-center md:mx-0 md:max-w-[42ch] md:text-left">
+          <p className="text-[15px] leading-snug font-medium text-zinc-100">{headline.title}</p>
+          <p className="mt-2 text-[14px] leading-relaxed text-zinc-400">{headline.body}</p>
+        </section>
       ) : null}
 
       {page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
         <Link
           href="/check-in"
-          className="mx-auto mt-7 flex min-h-11 max-w-[20rem] items-center justify-center rounded-full border border-white/12 px-5 text-[14px] text-zinc-200 md:mx-0 md:inline-flex md:max-w-none"
+          className="mx-auto mt-8 flex min-h-11 max-w-[20rem] items-center justify-center rounded-full bg-white/[0.06] px-6 text-[15px] text-zinc-100 ring-1 ring-white/12 md:mx-0 md:inline-flex md:max-w-none"
         >
           {page === "filed"
             ? "This morning is filed"
@@ -87,7 +87,7 @@ export function TonightView() {
         </Link>
       ) : null}
 
-      <div className="mt-10">
+      <div className="mt-12">
         <WindDown />
       </div>
 
@@ -138,33 +138,39 @@ function CountdownHero({
 
   return (
     <div className="mt-2 flex flex-col items-center md:mt-10">
-      <p className="mb-5 text-[13px] tracking-[0.18em] text-zinc-500 uppercase md:hidden">{nowLabel}</p>
-      <div className="relative size-[13.5rem] sm:size-[17.5rem] lg:size-[22rem]">
-        <div
-          className="absolute inset-0 rounded-full opacity-90"
-          style={{
-            background: `conic-gradient(from 180deg, rgba(196,181,253,0.88) ${degrees}deg, rgba(255,255,255,0.05) ${degrees}deg)`,
-          }}
-        />
-        <div className="absolute inset-[9px] flex flex-col items-center justify-center rounded-full bg-[#07060f]">
+      <p className="mb-6 text-[12px] tracking-[0.22em] text-zinc-500 uppercase md:hidden">{nowLabel}</p>
+      <div
+        className="countdown-orb countdown-orb-glow relative size-[13.5rem] sm:size-[17.5rem] lg:size-[22rem]"
+        style={{ ["--orb-progress" as string]: `${degrees}deg` }}
+      >
+        <div className="countdown-orb-track absolute inset-0 rounded-full" />
+        <div className="countdown-orb-progress absolute inset-0 rounded-full" />
+        <div className="absolute inset-[1.25rem] flex flex-col items-center justify-center overflow-hidden rounded-full bg-[#05040a] px-5 text-center sm:inset-[1.45rem]">
           {screensDown ? (
             <>
-              <p className="font-heading text-[2.1rem] leading-none tracking-tight text-zinc-50 md:text-[2.4rem]">
-                Screens down
+              <p className="font-heading text-[1.55rem] leading-[1.08] tracking-tight text-zinc-50 sm:text-[1.85rem] lg:text-[2.1rem]">
+                Screens
+                <span className="block">down</span>
               </p>
-              <p className="mt-3 text-[13px] text-zinc-500">Asleep-by in {formatCountdown(untilSleep)}</p>
+              <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-500">
+                Asleep-by
+                <span className="mt-0.5 block">{formatCountdown(untilSleep)}</span>
+              </p>
             </>
           ) : (
             <>
-              <p className="font-heading text-[2.65rem] leading-none tracking-tight text-zinc-50 md:text-[3.35rem]">
+              <p className="font-heading text-[2.05rem] leading-none tracking-tight text-zinc-50 tabular-nums sm:text-[2.55rem] lg:text-[3.05rem]">
                 {formatCountdown(untilOff)}
               </p>
-              <p className="mt-3 text-[13px] tracking-wide text-zinc-500">to screens down</p>
+              <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-500">
+                to screens
+                <span className="mt-0.5 block">down</span>
+              </p>
             </>
           )}
         </div>
       </div>
-      <p className="mt-5 max-w-[28ch] text-center text-[13px] leading-relaxed text-zinc-500">
+      <p className="mt-6 max-w-[28ch] text-center text-[12px] leading-relaxed tracking-wide text-zinc-500">
         {offLabel} ping · {sleepLabel}–{wakeLabel} ({windowLabel})
         {notificationsEnabled ? "" : " · pings off"}
       </p>

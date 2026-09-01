@@ -53,8 +53,8 @@ export function InsightsView() {
       <h1 className="font-heading mt-1 text-3xl text-zinc-50">The week.</h1>
       <p className="mt-2 max-w-[46ch] text-sm leading-relaxed text-zinc-400">
         The better nights, the worse ones, and what I would try next. After each morning I hand you
-        one page to read — the one that night earned, not the whole shelf. Ask Consult about a
-        specific morning — I will read the log, not guess.
+        one page to read — the one that night earned. If the page from last night would fire again, I
+        hand the next still-justified note instead of recycling it.
       </p>
 
       {state.demoWeek ? (

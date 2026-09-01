@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.3 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.3");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.3");
+  it("is version 0.8.4 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.4");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.4");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -48,6 +48,8 @@ describe("phone diary shell", () => {
     expect(tonight).toMatch(/safe-area-inset-(top|bottom)/);
     expect(tonight).toContain("phone-page-y");
     expect(tonight).toContain("size-[13.5rem]");
+    expect(tonight).toContain("countdown-orb");
+    expect(tonight).toContain("<span className=\"block\">down</span>");
     expect(tonight).toContain("md:hidden");
     expect(readFileSync("src/components/install-hint.tsx", "utf8")).toContain("hidden");
     expect(readFileSync("src/components/install-hint.tsx", "utf8")).toContain("md:block");
@@ -104,8 +106,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.3");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 13");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.4");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 14");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -175,7 +177,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/phone-pack-fresh.cjs", "utf8")).toContain("vaultFingerprint");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.3");
+    expect(run.stdout).toContain("0.8.4");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
