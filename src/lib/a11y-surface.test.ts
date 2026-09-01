@@ -35,7 +35,14 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).toContain("brand-open-ring");
     expect(css).toContain("brand-open-exit");
     expect(css).toContain("countdown-orb");
-    expect(css).toContain("countdown-orb-core");
+    expect(css).toContain("countdown-orb-svg");
+    expect(css).toContain("clip-path: circle(50%)");
+    expect(css).toContain("-webkit-clip-path: circle(50%)");
+    expect(css).toMatch(/\.countdown-orb \{[^}]*overflow: hidden/);
+    expect(css).toMatch(/\.countdown-orb \{[^}]*box-shadow: none/);
+    expect(css).not.toMatch(/@keyframes countdown-orb-debut \{[^}]*transform:/);
+    expect(css).not.toContain("countdown-orb-glow");
+    expect(css).not.toContain("feGaussianBlur");
     expect(css).toContain("circadia-enter");
   });
 

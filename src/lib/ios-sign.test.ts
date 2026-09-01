@@ -51,6 +51,16 @@ const install = require("../../scripts/ios-install.cjs") as {
   destinationMissing: (text: string) => boolean;
   parseCli: (argv: string[]) => { targetId: string; fallbackTeam: string | null; coreDeviceId: string };
   installOnDevice: (input: { targetId: string; sign?: { style: string } }) => number;
+  deployApp: (opts: {
+    app: string;
+    targetId: string;
+    coreDeviceId?: string;
+    root?: string;
+    nativeRun?: string | null;
+    waitMs?: number;
+    spawn: (cmd: string, args: string[]) => { status: number; stdout?: string; stderr?: string };
+    log?: (line: string) => void;
+  }) => number;
 };
 
 const TEAM = "A1B2C3D4E5";
@@ -360,5 +370,34 @@ describe("ios-install signing args", () => {
     expect(install.installOnDevice({ targetId: "3BF49769-5494-56B1-8F32-F329DC6F058F", sign: { style: "manual" } })).toBe(
       11,
     );
+  });
+
+  it("tries Apple's installer with the hardware UDID before the CoreDevice UUID", () => {
+    const devices: string[] = [];
+    const logs: string[] = [];
+    const status = install.deployApp({
+      app: "/tmp/Circadia.app",
+      targetId: DEVICE,
+      coreDeviceId: "3BF49769-5494-56B1-8F32-F329DC6F058F",
+      root: "/tmp",
+      nativeRun: null,
+      waitMs: 0,
+      log: (line) => logs.push(line),
+      spawn: (_cmd, args) => {
+        const i = args.indexOf("--device");
+        if (i >= 0) devices.push(String(args[i + 1]));
+        return {
+          status: 1,
+          stdout: "",
+          stderr:
+            "CoreDeviceService was unable to locate a device matching the requested device identifier",
+        };
+      },
+    });
+    expect(devices[0]).toBe(DEVICE);
+    expect(devices[1]).toBe("3BF49769-5494-56B1-8F32-F329DC6F058F");
+    expect(logs.join("\n")).toMatch(/Trying Apple's installer with the hardware UDID|Installing with Apple's installer/);
+    expect(logs.join("\n")).toMatch(/Install did not finish|CoreDevice still cannot see James-iPhone/);
+    expect(status).toBe(1);
   });
 });

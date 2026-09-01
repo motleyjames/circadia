@@ -17,7 +17,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { normalizeTeam } = require("./ios-team.cjs");
 const { resolveSignForDevice, nextSignAfterSessionFailure } = require("./ios-sign.cjs");
-const { isHardwareUdid, isCoreDeviceUuid, wakeDevice } = require("./ios-target.cjs");
+const { isHardwareUdid, isCoreDeviceUuid, wakeDevice, waitForInstallTarget, resolveWaitMs, scanInstallableIphones, collectSources } = require("./ios-target.cjs");
 
 function repoRoot() {
   return path.join(__dirname, "..");
@@ -186,23 +186,56 @@ function installWithDevicectl(app, device, spawn = spawnSync) {
   return result.status ?? 1;
 }
 
-function deployApp({ app, targetId, coreDeviceId, root }) {
+function deployApp({
+  app,
+  targetId,
+  coreDeviceId,
+  root = repoRoot(),
+  nativeRun,
+  waitMs,
+  poll,
+  spawn = spawnSync,
+  log = (msg) => console.error(msg),
+} = {}) {
   const phone = path.join(root, "phone");
-  const nativeRun = nativeRunBin(root);
-  if (nativeRun) {
-    const deployed = run(nativeRun, ["ios", "--app", app, "--target", targetId], { cwd: phone });
-    if (deployed === 0) return 0;
-    console.error("native-run could not reach the phone. Trying Apple's installer with the same UDID.");
-  } else {
-    console.error("native-run is missing. Installing with Apple's installer.");
+  const bin = nativeRun === undefined ? nativeRunBin(root) : nativeRun;
+  const deadline = waitMs != null ? waitMs : resolveWaitMs();
+  if (deadline > 0) {
+    waitForInstallTarget({
+      deadlineMs: deadline,
+      poll:
+        poll ||
+        (() => {
+          const src = collectSources({ root, nativeRun: bin, spawn });
+          const pick = scanInstallableIphones(src);
+          return pick;
+        }),
+      log: (_last, remain) => {
+        log(
+          `Unlock James-iPhone, keep the screen on, plug in USB. ${Math.max(1, Math.ceil(remain / 1000))}s left before install.`,
+        );
+      },
+      nudge: (last) => {
+        wakeDevice(last?.coreDeviceId || coreDeviceId || targetId, spawn);
+      },
+    });
   }
-  const first = coreDeviceId && isCoreDeviceUuid(coreDeviceId) ? coreDeviceId : targetId;
-  let status = installWithDevicectl(app, first);
+  if (bin) {
+    const deployed = run(bin, ["ios", "--app", app, "--target", targetId], { cwd: phone });
+    if (deployed === 0) return 0;
+    log("native-run could not reach the phone. Trying Apple's installer with the hardware UDID.");
+  } else {
+    log("native-run is missing. Installing with Apple's installer.");
+  }
+  let status = installWithDevicectl(app, targetId, spawn);
   if (status === 0) return 0;
-  if (first !== targetId) {
-    status = installWithDevicectl(app, targetId);
+  if (coreDeviceId && isCoreDeviceUuid(coreDeviceId) && coreDeviceId !== targetId) {
+    status = installWithDevicectl(app, coreDeviceId, spawn);
     if (status === 0) return 0;
   }
+  log(
+    "CoreDevice still cannot see James-iPhone. Unlock it, keep the screen on, plug in USB, then run this again. The .app is already compiled — the next run skips the Next.js pack.",
+  );
   return status || 11;
 }
 
