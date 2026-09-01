@@ -9,10 +9,13 @@ const team = require("../../scripts/ios-team.cjs") as {
   parseCodesignIdentities: (text: string) => string | null;
   teamFromCertificateSubject: (text: string) => string | null;
   parseXcodeTeamsPlist: (text: string) => string | null;
+  collectTeamIdsFromPlistText: (text: string) => string[];
+  hasXcodeAccountFromText: (text: string) => boolean;
   readTeamFromXcconfig: (text: string) => string | null;
   readTeamFromPbxproj: (text: string) => string | null;
   writeSigningXcconfig: (teamId: string, root: string) => string | null;
   discoverTeam: (root: string, env?: NodeJS.ProcessEnv) => { team: string; source: string } | null;
+  XCODE_TEAM_KEYS: string[];
 };
 
 const SAMPLE_TEAM = "A1B2C3D4E5";
@@ -41,6 +44,18 @@ describe("ios-team", () => {
       SAMPLE_TEAM,
     );
     expect(team.parseXcodeTeamsPlist(`teamID = ${SAMPLE_TEAM};\nteamName = "James Motley";`)).toBe(SAMPLE_TEAM);
+    expect(
+      team.collectTeamIdsFromPlistText(`{
+        "ACCT-UUID" = (
+            { teamID = ${SAMPLE_TEAM}; isFreeProvisioningTeam = 1; }
+        );
+    }`),
+    ).toEqual([SAMPLE_TEAM]);
+    expect(team.collectTeamIdsFromPlistText(`(\n    ${SAMPLE_TEAM}\n)`)).toEqual([SAMPLE_TEAM]);
+    expect(team.XCODE_TEAM_KEYS).toContain("IDEProvisioningTeamByIdentifier");
+    expect(team.XCODE_TEAM_KEYS).toContain("IDEProvisioningTeamIdentifiers");
+    expect(team.hasXcodeAccountFromText("{ identifier = ACCT-1; }")).toBe(true);
+    expect(team.hasXcodeAccountFromText("The domain/default pair does not exist")).toBe(false);
   });
 
   it("writes a gitignored xcconfig and includes it from debug.xcconfig", () => {

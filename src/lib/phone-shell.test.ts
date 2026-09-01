@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.7.8 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.7.8");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.8");
+  it("is version 0.7.9 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.7.9");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.7.9");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -89,7 +89,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.7.8");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.7.9");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 9");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -123,20 +124,26 @@ describe("phone diary shell", () => {
     expect(script).toContain("exit 8");
     expect(script).toContain("exit 10");
     expect(script).toContain("exit 11");
-    expect(script).toContain("exit 12");
+    expect(script).toContain("--fallback-team");
+    expect(script).toContain("diagnosis");
     expect(script).toContain("this one install");
+    expect(script).not.toContain("exit 12");
     expect(gitignore).toContain("/phone/ios/signing.xcconfig");
     expect(debugXc).toContain('#include? "signing.xcconfig"');
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("resolveSignForDevice");
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("CODE_SIGN_STYLE=Manual");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("automatic-session");
     expect(readFileSync("scripts/ios-sign.cjs", "utf8")).toContain("app.circadia.diary");
+    expect(readFileSync("scripts/ios-sign.cjs", "utf8")).toContain("automatic-session");
     expect(readFileSync("scripts/ios-team.cjs", "utf8")).toContain("Apple Development");
+    expect(readFileSync("scripts/ios-team.cjs", "utf8")).toContain("IDEProvisioningTeamByIdentifier");
+    expect(readFileSync("scripts/ios-team.cjs", "utf8")).toContain("process.exit(12)");
     expect(readFileSync("scripts/ios-target.cjs", "utf8")).toContain("native-run");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.7.8");
+    expect(run.stdout).toContain("0.7.9");
     if (process.platform === "darwin") {
-      expect([0, 5, 6, 8, 10, 11, 12, 13]).toContain(run.status);
+      expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
       expect(run.status).toBe(4);
       expect(run.stdout).toContain("macOS");

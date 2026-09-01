@@ -6,11 +6,15 @@
  * GitHub's Xcode project has no DEVELOPMENT_TEAM on purpose — James's team
  * is not Circadia's to commit. Opening Xcode to pick Team writes it into
  * project.pbxproj, which `git restore` / `git pull` then wipes. That is the
- * loop. The Team ID already lives on the Apple Development certificate in
- * the keychain (any Mac that has Run an app on a phone has one).
+ * loop.
  *
- * Writes phone/ios/signing.xcconfig (gitignored) and ensures debug.xcconfig
- * includes it. put-on-phone also passes DEVELOPMENT_TEAM to xcodebuild.
+ * A keychain certificate is not an Xcode Accounts session. 0.7.7 passed the
+ * keychain team into automatic signing and died with "No Account for Team".
+ * This file may still *record* a keychain team in the gitignored xcconfig
+ * for the GUI. ios-sign must not treat that as an Accounts team.
+ *
+ * Xcode 16+/26 often leaves IDEProvisioningTeams empty. Team ids live in
+ * IDEProvisioningTeamByIdentifier / IDEProvisioningTeamIdentifiers instead.
  */
 
 const fs = require("node:fs");
@@ -18,6 +22,13 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
 const TEAM_RE = /^[A-Z0-9]{10}$/;
+
+const XCODE_TEAM_KEYS = [
+  "IDEProvisioningTeamByIdentifier",
+  "IDEProvisioningTeams",
+  "IDEProvisioningTeamIdentifiers",
+  "IDELastSelectedProvisioningTeam",
+];
 
 function repoRoot() {
   return path.join(__dirname, "..");
@@ -86,12 +97,30 @@ function teamFromCertificateSubject(subject) {
 }
 
 function parseXcodeTeamsPlist(text) {
-  const ids = [...String(text || "").matchAll(/teamID\s*=\s*"?([A-Za-z0-9]{10})"?/gi)];
-  for (const m of ids) {
-    const team = normalizeTeam(m[1]);
-    if (team) return team;
+  const ids = collectTeamIdsFromPlistText(text);
+  return ids[0] ?? null;
+}
+
+function collectTeamIdsFromPlistText(text) {
+  const ids = [];
+  function add(value) {
+    const team = normalizeTeam(value);
+    if (team && !ids.includes(team)) ids.push(team);
   }
-  return null;
+  const src = String(text || "");
+  if (!src.trim() || /does not exist/i.test(src)) return ids;
+  for (const m of src.matchAll(/teamID\s*=\s*"?([A-Za-z0-9]{10})"?/gi)) add(m[1]);
+  // IDEProvisioningTeamIdentifiers is a bare list of 10-char ids, no teamID=.
+  if (!ids.length) {
+    for (const m of src.matchAll(/\b([A-Z0-9]{10})\b/g)) add(m[1]);
+  }
+  return ids;
+}
+
+function hasXcodeAccountFromText(text) {
+  const src = String(text || "");
+  if (!src.trim() || /does not exist/i.test(src)) return false;
+  return /\bidentifier\s*=/i.test(src);
 }
 
 function signingXcconfigContents(team) {
@@ -139,12 +168,32 @@ function teamFromDevelopmentCertificate() {
   return teamFromCertificateSubject(`${subject.stdout || ""}\n${subject.stderr || ""}`);
 }
 
-function teamFromXcodeDefaults() {
-  const read = spawnSync("defaults", ["read", "com.apple.dt.Xcode", "IDEProvisioningTeams"], {
+function readXcodeDefaultsKey(key) {
+  const read = spawnSync("defaults", ["read", "com.apple.dt.Xcode", key], {
     encoding: "utf8",
   });
-  if (read.status !== 0) return null;
-  return parseXcodeTeamsPlist(`${read.stdout || ""}\n${read.stderr || ""}`);
+  return `${read.stdout || ""}\n${read.stderr || ""}`;
+}
+
+function loadXcodeAccountTeams() {
+  if (process.platform !== "darwin") return [];
+  const ids = [];
+  for (const key of XCODE_TEAM_KEYS) {
+    const text = readXcodeDefaultsKey(key);
+    for (const id of collectTeamIdsFromPlistText(text)) {
+      if (!ids.includes(id)) ids.push(id);
+    }
+  }
+  return ids;
+}
+
+function loadHasXcodeAccount() {
+  if (process.platform !== "darwin") return false;
+  return hasXcodeAccountFromText(readXcodeDefaultsKey("DVTDeveloperAccountManagerAppleIDLists"));
+}
+
+function teamFromXcodeDefaults() {
+  return loadXcodeAccountTeams()[0] ?? null;
 }
 
 function discoverTeam(root = repoRoot(), env = process.env) {
@@ -194,10 +243,13 @@ function resolveAndPersistTeam(root = repoRoot(), env = process.env) {
 
 module.exports = {
   TEAM_RE,
+  XCODE_TEAM_KEYS,
   normalizeTeam,
   parseCodesignIdentities,
   teamFromCertificateSubject,
   parseXcodeTeamsPlist,
+  collectTeamIdsFromPlistText,
+  hasXcodeAccountFromText,
   readTeamFromXcconfig,
   readTeamFromPbxproj,
   signingXcconfigContents,
@@ -206,16 +258,27 @@ module.exports = {
   discoverTeam,
   resolveAndPersistTeam,
   signingXcconfigPath,
+  loadXcodeAccountTeams,
+  loadHasXcodeAccount,
 };
 
 if (require.main === module) {
   const hit = resolveAndPersistTeam();
-  if (!hit) {
-    console.error("No Apple Development team on this Mac.");
-    console.error("Xcode → Settings → Accounts → your Apple ID. That creates a development certificate.");
-    console.error("Then run npm run put-on-phone again. Do not press Run. Do not use Any iOS Device.");
-    process.exit(12);
+  if (hit) {
+    console.error(`Signing team from ${hit.source} (kept on this Mac, not in git).`);
+    if (hit.source === "keychain" || hit.source === "certificate" || hit.source === "xcconfig") {
+      console.error("That id is not used for automatic signing unless Xcode Accounts also has it.");
+    }
+    console.log(hit.team);
+    process.exit(0);
   }
-  console.error(`Signing team from ${hit.source} (kept on this Mac, not in git).`);
-  console.log(hit.team);
+  if (loadHasXcodeAccount()) {
+    console.error("Xcode Accounts has an Apple ID, but no Team ID is stored yet (common on Xcode 16+).");
+    console.error("Install will sign with that session, not a keychain-only team.");
+    process.exit(0);
+  }
+  console.error("No Apple Development team on this Mac.");
+  console.error("Xcode → Settings → Accounts → your Apple ID. That creates a development certificate.");
+  console.error("Then run npm run put-on-phone again. Do not press Run. Do not use Any iOS Device.");
+  process.exit(12);
 }

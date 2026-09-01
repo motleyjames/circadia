@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Put the Circadia diary on a reachable iPhone.
-# Signing Team comes from this Mac's Apple Development certificate, not from Xcode's picker
-# and not from git. Destination is never Any iOS Device.
+# Destination is never Any iOS Device. Signing does not open Xcode.
+# A leftover development profile is enough. An Xcode Accounts team is enough.
+# A signed-in Xcode 16 Apple ID with no stored team id is enough.
+# A keychain certificate alone is not automatic signing.
 #
 # USB: only this install, and only if the phone is unavailable.
 # After Circadia is on the home screen, unplug. The app does not talk to the Mac.
@@ -47,20 +49,14 @@ if [[ ! -d node_modules/next ]] || [[ ! -d node_modules/@capacitor/core ]]; then
   npm install
 fi
 
-TEAM="$(node scripts/ios-team.cjs)" || {
-  echo
-  echo "Stopped. This Mac has no Apple Development certificate, so the iPhone build cannot be signed."
-  echo "Xcode → Settings → Accounts → your Apple ID. Close Xcode. Do not press Run."
-  echo "Then: npm run put-on-phone"
-  exit 12
-}
+set +e
+TEAM="$(node scripts/ios-team.cjs)"
+TEAM_STATUS=$?
+set -e
 TEAM="$(printf '%s' "$TEAM" | tr -d '[:space:]')"
-if [[ ! "$TEAM" =~ ^[A-Z0-9]{10}$ ]]; then
-  echo
-  echo "Stopped. Could not read a development team id from this Mac."
-  echo "Xcode → Settings → Accounts → your Apple ID. Close Xcode. Do not press Run."
-  echo "Then: npm run put-on-phone"
-  exit 12
+if [[ "$TEAM_STATUS" -ne 0 ]]; then
+  echo "No stored Team ID yet. Install will still look for a leftover profile or a signed-in Xcode account."
+  TEAM=""
 fi
 
 npm run phone:sync
@@ -97,14 +93,20 @@ NAME="${PICK%%$'\t'*}"
 ID="${PICK#*$'\t'}"
 echo "Target: $NAME ($ID)"
 
+INSTALL_ARGS=(--target "$ID")
+if [[ "$TEAM" =~ ^[A-Z0-9]{10}$ ]]; then
+  INSTALL_ARGS+=(--fallback-team "$TEAM")
+fi
+
 set +e
-node scripts/ios-install.cjs --target "$ID"
+node scripts/ios-install.cjs "${INSTALL_ARGS[@]}"
 STATUS=$?
 set -e
 if [[ "$STATUS" -eq 13 ]]; then
   echo
-  echo "Stopped. Xcode has no signed-in Apple ID that can create a profile for this app,"
-  echo "and this Mac has no leftover development profile for app.circadia.diary."
+  echo "Stopped. No leftover development profile for this iPhone was usable,"
+  echo "and Xcode did not expose an Accounts team or a signed-in Apple ID."
+  echo "The diagnosis is above. This is not USB and not the packed diary."
   echo "Xcode → Settings → Accounts → your Apple ID. Wait until a team appears."
   echo "Close Xcode. Do not press Run. Do not use Any iOS Device."
   echo "Then: npm run put-on-phone"
