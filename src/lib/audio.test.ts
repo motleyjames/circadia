@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parseWavPcm } from "./audio";
+import { isRiffWav, parseWavPcm } from "./audio";
 
 function encodeS16Wav(samples: Int16Array, sampleRate: number): ArrayBuffer {
   const dataSize = samples.length * 2;
@@ -34,7 +34,10 @@ describe("sleep audio graph", () => {
     expect(src).toContain("loadWavUrl");
     expect(src).toContain("loadWavPcm");
     expect(src).toContain("pcmCache");
-    expect(src).toContain("resolveAppUrl");
+    expect(src).toContain("resolveAppHrefs");
+    expect(src).toContain("isRiffWav");
+    expect(src).toContain("WKURLSchemeHandler");
+    expect(src).toContain("peekPcm");
     expect(src).toContain("scheduleBufferAt");
     expect(src).toMatch(/src\.start\(\)/);
     expect(src).not.toContain("73.88");
@@ -53,10 +56,13 @@ describe("sleep audio graph", () => {
     expect(wind).toContain("startGuideFromTap");
     expect(wind).toContain("primeGuide");
     expect(wind).toContain("warmGuides");
+    expect(wind).toContain("prefetchGuide");
+    expect(wind).toContain("guidePcmWarm");
     expect(wind).toContain("hushVoice");
     expect(wind).toContain("unlockAudio");
     expect(wind).toContain("Preparing the guide");
-    expect(wind).toContain('disabled={guides !== "ready"}');
+    expect(wind).toContain("beginGuide");
+    expect(wind).not.toContain('disabled={guides !== "ready"}');
     expect(wind).not.toContain("speechSynthesis");
     expect(wind).not.toContain("speakBedside");
     expect(wind).not.toMatch(/void playGuide/);
@@ -93,6 +99,13 @@ describe("sleep audio graph", () => {
     expect(clip.samples.length).toBe(4);
     expect(clip.samples[1]).toBeCloseTo(0.5, 2);
     expect(clip.samples[2]).toBeCloseTo(-0.5, 2);
+  });
+
+  it("rejects HTML and empty buffers as WAV", () => {
+    const html = new TextEncoder().encode("<!doctype html>").buffer;
+    expect(isRiffWav(html)).toBe(false);
+    expect(isRiffWav(new ArrayBuffer(0))).toBe(false);
+    expect(isRiffWav(encodeS16Wav(new Int16Array([1, 2, 3, 4]), 22050))).toBe(true);
   });
 
   it("parses the shipped opening line as real PCM, not silence", () => {

@@ -13,12 +13,14 @@ export function DiaryLink({
   children,
   onClick,
   "aria-current": ariaCurrent,
+  "aria-label": ariaLabel,
 }: {
   href: string;
   className?: string;
   children: ReactNode;
   onClick?: () => void;
   "aria-current"?: "page";
+  "aria-label"?: string;
 }) {
   function go(event: MouseEvent<HTMLAnchorElement>) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
@@ -28,7 +30,7 @@ export function DiaryLink({
   }
 
   return (
-    <a href={href} aria-current={ariaCurrent} className={className} onClick={go}>
+    <a href={href} aria-current={ariaCurrent} aria-label={ariaLabel} className={className} onClick={go}>
       {children}
     </a>
   );
@@ -40,6 +42,7 @@ export function DiaryTabLink(props: {
   children: ReactNode;
   onClick?: () => void;
   "aria-current"?: "page";
+  "aria-label"?: string;
 }) {
   return <DiaryLink {...props} />;
 }

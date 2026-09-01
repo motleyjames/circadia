@@ -32,8 +32,7 @@ async function probeInbox(): Promise<boolean> {
     if (res.status === 404) return false;
     if (looksLikeHtml(res)) return false;
     const payload = (await res.json().catch(() => null)) as { ok?: boolean; inbox?: boolean } | null;
-    if (payload?.inbox === true) return true;
-    return res.status !== 404;
+    return payload?.inbox === true;
   } catch {
     return false;
   }
@@ -44,22 +43,26 @@ export async function studyInboxAvailable(): Promise<boolean> {
   return inboxProbe;
 }
 
+function held(): InboxPostResult {
+  return { ok: false, held: true, error: STUDY_HELD_ERROR };
+}
+
 export async function postInbox(body: InboxBody): Promise<InboxPostResult> {
+  if (isPhoneNative()) return held();
   const available = await studyInboxAvailable();
-  if (!available) {
-    return { ok: false, held: true, error: STUDY_HELD_ERROR };
-  }
+  if (!available) return held();
   try {
     const res = await fetch(studyInboxUrl(), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     });
+    if (looksLikeHtml(res)) return held();
     const payload = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-    if (!res.ok || !payload?.ok) {
-      return { ok: false, error: payload?.error ?? `Send failed (${res.status}).` };
-    }
-    return { ok: true };
+    if (payload?.ok) return { ok: true };
+    if (payload?.error) return { ok: false, error: payload.error };
+    if (!res.ok) return { ok: false, error: `Send failed (${res.status}).` };
+    return held();
   } catch {
     return { ok: false, error: "Could not reach the study inbox. The pack is still on this device." };
   }

@@ -45,6 +45,26 @@ describe("study inbox client", () => {
     expect(result.ok).toBe(false);
   });
 
+  it("holds the pack when a 200 is not the inbox JSON", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(200, { ok: true })));
+    const result = await postInbox(body);
+    expect(result).toEqual({ ok: false, held: true, error: STUDY_HELD_ERROR });
+  });
+
+  it("holds the pack when POST returns HTML with status 200", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET") {
+        return jsonResponse(200, { ok: true, inbox: true });
+      }
+      return new Response("<!doctype html>", { status: 200, headers: { "content-type": "text/html" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await postInbox(body);
+    expect(result.held).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe(STUDY_HELD_ERROR);
+  });
+
   it("posts once the inbox answers the probe", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       if ((init?.method ?? "GET") === "GET") {
@@ -57,6 +77,18 @@ describe("study inbox client", () => {
     const result = await postInbox(body);
     expect(result).toEqual({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("surfaces a real inbox HTTP error instead of holding", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET") {
+        return jsonResponse(200, { ok: true, inbox: true });
+      }
+      return jsonResponse(500, { ok: false });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await postInbox(body);
+    expect(result).toEqual({ ok: false, error: "Send failed (500)." });
   });
 
   it("does not write on the GET probe in the Next route or the Dock static server", () => {

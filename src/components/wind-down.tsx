@@ -14,9 +14,11 @@ import {
 } from "@/lib/audio";
 import {
   beatAt,
+  guidePcmWarm,
   hushVoice,
   MEDITATIONS,
   meditationById,
+  prefetchGuide,
   primeGuide,
   startGuideFromTap,
   warmGuides,
@@ -39,6 +41,7 @@ export function WindDown() {
   const [meditationId, setMeditationId] = useState<MeditationId>("478");
   const [soundId, setSoundId] = useState<SoundscapeId>("brown");
   const [guides, setGuides] = useState<"warming" | "ready" | "failed">("warming");
+  const startingRef = useRef(false);
 
   function logSession(session: Parameters<typeof addSession>[0]) {
     addSession(session);
@@ -50,6 +53,31 @@ export function WindDown() {
     void warmGuides()
       .then(() => setGuides("ready"))
       .catch(() => setGuides("failed"));
+  }
+
+  async function beginGuide(id: MeditationId) {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    void hapticSelect();
+    setGuides("warming");
+    try {
+      if (!guidePcmWarm(id, 0)) {
+        await prefetchGuide(id);
+      }
+      primeGuide();
+      startBreathBed();
+      if (!startGuideFromTap(id, 0)) {
+        throw new Error("guide buffers missing");
+      }
+      setGuides("ready");
+      setMeditationId(id);
+      setMode("meditate");
+    } catch {
+      setGuides("failed");
+      stopBreathBed();
+    } finally {
+      startingRef.current = false;
+    }
   }
 
   useEffect(() => {
@@ -89,19 +117,9 @@ export function WindDown() {
             <button
               key={m.id}
               type="button"
-              disabled={guides !== "ready"}
               aria-label={`${m.title}, ${Math.round(m.durationSeconds / 60)} minutes`}
               onClick={() => {
-                void hapticSelect();
-                primeGuide();
-                startBreathBed();
-                if (!startGuideFromTap(m.id, 0)) {
-                  setGuides("failed");
-                  stopBreathBed();
-                  return;
-                }
-                setMeditationId(m.id);
-                setMode("meditate");
+                void beginGuide(m.id);
               }}
               className="rounded-3xl border border-white/10 bg-white/4 px-4 py-3 text-left transition-colors hover:border-white/20 hover:bg-white/8 active:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -195,6 +213,8 @@ function MeditationPlayer({
     onExit(elapsedRef.current, elapsedRef.current >= script.durationSeconds);
   }
 
+  const originMs = useRef<number | null>(null);
+
   useEffect(() => {
     elapsedRef.current = elapsed;
   }, [elapsed]);
@@ -218,7 +238,16 @@ function MeditationPlayer({
 
   useEffect(() => {
     if (!running || done) return;
-    const timer = window.setInterval(() => setElapsed((e) => e + 1), 1000);
+    originMs.current = Date.now() - elapsedRef.current * 1000;
+    const tick = () => {
+      const origin = originMs.current;
+      if (origin == null) return;
+      const next = Math.max(0, Math.floor((Date.now() - origin) / 1000));
+      elapsedRef.current = next;
+      setElapsed(next);
+    };
+    tick();
+    const timer = window.setInterval(tick, 250);
     return () => window.clearInterval(timer);
   }, [running, done]);
 
@@ -286,6 +315,7 @@ function SoundPlayer({
   const [elapsed, setElapsed] = useState(0);
   const elapsedRef = useRef(0);
   const logged = useRef(false);
+  const originMs = useRef(Date.now());
 
   function finish(fromUnmount = false) {
     if (logged.current) return;
@@ -301,7 +331,14 @@ function SoundPlayer({
 
   useEffect(() => {
     const handle = startSoundscape(id);
-    const timer = window.setInterval(() => setElapsed((e) => e + 1), 1000);
+    originMs.current = Date.now();
+    const tick = () => {
+      const next = Math.max(0, Math.floor((Date.now() - originMs.current) / 1000));
+      elapsedRef.current = next;
+      setElapsed(next);
+    };
+    tick();
+    const timer = window.setInterval(tick, 250);
     return () => {
       handle.stop();
       window.clearInterval(timer);

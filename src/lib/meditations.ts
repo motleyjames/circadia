@@ -108,6 +108,7 @@ export function beatAt(script: MeditationScript, elapsed: number): MeditationBea
 
 export {
   guideIsWarm,
+  guidePcmWarm,
   hushVoice,
   playGuide,
   prefetchGuide,

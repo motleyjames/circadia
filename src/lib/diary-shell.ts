@@ -1,11 +1,11 @@
 export type DiaryShellPhase = "opening" | "gate" | "app";
 
 /** Long enough for the mark to draw and the wordmark to settle. */
-export const OPEN_HOLD_MS = 2800;
+export const OPEN_HOLD_MS = 2400; // phone + dock; BrandStage paused until surfaceReady, then plays in full.
 /** Static mark beat when the system asked for no motion. Still an open, not a skip. */
 export const OPEN_HOLD_REDUCED_MS = 900;
-/** Cover stays opaque, then dissolves so the diary never dips to black. */
-export const OPEN_COVER_MS = 880;
+/** Cover stays opaque, then dissolves so the diary never dips to black. Must match `.brand-open-exit`. */
+export const OPEN_COVER_MS = 800;
 /** Do not hang the cover if splash/visibility never fires. */
 export const OPEN_SURFACE_WAIT_MS = 1200;
 

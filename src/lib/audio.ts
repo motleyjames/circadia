@@ -1,4 +1,4 @@
-import { resolveAppUrl } from "./app-url";
+import { resolveAppHrefs } from "./app-url";
 
 export type SoundscapeId = "brown" | "pink" | "rain" | "ocean";
 
@@ -403,6 +403,10 @@ export function pcmToBuffer(clip: PcmClip): AudioBuffer {
   return buffer;
 }
 
+export function peekPcm(url: string): PcmClip | null {
+  return pcmCache.get(url) ?? null;
+}
+
 function bufferizeClip(url: string): AudioBuffer | null {
   const clip = pcmCache.get(url);
   if (!clip) return null;
@@ -423,8 +427,11 @@ function xhrArrayBuffer(href: string): Promise<ArrayBuffer> {
     xhr.open("GET", href);
     xhr.responseType = "arraybuffer";
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300 && xhr.response instanceof ArrayBuffer) {
-        resolve(xhr.response);
+      const data = xhr.response;
+      // Capacitor serves .wav through WKURLSchemeHandler as URLResponse, not
+      // HTTPURLResponse. WebKit then reports status 0 with the file bytes.
+      if (data instanceof ArrayBuffer && data.byteLength >= 12) {
+        resolve(data);
         return;
       }
       reject(new Error(`audio ${xhr.status} ${href}`));
@@ -434,17 +441,35 @@ function xhrArrayBuffer(href: string): Promise<ArrayBuffer> {
   });
 }
 
+/** RIFF magic. HTML 200s and empty custom-scheme bodies fail this. */
+export function isRiffWav(data: ArrayBuffer): boolean {
+  if (data.byteLength < 12) return false;
+  const bytes = new Uint8Array(data);
+  return bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+}
+
 async function readWavBytes(url: string): Promise<ArrayBuffer> {
-  const href = resolveAppUrl(url);
-  try {
-    const res = await fetch(href);
-    if (res.ok) return await res.arrayBuffer();
-    throw new Error(`audio ${res.status} ${url}`);
-  } catch (err) {
-    if (err instanceof Error && /^audio \d+/.test(err.message)) throw err;
-    if (typeof XMLHttpRequest === "undefined") throw err;
-    return xhrArrayBuffer(href);
+  const hrefs = resolveAppHrefs(url);
+  let lastError = `audio missing ${url}`;
+  for (const href of hrefs) {
+    try {
+      const res = await fetch(href);
+      const bytes = await res.arrayBuffer();
+      if (isRiffWav(bytes)) return bytes;
+      lastError = `audio not a wave ${href}`;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : `audio fetch ${href}`;
+    }
+    if (typeof XMLHttpRequest === "undefined") continue;
+    try {
+      const bytes = await xhrArrayBuffer(href);
+      if (isRiffWav(bytes)) return bytes;
+      lastError = `audio not a wave ${href}`;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : `audio xhr ${href}`;
+    }
   }
+  throw new Error(lastError);
 }
 
 /** Fetch + parse only. Safe in useEffect — does not need an AudioContext. */

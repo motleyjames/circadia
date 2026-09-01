@@ -7,7 +7,9 @@ import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
 import { ChatBar } from "@/components/chat-bar";
 import { DiaryNavLock } from "@/components/diary-nav-lock";
+import { DiaryTabLink } from "@/components/diary-tab-link";
 import { DiaryViews } from "@/components/diary-views";
+import { Mark } from "@/components/mark";
 import { NativeChrome } from "@/components/native-chrome";
 import { Onboarding } from "@/components/onboarding";
 import { SidebarNav } from "@/components/sidebar-nav";
@@ -69,6 +71,7 @@ function OpenCover({ exiting, play }: { exiting: boolean; play: boolean }) {
     <div
       className={cn(
         "brand-open-cover absolute inset-0 z-40 flex flex-col",
+        !play && "brand-open-wait",
         exiting ? "brand-open-exit pointer-events-none" : "pointer-events-auto",
       )}
       aria-hidden={exiting}
@@ -76,7 +79,7 @@ function OpenCover({ exiting, play }: { exiting: boolean; play: boolean }) {
       <div className="night-sky absolute inset-0" />
       <div className="pointer-events-none absolute inset-0 glow-veil" />
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        {play ? <BrandStage key="open" /> : null}
+        <BrandStage />
       </div>
     </div>
   );
@@ -84,7 +87,18 @@ function OpenCover({ exiting, play }: { exiting: boolean; play: boolean }) {
 
 function PhoneAsk({ onAsk }: { onAsk: () => void }) {
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-[calc(env(safe-area-inset-top)+2.75rem)] items-end justify-end bg-gradient-to-b from-[#05040a]/80 to-transparent px-1 xl:hidden">
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-[calc(env(safe-area-inset-top)+2.75rem)] items-end justify-between bg-gradient-to-b from-[#05040a]/85 to-transparent px-[max(0.35rem,env(safe-area-inset-left))] pr-[max(0.35rem,env(safe-area-inset-right))] xl:hidden">
+      <DiaryTabLink
+        href="/"
+        className="pointer-events-auto inline-flex h-11 items-center gap-2.5 px-3"
+        aria-label="Circadia, Tonight"
+        onClick={() => {
+          void hapticLight();
+        }}
+      >
+        <Mark className="size-7 shrink-0" />
+        <span className="font-heading text-[17px] leading-none tracking-tight text-zinc-50" aria-hidden>Circadia</span>
+      </DiaryTabLink>
       <button
         type="button"
         className="pointer-events-auto inline-flex h-11 min-w-11 items-center justify-end px-3 text-[15px] font-medium tracking-[0.04em] text-sky-300/90"

@@ -301,7 +301,7 @@
 }
 
 .brand-open-exit {
-  animation: brand-open-exit 0.88s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: brand-open-exit 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes brand-open-fade {
@@ -313,33 +313,80 @@
   }
 }
 
-/* WKWebView rasterizes transform:scale on a square box as a rectangle. The
-   phone open is opacity + the SVG ring draw, clipped to a circle. */
-html.circadia-phone .brand-open-mark {
-  overflow: hidden;
-  clip-path: circle(50%);
-  -webkit-clip-path: circle(50%);
-  transform: none;
-  animation: brand-open-fade 1.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+.brand-open-wait .brand-open-mark,
+.brand-open-wait .brand-open-halo,
+.brand-open-wait .brand-open-ring,
+.brand-open-wait .brand-open-sky,
+.brand-open-wait .brand-open-title,
+.brand-open-wait .brand-open-line,
+.brand-open-wait .brand-open-mark .mark-ring,
+.brand-open-wait .brand-open-mark .mark-hands,
+.brand-open-wait .brand-open-mark .mark-moon,
+.brand-open-wait .brand-open-mark .mark-ticks {
+  animation-play-state: paused !important;
 }
 
-html.circadia-phone .brand-open-halo,
-html.circadia-phone .brand-open-ring {
-  overflow: hidden;
-  clip-path: circle(50%);
-  -webkit-clip-path: circle(50%);
+/* WKWebView rasterizes transform:scale on a square box as a rectangle.
+   Phone open is a still mark that breathes, then dissolves — no scale, no clip. */
+html.circadia-phone .brand-open-cover {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+html.circadia-phone .brand-open-mark {
   transform: none;
-  animation: brand-open-fade 1.45s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  animation: brand-breathe 4.8s ease-in-out infinite;
+}
+
+html.circadia-phone .brand-open-halo {
+  transform: none;
+  animation: brand-open-fade 1.05s ease both;
+}
+
+html.circadia-phone .brand-open-ring {
+  transform: none;
+  box-shadow: none;
+  animation: brand-open-fade 0.9s ease both;
 }
 
 html.circadia-phone .brand-open-title,
 html.circadia-phone .brand-open-line {
   transform: none;
-  animation: brand-open-fade 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both;
+  animation: none;
+  opacity: 1;
 }
 
-html.circadia-phone .brand-open-line {
-  animation-delay: 0.78s;
+html.circadia-phone .brand-open-sky {
+  animation: none;
+  opacity: 1;
+}
+
+html.circadia-phone .brand-open-mark .mark-ring {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+
+html.circadia-phone .brand-open-mark .mark-hands,
+html.circadia-phone .brand-open-mark .mark-moon,
+html.circadia-phone .brand-open-mark .mark-ticks {
+  animation: none;
+  opacity: 1;
+}
+
+html.circadia-phone .brand-open-wait .brand-open-mark,
+html.circadia-phone .brand-open-wait .brand-open-halo,
+html.circadia-phone .brand-open-wait .brand-open-ring {
+  animation: none !important;
+}
+
+html.circadia-phone .brand-open-wait .brand-open-mark,
+html.circadia-phone .brand-open-wait .brand-open-halo,
+html.circadia-phone .brand-open-wait .brand-open-ring,
+html.circadia-phone .brand-open-wait .brand-open-title,
+html.circadia-phone .brand-open-wait .brand-open-line,
+html.circadia-phone .brand-open-wait .brand-open-sky {
+  opacity: 1;
+  transform: none;
 }
 
 .countdown-orb {
@@ -362,7 +409,7 @@ html.circadia-phone .brand-open-line {
 }
 
 .countdown-orb-arc {
-  transition: stroke-dashoffset 1.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: stroke-dashoffset 1s linear;
 }
 
 @keyframes countdown-orb-debut {

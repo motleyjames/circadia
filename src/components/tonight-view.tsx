@@ -10,36 +10,32 @@ import { isOpenHoldConsumed, subscribeOpenHold, takeSkyDebut } from "@/lib/diary
 import { shouldBeOffScreens } from "@/lib/notifications";
 import { morningPageStatus } from "@/lib/morning-file";
 import {
-  clockFromDate,
   formatClock,
-  formatCountdown,
+  formatCountdownHms,
   formatDuration,
-  minutesUntilClock,
+  formatWallClock,
   overnightDuration,
   screenOffClock,
+  secondsUntilClock,
 } from "@/lib/time";
 import { cn } from "@/lib/utils";
+import { useWallClock } from "@/lib/wall-clock";
 
 const ORB_C = 2 * Math.PI * 46;
 
 export function TonightView() {
   const { state } = useCircadia();
   const profile = state.profile;
-  const [now, setNow] = useState(() => new Date());
+  const now = useWallClock();
   const firstOpen = state.reports.length === 0;
   const page = morningPageStatus(state.reports, now, profile?.targetWake);
-
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 30_000);
-    return () => window.clearInterval(t);
-  }, []);
 
   if (!profile) return null;
 
   const offClock = screenOffClock(profile.targetSleep);
   const screensDown = shouldBeOffScreens(profile.targetSleep, now);
-  const untilOff = minutesUntilClock(offClock, now);
-  const untilSleep = minutesUntilClock(profile.targetSleep, now);
+  const untilOff = secondsUntilClock(offClock, now);
+  const untilSleep = secondsUntilClock(profile.targetSleep, now);
   const windowMin = overnightDuration(profile.targetSleep, profile.targetWake);
   const notes = firstOpen ? [] : buildSleepNotes(profile, state.reports);
   const headline = notes.find((n) => n.kind === "alert" || n.kind === "lever" || n.kind === "steady");
@@ -50,7 +46,7 @@ export function TonightView() {
       <div className="mx-auto flex w-full max-w-[22rem] flex-1 flex-col sm:max-w-[26rem] lg:max-w-[28rem]">
         <div className="flex flex-1 flex-col items-center justify-center">
           <CountdownHero
-            nowLabel={formatClock(clockFromDate(now), profile.units)}
+            nowLabel={formatWallClock(now, profile.units)}
             screensDown={screensDown}
             untilOff={untilOff}
             untilSleep={untilSleep}
@@ -132,7 +128,7 @@ function CountdownHero({
   windowLabel: string;
   notificationsEnabled: boolean;
 }) {
-  const horizon = 12 * 60;
+  const horizon = 12 * 3600;
   const t = screensDown ? 1 : Math.max(0.06, Math.min(1, 1 - untilOff / horizon));
   const holdConsumed = useSyncExternalStore(subscribeOpenHold, isOpenHoldConsumed, () => false);
   const [debuting, setDebuting] = useState(false);
@@ -160,7 +156,12 @@ function CountdownHero({
 
   return (
     <div className="mt-3 flex w-full flex-col items-center md:mt-2">
-      <p className="mb-5 text-[11px] tracking-[0.28em] text-zinc-500 uppercase">{nowLabel}</p>
+      <p
+        className="mb-5 text-[11px] tracking-[0.28em] text-zinc-500 uppercase tabular-nums"
+        suppressHydrationWarning
+      >
+        {nowLabel}
+      </p>
       <div
         className={cn(
           "countdown-orb relative size-[13.5rem] overflow-hidden rounded-full sm:size-[17.5rem] lg:size-[20rem]",
@@ -209,13 +210,13 @@ function CountdownHero({
               </p>
               <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-500">
                 Asleep-by
-                <span className="mt-0.5 block">{formatCountdown(untilSleep)}</span>
+                <span className="mt-0.5 block">{formatCountdownHms(untilSleep)}</span>
               </p>
             </>
           ) : (
             <>
-              <p className="font-heading text-[2.05rem] leading-none tracking-tight text-zinc-50 tabular-nums sm:text-[2.55rem] lg:text-[2.85rem]">
-                {formatCountdown(untilOff)}
+              <p className="font-heading text-[2.05rem] leading-none tracking-tight text-zinc-50 tabular-nums sm:text-[2.55rem] lg:text-[2.85rem]" suppressHydrationWarning>
+                {formatCountdownHms(untilOff)}
               </p>
               <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-500">
                 to screens
