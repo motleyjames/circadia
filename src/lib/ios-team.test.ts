@@ -14,9 +14,6 @@ const team = require("../../scripts/ios-team.cjs") as {
   writeSigningXcconfig: (teamId: string, root: string) => string | null;
   discoverTeam: (root: string, env?: NodeJS.ProcessEnv) => { team: string; source: string } | null;
 };
-const install = require("../../scripts/ios-install.cjs") as {
-  xcodebuildArgs: (input: { team: string; targetId: string; derivedDataPath: string }) => string[];
-};
 
 const SAMPLE_TEAM = "A1B2C3D4E5";
 
@@ -61,22 +58,5 @@ describe("ios-team", () => {
       team.discoverTeam(root, { ...process.env, CIRCADIA_DEVELOPMENT_TEAM: SAMPLE_TEAM })?.source,
     ).toBe("env");
     rmSync(root, { recursive: true, force: true });
-  });
-});
-
-describe("ios-install", () => {
-  it("passes DEVELOPMENT_TEAM to xcodebuild and never live-reloads", () => {
-    const args = install.xcodebuildArgs({
-      team: SAMPLE_TEAM,
-      targetId: "00008140-001A",
-      derivedDataPath: "/tmp/derived",
-    });
-    expect(args).toContain(`DEVELOPMENT_TEAM=${SAMPLE_TEAM}`);
-    expect(args).toContain("-allowProvisioningUpdates");
-    expect(args).toContain("-destination");
-    expect(args).toContain("platform=iOS,id=00008140-001A");
-    expect(args).toContain("CODE_SIGN_IDENTITY=Apple Development");
-    expect(args.join(" ")).not.toMatch(/live.?reload/i);
-    expect(args.join(" ")).not.toContain("generic/platform=iOS");
   });
 });

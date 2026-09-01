@@ -151,6 +151,11 @@ function discoverTeam(root = repoRoot(), env = process.env) {
   const fromEnv = normalizeTeam(env.CIRCADIA_DEVELOPMENT_TEAM);
   if (fromEnv) return { team: fromEnv, source: "env" };
 
+  if (process.platform === "darwin") {
+    const fromXcode = teamFromXcodeDefaults();
+    if (fromXcode) return { team: fromXcode, source: "xcode" };
+  }
+
   try {
     const fromFile = readTeamFromXcconfig(fs.readFileSync(signingXcconfigPath(root), "utf8"));
     if (fromFile) return { team: fromFile, source: "xcconfig" };
@@ -175,8 +180,6 @@ function discoverTeam(root = repoRoot(), env = process.env) {
     if (fromIdentities) return { team: fromIdentities, source: "keychain" };
     const fromCert = teamFromDevelopmentCertificate();
     if (fromCert) return { team: fromCert, source: "certificate" };
-    const fromXcode = teamFromXcodeDefaults();
-    if (fromXcode) return { team: fromXcode, source: "xcode" };
   }
 
   return null;
