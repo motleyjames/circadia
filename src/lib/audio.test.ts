@@ -32,6 +32,9 @@ describe("sleep audio graph", () => {
     expect(src).toContain("createBufferSource");
     expect(src).toContain("parseWavPcm");
     expect(src).toContain("loadWavUrl");
+    expect(src).toContain("loadWavPcm");
+    expect(src).toContain("pcmCache");
+    expect(src).toContain("resolveAppUrl");
     expect(src).toContain("scheduleBufferAt");
     expect(src).toMatch(/src\.start\(\)/);
     expect(src).not.toContain("73.88");
@@ -70,7 +73,7 @@ describe("sleep audio graph", () => {
     const voice = readFileSync("src/lib/voice.ts", "utf8");
     expect(voice).toContain("startGuideFromTap");
     expect(voice).toContain("scheduleBufferAt");
-    expect(voice).toContain("loadWavUrl");
+    expect(voice).toContain("loadWavPcm");
     expect(voice).toContain(".wav");
     expect(voice).not.toMatch(/new Audio\(/);
     expect(voice).not.toContain("el.play(");

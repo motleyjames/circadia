@@ -2,11 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   OPEN_COVER_MS,
   OPEN_HOLD_MS,
+  OPEN_HOLD_REDUCED_MS,
   consumeOpenHold,
   diaryShellPhase,
   isOpenHoldConsumed,
   resetOpenHoldForTests,
   takeSkyDebut,
+  waitForOpenSurface,
 } from "./diary-shell";
 
 describe("diary shell phase", () => {
@@ -42,7 +44,7 @@ describe("diary shell phase", () => {
     ).toBe("gate");
   });
 
-  it("skips the hold when the user asked for reduced motion", () => {
+  it("still holds a static mark when the user asked for reduced motion", () => {
     expect(
       diaryShellPhase({
         ready: true,
@@ -50,16 +52,27 @@ describe("diary shell phase", () => {
         reducedMotion: true,
         holdConsumed: false,
       }),
-    ).toBe("app");
+    ).toBe("opening");
     expect(
-      diaryShellPhase({ ready: true, session: null, reducedMotion: true, holdConsumed: false }),
-    ).toBe("gate");
+      diaryShellPhase({
+        ready: true,
+        session: "email:ada@example.com",
+        reducedMotion: true,
+        holdConsumed: true,
+      }),
+    ).toBe("app");
   });
 
   it("holds the open long enough for the mark to draw", () => {
     expect(OPEN_HOLD_MS).toBeGreaterThanOrEqual(2400);
+    expect(OPEN_HOLD_REDUCED_MS).toBeGreaterThanOrEqual(700);
+    expect(OPEN_HOLD_REDUCED_MS).toBeLessThan(OPEN_HOLD_MS);
     expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(700);
     expect(OPEN_COVER_MS).toBeLessThan(1200);
+  });
+
+  it("resolves the open-surface wait on a visible document", async () => {
+    await expect(waitForOpenSurface()).resolves.toBeUndefined();
   });
 
   it("plays the Tonight debut once, then leaves tab switches still", () => {

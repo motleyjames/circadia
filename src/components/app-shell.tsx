@@ -15,10 +15,12 @@ import { StudyGate } from "@/components/study-gate";
 import {
   OPEN_COVER_MS,
   OPEN_HOLD_MS,
+  OPEN_HOLD_REDUCED_MS,
   consumeOpenHold,
   diaryShellPhase,
   isOpenHoldConsumed,
   subscribeOpenHold,
+  waitForOpenSurface,
 } from "@/lib/diary-shell";
 import { diaryPathname, useDiaryPath } from "@/lib/diary-route";
 import { hapticLight } from "@/lib/haptics";
@@ -62,7 +64,7 @@ function Stage({
   );
 }
 
-function OpenCover({ exiting }: { exiting: boolean }) {
+function OpenCover({ exiting, play }: { exiting: boolean; play: boolean }) {
   return (
     <div
       className={cn(
@@ -74,7 +76,7 @@ function OpenCover({ exiting }: { exiting: boolean }) {
       <div className="night-sky absolute inset-0" />
       <div className="pointer-events-none absolute inset-0 glow-veil" />
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        <BrandStage />
+        {play ? <BrandStage key="open" /> : null}
       </div>
     </div>
   );
@@ -107,6 +109,7 @@ function ShellInner() {
   const reducedMotion = useReducedMotion();
   const holdConsumed = useOpenHoldConsumed();
   const [coverLingering, setCoverLingering] = useState(() => !isOpenHoldConsumed());
+  const [surfaceReady, setSurfaceReady] = useState(() => isOpenHoldConsumed());
   const consultOpen = consultPath === pathname;
   const phase = diaryShellPhase({
     ready,
@@ -114,26 +117,36 @@ function ShellInner() {
     reducedMotion,
     holdConsumed,
   });
-  const showCover = !reducedMotion && (phase === "opening" || coverLingering);
+  const showCover = phase === "opening" || coverLingering;
   const signedIn = Boolean(session);
   const appChrome = Boolean(signedIn && state.profile?.onboardingComplete && state.study.asked);
 
   useEffect(() => {
-    if (reducedMotion) {
-      consumeOpenHold();
-      return;
-    }
     if (isOpenHoldConsumed()) return;
-    const hold = window.setTimeout(() => consumeOpenHold(), OPEN_HOLD_MS);
-    return () => window.clearTimeout(hold);
-  }, [reducedMotion]);
+    let cancelled = false;
+    void waitForOpenSurface().then(() => {
+      if (!cancelled) setSurfaceReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    if (reducedMotion) return;
+    if (!surfaceReady) return;
+    if (isOpenHoldConsumed()) return;
+    const hold = window.setTimeout(
+      () => consumeOpenHold(),
+      reducedMotion ? OPEN_HOLD_REDUCED_MS : OPEN_HOLD_MS,
+    );
+    return () => window.clearTimeout(hold);
+  }, [surfaceReady, reducedMotion]);
+
+  useEffect(() => {
     if (!holdConsumed || !ready) return;
     const cover = window.setTimeout(() => setCoverLingering(false), OPEN_COVER_MS);
     return () => window.clearTimeout(cover);
-  }, [holdConsumed, ready, reducedMotion]);
+  }, [holdConsumed, ready]);
 
   let destination: React.ReactNode = null;
   if (ready) {
@@ -175,7 +188,7 @@ function ShellInner() {
   return (
     <Stage
       wide={appChrome}
-      cover={showCover ? <OpenCover exiting={phase !== "opening"} /> : null}
+      cover={showCover ? <OpenCover exiting={phase !== "opening"} play={surfaceReady} /> : null}
     >
       {destination}
     </Stage>

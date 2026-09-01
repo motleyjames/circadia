@@ -145,6 +145,17 @@ function patch(updater: (prev: CircadiaState) => CircadiaState) {
   write(updater(snapshot()));
 }
 
+function markHeld(error: string | null) {
+  patch((prev) => ({
+    ...prev,
+    study: {
+      ...prev.study,
+      lastStatus: "held",
+      lastError: error ?? "Kept on this phone.",
+    },
+  }));
+}
+
 function markSend(ok: boolean, error: string | null, extra?: { rosterSentAt?: string }) {
   patch((prev) => ({
     ...prev,
@@ -179,6 +190,10 @@ async function transmitRoster() {
       return;
     }
     const result = await postInbox(payload);
+    if (result.held) {
+      markHeld(result.error ?? null);
+      return;
+    }
     markSend(result.ok, result.error ?? null, {
       rosterSentAt: result.ok ? new Date().toISOString() : undefined,
     });
@@ -197,6 +212,10 @@ async function transmitStudy() {
       return;
     }
     const result = await postInbox(pack);
+    if (result.held) {
+      markHeld(result.error ?? null);
+      return;
+    }
     markSend(result.ok, result.error ?? null);
   } catch {
     markSend(false, "Could not build a pack from this diary.");

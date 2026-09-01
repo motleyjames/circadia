@@ -304,6 +304,44 @@
   animation: brand-open-exit 0.88s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes brand-open-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* WKWebView rasterizes transform:scale on a square box as a rectangle. The
+   phone open is opacity + the SVG ring draw, clipped to a circle. */
+html.circadia-phone .brand-open-mark {
+  overflow: hidden;
+  clip-path: circle(50%);
+  -webkit-clip-path: circle(50%);
+  transform: none;
+  animation: brand-open-fade 1.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+html.circadia-phone .brand-open-halo,
+html.circadia-phone .brand-open-ring {
+  overflow: hidden;
+  clip-path: circle(50%);
+  -webkit-clip-path: circle(50%);
+  transform: none;
+  animation: brand-open-fade 1.45s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+html.circadia-phone .brand-open-title,
+html.circadia-phone .brand-open-line {
+  transform: none;
+  animation: brand-open-fade 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.55s both;
+}
+
+html.circadia-phone .brand-open-line {
+  animation-delay: 0.78s;
+}
+
 .countdown-orb {
   --orb-progress: 0deg;
   background: transparent;

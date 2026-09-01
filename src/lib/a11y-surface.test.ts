@@ -44,6 +44,8 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).not.toContain("countdown-orb-glow");
     expect(css).not.toContain("feGaussianBlur");
     expect(css).toContain("circadia-enter");
+    expect(css).toContain("brand-open-fade");
+    expect(css).toContain("html.circadia-phone .brand-open-mark");
   });
 
   it("ships generic fault screens with retry only", () => {

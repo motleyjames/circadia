@@ -25,6 +25,13 @@ async function forward(body: unknown): Promise<boolean> {
   }
 }
 
+export async function GET() {
+  if (isOperatorSurface()) {
+    return NextResponse.json({ ok: false, error: "This is the operator." }, { status: 404 });
+  }
+  return NextResponse.json({ ok: true, inbox: true });
+}
+
 export async function POST(request: Request) {
   if (isOperatorSurface()) {
     return NextResponse.json({ ok: false, error: "This is the operator." }, { status: 404 });

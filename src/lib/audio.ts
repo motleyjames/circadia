@@ -1,3 +1,5 @@
+import { resolveAppUrl } from "./app-url";
+
 export type SoundscapeId = "brown" | "pink" | "rain" | "ocean";
 
 type NoiseHandle = {
@@ -325,6 +327,9 @@ export type PcmClip = {
   sampleRate: number;
 };
 
+/** Survives AudioContext close/interrupt. iOS will dump `decoded` on a new graph. */
+const pcmCache = new Map<string, PcmClip>();
+
 /**
  * Read a mono 16-bit PCM WAV in JS. WebKit's decodeAudioData has been a dead end
  * for these clips (MPEG-2, then MPEG-1) — the bytes are fine; the decoder is not.
@@ -398,19 +403,73 @@ export function pcmToBuffer(clip: PcmClip): AudioBuffer {
   return buffer;
 }
 
+function bufferizeClip(url: string): AudioBuffer | null {
+  const clip = pcmCache.get(url);
+  if (!clip) return null;
+  const live = decoded.get(url);
+  if (live && shared && shared.state !== "closed") return live;
+  try {
+    const buffer = pcmToBuffer(clip);
+    decoded.set(url, buffer);
+    return buffer;
+  } catch {
+    return null;
+  }
+}
+
+function xhrArrayBuffer(href: string): Promise<ArrayBuffer> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("GET", href);
+    xhr.responseType = "arraybuffer";
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300 && xhr.response instanceof ArrayBuffer) {
+        resolve(xhr.response);
+        return;
+      }
+      reject(new Error(`audio ${xhr.status} ${href}`));
+    };
+    xhr.onerror = () => reject(new Error(`audio xhr ${href}`));
+    xhr.send();
+  });
+}
+
+async function readWavBytes(url: string): Promise<ArrayBuffer> {
+  const href = resolveAppUrl(url);
+  try {
+    const res = await fetch(href);
+    if (res.ok) return await res.arrayBuffer();
+    throw new Error(`audio ${res.status} ${url}`);
+  } catch (err) {
+    if (err instanceof Error && /^audio \d+/.test(err.message)) throw err;
+    if (typeof XMLHttpRequest === "undefined") throw err;
+    return xhrArrayBuffer(href);
+  }
+}
+
+/** Fetch + parse only. Safe in useEffect — does not need an AudioContext. */
+export async function loadWavPcm(url: string): Promise<PcmClip> {
+  const hit = pcmCache.get(url);
+  if (hit) {
+    bufferizeClip(url);
+    return hit;
+  }
+  const clip = parseWavPcm(await readWavBytes(url));
+  pcmCache.set(url, clip);
+  bufferizeClip(url);
+  return clip;
+}
+
 /** Fetch a WAV, parse PCM in JS, cache an AudioBuffer on the shared graph. */
 export async function loadWavUrl(url: string): Promise<AudioBuffer> {
-  const hit = decoded.get(url);
-  if (hit) return hit;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`audio ${res.status} ${url}`);
-  const buffer = pcmToBuffer(parseWavPcm(await res.arrayBuffer()));
-  decoded.set(url, buffer);
+  await loadWavPcm(url);
+  const buffer = bufferizeClip(url);
+  if (!buffer) throw new Error(`audio not on graph ${url}`);
   return buffer;
 }
 
 export function peekDecoded(url: string): AudioBuffer | null {
-  return decoded.get(url) ?? null;
+  return bufferizeClip(url);
 }
 
 export function unlockAudioSync() {
@@ -428,6 +487,7 @@ export function unlockAudioSync() {
     /* first frame */
   }
   void ctx.resume();
+  for (const url of pcmCache.keys()) bufferizeClip(url);
 }
 
 type ScheduledNode = { source: AudioBufferSourceNode; gain: GainNode };
