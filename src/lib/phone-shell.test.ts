@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.6 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.6");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.6");
+  it("is version 0.8.7 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.7");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.7");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -85,8 +85,16 @@ describe("phone diary shell", () => {
     expect(tonight).toContain("phone-page-y");
     expect(tonight).toContain("size-[13.5rem]");
     expect(tonight).toContain("countdown-orb");
+    expect(tonight).toContain("rounded-full");
+    expect(tonight).toContain("takeSkyDebut");
     expect(tonight).toContain("<span className=\"block\">down</span>");
-    expect(tonight).toContain("md:hidden");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OPEN_HOLD_MS");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OPEN_COVER_MS");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("brand-open-exit");
+    expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OpenCover");
+    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_HOLD_MS = 2800");
+    expect(tonight).toContain("countdown-orb-core");
+    expect(tonight).toContain("isOpenHoldConsumed");
     expect(readFileSync("src/components/install-hint.tsx", "utf8")).toContain("hidden");
     expect(readFileSync("src/components/install-hint.tsx", "utf8")).toContain("md:block");
     expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("phone-page-y");
@@ -142,8 +150,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.6");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 16");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.7");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 17");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -213,7 +221,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/phone-pack-fresh.cjs", "utf8")).toContain("vaultFingerprint");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.6");
+    expect(run.stdout).toContain("0.8.7");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
@@ -252,7 +260,9 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/app/globals.css", "utf8")).toContain("circadia-sheet");
     expect(readFileSync("src/lib/login.ts", "utf8")).toContain("this app was packed with");
     expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("SaveLockedCopyButton");
+    expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("FoldLockedDiaryButton");
     expect(bring).toContain("Bring a locked diary");
+    expect(bring).toContain("Fold nights from a locked copy");
     expect(bring).toContain("Use the packed diary");
     expect(bring).toContain("fetchPackedDiary");
     expect(readFileSync("scripts/pack-mac-diary.cjs", "utf8")).toContain("circadia-locked.json");

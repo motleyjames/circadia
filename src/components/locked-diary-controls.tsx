@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { useCircadia } from "@/context/circadia-store";
 import {
   DIARY_PACK_ERRORS,
   LOCKED_DIARY_FILENAME,
@@ -99,6 +100,89 @@ export function SaveLockedCopyButton({ className }: { className?: string }) {
         {busy ? "Saving a locked copy…" : "Save a locked copy"}
       </button>
       {msg ? <p className="mt-2 max-w-[52ch] text-[12px] leading-relaxed text-zinc-500">{msg}</p> : null}
+    </span>
+  );
+}
+
+export function FoldLockedDiaryButton({ className }: { className?: string }) {
+  const { foldLockedDiary } = useCircadia();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pending, setPending] = useState<DiskVault | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  async function apply(vault: DiskVault) {
+    setBusy(true);
+    const result = await foldLockedDiary(vault);
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      setMsg(null);
+      return;
+    }
+    setError(null);
+    setMsg(
+      result.added === 0
+        ? "Those nights were already on this device."
+        : result.added === 1
+          ? "Folded in 1 morning. It is on this device now."
+          : `Folded in ${result.added} mornings. They are on this device now.`,
+    );
+  }
+
+  return (
+    <span className="block">
+      <label
+        className={cn(
+          "relative inline-flex cursor-pointer items-center overflow-hidden",
+          busy && "pointer-events-none opacity-50",
+          className,
+        )}
+      >
+        <input
+          type="file"
+          disabled={busy}
+          aria-label="Fold nights from a locked copy"
+          className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file || busy) return;
+            setBusy(true);
+            setError(null);
+            void readLockedDiaryFile(file)
+              .then((vault) => {
+                setPending(vault);
+                setConfirmOpen(true);
+              })
+              .catch(() => {
+                setError(DIARY_PACK_ERRORS.notDiary);
+              })
+              .finally(() => setBusy(false));
+          }}
+        />
+        <span className="pointer-events-none">
+          {busy ? "Opening…" : "Fold nights from a locked copy"}
+        </span>
+      </label>
+      {error ? <p className="mt-2 text-[13px] text-amber-200/90">{error}</p> : null}
+      {msg ? <p className="mt-2 max-w-[52ch] text-[12px] leading-relaxed text-zinc-500">{msg}</p> : null}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          setConfirmOpen(open);
+          if (!open) setPending(null);
+        }}
+        title="Fold nights into this device?"
+        description="Mornings already here stay. If both copies have the same morning, the later page wins. You stay signed in. Circadia does not send this file anywhere — it is read on this device."
+        confirmLabel="Fold nights in"
+        onConfirm={() => {
+          const vault = pending;
+          setPending(null);
+          if (vault) void apply(vault);
+        }}
+      />
     </span>
   );
 }

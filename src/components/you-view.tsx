@@ -6,7 +6,7 @@ import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup } from "@/components/bubbles";
 import { StudyPanel } from "@/components/study-panel";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { BringLockedDiaryButton, SaveLockedCopyButton } from "@/components/locked-diary-controls";
+import { BringLockedDiaryButton, FoldLockedDiaryButton, SaveLockedCopyButton } from "@/components/locked-diary-controls";
 import { CrisisLine } from "@/components/crisis-line";
 import { ERASE_CONFIRM_WORD } from "@/lib/confirm-word";
 import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
@@ -458,9 +458,16 @@ export function YouView() {
 
         <section className="mt-8">
           <p className="px-1 text-[13px] text-zinc-500">This device</p>
-          <div className="mt-2 overflow-hidden rounded-[10px] bg-white/[0.055]">
+          <p className="mt-2 max-w-[52ch] px-1 text-[13px] leading-relaxed text-zinc-500">
+            Circadia.app and the phone each keep a file. A morning you file on one is not on the
+            other until you fold a locked copy in. There is no cloud account.
+          </p>
+          <div className="mt-3 overflow-hidden rounded-[10px] bg-white/[0.055]">
             <div className="border-b border-white/[0.08]">
               <SaveLockedCopyButton className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-zinc-100" />
+            </div>
+            <div className="border-b border-white/[0.08]">
+              <FoldLockedDiaryButton className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-zinc-100" />
             </div>
             <div className="border-b border-white/[0.08]">
               <BringLockedDiaryButton

@@ -32,7 +32,10 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain("animation-duration: 0.01ms");
     expect(css).toContain("brand-open-mark");
+    expect(css).toContain("brand-open-ring");
+    expect(css).toContain("brand-open-exit");
     expect(css).toContain("countdown-orb");
+    expect(css).toContain("countdown-orb-core");
     expect(css).toContain("circadia-enter");
   });
 
@@ -74,5 +77,19 @@ describe("touch targets, confirms, and fault screens", () => {
     ]) {
       expect(readFileSync(file, "utf8"), file).toMatch(/safe-area-inset-(top|bottom)/);
     }
+  });
+
+  it("names the fold path so a night can cross devices without a cloud", () => {
+    const you = readFileSync("src/components/you-view.tsx", "utf8");
+    const morning = readFileSync("src/components/check-in-flow.tsx", "utf8");
+    const notes = readFileSync("src/components/insights-view.tsx", "utf8");
+    expect(you).toContain("FoldLockedDiaryButton");
+    expect(you).toContain("There is no cloud account");
+    expect(readFileSync("src/components/locked-diary-controls.tsx", "utf8")).toContain(
+      "Fold nights from a locked copy",
+    );
+    expect(morning).toContain("Fold a locked copy in You");
+    expect(notes).toContain("Fold nights in");
+    expect(you).not.toMatch(/this computer|this laptop|this Mac/);
   });
 });

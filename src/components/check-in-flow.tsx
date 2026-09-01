@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { DiaryLink } from "@/components/diary-tab-link";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
 import { MorningFile } from "@/components/morning-file";
@@ -204,6 +205,15 @@ function MorningInterview({
           ? `${formatMorningDate(today)} · same page, new answers.`
           : `${formatMorningDate(today)} · one page.`}
       </p>
+      {!existing && state.reports.length === 0 ? (
+        <p className="mt-3 max-w-[44ch] text-[12px] leading-relaxed text-zinc-500">
+          Already filed on the other Circadia?{" "}
+          <DiaryLink href="/you" className="text-zinc-300">
+            Fold a locked copy in You
+          </DiaryLink>
+          . This file does not see the other one by itself.
+        </p>
+      ) : null}
 
       <div className="mt-6 mb-4 flex gap-1">
         {steps.map((key, i) => (

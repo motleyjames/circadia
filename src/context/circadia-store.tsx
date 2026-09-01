@@ -24,6 +24,7 @@ import {
   createFile,
   emptyState,
   eraseCurrentFile,
+  foldLockedVaultIntoSession,
   getSessionLogin,
   importStateJson,
   loadState,
@@ -40,8 +41,10 @@ import {
 } from "@/lib/morning-file";
 import type { CircadiaState, MorningReport, Profile, WindDownSession } from "@/lib/types";
 import { newId } from "@/lib/time";
+import type { DiskVault } from "@/lib/vault";
 
 export type AuthResult = { ok: true } | { ok: false; error: string };
+export type FoldResult = { ok: true; added: number } | { ok: false; error: string };
 
 const listeners = new Set<() => void>();
 let memory: CircadiaState | null = null;
@@ -241,6 +244,7 @@ type CircadiaContextValue = {
   deleteConsult: (id: string) => void;
   setResearchNotes: (notes: string) => void;
   importJson: (raw: string) => void;
+  foldLockedDiary: (vault: DiskVault) => Promise<FoldResult>;
   loadSampleWeek: () => void;
   resetAll: () => void;
   joinStudy: () => void;
@@ -273,6 +277,7 @@ const NOOP_VALUE: CircadiaContextValue = {
   deleteConsult: noop,
   setResearchNotes: noop,
   importJson: noop,
+  foldLockedDiary: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
   loadSampleWeek: noop,
   resetAll: noop,
   joinStudy: noop,
@@ -415,6 +420,15 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     write(importStateJson(raw));
   }, []);
 
+  const foldLockedDiary = useCallback(async (vault: DiskVault): Promise<FoldResult> => {
+    const result = await foldLockedVaultIntoSession(vault);
+    if (!result.ok) return result;
+    sessionMemory = result.login;
+    memory = result.state;
+    emit();
+    return { ok: true, added: result.added };
+  }, []);
+
   const loadSampleWeek = useCallback(() => {
     patch((prev) => sampleWeekState(prev));
   }, []);
@@ -555,6 +569,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       deleteConsult,
       setResearchNotes,
       importJson,
+      foldLockedDiary,
       loadSampleWeek,
       resetAll,
       joinStudy,
@@ -581,6 +596,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       deleteConsult,
       setResearchNotes,
       importJson,
+      foldLockedDiary,
       loadSampleWeek,
       resetAll,
       joinStudy,

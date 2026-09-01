@@ -12,13 +12,18 @@ import { NativeChrome } from "@/components/native-chrome";
 import { Onboarding } from "@/components/onboarding";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { StudyGate } from "@/components/study-gate";
-import { consumeOpenHold, diaryShellPhase, isOpenHoldConsumed, subscribeOpenHold } from "@/lib/diary-shell";
+import {
+  OPEN_COVER_MS,
+  OPEN_HOLD_MS,
+  consumeOpenHold,
+  diaryShellPhase,
+  isOpenHoldConsumed,
+  subscribeOpenHold,
+} from "@/lib/diary-shell";
 import { diaryPathname, useDiaryPath } from "@/lib/diary-route";
 import { hapticLight } from "@/lib/haptics";
 import { isOperatorSurface } from "@/lib/surface";
 import { cn } from "@/lib/utils";
-
-const OPEN_HOLD_MS = 1650;
 
 function useReducedMotion(): boolean {
   return useSyncExternalStore(
@@ -35,26 +40,42 @@ function useReducedMotion(): boolean {
 function Stage({
   children,
   wide = false,
-  enter = false,
+  cover = null,
 }: {
   children: React.ReactNode;
   wide?: boolean;
-  enter?: boolean;
+  cover?: React.ReactNode;
 }) {
-  if (wide) {
-    return (
-      <div className={cn("night-sky flex h-full max-h-full flex-col overflow-hidden", enter && "circadia-enter")}>
-        <div className="native-drag" aria-hidden />
-        <div className="flex min-h-0 min-w-0 flex-1">{children}</div>
-      </div>
-    );
-  }
-
   return (
-    <div className={cn("night-sky relative flex h-full max-h-full flex-col overflow-hidden", enter && "circadia-enter")}>
+    <div className="night-sky relative flex h-full max-h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0 glow-veil" />
-      <div className="native-drag relative z-10" aria-hidden />
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col">{children}</div>
+      <div className="native-drag relative z-50" aria-hidden />
+      <div className="relative z-10 flex min-h-0 min-w-0 flex-1">
+        {wide ? (
+          children
+        ) : (
+          <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-xl flex-1 flex-col">{children}</div>
+        )}
+      </div>
+      {cover}
+    </div>
+  );
+}
+
+function OpenCover({ exiting }: { exiting: boolean }) {
+  return (
+    <div
+      className={cn(
+        "brand-open-cover absolute inset-0 z-40 flex flex-col",
+        exiting ? "brand-open-exit pointer-events-none" : "pointer-events-auto",
+      )}
+      aria-hidden={exiting}
+    >
+      <div className="night-sky absolute inset-0" />
+      <div className="pointer-events-none absolute inset-0 glow-veil" />
+      <div className="relative z-10 flex min-h-0 flex-1 flex-col">
+        <BrandStage />
+      </div>
     </div>
   );
 }
@@ -85,6 +106,7 @@ function ShellInner() {
   const [consultPath, setConsultPath] = useState<string | null>(null);
   const reducedMotion = useReducedMotion();
   const holdConsumed = useOpenHoldConsumed();
+  const [coverLingering, setCoverLingering] = useState(() => !isOpenHoldConsumed());
   const consultOpen = consultPath === pathname;
   const phase = diaryShellPhase({
     ready,
@@ -92,6 +114,9 @@ function ShellInner() {
     reducedMotion,
     holdConsumed,
   });
+  const showCover = !reducedMotion && (phase === "opening" || coverLingering);
+  const signedIn = Boolean(session);
+  const appChrome = Boolean(signedIn && state.profile?.onboardingComplete && state.study.asked);
 
   useEffect(() => {
     if (reducedMotion) {
@@ -103,58 +128,56 @@ function ShellInner() {
     return () => window.clearTimeout(hold);
   }, [reducedMotion]);
 
-  if (phase === "opening") {
-    return (
-      <Stage>
-        <BrandStage />
-      </Stage>
-    );
-  }
+  useEffect(() => {
+    if (reducedMotion) return;
+    if (!holdConsumed || !ready) return;
+    const cover = window.setTimeout(() => setCoverLingering(false), OPEN_COVER_MS);
+    return () => window.clearTimeout(cover);
+  }, [holdConsumed, ready, reducedMotion]);
 
-  if (phase === "gate") {
-    return (
-      <Stage enter>
-        <AuthGate />
-      </Stage>
-    );
-  }
-
-  if (!state.profile?.onboardingComplete) {
-    return (
-      <Stage enter>
-        <Onboarding />
-      </Stage>
-    );
-  }
-
-  if (!state.study.asked) {
-    return (
-      <Stage enter>
-        <StudyGate />
-      </Stage>
-    );
+  let destination: React.ReactNode = null;
+  if (ready) {
+    if (!signedIn) {
+      destination = <AuthGate />;
+    } else if (!state.profile?.onboardingComplete) {
+      destination = <Onboarding />;
+    } else if (!state.study.asked) {
+      destination = <StudyGate />;
+    } else {
+      destination = (
+        <>
+          <SidebarNav />
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            {consultOpen ? null : (
+              <PhoneAsk
+                onAsk={() => {
+                  void hapticLight();
+                  setConsultPath(pathname);
+                }}
+              />
+            )}
+            <div className="flex min-h-0 flex-1">
+              <main className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <DiaryViews path={path} />
+                </div>
+              </main>
+              <ChatBar variant="rail" />
+            </div>
+            <ChatBar variant="sheet" open={consultOpen} onClose={() => setConsultPath(null)} />
+            {consultOpen ? null : <BottomNav />}
+          </div>
+        </>
+      );
+    }
   }
 
   return (
-    <Stage wide enter>
-      <SidebarNav />
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-        {consultOpen ? null : <PhoneAsk onAsk={() => {
-          void hapticLight();
-          setConsultPath(pathname);
-        }} />}
-        <div className="flex min-h-0 flex-1">
-          <main className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 z-0 glow-veil" />
-            <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden">
-              <DiaryViews path={path} />
-            </div>
-          </main>
-          <ChatBar variant="rail" />
-        </div>
-        <ChatBar variant="sheet" open={consultOpen} onClose={() => setConsultPath(null)} />
-        {consultOpen ? null : <BottomNav />}
-      </div>
+    <Stage
+      wide={appChrome}
+      cover={showCover ? <OpenCover exiting={phase !== "opening"} /> : null}
+    >
+      {destination}
     </Stage>
   );
 }
