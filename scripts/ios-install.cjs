@@ -2,13 +2,14 @@
 
 /**
  * Build the Circadia diary and put it on a connected iPhone.
- * Passes DEVELOPMENT_TEAM to xcodebuild so GitHub's empty Team field is not a blocker.
- * Does not open Xcode. Does not use destination Any iOS Device. Not live-reload.
+ * Manual sign if a development profile already exists. Automatic only when
+ * Xcode Accounts has the team. Does not open Xcode. Not live-reload.
  */
 
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const { resolveSignForDevice } = require("./ios-sign.cjs");
 
 function repoRoot() {
   return path.join(__dirname, "..");
@@ -22,8 +23,8 @@ function nativeRunBin(root = repoRoot()) {
   return candidates.find((file) => fs.existsSync(file)) || null;
 }
 
-function xcodebuildArgs({ team, targetId, derivedDataPath }) {
-  return [
+function xcodebuildArgs({ sign, targetId, derivedDataPath }) {
+  const args = [
     "-project",
     "App.xcodeproj",
     "-scheme",
@@ -34,12 +35,19 @@ function xcodebuildArgs({ team, targetId, derivedDataPath }) {
     `platform=iOS,id=${targetId}`,
     "-derivedDataPath",
     derivedDataPath,
-    "-allowProvisioningUpdates",
-    "-allowProvisioningDeviceRegistration",
-    `DEVELOPMENT_TEAM=${team}`,
-    "CODE_SIGN_STYLE=Automatic",
+    `DEVELOPMENT_TEAM=${sign.team}`,
     "CODE_SIGN_IDENTITY=Apple Development",
   ];
+  if (sign.style === "manual") {
+    args.push("CODE_SIGN_STYLE=Manual", `PROVISIONING_PROFILE=${sign.profileUuid}`);
+    return args;
+  }
+  args.push(
+    "-allowProvisioningUpdates",
+    "-allowProvisioningDeviceRegistration",
+    "CODE_SIGN_STYLE=Automatic",
+  );
+  return args;
 }
 
 function appPathForTarget(derivedDataPath) {
@@ -55,12 +63,19 @@ function run(cmd, args, opts) {
   return result.status ?? 1;
 }
 
-function installOnDevice({ root = repoRoot(), team, targetId } = {}) {
-  if (!team || !targetId) return 11;
+function installOnDevice({ root = repoRoot(), targetId, sign } = {}) {
+  if (!targetId) return 11;
+  const decided = sign ?? resolveSignForDevice({ deviceId: targetId, root });
+  if (!decided) return 13;
   const phone = path.join(root, "phone");
   const nativeDir = path.join(phone, "ios", "App");
   const derivedDataPath = path.join(phone, "ios", "DerivedData", targetId);
-  const args = xcodebuildArgs({ team, targetId, derivedDataPath });
+  const args = xcodebuildArgs({ sign: decided, targetId, derivedDataPath });
+  if (decided.style === "manual") {
+    console.error("Signing with a development profile already on this Mac. Not Xcode Accounts.");
+  } else {
+    console.error("Signing with the Apple ID signed into Xcode Accounts.");
+  }
   const built = run("xcrun", ["xcodebuild", ...args], { cwd: nativeDir });
   if (built !== 0) return built || 11;
   const app = appPathForTarget(derivedDataPath);
@@ -80,14 +95,12 @@ function installOnDevice({ root = repoRoot(), team, targetId } = {}) {
 module.exports = { xcodebuildArgs, appPathForTarget, nativeRunBin, installOnDevice };
 
 if (require.main === module) {
-  const teamFlag = process.argv.indexOf("--team");
   const targetFlag = process.argv.indexOf("--target");
-  const team = teamFlag !== -1 ? process.argv[teamFlag + 1] : "";
   const targetId = targetFlag !== -1 ? process.argv[targetFlag + 1] : "";
-  if (!team || !targetId || team.startsWith("-") || targetId.startsWith("-")) {
-    console.error("usage: node scripts/ios-install.cjs --team TEAMID --target DEVICE_ID");
+  if (!targetId || targetId.startsWith("-")) {
+    console.error("usage: node scripts/ios-install.cjs --target DEVICE_ID");
     process.exit(11);
   }
-  const status = installOnDevice({ team, targetId });
+  const status = installOnDevice({ targetId });
   process.exit(status);
 }

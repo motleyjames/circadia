@@ -97,13 +97,26 @@ NAME="${PICK%%$'\t'*}"
 ID="${PICK#*$'\t'}"
 echo "Target: $NAME ($ID)"
 
-node scripts/ios-install.cjs --team "$TEAM" --target "$ID" || {
+set +e
+node scripts/ios-install.cjs --target "$ID"
+STATUS=$?
+set -e
+if [[ "$STATUS" -eq 13 ]]; then
+  echo
+  echo "Stopped. Xcode has no signed-in Apple ID that can create a profile for this app,"
+  echo "and this Mac has no leftover development profile for app.circadia.diary."
+  echo "Xcode → Settings → Accounts → your Apple ID. Wait until a team appears."
+  echo "Close Xcode. Do not press Run. Do not use Any iOS Device."
+  echo "Then: npm run put-on-phone"
+  exit 13
+fi
+if [[ "$STATUS" -ne 0 ]]; then
   echo
   echo "Install did not finish. Circadia is not on the phone until this step succeeds."
   echo "If the phone is unavailable, unlock it, plug in USB for this one install, run this again."
   echo "Do not use destination Any iOS Device (arm64). Do not press Run in Xcode."
   exit 11
-}
+fi
 
 VERSION="$(node -p 'require("./package.json").version')"
 echo
