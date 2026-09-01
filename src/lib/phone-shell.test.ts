@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.2 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.2");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.2");
+  it("is version 0.8.3 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.3");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.3");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -71,13 +71,13 @@ describe("phone diary shell", () => {
     expect(cap).toContain('appId: "app.circadia.diary"');
     expect(cap).not.toMatch(/operator|audiospike/i);
     expect(cap).toContain('webDir: "../out"');
-    expect(cap).toContain("scrollEnabled: false");
+    expect(cap).toContain("scrollEnabled: true");
     expect(cap).toContain("allowsLinkPreview: false");
     expect(cap).toContain("@capacitor/haptics");
     expect(cap).not.toMatch(/server\s*:/);
     expect(JSON.parse(readFileSync("phone/ios/App/App/capacitor.config.json", "utf8"))).not.toHaveProperty("server");
     expect(JSON.parse(readFileSync("phone/ios/App/App/capacitor.config.json", "utf8")).ios).toMatchObject({
-      scrollEnabled: false,
+      scrollEnabled: true,
       allowsLinkPreview: false,
     });
     expect(JSON.parse(readFileSync("phone/ios/App/App/capacitor.config.json", "utf8")).plugins?.Keyboard?.resize).toBe(
@@ -104,8 +104,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.2");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 12");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.3");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 13");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -175,7 +175,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/phone-pack-fresh.cjs", "utf8")).toContain("vaultFingerprint");
     expect(script).toContain("[A-Z0-9]{10}");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.2");
+    expect(run.stdout).toContain("0.8.3");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
