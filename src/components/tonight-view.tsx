@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useCircadia } from "@/context/circadia-store";
+import { DiaryLink } from "@/components/diary-tab-link";
 import { InstallHint } from "@/components/install-hint";
 import { Mark } from "@/components/mark";
 import { WindDown } from "@/components/wind-down";
@@ -75,7 +75,7 @@ export function TonightView() {
       ) : null}
 
       {page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
-        <Link
+        <DiaryLink
           href="/check-in"
           className="mx-auto mt-8 flex min-h-11 max-w-[20rem] items-center justify-center rounded-full bg-white/[0.06] px-6 text-[15px] text-zinc-100 ring-1 ring-white/12 md:mx-0 md:inline-flex md:max-w-none"
         >
@@ -84,7 +84,7 @@ export function TonightView() {
             : page === "unfiled-open"
               ? "Morning interview is open"
               : "This morning is not filed"}
-        </Link>
+        </DiaryLink>
       ) : null}
 
       <div className="mt-12">

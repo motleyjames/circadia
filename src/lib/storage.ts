@@ -236,6 +236,24 @@ function sessionHeaders(init?: HeadersInit): Headers {
   return headers;
 }
 
+function desktopTokenReady(): boolean {
+  if (typeof window === "undefined") return false;
+  const token = window.circadiaDesktop?.token;
+  return typeof token === "string" && token.length > 0;
+}
+
+/** Dock injects the launch token at document start. Wait if JS won the race. */
+async function waitForDesktopToken(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (phoneVaultActive()) return;
+  if (!window.circadiaDesktop?.native) return;
+  if (desktopTokenReady()) return;
+  for (const ms of VAULT_RETRY_MS) {
+    await vaultPause(ms);
+    if (desktopTokenReady()) return;
+  }
+}
+
 async function persistUnlockNow(login: string): Promise<void> {
   if (typeof window === "undefined") return;
   dropLegacyUnlock();
@@ -246,6 +264,7 @@ async function persistUnlockNow(login: string): Promise<void> {
     await phoneSecureSet(login, payload);
     return;
   }
+  await waitForDesktopToken();
   try {
     const res = await fetch("/api/session-key", {
       method: "POST",
@@ -288,10 +307,12 @@ async function fetchPersistedUnlock(login: string): Promise<{ login: string; mas
     if (master.length !== 32) return null;
     return { login, master };
   }
+  await waitForDesktopToken();
   let held = await fetchSessionKeyOnce(login);
   for (const ms of VAULT_RETRY_MS) {
     if (held) break;
     await vaultPause(ms);
+    await waitForDesktopToken();
     held = await fetchSessionKeyOnce(login);
   }
   return held;
@@ -303,6 +324,7 @@ async function deletePersistedUnlock(login: string): Promise<void> {
     await phoneSecureDelete(login);
     return;
   }
+  await waitForDesktopToken();
   try {
     await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, {
       method: "DELETE",
@@ -550,6 +572,19 @@ async function readMacVault(): Promise<{ status: "ok" | "unavailable"; vault: Di
   }
 }
 
+async function readMacVaultWithRetry(): Promise<{ status: "ok" | "unavailable"; vault: DiskVault }> {
+  await waitForDesktopToken();
+  let last = await readMacVault();
+  if (last.status === "ok") return last;
+  for (const ms of VAULT_RETRY_MS) {
+    await vaultPause(ms);
+    await waitForDesktopToken();
+    last = await readMacVault();
+    if (last.status === "ok") return last;
+  }
+  return last;
+}
+
 export async function bootVaultFromDisk(): Promise<void> {
   if (typeof window === "undefined") return;
   dropLegacyUnlock();
@@ -561,7 +596,7 @@ export async function bootVaultFromDisk(): Promise<void> {
     disk = read.vault;
     diskStatus = read.status;
   } else {
-    const read = await readMacVault();
+    const read = await readMacVaultWithRetry();
     disk = read.vault;
     diskStatus = read.status;
   }

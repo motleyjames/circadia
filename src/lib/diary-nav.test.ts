@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diaryPathToPush } from "./diary-nav";
+import { tabIsActive } from "./diary-route";
 
 const ORIGIN = "https://localhost";
 
@@ -19,5 +20,11 @@ describe("diary in-app paths", () => {
     expect(diaryPathToPush("https://example.com/you", ORIGIN)).toBeNull();
     expect(diaryPathToPush("mailto:ada@example.com", ORIGIN)).toBeNull();
     expect(diaryPathToPush("#already-hash", ORIGIN)).toBeNull();
+  });
+
+  it("marks the five tabs from the in-shell path, not Next pathname", () => {
+    expect(tabIsActive("/", "/")).toBe(true);
+    expect(tabIsActive("/", "/you")).toBe(false);
+    expect(tabIsActive("/library", "/library#caffeine")).toBe(true);
   });
 });

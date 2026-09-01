@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DiaryLink } from "@/components/diary-tab-link";
 import type { MorningReport, SleepRating, Units } from "@/lib/types";
 import { filedNight } from "@/lib/morning-file";
 import { cn } from "@/lib/utils";
@@ -69,13 +69,12 @@ export function MorningFile({
         ) : null}
 
         <div className="mt-10 text-center">
-          <Link
+          <DiaryLink
             href="/insights"
-            prefetch={false}
             className="inline-flex min-h-11 items-center text-[17px] font-medium text-sky-300"
           >
             Notes for this morning
-          </Link>
+          </DiaryLink>
           <div className="mt-1 flex justify-center gap-x-4 text-[15px] text-zinc-500">
             <button type="button" className="min-h-11" onClick={onCorrect}>
               Change an answer

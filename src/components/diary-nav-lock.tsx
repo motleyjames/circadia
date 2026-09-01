@@ -1,23 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { diaryClickTarget } from "@/lib/diary-nav";
+import { listenDiaryHistory, navigateDiary } from "@/lib/diary-route";
 
-/** Capture-phase: cancel the document load before WKWebView follows href. */
+/** Capture-phase: cancel the document load, then stay in this JS lifetime. */
 export function DiaryNavLock() {
-  const router = useRouter();
-
   useEffect(() => {
+    const stopHistory = listenDiaryHistory();
     const onClick = (event: MouseEvent) => {
       const path = diaryClickTarget(event);
       if (!path) return;
       event.preventDefault();
-      router.push(path);
+      navigateDiary(path);
     };
     document.addEventListener("click", onClick, true);
-    return () => document.removeEventListener("click", onClick, true);
-  }, [router]);
+    return () => {
+      document.removeEventListener("click", onClick, true);
+      stopHistory();
+    };
+  }, []);
 
   return null;
 }

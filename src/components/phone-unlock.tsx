@@ -91,7 +91,7 @@ export function PhoneUnlock() {
       </form>
 
       <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-600">
-        Stay-signed-in is on this iPhone only. It does not travel in the pack.
+        Stay-signed-in is on this device only. It does not travel in the pack.
       </p>
       <PackFooter packed />
     </GateShell>

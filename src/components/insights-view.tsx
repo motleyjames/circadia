@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { DiaryLink } from "@/components/diary-tab-link";
 import { useCircadia } from "@/context/circadia-store";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { buildSleepNotes } from "@/lib/advisor";
@@ -80,12 +80,12 @@ export function InsightsView() {
             the shape first. It is clearly fake data.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link
+            <DiaryLink
               href="/check-in"
               className="inline-flex items-center rounded-full bg-sky-300 px-4 py-2 text-sm text-zinc-950"
             >
               Morning interview
-            </Link>
+            </DiaryLink>
             <button
               type="button"
               className="inline-flex min-h-11 items-center rounded-full border border-white/15 px-4 text-[15px] text-zinc-200"
@@ -162,12 +162,12 @@ export function InsightsView() {
             <WeekColumn kicker="What I would try" items={review.doThis} tone="advice" numbered />
           </div>
 
-          <Link
+          <DiaryLink
             href="/"
             className="mt-8 inline-flex min-h-11 items-center text-[17px] font-medium text-sky-300"
           >
             Open wind-down
-          </Link>
+          </DiaryLink>
         </section>
       ) : null}
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
 import { MorningFile } from "@/components/morning-file";
@@ -22,6 +21,7 @@ import { formatMorningDate, shiftIsoDate } from "@/lib/schedule";
 import { clockFromDate, formatClock, todayIsoDate } from "@/lib/time";
 import { SLEEP_AID_QUESTION } from "@/lib/intake";
 import { hapticLight, hapticSelect } from "@/lib/haptics";
+import { navigateDiary } from "@/lib/diary-route";
 
 const SLEEP_TIMES = ["21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00"];
 const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00"];
@@ -70,7 +70,6 @@ function MorningInterview({
   existing: MorningReport | null;
   onCancel?: () => void;
 }) {
-  const router = useRouter();
   const { state, addReport } = useCircadia();
   const today = todayIsoDate();
   const priorNight = shiftIsoDate(today, -1);
@@ -189,7 +188,7 @@ function MorningInterview({
     }
     addReport(payload);
     void hapticLight();
-    router.push("/insights");
+    navigateDiary("/insights");
   }
 
   return (

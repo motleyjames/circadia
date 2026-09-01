@@ -1,16 +1,16 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { DiaryTabLink } from "@/components/diary-tab-link";
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
 import { TABS } from "@/lib/nav";
 import { morningFileDue } from "@/lib/morning-file";
 import { APP_VERSION } from "@/lib/version";
+import { tabIsActive, useDiaryPath } from "@/lib/diary-route";
 import { cn } from "@/lib/utils";
 
 export function SidebarNav() {
-  const pathname = usePathname();
+  const path = useDiaryPath();
   const { state } = useCircadia();
   const study = state.study;
   const morningDue = morningFileDue(state.reports, new Date(), state.profile?.targetWake);
@@ -26,7 +26,7 @@ export function SidebarNav() {
       </div>
       <nav className="flex flex-1 flex-col gap-1 px-3">
         {TABS.map((tab) => {
-          const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
+          const active = tabIsActive(tab.href, path);
           const Icon = tab.icon;
           return (
             <DiaryTabLink

@@ -1,10 +1,6 @@
 import { DiaryPage } from "@/components/diary-page";
-import { YouView } from "@/components/you-view";
 
+/** HTML entry. AppShell swaps You in without unloading the session. */
 export default function YouPage() {
-  return (
-    <DiaryPage>
-      <YouView />
-    </DiaryPage>
-  );
+  return <DiaryPage>{null}</DiaryPage>;
 }
