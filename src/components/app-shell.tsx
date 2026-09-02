@@ -79,7 +79,7 @@ function OpenCover({ exiting, play }: { exiting: boolean; play: boolean }) {
       <div className="night-sky absolute inset-0" />
       <div className="pointer-events-none absolute inset-0 glow-veil" />
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        <BrandStage />
+        <BrandStage key={play ? "play" : "hold"} />
       </div>
     </div>
   );
