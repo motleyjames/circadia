@@ -102,10 +102,12 @@ describe("static pack parks Operator and API routes", () => {
       expect(existsSync(".mod-parked")).toBe(false);
 
       expect(result.status, result.stderr || result.stdout).toBe(0);
+      expect(existsSync("out/index.html")).toBe(true);
+      expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("stashDiaryServer");
+      expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("restoreDiaryServer");
       expect(`${result.stdout}\n${result.stderr}`).not.toContain(
         'Specified "headers" will not automatically work with "output: export"',
       );
-      expect(existsSync("out/index.html")).toBe(true);
       expect(readFileSync("out/index.html", "utf8")).toContain('name="circadia-version"');
       expect(readFileSync("out/index.html", "utf8")).toContain(APP_VERSION);
       expect(existsSync("out/voice/silence.wav")).toBe(true);

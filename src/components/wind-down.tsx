@@ -315,7 +315,7 @@ function SoundPlayer({
   const [elapsed, setElapsed] = useState(0);
   const elapsedRef = useRef(0);
   const logged = useRef(false);
-  const originMs = useRef(Date.now());
+  const originMs = useRef(0);
 
   function finish(fromUnmount = false) {
     if (logged.current) return;

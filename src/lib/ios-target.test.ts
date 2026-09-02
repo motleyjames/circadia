@@ -41,7 +41,11 @@ const {
   }) => { id?: string; reachable?: boolean } | null;
   resolveWaitMs: (env?: Record<string, string | undefined>, tty?: boolean) => number;
   formatTargetLine: (pick: { name?: string; id: string; coreDeviceId?: string }) => string;
-  connectionLive: (conn: { tunnelState?: string; transportType?: string }) => boolean;
+  connectionLive: (conn: {
+    tunnelState?: string;
+    transportType?: string;
+    ddiServicesAvailable?: boolean;
+  }) => boolean;
   usbSeesIphone: (text: string) => boolean;
 };
 

@@ -56,8 +56,15 @@ describe("skipWebOpenCover", () => {
     expect(skipWebOpenCover()).toBe(true);
   });
 
-  it("does not skip for a browser preview of the phone layout", () => {
-    g.window = { location: { protocol: "http:" }, Capacitor: { isNativePlatform: () => false } };
-    expect(skipWebOpenCover()).toBe(false);
+  it("does not skip when the phone-pack env leaked into a browser", () => {
+    const previous = process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK;
+    process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK = "1";
+    try {
+      g.window = { location: { protocol: "http:" } };
+      expect(skipWebOpenCover()).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK;
+      else process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK = previous;
+    }
   });
 });

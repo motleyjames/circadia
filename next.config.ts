@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { nextImagesUnoptimized, nextOutput } from "./src/lib/next-output";
+import { nextDistDir, nextImagesUnoptimized, nextOutput } from "./src/lib/next-output";
 
 /** Pin the repo, not a parent folder that happens to have a package-lock.json. */
 const repoRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -13,12 +13,10 @@ const env = {
   NEXT_PUBLIC_CIRCADIA_SURFACE: process.env.NEXT_PUBLIC_CIRCADIA_SURFACE,
 };
 
-const operator =
-  process.env.CIRCADIA_SURFACE === "mod" || process.env.NEXT_PUBLIC_CIRCADIA_SURFACE === "mod";
 const packStatic = nextOutput(env) === "export";
 
 const nextConfig: NextConfig = {
-  distDir: operator ? ".next-mod" : ".next",
+  distDir: nextDistDir(env),
   output: nextOutput(env),
   images: nextImagesUnoptimized(env) ? { unoptimized: true } : undefined,
   typescript: packStatic ? { tsconfigPath: "tsconfig.static.json" } : undefined,

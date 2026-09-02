@@ -60,9 +60,15 @@ describe("iPhone UIKit open", () => {
 
   it("skips the CSS OpenCover on the packed phone binary", () => {
     expect(shell).toContain("skipWebOpenCover");
-    expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain(
-      'process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK === "1"',
+    expect(shell).toContain("useLayoutEffect");
+    expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain("return isPhoneNative()");
+    expect(readFileSync("src/lib/phone-native.ts", "utf8")).not.toMatch(
+      /skipWebOpenCover[\s\S]*NEXT_PUBLIC_CIRCADIA_PHONE_PACK ===/,
     );
-    expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
+    expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("stashDiaryServer");
+    expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("restoreDiaryServer");
+    expect(readFileSync("electron/build-ui.cjs", "utf8")).not.toMatch(/rmSync\(path\.join\(root, "\.next"\)/);
+    expect(scene).toContain("makeKeyAndVisible");
+    expect(scene).toContain("applicationState == .active");
   });
 });

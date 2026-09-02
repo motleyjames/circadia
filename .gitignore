@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /.next-mod/
+/.next-phone/
+/.next-dock-stash/
 /out/
 /public/circadia-locked.json
 /circadia-locked.json
