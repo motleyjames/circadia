@@ -30,6 +30,7 @@ import {
 import type { ActivityLevel, Profile, Units } from "@/lib/types";
 import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
 import { ScheduledDaysPicker } from "@/components/scheduled-days-picker";
+import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
 const ACTIVITY: { value: ActivityLevel; label: string }[] = [
@@ -503,6 +504,7 @@ export function YouView() {
             {MEDICAL_DISCLAIMER}
           </p>
           <CrisisLine className="mt-2 max-w-[52ch] px-1 text-[12px] leading-relaxed text-zinc-600" />
+          <p className="mt-3 px-1 text-[11px] tracking-[0.18em] text-zinc-700 uppercase">{APP_VERSION}</p>
         </section>
         <ConfirmDialog
           open={sampleOpen}

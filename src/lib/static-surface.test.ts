@@ -14,6 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { DEFAULT_MOD_KEY } from "./mod-key-shared";
+import { APP_VERSION } from "./version";
 
 const require = createRequire(import.meta.url);
 const { parkSurfaces, restoreSurfaces } = require("../../electron/build-ui.cjs") as {
@@ -105,6 +106,8 @@ describe("static pack parks Operator and API routes", () => {
         'Specified "headers" will not automatically work with "output: export"',
       );
       expect(existsSync("out/index.html")).toBe(true);
+      expect(readFileSync("out/index.html", "utf8")).toContain('name="circadia-version"');
+      expect(readFileSync("out/index.html", "utf8")).toContain(APP_VERSION);
       expect(existsSync("out/voice/silence.wav")).toBe(true);
       expect(existsSync("out/voice/478/0.wav")).toBe(true);
       expect(existsSync("out/mod")).toBe(false);
