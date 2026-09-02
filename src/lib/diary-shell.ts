@@ -10,12 +10,9 @@ export const OPEN_HOLD_REDUCED_MS = 280;
 export const OPEN_COVER_MS = 1100;
 /** Do not hang a dark wait if visibility never fires. */
 export const OPEN_SURFACE_WAIT_MS = 800;
-/** Phone: native night cover lifts, then pings. Longer than the native handshake fallback. */
-export const OPEN_PHONE_SURFACE_WAIT_MS = 4000;
 
 export type OpenSurfaceWindow = Window & {
   __CIRCADIA_SURFACE__?: boolean;
-  __CIRCADIA_OPEN_READY__?: boolean;
   Capacitor?: { isNativePlatform?: () => boolean };
 };
 
@@ -35,26 +32,10 @@ function nextPaint(w: OpenSurfaceWindow): Promise<void> {
   });
 }
 
-function isPhoneOpenSurface(w: Window): boolean {
-  try {
-    const protocol = (w.location?.protocol ?? "").toLowerCase();
-    if (protocol === "circadia:" || protocol === "capacitor:" || protocol === "ionic:") return true;
-    return (w as OpenSurfaceWindow).Capacitor?.isNativePlatform?.() === true;
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Native launch screen is a dark empty field. Clock the open from a painted
- * visible frame — not `window.load`, which waits for every asset and freezes
- * the wait frame. If the CSS open runs under the splash, the user only sees
- * the last keyframe.
- *
- * Phone WKWebView reports visibilityState visible while LaunchScreen still
- * covers it. Raise `__CIRCADIA_OPEN_READY__` after the wait frame is painted
- * so native can lift its night cover, then wait for `circadia-surface`.
- * A ping in capacitorDidLoad is wiped — that hook runs before loadWebView.
+ * Dock CSS open clocks from a painted visible frame — not `window.load`.
+ * The iPhone open is UIKit (`CircadiaOpenWindow`); this helper must not wait
+ * for a native ping or the packed diary would sit under a frozen web cover.
  */
 export function waitForOpenSurface(host?: OpenSurfaceHost): Promise<void> {
   const w = (host?.window ?? (typeof window !== "undefined" ? window : undefined)) as
@@ -72,11 +53,7 @@ export function waitForOpenSurface(host?: OpenSurfaceHost): Promise<void> {
       w.clearTimeout(watchdog);
       void nextPaint(w).then(resolve);
     };
-    const phone = isPhoneOpenSurface(w);
-    const watchdog = w.setTimeout(
-      finish,
-      phone ? OPEN_PHONE_SURFACE_WAIT_MS : OPEN_SURFACE_WAIT_MS,
-    );
+    const watchdog = w.setTimeout(finish, OPEN_SURFACE_WAIT_MS);
     const start = () => {
       if (doc.visibilityState === "hidden") {
         doc.addEventListener("visibilitychange", function onVis() {
@@ -85,15 +62,6 @@ export function waitForOpenSurface(host?: OpenSurfaceHost): Promise<void> {
             start();
           }
         });
-        return;
-      }
-      if (phone) {
-        w.__CIRCADIA_OPEN_READY__ = true;
-        if (w.__CIRCADIA_SURFACE__) {
-          finish();
-          return;
-        }
-        w.addEventListener("circadia-surface", finish, { once: true });
         return;
       }
       finish();

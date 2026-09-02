@@ -5,7 +5,6 @@ import {
   OPEN_HOLD_MS,
   OPEN_HOLD_REDUCED_MS,
   OPEN_IDENTITY_MS,
-  OPEN_PHONE_SURFACE_WAIT_MS,
   OPEN_SURFACE_WAIT_MS,
   consumeOpenHold,
   diaryShellPhase,
@@ -77,58 +76,38 @@ describe("diary shell phase", () => {
     expect(OPEN_HOLD_REDUCED_MS).toBeLessThan(OPEN_HOLD_MS);
     expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(1000);
     expect(OPEN_COVER_MS).toBeLessThan(1600);
-    expect(OPEN_PHONE_SURFACE_WAIT_MS).toBeGreaterThan(OPEN_SURFACE_WAIT_MS);
+    expect(OPEN_SURFACE_WAIT_MS).toBeGreaterThan(0);
   });
 
-  it("clocks the open from a visible paint, not window load", () => {
+  it("clocks the Dock open from a visible paint, not window load", () => {
     const src = readFileSync("src/lib/diary-shell.ts", "utf8");
     expect(src).toContain("DOMContentLoaded");
     expect(src).not.toContain('addEventListener("load"');
     expect(src).toContain("readyState === \"loading\"");
-    expect(src).toContain("circadia-surface");
-    expect(src).toContain("__CIRCADIA_SURFACE__");
-    expect(src).toContain("OPEN_PHONE_SURFACE_WAIT_MS");
-    expect(src).toContain("__CIRCADIA_OPEN_READY__");
-    expect(OPEN_PHONE_SURFACE_WAIT_MS).toBeGreaterThanOrEqual(3000);
+    expect(src).not.toContain("__CIRCADIA_OPEN_READY__");
+    expect(src).not.toContain("OPEN_PHONE_SURFACE_WAIT_MS");
+    expect(src).toContain("CircadiaOpenWindow");
   });
 
   it("resolves the open-surface wait on a visible document", async () => {
     await expect(waitForOpenSurface()).resolves.toBeUndefined();
   });
 
-  it("on a phone host raises open-ready and waits for the native surface ping", async () => {
-    const listeners = new Map<string, Set<(ev?: Event) => void>>();
+  it("on a phone host finishes without waiting for a native surface ping", async () => {
     const hostWindow = {
       location: { protocol: "capacitor:" },
       __CIRCADIA_SURFACE__: false,
-      addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
-        const fn = typeof listener === "function" ? listener : listener.handleEvent.bind(listener);
-        const set = listeners.get(type) ?? new Set();
-        set.add(fn as (ev?: Event) => void);
-        listeners.set(type, set);
-      },
+      addEventListener() {},
       setTimeout: setTimeout as unknown as Window["setTimeout"],
       clearTimeout: clearTimeout as unknown as Window["clearTimeout"],
-    } as OpenSurfaceWindow;
+    } as unknown as OpenSurfaceWindow;
     const hostDoc = {
       visibilityState: "visible" as Document["visibilityState"],
       readyState: "complete" as DocumentReadyState,
       addEventListener() {},
       removeEventListener() {},
     };
-    let finished = false;
-    const pending = waitForOpenSurface({ window: hostWindow, document: hostDoc }).then(() => {
-      finished = true;
-    });
-    await Promise.resolve();
-    expect(hostWindow.__CIRCADIA_OPEN_READY__).toBe(true);
-    expect(finished).toBe(false);
-    const surface = listeners.get("circadia-surface");
-    expect(surface && surface.size).toBeGreaterThan(0);
-    hostWindow.__CIRCADIA_SURFACE__ = true;
-    surface?.forEach((fn) => fn());
-    await pending;
-    expect(finished).toBe(true);
+    await expect(waitForOpenSurface({ window: hostWindow, document: hostDoc })).resolves.toBeUndefined();
   });
 
   it("plays the Tonight debut once, then leaves tab switches still", () => {
