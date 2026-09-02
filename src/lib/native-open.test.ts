@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { APP_VERSION } from "./version";
 import { OPEN_COVER_MS, OPEN_HOLD_MS, OPEN_HOLD_REDUCED_MS, OPEN_IDENTITY_MS } from "./diary-shell";
 import { weakSelfViolations } from "./swift-weak-self";
 
@@ -8,6 +7,7 @@ describe("iPhone UIKit open", () => {
   const scene = readFileSync("phone/ios/App/App/SceneDelegate.swift", "utf8");
   const launch = readFileSync("phone/ios/App/App/Base.lproj/LaunchScreen.storyboard", "utf8");
   const mark = readFileSync("phone/ios/App/App/CircadiaMarkView.swift", "utf8");
+  const sky = readFileSync("phone/ios/App/App/CircadiaSky.swift", "utf8");
   const shell = readFileSync("src/components/app-shell.tsx", "utf8");
 
   it("plays the fade on a dedicated UIWindow, not inside WKWebView", () => {
@@ -31,12 +31,44 @@ describe("iPhone UIKit open", () => {
     expect(scene).not.toMatch(/web(View)?\.transform/);
   });
 
-  it("matches LaunchScreen to the overlay so splash cannot hide the wordmark", () => {
-    expect(launch).toContain("Circadia");
-    expect(launch).toContain("For falling asleep. For staying asleep. For a clock that holds.");
-    expect(launch).toContain(APP_VERSION);
-    expect(launch).toContain("Georgia");
+  it("keeps LaunchScreen a dark wait so the overlay owns the whole open", () => {
+    // The launch screen used to show the finished wordmark, which left the phone
+    // nothing to play. It is now `brand-open-wait`: flat night, no type.
     expect(launch).toContain("0.019607843137254902");
+    expect(launch).not.toContain("<label");
+    expect(launch).not.toContain("For falling asleep.");
+    expect(launch).not.toContain("Georgia");
+    // The identity is built in UIKit instead, on the Dock's beats.
+    expect(scene).toContain("private func arriveWords()");
+    expect(scene).toContain("(title, 1.2, 1.8)");
+    expect(scene).toContain("(line, 1.6, 1.6)");
+    expect(scene).toContain("(build, 2.0, 1.4)");
+  });
+
+  it("wears the brand faces and the night sky, not Georgia on flat black", () => {
+    // Fraunces and Outfit, pinned to the axis values the Dock renders and bundled
+    // as static TTFs — iOS cannot load the woff2 the web build uses.
+    expect(scene).toContain('UIFont(name: "CircadiaSerif-Regular"');
+    expect(scene).toContain('UIFont(name: "CircadiaSans-Regular"');
+    expect(scene).toContain("wordmarkSize: CGFloat = 45.6");
+    expect(scene).toContain(".kern: -0.03 * Self.wordmarkSize");
+    const plist = readFileSync("phone/ios/App/App/Info.plist", "utf8");
+    for (const font of ["CircadiaSerif-Regular.ttf", "CircadiaSans-Regular.ttf"]) {
+      expect(existsSync(`phone/ios/App/App/Fonts/${font}`)).toBe(true);
+      expect(plist).toContain(`Fonts/${font}`);
+    }
+    // OFL requires the licence to travel with the font.
+    expect(existsSync("phone/ios/App/App/Fonts/OFL-Fraunces.txt")).toBe(true);
+    expect(existsSync("phone/ios/App/App/Fonts/OFL-Outfit.txt")).toBe(true);
+    // The same three washes and five stars the Dock paints.
+    expect(sky).toContain("final class CircadiaSky");
+    expect(sky).toContain("type = .radial");
+    expect(sky).toContain("func rise(duration: TimeInterval)");
+    expect(scene).toContain("sky.rise(duration: 1.8)");
+    expect(weakSelfViolations(sky)).toEqual([]);
+    const pbx = readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8");
+    expect(pbx).toContain("CircadiaSky.swift in Sources");
+    expect(pbx).toContain("Fonts in Resources");
   });
 
   it("draws the clock natively, then recedes on the same beat as Dock", () => {

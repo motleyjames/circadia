@@ -47,6 +47,11 @@
 	<array>
 		<string>audio</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Fonts/CircadiaSerif-Regular.ttf</string>
+		<string>Fonts/CircadiaSans-Regular.ttf</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

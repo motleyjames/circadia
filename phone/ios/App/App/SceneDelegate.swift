@@ -53,6 +53,7 @@ final class CircadiaOpenWindow {
     private static let settleBeat: TimeInterval = 0.8
 
     private let overlay: UIWindow
+    private let sky = CircadiaSky()
     private let identity = UIStackView()
     private let mark = CircadiaMarkView(size: 84)
     private let title = UILabel()
@@ -85,9 +86,17 @@ final class CircadiaOpenWindow {
 
         let root = UIViewController()
         root.view.backgroundColor = Self.night
+        sky.frame = root.view.bounds
+        sky.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        root.view.addSubview(sky)
         buildIdentity(in: root.view)
         overlay.rootViewController = root
+        // The launch screen is a dark wait now: nothing is on screen until arm()
+        // builds the identity, layer by layer, the way the Dock cover does.
         identity.alpha = 1
+        title.alpha = 0
+        line.alpha = 0
+        build.alpha = 0
         overlay.makeKeyAndVisible()
     }
 
@@ -100,17 +109,47 @@ final class CircadiaOpenWindow {
         overlay.makeKeyAndVisible()
     }
 
+    /// `word-arrive` in globals.css: fade up and settle the last 6pt. Same beats
+    /// on both shells — title 1.2s, tagline 1.6s, stamp 2.0s.
+    private func arriveWords() {
+        for (label, delay, duration) in [
+            (title, 1.2, 1.8),
+            (line, 1.6, 1.6),
+            (build, 2.0, 1.4),
+        ] as [(UILabel, TimeInterval, TimeInterval)] {
+            label.alpha = 0
+            label.transform = CGAffineTransform(translationX: 0, y: 6)
+            UIView.animate(withDuration: duration, delay: delay,
+                           options: [.curveEaseOut, .beginFromCurrentState]) {
+                label.alpha = 1
+                label.transform = .identity
+            }
+        }
+    }
+
+    private func settleWords() {
+        for label in [title, line, build] {
+            label.alpha = 1
+            label.transform = .identity
+        }
+    }
+
     private func arm() {
         guard !armed, !receded else { return }
         armed = true
         let reduced = UIAccessibility.isReduceMotionEnabled
         if reduced {
             mark.settle()
+            sky.settle()
+            settleWords()
             UIView.animate(withDuration: 0.2) { self.mark.alpha = 1 }
             drawDoneAt = CACurrentMediaTime() + 0.28
         } else {
             mark.alpha = 1
             mark.play()
+            // Launch screen is flat night; the sky wakes under the draw so there is no pop.
+            sky.rise(duration: 1.8)
+            arriveWords()
             drawDoneAt = CACurrentMediaTime() + CircadiaMarkView.playDuration
         }
         // Start asking the diary early; recede() itself waits out the draw.
@@ -198,13 +237,13 @@ final class CircadiaOpenWindow {
         // Total 2.2s — the same beats as `.brand-open-recede` in globals.css.
         let drift = CGAffineTransform(translationX: 0, y: -6)
         overlay.backgroundColor = .clear
-        UIView.animate(withDuration: 0.8, delay: 0, options: [.curveEaseInOut]) {
+        UIView.animate(withDuration: 0.8, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
             self.build.alpha = 0
             self.build.transform = drift
             self.line.alpha = 0
             self.line.transform = drift
         }
-        UIView.animate(withDuration: 0.9, delay: 0.15, options: [.curveEaseInOut]) {
+        UIView.animate(withDuration: 0.9, delay: 0.15, options: [.curveEaseInOut, .beginFromCurrentState]) {
             self.title.alpha = 0
             self.title.transform = drift
         }
@@ -214,6 +253,7 @@ final class CircadiaOpenWindow {
             self.mark.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
         }
         UIView.animate(withDuration: 1.6, delay: 0.2, options: [.curveEaseInOut]) {
+            self.sky.alpha = 0
             self.overlay.rootViewController?.view.backgroundColor = Self.night.withAlphaComponent(0)
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
@@ -235,24 +275,36 @@ final class CircadiaOpenWindow {
     }
 
     private func buildIdentity(in host: UIView) {
-        title.text = "Circadia"
-        title.textColor = UIColor(white: 0.98, alpha: 1)
+        title.attributedText = NSAttributedString(
+            string: "Circadia",
+            attributes: [
+                .font: Self.wordmarkFont(),
+                .foregroundColor: UIColor(white: 0.98, alpha: 1),
+                // Dock is `tracking-tight`: -0.03em.
+                .kern: -0.03 * Self.wordmarkSize,
+            ],
+        )
         title.textAlignment = .center
-        title.font = Self.wordmarkFont()
         title.adjustsFontForContentSizeCategory = false
 
         line.text = "For falling asleep. For staying asleep. For a clock that holds."
         line.textColor = UIColor(red: 161 / 255.0, green: 161 / 255.0, blue: 170 / 255.0, alpha: 1)
         line.textAlignment = .center
         line.numberOfLines = 0
-        line.font = UIFont.systemFont(ofSize: 15, weight: .regular)
+        line.font = Self.bodyFont(15)
         line.adjustsFontForContentSizeCategory = false
 
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-        build.text = version
-        build.textColor = UIColor(white: 0.44, alpha: 1)
+        build.attributedText = NSAttributedString(
+            string: version.uppercased(),
+            attributes: [
+                .font: Self.bodyFont(11),
+                // zinc-700, the Dock's stamp colour — not the brighter grey.
+                .foregroundColor: UIColor(red: 63 / 255.0, green: 63 / 255.0, blue: 70 / 255.0, alpha: 1),
+                .kern: 0.18 * 11,
+            ],
+        )
         build.textAlignment = .center
-        build.font = UIFont.systemFont(ofSize: 11, weight: .regular)
         build.adjustsFontForContentSizeCategory = false
 
         identity.axis = .vertical
@@ -281,13 +333,25 @@ final class CircadiaOpenWindow {
         mark.alpha = 0
     }
 
-    private static let night = UIColor(red: 5.0 / 255.0, green: 4.0 / 255.0, blue: 10.0 / 255.0, alpha: 1)
+    private static let night = CircadiaSky.night
+
+    /// The Dock wordmark is Fraunces at 2.85rem. `CircadiaSerif` is that same face,
+    /// pinned to the axis values the browser renders (wght 400, SOFT 50, WONK 0.4)
+    /// and bundled in Fonts/. Georgia was never the brand — only the nearest thing
+    /// already on the phone.
+    static let wordmarkSize: CGFloat = 45.6
 
     private static func wordmarkFont() -> UIFont {
-        if let georgia = UIFont(name: "Georgia", size: 42) { return georgia }
-        let base = UIFont.systemFont(ofSize: 42, weight: .regular)
+        if let brand = UIFont(name: "CircadiaSerif-Regular", size: wordmarkSize) { return brand }
+        if let georgia = UIFont(name: "Georgia", size: wordmarkSize) { return georgia }
+        let base = UIFont.systemFont(ofSize: wordmarkSize, weight: .regular)
         guard let descriptor = base.fontDescriptor.withDesign(.serif) else { return base }
-        return UIFont(descriptor: descriptor, size: 42)
+        return UIFont(descriptor: descriptor, size: wordmarkSize)
+    }
+
+    /// Body copy is Outfit on the Dock; `CircadiaSans` is that face.
+    private static func bodyFont(_ size: CGFloat) -> UIFont {
+        UIFont(name: "CircadiaSans-Regular", size: size) ?? UIFont.systemFont(ofSize: size, weight: .regular)
     }
 }
 
