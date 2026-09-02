@@ -92,6 +92,7 @@ describe("stay signed in across diary tabs", () => {
     resetVaultMemoryForTests();
     setPhoneVaultIoForTests(null);
     localStorage.clear();
+    delete window.circadiaDesktop;
   });
 
   async function signIn(): Promise<void> {
@@ -132,6 +133,55 @@ describe("stay signed in across diary tabs", () => {
       expect(getSessionLogin(), tab.label).toBe(LOGIN);
       expect(loadState().researchNotes, tab.label).toBe("nights still here");
     }
+  });
+
+  it("stays signed in after a hundred process deaths", async () => {
+    await signIn();
+    for (let i = 0; i < 100; i += 1) {
+      resetVaultMemoryForTests();
+      setVaultPauseForTests(async () => undefined);
+      expect(getSessionLogin(), `death ${i}`).toBeNull();
+      await bootVaultFromDisk();
+      expect(getSessionLogin(), `boot ${i}`).toBe(LOGIN);
+    }
+    expect(loadState().researchNotes).toBe("nights still here");
+  });
+
+  it("restores from Circadia.app Keychain when /api/session-key is gone", async () => {
+    const nativeKeys = new Map<string, string>();
+    window.circadiaDesktop = {
+      native: true,
+      token: "launch-token",
+      sessionKey: {
+        set: async (login, master) => {
+          nativeKeys.set(login, master);
+          return true;
+        },
+        get: async (login) => nativeKeys.get(login) ?? null,
+        delete: async (login) => {
+          nativeKeys.delete(login);
+        },
+      },
+    };
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "http://127.0.0.1");
+      if (url.pathname === "/api/session-key") {
+        return new Response(JSON.stringify({ ok: false }), { status: 404 });
+      }
+      if (url.pathname === PACKED_DIARY_HREF || url.pathname.endsWith("/circadia-locked.json")) {
+        return new Response("", { status: 404 });
+      }
+      return new Response(JSON.stringify({ v: 1, files: {}, locks: {}, session: null }), { status: 200 });
+    }) as typeof fetch;
+    await signIn();
+    expect(nativeKeys.get(LOGIN)?.length).toBeGreaterThan(8);
+    resetVaultMemoryForTests();
+    setVaultPauseForTests(async () => undefined);
+    expect(getSessionLogin()).toBeNull();
+    await bootVaultFromDisk();
+    expect(getSessionLogin()).toBe(LOGIN);
+    expect(loadState().researchNotes).toBe("nights still here");
+    delete window.circadiaDesktop;
   });
 
   it("logs out only when closeFile runs, not when the shell remounts", async () => {

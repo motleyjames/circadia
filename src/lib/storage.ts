@@ -259,6 +259,58 @@ async function waitForDesktopToken(): Promise<void> {
   }
 }
 
+async function persistUnlockNative(login: string, payload: string): Promise<boolean> {
+  const sk = window.circadiaDesktop?.sessionKey;
+  if (!sk?.set) return false;
+  try {
+    return (await sk.set(login, payload)) === true;
+  } catch {
+    return false;
+  }
+}
+
+async function fetchUnlockNative(login: string): Promise<{ login: string; master: Uint8Array } | null> {
+  const sk = window.circadiaDesktop?.sessionKey;
+  if (!sk?.get) return null;
+  try {
+    const raw = await sk.get(login);
+    if (!raw) return null;
+    const master = bytesFromBase64(raw);
+    if (master.length !== 32) return null;
+    return { login, master };
+  } catch {
+    return null;
+  }
+}
+
+async function deleteUnlockNative(login: string): Promise<void> {
+  const sk = window.circadiaDesktop?.sessionKey;
+  if (!sk?.delete) return;
+  try {
+    await sk.delete(login);
+  } catch {
+    /* API delete still runs */
+  }
+}
+
+async function persistUnlockViaApi(login: string, payload: string): Promise<boolean> {
+  await waitForDesktopToken();
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const res = await fetch("/api/session-key", {
+        method: "POST",
+        headers: sessionHeaders({ "content-type": "application/json" }),
+        body: JSON.stringify({ login, master: payload }),
+      });
+      if (res.ok) return true;
+    } catch {
+      /* retry */
+    }
+    if (attempt < 2) await vaultPause(VAULT_RETRY_MS[Math.min(attempt, VAULT_RETRY_MS.length - 1)] ?? 120);
+  }
+  return false;
+}
+
 async function persistUnlockNow(login: string): Promise<void> {
   if (typeof window === "undefined") return;
   dropLegacyUnlock();
@@ -269,17 +321,9 @@ async function persistUnlockNow(login: string): Promise<void> {
     await phoneSecureSet(login, payload);
     return;
   }
-  await waitForDesktopToken();
-  try {
-    const res = await fetch("/api/session-key", {
-      method: "POST",
-      headers: sessionHeaders({ "content-type": "application/json" }),
-      body: JSON.stringify({ login, master: payload }),
-    });
-    if (!res.ok) return;
-  } catch {
-    /* fail closed: next launch requires the password */
-  }
+  // Circadia.app Keychain first — Node `security` ACL breaks after a Node path change.
+  await persistUnlockNative(login, payload);
+  await persistUnlockViaApi(login, payload);
 }
 
 async function fetchSessionKeyOnce(login: string): Promise<{ login: string; master: Uint8Array } | null> {
@@ -312,6 +356,8 @@ async function fetchPersistedUnlock(login: string): Promise<{ login: string; mas
     if (master.length !== 32) return null;
     return { login, master };
   }
+  const fromApp = await fetchUnlockNative(login);
+  if (fromApp) return fromApp;
   await waitForDesktopToken();
   let held = await fetchSessionKeyOnce(login);
   for (const ms of VAULT_RETRY_MS) {
@@ -329,6 +375,7 @@ async function deletePersistedUnlock(login: string): Promise<void> {
     await phoneSecureDelete(login);
     return;
   }
+  await deleteUnlockNative(login);
   await waitForDesktopToken();
   try {
     await fetch(`/api/session-key?login=${encodeURIComponent(login)}`, {

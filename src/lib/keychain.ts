@@ -18,6 +18,28 @@ export function defaultSecurity(args: string[]): SecurityResult {
   }
 }
 
+/**
+ * `security -w` treats a leading dash as a flag, and some macOS builds mangle
+ * `+` `/` in argv. A 32-byte master as hex is only 0-9a-f.
+ */
+export function secretForArgv(password: string): string {
+  try {
+    const buf = Buffer.from(password, "base64");
+    if (buf.length === 32) return buf.toString("hex");
+  } catch {
+    /* keep the original */
+  }
+  return password;
+}
+
+export function secretFromArgv(value: string): string {
+  const trimmed = value.trim();
+  if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return Buffer.from(trimmed, "hex").toString("base64");
+  }
+  return trimmed;
+}
+
 export type Keychain = {
   set: (account: string, password: string) => boolean;
   get: (account: string) => string | null;
@@ -31,12 +53,13 @@ export function makeKeychain(security: SecurityFn = defaultSecurity): Keychain {
       const result = security([
         "add-generic-password",
         "-U",
+        "-A",
         "-s",
         KEYCHAIN_SERVICE,
         "-a",
         account,
         "-w",
-        password,
+        secretForArgv(password),
       ]);
       return result.status === 0;
     },
@@ -51,7 +74,7 @@ export function makeKeychain(security: SecurityFn = defaultSecurity): Keychain {
         account,
       ]);
       if (result.status !== 0) return null;
-      const value = result.stdout.trim();
+      const value = secretFromArgv(result.stdout);
       return value.length > 0 ? value : null;
     },
     delete(account: string) {

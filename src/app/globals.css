@@ -195,6 +195,7 @@
 .brand-open-cover .brand-open-sky,
 .brand-open-cover .brand-open-title,
 .brand-open-cover .brand-open-line,
+.brand-open-cover .brand-open-build,
 .brand-open-cover .brand-open-mark .mark-ring,
 .brand-open-cover .brand-open-mark .mark-hands,
 .brand-open-cover .brand-open-mark .mark-moon,
@@ -239,7 +240,8 @@ html.circadia-phone .brand-open-mark,
 html.circadia-phone .brand-open-halo,
 html.circadia-phone .brand-open-ring,
 html.circadia-phone .brand-open-title,
-html.circadia-phone .brand-open-line {
+html.circadia-phone .brand-open-line,
+html.circadia-phone .brand-open-build {
   -webkit-transform: none;
   transform: none;
   will-change: auto;

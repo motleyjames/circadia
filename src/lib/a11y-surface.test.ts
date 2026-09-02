@@ -49,6 +49,7 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).toContain("brand-open-identity");
     expect(css).toContain("html.circadia-phone .brand-open-cover");
     expect(css).toContain("html.circadia-phone .brand-open-mark");
+    expect(css).toContain("brand-open-build");
     expect(css).toContain("brand-open-wait");
     expect(css).toContain("transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)");
     expect(css).toContain("transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1)");

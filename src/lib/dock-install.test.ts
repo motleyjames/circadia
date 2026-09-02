@@ -87,10 +87,15 @@ describe("Dock install invariants", () => {
       /localStorage\.setItem\(\s*SESSION_UNLOCK_KEY/,
     );
     expect(readFileSync("src/lib/keychain.ts", "utf8")).toContain("add-generic-password");
+    expect(readFileSync("src/lib/keychain.ts", "utf8")).toContain('"-A"');
+    expect(readFileSync("src/lib/keychain.ts", "utf8")).toContain("secretForArgv");
     expect(readFileSync("src/app/api/session-key/route.ts", "utf8")).toContain("isLocalRequest");
     expect(readFileSync("src/app/api/session-key/route.ts", "utf8")).toContain("sessionTokenOk");
     expect(readFileSync("electron/launcher.swift", "utf8")).toContain("CIRCADIA_SESSION_TOKEN");
     expect(readFileSync("electron/launcher.swift", "utf8")).toContain("circadiaDesktop");
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain("circadiaSession");
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain("SecItemAdd");
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain("sessionKey");
     expect(readFileSync("electron/launcher.swift", "utf8")).toContain("SecRandomCopyBytes");
     expect(readFileSync("electron/launcher.swift", "utf8")).not.toMatch(/logLine\([^)]*sessionToken/);
     expect(onboarding).not.toContain("James can reach");
@@ -173,7 +178,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("File this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("Notes for this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).not.toContain("The interview is closed");
-    expect(APP_VERSION).toBe("0.8.16");
+    expect(APP_VERSION).toBe("0.8.17");
   });
 
   it("does not run diary views while compiling the operator", () => {

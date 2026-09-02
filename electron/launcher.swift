@@ -44,8 +44,103 @@ func jsonString(_ value: String) -> String {
 
 func sessionBridgeScript() -> String {
   let token = jsonString(sessionToken)
-  return "document.documentElement.classList.add('circadia-native');Object.defineProperty(window,'circadiaDesktop',{value:{native:true,token:\(token)},writable:false,enumerable:true,configurable:false});"
+  return """
+  document.documentElement.classList.add('circadia-native');
+  (function(){
+    var token=\(token);
+    function talk(payload){
+      var h=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.circadiaSession;
+      if(!h||typeof h.postMessage!=='function') return Promise.resolve(null);
+      return Promise.resolve(h.postMessage(payload));
+    }
+    Object.defineProperty(window,'circadiaDesktop',{value:{
+      native:true,
+      token:token,
+      sessionKey:{
+        set:function(login,master){return talk({op:'set',login:String(login||''),master:String(master||'')}).then(function(v){return v===true});},
+        get:function(login){return talk({op:'get',login:String(login||'')}).then(function(v){return typeof v==='string'&&v?v:null});},
+        delete:function(login){return talk({op:'delete',login:String(login||'')}).then(function(){})}
+      }
+    },writable:false,enumerable:true,configurable:false});
+  })();
+  """
 }
+
+/// Circadia.app's own Keychain. Node `security` ACL is bound to whichever
+/// Node binary wrote the item — a git pull that changes PATH logs the user out.
+final class CircadiaSessionStore: NSObject, WKScriptMessageHandlerWithReply {
+  private let service = "Circadia"
+
+  func userContentController(
+    _ userContentController: WKUserContentController,
+    didReceive message: WKScriptMessage,
+    replyHandler: @escaping (Any?, String?) -> Void
+  ) {
+    guard message.name == "circadiaSession" else {
+      replyHandler(nil, "unknown")
+      return
+    }
+    let body = message.body as? [String: Any] ?? [:]
+    let op = body["op"] as? String ?? ""
+    let login = body["login"] as? String ?? ""
+    let master = body["master"] as? String ?? ""
+    if login.count < 3 || login.count > 180 || login.contains("\0") {
+      replyHandler(op == "get" ? nil : false, nil)
+      return
+    }
+    switch op {
+    case "set":
+      replyHandler(set(account: login, master: master), nil)
+    case "get":
+      replyHandler(get(account: login), nil)
+    case "delete":
+      delete(account: login)
+      replyHandler(true, nil)
+    default:
+      replyHandler(nil, "unknown")
+    }
+  }
+
+  private func query(account: String) -> [String: Any] {
+    [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: service,
+      kSecAttrAccount as String: account,
+    ]
+  }
+
+  private func set(account: String, master: String) -> Bool {
+    guard master.count >= 20, master.count <= 200, !master.contains("\0") else { return false }
+    guard let data = master.data(using: .utf8) else { return false }
+    let base = query(account: account)
+    SecItemDelete(base as CFDictionary)
+    var add = base
+    add[kSecValueData as String] = data
+    add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+    let status = SecItemAdd(add as CFDictionary, nil)
+    if status == errSecDuplicateItem {
+      return SecItemUpdate(base as CFDictionary, [kSecValueData as String: data] as CFDictionary) == errSecSuccess
+    }
+    return status == errSecSuccess
+  }
+
+  private func get(account: String) -> String? {
+    var copy = query(account: account)
+    copy[kSecReturnData as String] = true
+    copy[kSecMatchLimit as String] = kSecMatchLimitOne
+    var out: AnyObject?
+    let status = SecItemCopyMatching(copy as CFDictionary, &out)
+    guard status == errSecSuccess, let data = out as? Data else { return nil }
+    let value = String(data: data, encoding: .utf8) ?? ""
+    return value.isEmpty ? nil : value
+  }
+
+  private func delete(account: String) {
+    SecItemDelete(query(account: account) as CFDictionary)
+  }
+}
+
+let circadiaSessionStore = CircadiaSessionStore()
 
 func installPort(_ install: Install?) -> Int {
   install?.port ?? defaultPort
@@ -167,6 +262,13 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     // HTML5 <audio> is gated; speechSynthesis was not. Empty set = play from a timer.
     config.mediaTypesRequiringUserActionForPlayback = []
     // Inline media playback is an iOS WKWebView flag. macOS WebKit has no such property; setting it fails swiftc.
+    if #available(macOS 11.0, *) {
+      config.userContentController.addScriptMessageHandler(
+        circadiaSessionStore,
+        contentWorld: .page,
+        name: "circadiaSession"
+      )
+    }
     let js = sessionBridgeScript()
     config.userContentController.addUserScript(
       WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true)
