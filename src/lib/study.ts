@@ -133,6 +133,35 @@ function distinctiveSlices(text: string): string[] {
 }
 
 /** Fail closed: if a pack still contains a local secret, do not send it. */
+/**
+ * Words the pack is designed to contain. A profile entry that happens to equal one
+ * of these is not evidence that a name leaked — the class label was always going.
+ */
+const PACK_VOCABULARY = new Set([
+  "melatonin",
+  "magnesium",
+  "valerian",
+  "antihistamine",
+  "antihistamines",
+  "bupropion",
+  "stimulant",
+  "stimulants",
+  "steroid",
+  "steroids",
+  "decongestant",
+  "decongestants",
+  "beta blocker",
+  "trazodone",
+  "hypnotic",
+  "hypnotics",
+  "cannabis",
+  "nicotine",
+  "alcohol",
+  "caffeine",
+  "none",
+  "other",
+]);
+
 export function anonymityViolations(payload: unknown, state: CircadiaState): string[] {
   const blob = JSON.stringify(payload).toLowerCase();
   const hits: string[] = [];
@@ -154,13 +183,17 @@ export function anonymityViolations(payload: unknown, state: CircadiaState): str
   const phoneDigits = (state.profile?.phone ?? "").replace(/\D/g, "");
   if (phoneDigits.length >= 7 && blob.includes(phoneDigits)) hits.push("phone");
 
+  // The pack legitimately carries class labels (`bupropion`, `melatonin`,
+  // `magnesium`) that are also exactly what users type in You. Scanning the whole
+  // blob for those words permanently blocked every participant on bupropion or
+  // melatonin from ever sending a night. Only free text can leak a name.
   for (const med of state.profile?.medications ?? []) {
     const m = med.trim().toLowerCase();
-    if (m.length >= 4 && blob.includes(m)) hits.push("medication");
+    if (m.length >= 4 && !PACK_VOCABULARY.has(m) && blob.includes(m)) hits.push("medication");
   }
   for (const sup of state.profile?.supplements ?? []) {
     const s = sup.trim().toLowerCase();
-    if (s.length >= 4 && blob.includes(s)) hits.push("supplement");
+    if (s.length >= 4 && !PACK_VOCABULARY.has(s) && blob.includes(s)) hits.push("supplement");
   }
 
   for (const report of state.reports) {

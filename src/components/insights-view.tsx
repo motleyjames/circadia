@@ -15,6 +15,14 @@ import { MorningReadingCard } from "@/components/morning-reading";
 import { suggestMorningReadingForLogs } from "@/lib/morning-reading";
 import { buildWeekReview, formatMorningDate, lastSevenReports } from "@/lib/week-review";
 
+/** The note taxonomy is internal. Users were reading raw "LEVER" and "STEADY". */
+const NOTE_KIND_LABEL: Record<string, string> = {
+  alert: "Worth attention",
+  lever: "Worth trying",
+  steady: "Holding steady",
+  context: "Background",
+};
+
 export function InsightsView() {
   const { state, loadSampleWeek } = useCircadia();
   const [sampleOpen, setSampleOpen] = useState(false);
@@ -75,7 +83,7 @@ export function InsightsView() {
         <div className="mt-6 rounded-3xl border border-white/10 bg-white/4 p-4">
           <p className="text-sm text-zinc-200">No mornings yet.</p>
           <p className="mt-1 text-xs text-zinc-500">
-            Log tonight tomorrow. The week read starts on night one — honest, and labeled as a
+            File tomorrow morning and the first page appears here. The week read starts on night one — honest, and labeled as a
             sketch until there are a few mornings. Already filed on the other Circadia? Fold a
             locked copy in You. The two files do not update each other on their own. Load a sample
             student week if you want to see the shape first. It is clearly fake data.
@@ -149,7 +157,7 @@ export function InsightsView() {
           <p className="mt-2 max-w-[46ch] text-[13px] leading-relaxed text-zinc-500">{review.kicker}</p>
 
           <div className="mt-6 border-l border-sky-300/35 pl-4">
-            <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">What I see</p>
+            <p className="text-[10px] tracking-[0.2em] text-zinc-400 uppercase">What I see</p>
             <div className="mt-2 max-w-[52ch] space-y-3">
               {review.read.split("\n\n").map((para) => (
                 <p key={para.slice(0, 48)} className="text-[15px] leading-relaxed text-zinc-200">
@@ -205,10 +213,10 @@ export function InsightsView() {
                     <div className="mt-3 space-y-2 text-xs leading-relaxed text-zinc-400">
                       <p>{read.physiology}</p>
                       <p>{read.meaning}</p>
-                      <p className="text-zinc-600">{read.caution}</p>
+                      <p className="text-zinc-400">{read.caution}</p>
                     </div>
                   ) : (
-                    <p className="mt-2 text-[11px] text-zinc-600">Stored only. Meaning was off.</p>
+                    <p className="mt-2 text-[11px] text-zinc-400">Stored only. Meaning was off.</p>
                   )}
                 </article>
               );
@@ -217,7 +225,7 @@ export function InsightsView() {
       ) : null}
 
       {week.nights.length > 0 ? (
-        <p className="mt-8 text-[11px] text-zinc-600">
+        <p className="mt-8 text-[11px] text-zinc-400">
           Mid-sleep average ~{formatClock(minutesToClock(week.meanMidpointMinutes), profile.units)}. Wake
           spread ~{Math.round(week.wakeSpreadMinutes)} min.
         </p>
@@ -253,11 +261,11 @@ function WeekColumn({
         : "border-zinc-100/20";
   return (
     <div className={`border-l ${rule} pl-4`}>
-      <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">{kicker}</p>
+      <p className="text-[10px] tracking-[0.2em] text-zinc-400 uppercase">{kicker}</p>
       <ul className="mt-2 space-y-2.5">
         {items.map((item, i) => (
           <li key={item} className="flex gap-2.5 text-[13px] leading-relaxed text-zinc-300">
-            <span className="mt-px w-4 shrink-0 text-[11px] text-zinc-600">
+            <span className="mt-px w-4 shrink-0 text-[11px] text-zinc-400">
               {numbered ? String(i + 1) : "·"}
             </span>
             <span>{item}</span>
@@ -281,13 +289,13 @@ function NoteCard({ note }: { note: SleepNote }) {
   return (
     <article className="rounded-3xl border border-white/8 bg-white/4 p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] tracking-[0.16em] text-zinc-500 uppercase">{note.kind}</p>
-        <p className="text-[10px] text-zinc-600">{note.confidence}</p>
+        <p className="text-[10px] tracking-[0.16em] text-zinc-400 uppercase">{NOTE_KIND_LABEL[note.kind] ?? note.kind}</p>
+        <p className="text-[10px] text-zinc-400">{note.confidence}</p>
       </div>
       <h3 className="mt-1 text-sm text-zinc-50">{note.title}</h3>
       <p className="mt-2 text-xs leading-relaxed text-zinc-400">{note.body}</p>
       {note.sourceIds.length > 0 ? (
-        <p className="mt-2 text-[10px] text-zinc-600">
+        <p className="mt-2 text-[10px] text-zinc-400">
           {note.sourceIds
             .map((id) => researchById(id)?.title)
             .filter(Boolean)

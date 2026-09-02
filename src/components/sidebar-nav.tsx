@@ -21,7 +21,7 @@ export function SidebarNav() {
         <Mark className="size-6" />
         <div>
           <p className="font-heading text-lg leading-none text-zinc-50">Circadia</p>
-          <p className="mt-1 text-[10px] tracking-[0.22em] text-zinc-600 uppercase">{APP_VERSION}</p>
+          <p className="mt-1 text-[10px] tracking-[0.22em] text-zinc-400 uppercase">{APP_VERSION}</p>
         </div>
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
@@ -53,7 +53,7 @@ export function SidebarNav() {
           );
         })}
       </nav>
-      <p className="px-5 pb-6 text-[11px] leading-relaxed text-zinc-600">
+      <p className="px-5 pb-6 text-[11px] leading-relaxed text-zinc-400">
         {study.consented ? "Study is on. The switch is in You." : "Diary stays on this device."}
       </p>
     </aside>

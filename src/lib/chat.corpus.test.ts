@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answerQuestion, makeChatMessage } from "./chat";
+import { answerQuestion, isWithhold, makeChatMessage } from "./chat";
 import { bannedIn, buildCorpus } from "./chat-corpus";
 import { isFollowUp, resolveQuestion } from "./chat-history";
 import type { ChatMessage, Profile } from "./types";
@@ -55,7 +55,7 @@ describe("consult corpus", () => {
         continue;
       }
       if (row.withhold) {
-        if (reply.citations.length > 0 || !/solid note/.test(text)) {
+        if (!isWithhold(reply)) {
           failures.push(`${row.id} [${row.q}] expected withhold, got ${reply.citations.join(",")} ${reply.text.slice(0, 120)}`);
         }
         continue;

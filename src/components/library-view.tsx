@@ -53,6 +53,19 @@ export function LibraryView() {
     if (hashedId) setPickedId(hashedId);
   }
   const openId = pickedId === undefined ? (reading?.articleId ?? null) : pickedId;
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  // 35 notes in one flat accordion had no way in but scrolling. Match the title,
+  // the plain-English line, and the aliases — the aliases are the words people
+  // actually type ("zzzquil", "night owl", "hot flashes").
+  const visible = needle
+    ? shelf.filter((article) =>
+        [article.title, article.summary, article.say ?? "", ...article.tags, ...(article.aliases ?? [])]
+          .join(" ")
+          .toLowerCase()
+          .includes(needle),
+      )
+    : shelf;
 
   useEffect(() => {
     if (!hashedId) return;
@@ -80,19 +93,37 @@ export function LibraryView() {
         />
       ) : null}
 
-      {reading ? (
-        <p className="mt-8 text-[11px] tracking-[0.22em] text-zinc-500 uppercase">The rest of the shelf</p>
-      ) : null}
+      <div className="mt-8">
+        <label htmlFor="library-search" className="text-[11px] tracking-[0.22em] text-zinc-400 uppercase">
+          {reading ? "The rest of the shelf" : "The shelf"}
+        </label>
+        <input
+          id="library-search"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search — melatonin, 3 a.m., hot flashes, snoring…"
+          className="mt-2 h-11 w-full rounded-full border border-white/12 bg-white/[0.06] px-4 text-[15px] text-zinc-100 placeholder:text-zinc-500 focus-visible:border-violet-300/50"
+        />
+      </div>
 
-      <div className={reading ? "mt-2 space-y-2" : "mt-6 space-y-2"}>
-        {shelf.map((article) => (
-          <LibraryArticle
-            key={article.id}
-            article={article}
-            open={openId === article.id}
-            onToggle={() => setPickedId(openId === article.id ? null : article.id)}
-          />
-        ))}
+      <div className="mt-3 space-y-2">
+        {visible.length === 0 ? (
+          <p className="rounded-3xl border border-white/8 bg-white/[0.03] px-4 py-6 text-[14px] leading-relaxed text-zinc-400">
+            Nothing on the shelf matches “{query.trim()}”. That does not mean it does not matter — it
+            means I have not written a note I trust yet. Ask it in Consult and I will tell you
+            straight if I have to withhold.
+          </p>
+        ) : (
+          visible.map((article) => (
+            <LibraryArticle
+              key={article.id}
+              article={article}
+              open={openId === article.id}
+              onToggle={() => setPickedId(openId === article.id ? null : article.id)}
+            />
+          ))
+        )}
       </div>
 
       <section className="mt-10">
@@ -122,32 +153,38 @@ function LibraryArticle({
 }) {
   return (
     <article id={article.id} className="scroll-mt-24 overflow-hidden rounded-3xl border border-white/8 bg-white/[0.03]">
-      <button type="button" className="flex w-full items-start gap-3 px-4 py-4 text-left active:bg-white/[0.06]" onClick={onToggle}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={`${article.id}-body`}
+        className="flex w-full items-start gap-3 px-4 py-4 text-left active:bg-white/[0.06]"
+        onClick={onToggle}
+      >
         <span className="min-w-0 flex-1">
           <p className="text-[17px] leading-snug text-zinc-100">{article.title}</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">{article.summary}</p>
-          <p className="mt-2 text-[11px] text-zinc-600">
+          <p className="mt-2 text-[11px] text-zinc-400">
             Reviewed through {formatReviewedThrough(article.reviewedThrough)}
             {article.confidence === "low" ? " · mixed evidence" : ""}
           </p>
         </span>
         <ChevronRight
-          className={`mt-0.5 size-5 shrink-0 text-zinc-600 transition-transform ${open ? "rotate-90" : ""}`}
+          className={`mt-0.5 size-5 shrink-0 text-zinc-400 transition-transform ${open ? "rotate-90" : ""}`}
           aria-hidden
         />
       </button>
       {open ? (
-        <div className="border-t border-white/8 px-4 py-4">
+        <div id={`${article.id}-body`} className="border-t border-white/8 px-4 py-4">
           <p className="text-[14px] leading-[1.55] text-zinc-200">{article.say ?? article.summary}</p>
-          <p className="mt-5 text-[10px] tracking-[0.2em] text-zinc-600 uppercase">The note</p>
+          <p className="mt-5 text-[10px] tracking-[0.2em] text-zinc-400 uppercase">The note</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">{article.body}</p>
           {article.confidence === "low" ? (
             <p className="mt-3 text-[11px] leading-relaxed text-amber-200/70">
               Evidence is mixed. Circadia will not overclaim this.
             </p>
           ) : null}
-          <p className="mt-4 text-[10px] tracking-[0.2em] text-zinc-600 uppercase">Sources</p>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-600">{researchSourceLine(article)}</p>
+          <p className="mt-4 text-[10px] tracking-[0.2em] text-zinc-400 uppercase">Sources</p>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">{researchSourceLine(article)}</p>
         </div>
       ) : null}
     </article>

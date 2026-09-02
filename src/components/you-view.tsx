@@ -117,12 +117,12 @@ export function YouView() {
               <>
                 <p className="mt-2 text-[14px] text-zinc-400">
                   {formatClock(profile.targetSleep, profile.units)}
-                  <span className="mx-2 text-zinc-600">→</span>
+                  <span className="mx-2 text-zinc-400">→</span>
                   {formatClock(profile.targetWake, profile.units)}
-                  <span className="mx-2 text-zinc-700">·</span>
+                  <span className="mx-2 text-zinc-500">·</span>
                   {compactScheduledDays(profile.scheduledDays)}
                 </p>
-                <p className="mt-1 text-[12px] text-zinc-600">{need.label}</p>
+                <p className="mt-1 text-[12px] text-zinc-400">{need.label}</p>
               </>
             }
           >
@@ -244,7 +244,7 @@ export function YouView() {
                           aria-label="Height, feet"
                           className="h-10 rounded-xl border-white/10 bg-white/5"
                         />
-                        <span className="text-[11px] text-zinc-600">ft</span>
+                        <span className="text-[11px] text-zinc-400">ft</span>
                         <Input
                           inputMode="numeric"
                           value={inches}
@@ -255,7 +255,7 @@ export function YouView() {
                           aria-label="Height, inches"
                           className="h-10 rounded-xl border-white/10 bg-white/5"
                         />
-                        <span className="text-[11px] text-zinc-600">in</span>
+                        <span className="text-[11px] text-zinc-400">in</span>
                       </span>
                     </label>
                     <UnitField
@@ -269,7 +269,7 @@ export function YouView() {
                   </>
                 )}
               </div>
-              <p className="text-[12px] text-zinc-600">BMI {bmi.toFixed(1)} · notes only, not a diagnosis</p>
+              <p className="text-[12px] text-zinc-400">BMI {bmi.toFixed(1)} · notes only, not a diagnosis</p>
               <div>
                 <p className="mb-2 text-[12px] text-zinc-500">Activity</p>
                 <BubbleGroup
@@ -357,7 +357,7 @@ export function YouView() {
                   {loginError ? <p className="mt-2 text-[13px] text-amber-200/90">{loginError}</p> : null}
                   <button
                     type="button"
-                    className="mt-4 h-10 w-full rounded-full bg-zinc-50 text-[13px] font-medium text-zinc-950 hover:bg-zinc-200"
+                    className="mt-4 h-10 w-full rounded-full btn-primary text-[13px] font-medium"
                     onClick={() => {
                       void attachLogin(loginDraft, loginPassword, loginConfirm).then((result) => {
                         if (!result.ok) setLoginError(result.error);
@@ -387,7 +387,7 @@ export function YouView() {
                       >
                         {changingPassword ? "Cancel" : "Change password"}
                       </button>
-                      <span className="text-zinc-700" aria-hidden>
+                      <span className="text-zinc-500" aria-hidden>
                         ·
                       </span>
                       <button type="button" className="text-zinc-500 hover:text-zinc-300" onClick={logOut}>
@@ -421,7 +421,7 @@ export function YouView() {
                       ) : null}
                       <button
                         type="button"
-                        className="mt-4 h-10 w-full rounded-full bg-zinc-50 text-[13px] font-medium text-zinc-950 hover:bg-zinc-200"
+                        className="mt-4 h-10 w-full rounded-full btn-primary text-[13px] font-medium"
                         onClick={() => {
                           void changePassword(currentPassword, nextPassword, nextConfirm).then((result) => {
                             if (!result.ok) setPasswordMsg(result.error);
@@ -442,7 +442,7 @@ export function YouView() {
                     <p className="mt-3 text-[12px] text-zinc-400">Password updated.</p>
                   ) : null}
 
-                  <p className="mt-4 text-[12px] leading-relaxed text-zinc-600">
+                  <p className="mt-4 text-[12px] leading-relaxed text-zinc-400">
                     Closing the app does not log you out. Log out here when you want the password gate
                     back. This device still has your diary — the same email or phone, plus the
                     password, opens it.
@@ -500,11 +500,11 @@ export function YouView() {
               Erase this device
             </button>
           </div>
-          <p className="mt-4 max-w-[52ch] px-1 text-[12px] leading-relaxed text-zinc-600">
+          <p className="mt-4 max-w-[52ch] px-1 text-[12px] leading-relaxed text-zinc-400">
             {MEDICAL_DISCLAIMER}
           </p>
-          <CrisisLine className="mt-2 max-w-[52ch] px-1 text-[12px] leading-relaxed text-zinc-600" />
-          <p className="mt-3 px-1 text-[11px] tracking-[0.18em] text-zinc-700 uppercase">{APP_VERSION}</p>
+          <CrisisLine className="mt-2 max-w-[52ch] px-1 text-[12px] leading-relaxed text-zinc-400" />
+          <p className="mt-3 px-1 text-[11px] tracking-[0.18em] text-zinc-500 uppercase">{APP_VERSION}</p>
         </section>
         <ConfirmDialog
           open={sampleOpen}
@@ -714,7 +714,7 @@ function UnitField({
           aria-label={`${label}, ${unit}`}
           className="h-10 rounded-xl border-white/10 bg-white/5"
         />
-        <span className="w-6 shrink-0 text-[11px] text-zinc-600">{unit}</span>
+        <span className="w-6 shrink-0 text-[11px] text-zinc-400">{unit}</span>
       </span>
     </label>
   );
@@ -761,7 +761,7 @@ function Chips({
         </button>
       </div>
       {items.length === 0 ? (
-        <p className="mt-2 text-[12px] text-zinc-600">{empty}</p>
+        <p className="mt-2 text-[12px] text-zinc-400">{empty}</p>
       ) : (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {items.map((item) => (

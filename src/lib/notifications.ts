@@ -63,11 +63,11 @@ export function startScreenOffWatcher(targetSleep: string, enabled: boolean): ()
       pingScreenOff();
       return;
     }
+    // The 6 h cap keeps a long timer from drifting. It used to fire, find
+    // `shouldBeOffScreens` still false, and stop dead — so anyone who left the app
+    // open from the morning never got that evening's ping at all. Re-arm instead.
     const wait = Math.min(msUntilScreenOff(targetSleep), 6 * 60 * 60 * 1000);
-    timer = window.setTimeout(() => {
-      if (cancelled) return;
-      if (shouldBeOffScreens(targetSleep)) pingScreenOff();
-    }, Math.max(1000, wait));
+    timer = window.setTimeout(arm, Math.max(1000, wait));
   };
 
   arm();

@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.25 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.25");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.25");
+  it("is version 0.9.0 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.9.0");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.9.0");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -230,8 +230,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.25");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 35");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.9.0");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 36");
     const scene = readFileSync("phone/ios/App/App/SceneDelegate.swift", "utf8");
     expect(scene).toContain("class CircadiaBridgeViewController: CAPBridgeViewController");
     expect(scene).toContain("windowScene.windows.first");
@@ -367,7 +367,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/lib/locked-diary-file.ts", "utf8")).toContain("foldInboxFilePath");
     expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("absorbPeerNights");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.25");
+    expect(run.stdout).toContain("0.9.0");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {

@@ -21,13 +21,24 @@ export type VaultEnvelope = {
   v: 1;
   iv: string;
   ct: string;
+  /**
+   * Monotonic write counter. Lets `mergeDiskVault` order two copies of the same
+   * file instead of guessing from ciphertext length, which ties whenever an edit
+   * does not change the plaintext byte count. Absent on files written before this.
+   */
+  rev?: number;
 };
 
 const masters = new Map<string, Uint8Array>();
 
 export function bytesToBase64(bytes: Uint8Array): string {
+  // Chunked: the previous per-byte concat ran over the entire ciphertext on every
+  // save, which is every keystroke in the Library notes field.
   let bin = "";
-  for (const b of bytes) bin += String.fromCharCode(b);
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
   return btoa(bin);
 }
 
@@ -164,13 +175,19 @@ export function isVaultEnvelope(value: unknown): value is VaultEnvelope {
   return o.enc === true && o.v === 1 && typeof o.iv === "string" && typeof o.ct === "string" && o.iv.length > 0 && o.ct.length > 0;
 }
 
-export async function encryptPayload(payload: unknown, master: Uint8Array): Promise<VaultEnvelope> {
+export async function encryptPayload(
+  payload: unknown,
+  master: Uint8Array,
+  rev?: number,
+): Promise<VaultEnvelope> {
   if (!hasWebCrypto()) throw cryptoUnavailable();
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await crypto.subtle.importKey("raw", asBufferSource(master), { name: "AES-GCM" }, false, ["encrypt"]);
   const pt = new TextEncoder().encode(JSON.stringify(payload));
   const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: asBufferSource(iv) }, key, pt);
-  return { enc: true, v: 1, iv: bytesToBase64(iv), ct: bytesToBase64(new Uint8Array(ct)) };
+  const envelope: VaultEnvelope = { enc: true, v: 1, iv: bytesToBase64(iv), ct: bytesToBase64(new Uint8Array(ct)) };
+  if (typeof rev === "number" && Number.isFinite(rev)) envelope.rev = rev;
+  return envelope;
 }
 
 export async function decryptPayload(envelope: VaultEnvelope, master: Uint8Array): Promise<unknown> {

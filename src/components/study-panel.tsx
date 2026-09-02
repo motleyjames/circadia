@@ -41,7 +41,7 @@ export function StudyPanel() {
               ? STUDY_HELD_ERROR
               : "Nights and faults leave after each morning. No Send button. Dreams and chat stay here."}
           </p>
-          <p className="mt-3 text-[12px] text-zinc-600">
+          <p className="mt-3 text-[12px] text-zinc-400">
             {study.lastStatus === "sent" && study.lastSentAt
               ? `Last reached James ${new Date(study.lastSentAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
               : study.lastStatus === "blocked"
@@ -59,7 +59,7 @@ export function StudyPanel() {
             {study.lastStatus === "error" || study.lastStatus === "blocked" ? (
               <Button
                 type="button"
-                className="h-10 cursor-pointer rounded-full bg-zinc-50 px-4 text-zinc-950"
+                className="h-10 cursor-pointer rounded-full btn-primary px-4"
                 onClick={() => void sendStudyNow()}
               >
                 Try again

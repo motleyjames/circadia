@@ -472,8 +472,8 @@ export function buildCorpus(): CorpusCase[] {
     for (const frame of FRAMES) {
       cases.push({
         id: "withhold",
+        must: "",
         q: frame(stem),
-        must: "solid note",
         withhold: true,
       });
     }

@@ -24,7 +24,7 @@ function LibraryCite({ ids }: { ids: string[] }) {
   if (notes.length === 0) return null;
   return (
     <div className="mt-3">
-      <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">From the library</p>
+      <p className="text-[10px] tracking-[0.2em] text-zinc-400 uppercase">From the library</p>
       <ul className="mt-1 space-y-0.5">
         {notes.map((note) => (
           <li key={note.id}>
@@ -61,7 +61,7 @@ function HistoryList({
   if (groups.length === 0) return null;
   return (
     <div>
-      <p className="text-[10px] tracking-[0.22em] text-zinc-600 uppercase">History</p>
+      <p className="text-[10px] tracking-[0.22em] text-zinc-400 uppercase">History</p>
       <div className="mt-3 space-y-5">
         {groups.map((group) => (
           <section key={group.key}>
@@ -126,12 +126,12 @@ function HistoryRow({
         <>
           <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
             <p className="truncate text-[13px] text-zinc-100">{thread.title}</p>
-            <p className="mt-0.5 text-[11px] text-zinc-600">{formatConsultTime(thread.updatedAt)}</p>
+            <p className="mt-0.5 text-[11px] text-zinc-400">{formatConsultTime(thread.updatedAt)}</p>
           </button>
           <button
             type="button"
             aria-label={`Delete ${thread.title}`}
-            className="mt-0.5 shrink-0 text-[11px] text-zinc-600 hover:text-zinc-300"
+            className="mt-0.5 shrink-0 text-[11px] text-zinc-400 hover:text-zinc-300"
             onClick={onAskDelete}
           >
             Delete
@@ -308,7 +308,7 @@ export function ChatBar({
             placeholder="Falling asleep, 3 a.m., a bottle on the aisle…"
             aria-label="Ask Circadia"
             className={cn(
-              "h-11 min-w-0 flex-1 rounded-full border border-white/12 bg-white/[0.06] px-4 text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-300/40",
+              "h-11 min-w-0 flex-1 rounded-full border border-white/12 bg-white/[0.06] px-4 text-zinc-100 outline-none placeholder:text-zinc-400 focus:border-sky-300/40",
               sheet ? "text-base" : "text-[13px]",
             )}
           />
@@ -320,7 +320,7 @@ export function ChatBar({
             <ArrowUp className="size-4" strokeWidth={2.25} />
           </button>
         </form>
-        <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">
+        <p className="mt-2 text-[10px] leading-relaxed text-zinc-400">
           Diary plus the library. Not a prescription.
         </p>
       </div>

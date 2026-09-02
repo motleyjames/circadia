@@ -72,10 +72,33 @@ function bumpGen(login: string): number {
   return next;
 }
 
+let lastPersistError: string | null = null;
+const persistErrorListeners = new Set<() => void>();
+
+/** Null when the last write landed. A message when this device refused it. */
+export function persistFailure(): string | null {
+  return lastPersistError;
+}
+
+export function subscribePersistFailure(listener: () => void): () => void {
+  persistErrorListeners.add(listener);
+  return () => {
+    persistErrorListeners.delete(listener);
+  };
+}
+
 function enqueueVaultWrite(work: () => Promise<void>): Promise<void> {
-  persistChain = persistChain.then(work).catch(() => {
-    /* a failed encrypt must not stall later writes */
-  });
+  persistChain = persistChain
+    .then(work)
+    .then(() => {
+      lastPersistError = null;
+    })
+    .catch((error: unknown) => {
+      // A failed encrypt must not stall later writes — but it must not be invisible
+      // either. Quota exhaustion used to mean every morning silently stopped saving.
+      lastPersistError = error instanceof Error ? error.message : "Could not save to this device.";
+      persistErrorListeners.forEach((listener) => listener());
+    });
   return persistChain;
 }
 
@@ -186,6 +209,8 @@ function readRawVault(): Record<string, unknown> {
 
 function writeRawVault(files: Record<string, unknown>): void {
   if (typeof window === "undefined") return;
+  // Deliberately not caught here: enqueueVaultWrite records the failure so the UI
+  // can say the device is full instead of pretending the morning was saved.
   window.localStorage.setItem(VAULT_KEY, JSON.stringify(files));
 }
 
@@ -828,7 +853,7 @@ async function persistEncrypted(login: string, state: CircadiaState, gen: number
   if (writeGen.get(login) !== gen) return;
   const master = getMaster(login);
   if (!master) return;
-  const envelope = await encryptPayload(state, master);
+  const envelope = await encryptPayload(state, master, gen);
   if (writeGen.get(login) !== gen) return;
   const files = readRawVault();
   files[login] = envelope;
@@ -845,6 +870,7 @@ async function readDiary(login: string, master: Uint8Array): Promise<CircadiaSta
 }
 
 function cloneState(state: CircadiaState): CircadiaState {
+  if (typeof structuredClone === "function") return structuredClone(state);
   return JSON.parse(JSON.stringify(state)) as CircadiaState;
 }
 
@@ -863,6 +889,10 @@ export function saveState(state: CircadiaState) {
   const snapshot = cloneState(state);
   const gen = bumpGen(login);
   void enqueueVaultWrite(() => persistEncrypted(login, snapshot, gen));
+  // persistEncrypted only writes localStorage. Without this, a filed morning never
+  // reached vault.json until the next login — and WebKit evicts local storage under
+  // pressure, so weeks of nights could vanish behind a stale disk copy. Debounced.
+  schedulePersistDisk();
 }
 
 export async function createFile(input: {

@@ -83,14 +83,14 @@ export function PhoneUnlock() {
           <button
             type="submit"
             disabled={busy}
-            className="h-14 w-full rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950 disabled:opacity-50"
+            className="h-14 w-full rounded-full btn-primary text-[17px] font-semibold disabled:opacity-50"
           >
             {busy ? "Logging in…" : "Log in"}
           </button>
         </div>
       </form>
 
-      <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-600">
+      <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-400">
         Stay-signed-in is on this device only. It does not travel in the pack.
       </p>
       <PackFooter packed />
@@ -127,7 +127,7 @@ export function PhoneEmptyPack({
         onInstalled={onBrought}
       />
 
-      <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-600">
+      <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-400">
         Bring a locked diary if you already saved one. Signing up here starts a second diary on this device.
       </p>
       <button
@@ -160,7 +160,7 @@ function PackFooter({ packed }: { packed: boolean }) {
   const status = packedDiaryStatus();
   const label = packed || status === "packed" ? "diary packed" : "no diary packed";
   return (
-    <p className="mt-3 text-[11px] tracking-[0.18em] text-zinc-700 uppercase">
+    <p className="mt-3 text-[11px] tracking-[0.18em] text-zinc-500 uppercase">
       {APP_VERSION} · {label}
     </p>
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildSleepNotes } from "./advisor";
-import { answerQuestion } from "./chat";
+import { answerQuestion, isWithhold } from "./chat";
 import { readDream } from "./dreams";
 import { buildRecommendations, NIGHTS_NEEDED } from "./recommendations";
 import type { MorningReport, Profile } from "./types";
@@ -180,7 +180,7 @@ describe("chat and dreams", () => {
 
   it("does not dump the chart when it does not know the topic", () => {
     const reply = answerQuestion("what is the weather in boulder", profile, []);
-    expect(reply.text.toLowerCase()).toMatch(/don.?t have a solid note/);
+    expect(isWithhold(reply)).toBe(true);
     expect(reply.text.toLowerCase()).not.toMatch(/empty diary|need band/);
   });
 

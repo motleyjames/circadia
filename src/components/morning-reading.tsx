@@ -26,7 +26,7 @@ export function MorningReadingCard({
       </h2>
       <p className="mt-3 max-w-[46ch] text-[15px] leading-relaxed text-zinc-200">{reading.why}</p>
       <div className="mt-5 max-w-[46ch] border-l border-white/12 pl-4">
-        <p className="text-[10px] tracking-[0.2em] text-zinc-600 uppercase">The page</p>
+        <p className="text-[10px] tracking-[0.2em] text-zinc-400 uppercase">The page</p>
         <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">{reading.note}</p>
       </div>
       <DiaryLink

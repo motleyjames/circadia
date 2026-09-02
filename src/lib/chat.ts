@@ -6,8 +6,23 @@ import { buildRecommendations } from "@/lib/recommendations";
 import { extraConsult } from "@/lib/consult-extra";
 import { answerDiaryQuestion } from "@/lib/diary-consult";
 import { resolveQuestion } from "@/lib/chat-history";
+import { safetyTriage } from "@/lib/safety-triage";
 import { matchResearch } from "@/lib/research";
 import { formatClock, formatDuration, newId, overnightDuration, sleepNeedHours } from "@/lib/time";
+
+/**
+ * The one thing the engine says when it does not know.
+ *
+ * Exported because the corpus suite and three other tests used to detect a
+ * withhold by grepping for the phrase "solid note" — so rewording the sentence
+ * silently broke 144 assertions. Detection belongs on the constant, not the prose.
+ */
+export const WITHHOLD_REPLY =
+  "I don’t have a note I trust on that, and I would rather say so than make something up. If it is keeping you awake tonight it is still worth raising with a doctor — silence from me is not the same as it being nothing. Things I can go properly deep on: falling asleep, 3 a.m. wakings, a mind that will not stop, alcohol, caffeine, melatonin, Unisom-type sleep aids, screens, weekends and sleeping in, or any medication on your list.";
+
+export function isWithhold(reply: { text: string; citations: string[] }): boolean {
+  return reply.citations.length === 0 && reply.text === WITHHOLD_REPLY;
+}
 
 export type ChatReply = {
   text: string;
@@ -65,6 +80,12 @@ function howYouLook(consult: Consult): string {
 function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
   const { profile, reports, week, latest } = consult;
   const lower = q.toLowerCase();
+
+  // Before anything else. Some of the most urgent things a person types contain
+  // ordinary sleep words and were being answered by the topic ladder below.
+  const urgent = safetyTriage(lower, profile);
+  if (urgent) return urgent;
+
   const recs = buildRecommendations(profile, reports);
   const notes = buildSleepNotes(profile, reports);
   const units = profile.units;
@@ -92,7 +113,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     )
   ) {
     return {
-      text: "Prescription sleep drugs. Ambien is the common one. A newer family — Belsomra, Dayvigo, Quviviq — blocks a wake signal instead of knocking you out the old way. Trazodone is often used off-label; it is not a first-line sleeping pill. They can help you fall or stay asleep. They can also leave you groggy, and some people get odd nighttime behavior. I will never tell you to start, stop, or change a prescription — that is your prescriber. The long-term plan is still a wake time you protect, and getting out of bed if you are lying there awake. Adding a pill to that plan is not usually better than the plan alone.",
+      text: "Prescription sleep drugs. Ambien is the common one. A newer family — Belsomra, Dayvigo, Quviviq — blocks a wake signal instead of knocking you out the old way. Trazodone is often used off-label; it is not a first-line sleeping pill. They can help you fall or stay asleep, and they can leave you groggy the next day. One thing worth knowing about Ambien and its close cousins: they carry the strongest warning the regulator issues, for people who drive, eat, or walk while not really awake and remember none of it. If that has ever happened to you on one, tell your prescriber — it is a reason to stop that drug, and that call is theirs to make with you. They are also not meant to be combined with opioid painkillers. I will never tell you to start, stop, or change a prescription. The long-term plan is still a wake time you protect, and getting out of bed if you are lying there awake. Adding a pill to that plan is not usually better than the plan alone.",
       citations: ["prescription-hypnotics"],
     };
   }
@@ -109,7 +130,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
       ? " Taking it every night is the thing clinics do not want."
       : "";
     return {
-      text: `Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep — next-day fog is common, and they work less if you take them often. Sleep clinics do not use these as a nightly plan. Fine as a rare backup; not a habit. Do not mix with alcohol. If you are older or already take drowsy meds, ask a pharmacist or doctor first. I will not tell you to start them.${gel}${nightly}`,
+      text: `Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep, and they work less the more often you take them. Two things worth knowing. Doxylamine especially is still in you the next morning — do not drive until you know how it hits you. And the “PM” products are a sedating antihistamine plus a painkiller: Tylenol PM has acetaminophen in it, Advil PM has ibuprofen. If you already take those in the daytime you can double up without meaning to, so check the label. Sleep clinics do not use these as a nightly plan. Fine as a rare backup. Do not mix with alcohol. If you are older or already take drowsy meds, ask a pharmacist first. I will not tell you to start them.${gel}${nightly}`,
       citations: ["otc-antihistamines"],
     };
   }
@@ -133,7 +154,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
       ? " Timing people discuss with a clinician is often 1–3 hours before desired sleep, not at lights-out."
       : "";
     const howMuch = /how much|dose|mg\b|milligram/.test(lower)
-      ? " The clock-tool discussion is often 0.3–1 mg — not 10 mg."
+      ? " The clock-tool discussion is often 0.3–1 mg — not 10 mg. Worth knowing: these are sold as supplements, not medicines, so what is in the bottle is often not what is on the label, and 0.3 mg is genuinely hard to buy."
       : "";
     const rec = recs.ready ? recs.supplements.find((s) => s.id === "melatonin" || s.id === "none") : undefined;
     const plan = recs.ready
@@ -192,8 +213,8 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     )
   ) {
     return {
-      text: `${diary ? `${diary} ` : ""}Waking and not dropping back is a staying-asleep problem. I rank: alcohol in the second half, too much time in bed, watching the clock, then snoring / gasping. If you are up about 20 minutes, leave the bed, keep it dim and boring, return when sleepy. Do not negotiate with the clock.`,
-      citations: ["sleep-pressure", "alcohol", "bmi-osa"],
+      text: `${diary ? `${diary} ` : ""}Waking and not dropping back is a staying-asleep problem. The usual suspects: a mind that switches on, alcohol in the second half, too much time in bed, the bathroom, watching the clock, and snoring or gasping. When it starts to feel like you are not going to drop off again — roughly twenty minutes, but do not lie there timing it — get up, keep it dim and boring, and come back when you are sleepy.`,
+      citations: ["sleep-pressure", "racing-mind", "alcohol", "nocturia", "bmi-osa"],
     };
   }
 
@@ -220,7 +241,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/snore|apnea|gasp|cpap|airway|osa/.test(lower)) {
+  if (/snor\w*|apnea|apnoea|gasp\w*|cpap|airway|\bosa\b|deviated septum|morning headache/.test(lower)) {
     return {
       text: `I cannot hear you sleep. Unrefreshing sleep, snoring, gasping, or high body weight is an airway checklist for a clinician — not a magnesium problem. Insomnia tools will not fix sleep apnea. If that list fits, ask for a proper evaluation.`,
       citations: ["bmi-osa"],
@@ -262,10 +283,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     return { text: retrieved.say ?? retrieved.summary, citations: [retrieved.id] };
   }
 
-  return {
-    text: "I don’t have a solid note on that. Ask about falling asleep, 3 a.m. wakings, alcohol, caffeine, melatonin, Unisom-type sleep aids, screens, sleeping in, or the meds on your list.",
-    citations: [],
-  };
+  return { text: WITHHOLD_REPLY, citations: [] };
 }
 
 export function answerQuestion(

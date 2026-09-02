@@ -2,6 +2,7 @@ import type { MedicationClass, MorningReport, NightMetrics, Profile, WeekBreakdo
 import {
   bmiKgM,
   circularMeanMinutes,
+  circularMeanOfMinutes,
   circularSpreadMinutes,
   clockToMinutes,
   mean,
@@ -36,12 +37,12 @@ export function weekBreakdown(reports: MorningReport[]): WeekBreakdown {
     alcoholNights: nights.filter((n) => n.drank).length,
     wakeSpreadMinutes: circularSpreadMinutes(sorted.map((r) => r.wokeAt)),
     sleepSpreadMinutes: circularSpreadMinutes(sorted.map((r) => r.fellAsleepAt)),
-    meanMidpointMinutes: circularMeanMinutes(sorted.map((r) => {
-      const mid = midpointMinutes(r.fellAsleepAt, r.wokeAt);
-      const h = Math.floor(mid / 60);
-      const m = Math.round(mid % 60);
-      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-    })),
+    // Straight from minutes. The old clock-string detour rounded `mid % 60` up to
+    // 60, which `clockToMinutes` normalised back to :00 — an hour of error on any
+    // odd-length night, feeding social jetlag and the Notes copy.
+    meanMidpointMinutes: circularMeanOfMinutes(
+      sorted.map((r) => midpointMinutes(r.fellAsleepAt, r.wokeAt)),
+    ),
     nightsWithHighLatency: nights.filter((n) => n.sleepLatencyMinutes >= 30).length,
     nightsWokeInNight: nights.filter((n) => n.wokeInNight).length,
   };

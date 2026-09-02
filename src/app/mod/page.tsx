@@ -107,7 +107,7 @@ export default function ModeratorPage() {
           <button
             type="submit"
             disabled={loading || !draft.trim()}
-            className="mt-4 h-14 w-full cursor-pointer rounded-full bg-zinc-50 text-[15px] font-medium text-zinc-950 disabled:opacity-50"
+            className="mt-4 h-14 w-full cursor-pointer rounded-full btn-primary text-[15px] font-medium disabled:opacity-50"
           >
             {loading ? "Opening…" : "Open the inbox"}
           </button>
@@ -173,7 +173,7 @@ export default function ModeratorPage() {
             )}
           >
             {label}
-            <span className="ml-2 text-zinc-600">{count}</span>
+            <span className="ml-2 text-zinc-400">{count}</span>
           </button>
         ))}
       </div>
@@ -269,7 +269,7 @@ function NightRow({ person }: { person: ModeratorNightPerson }) {
         <span className="text-right text-[13px] text-zinc-500">{person.packs.length}</span>
         <ChevronRight
           aria-hidden
-          className={cn("size-3.5 text-zinc-600 transition-transform", open && "rotate-90")}
+          className={cn("size-3.5 text-zinc-400 transition-transform", open && "rotate-90")}
         />
       </div>
       {open ? (
@@ -277,7 +277,7 @@ function NightRow({ person }: { person: ModeratorNightPerson }) {
           <div
             className={cn(
               PACK_COLS,
-              "h-6 items-center text-[10px] font-medium tracking-[0.16em] text-zinc-600 uppercase",
+              "h-6 items-center text-[10px] font-medium tracking-[0.16em] text-zinc-400 uppercase",
             )}
           >
             <span>Received</span>
@@ -365,7 +365,7 @@ function SignupRow({ person }: { person: ModeratorPerson }) {
         </span>
         <ChevronRight
           aria-hidden
-          className={cn("size-3.5 text-zinc-600 transition-transform", open && "rotate-90")}
+          className={cn("size-3.5 text-zinc-400 transition-transform", open && "rotate-90")}
         />
       </div>
       {open ? (
@@ -444,7 +444,7 @@ function FaultRow({
         <span className="truncate text-[13px] text-zinc-400">{latest.message}</span>
         <ChevronRight
           aria-hidden
-          className={cn("size-3.5 text-zinc-600 transition-transform", open && "rotate-90")}
+          className={cn("size-3.5 text-zinc-400 transition-transform", open && "rotate-90")}
         />
       </div>
       {open ? (
@@ -489,7 +489,7 @@ function Metric({ label, value }: { label: string; value: number | string }) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[10px] tracking-[0.16em] text-zinc-600 uppercase">{label}</p>
+      <p className="text-[10px] tracking-[0.16em] text-zinc-400 uppercase">{label}</p>
       <p className="mt-0.5 text-zinc-300">{value}</p>
     </div>
   );

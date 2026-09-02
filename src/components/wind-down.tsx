@@ -236,6 +236,20 @@ function MeditationPlayer({
     bedRef.current?.setPhase(beat.breath ?? "rest");
   }, [beat.breath, running, done]);
 
+  /**
+   * Release the graph once the guide has finished.
+   *
+   * The copy asks people to leave the screen on and fall asleep. When the script
+   * ran out, `done` flipped and nothing stopped the breath oscillator — it held a
+   * live AudioContext and an audio session until the app was killed, which on a
+   * phone left on all night is the worst battery cost this app can produce.
+   */
+  useEffect(() => {
+    if (!done) return;
+    const release = window.setTimeout(() => finish(), 4000);
+    return () => window.clearTimeout(release);
+  }, [done, finish]);
+
   useEffect(() => {
     if (!running || done) return;
     originMs.current = Date.now() - elapsedRef.current * 1000;

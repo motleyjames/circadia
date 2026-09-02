@@ -20,7 +20,7 @@ export function BrandStage({ cta }: { cta?: ReactNode }) {
           <p className="brand-open-line mt-5 max-w-[22rem] text-[15px] leading-relaxed text-zinc-400">
             For falling asleep. For staying asleep. For a clock that holds.
           </p>
-          <p className="brand-open-build mt-8 text-[11px] tracking-[0.18em] text-zinc-700 uppercase">{APP_VERSION}</p>
+          <p className="brand-open-build mt-8 text-[11px] tracking-[0.18em] text-zinc-500 uppercase">{APP_VERSION}</p>
         </div>
       </div>
       <div className="flex h-14 w-full items-center">{cta ?? null}</div>

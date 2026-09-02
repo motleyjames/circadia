@@ -29,7 +29,10 @@ const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30
 
 export function CheckInFlow() {
   const { state, withdrawMorning } = useCircadia();
-  const today = todayIsoDate();
+  // Captured once. This was `todayIsoDate()` evaluated on every render, so an
+  // interview begun before midnight and finished after it was written to the next
+  // day — mis-attributing the night and permanently blocking the real morning.
+  const [today] = useState(() => todayIsoDate());
   const existing = reportForMorning(state.reports, today);
   const [revising, setRevising] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -143,6 +146,8 @@ function MorningInterview({
     setStep((s) => Math.min(s + 1, steps.length - 1));
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   function save() {
     if (
       rating === undefined ||
@@ -156,13 +161,16 @@ function MorningInterview({
       windDownHelped === undefined ||
       (drank && (drinkCount === undefined || spins === undefined))
     ) {
+      setSaveError("Something above is still blank. Step back and finish it, then file.");
       return;
     }
     // A fresh interview cannot write if today already has a page.
     // Revision is the only second pass, and it replaces — it does not append.
     if (!existing && reportForMorning(state.reports, today)) {
+      setSaveError("This morning is already filed. Open it from Notes to change an answer.");
       return;
     }
+    setSaveError(null);
     const payload: Omit<MorningReport, "id" | "createdAt"> = {
       morningDate: today,
       wokeAt,
@@ -198,7 +206,7 @@ function MorningInterview({
         {existing ? "Correcting this morning" : "Morning interview"}
       </p>
       <h1 className="font-heading mt-1 text-2xl text-zinc-50">
-        {existing ? "Same date. New answers." : "Forty seconds. Honest bubbles."}
+        {existing ? "Same date. New answers." : "About forty seconds. Rough answers are fine — close beats exact."}
       </h1>
       <p className="mt-1 text-xs text-zinc-500">
         {existing
@@ -500,13 +508,18 @@ function MorningInterview({
         ) : (
           <button
             type="button"
-            className="rounded-full bg-sky-300 px-5 py-2.5 text-[17px] font-semibold text-zinc-950"
+            className="rounded-full btn-primary px-5 py-2.5 text-[17px] font-semibold"
             onClick={save}
           >
             {existing ? "Save this page" : "File this morning"}
           </button>
         )}
       </div>
+      {saveError ? (
+        <p role="alert" className="mt-3 px-1 text-[13px] leading-relaxed text-amber-200">
+          {saveError}
+        </p>
+      ) : null}
     </div>
   );
 }
