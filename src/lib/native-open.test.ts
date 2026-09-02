@@ -45,6 +45,19 @@ describe("iPhone UIKit open", () => {
     expect(OPEN_COVER_MS).toBe(1100);
   });
 
+  it("keeps SceneDelegate braces balanced so Xcode can compile", () => {
+    let depth = 0;
+    for (const ch of scene) {
+      if (ch === "{") depth += 1;
+      if (ch === "}") depth -= 1;
+      expect(depth).toBeGreaterThanOrEqual(0);
+    }
+    expect(depth).toBe(0);
+    expect(scene).toMatch(
+      /if state == "complete" \|\| state == "interactive" \{[\s\S]*?asyncAfter[\s\S]*?recede\(\)[\s\S]*?\}\s*\} else \{/,
+    );
+  });
+
   it("skips the CSS OpenCover on the packed phone binary", () => {
     expect(shell).toContain("skipWebOpenCover");
     expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain(
