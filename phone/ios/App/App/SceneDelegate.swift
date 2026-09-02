@@ -39,16 +39,25 @@ enum CircadiaSurface {
 /// yanked — the identity never lived in UIKit, so the user never saw a fade.
 ///
 /// This window is shown in scene connect, above the webview, with the wordmark
-/// already opaque. LaunchScreen is the same frame. Recede (`UIView.animate` on
-/// this window's root alpha) starts after the scene is active, so it cannot
-/// finish under the splash. It does not wait for JS to *show* Circadia.
+/// already opaque. LaunchScreen is the same frame. Once the scene is active the
+/// clock mark draws itself above the wordmark (`CircadiaMarkView.play`) — the
+/// wordmark never moves, so LaunchScreen → open is one still picture that comes
+/// alive. Recede (`UIView.animate` on this window's root alpha) waits for both
+/// the draw and the diary's first frame, so it cannot finish under the splash.
 final class CircadiaOpenWindow {
     static var shared: CircadiaOpenWindow?
 
+    /// Hard ceiling. A diary that never reports ready still gets the app.
+    private static let recedeCeiling: TimeInterval = 3.8
+    /// Finished mark on screen before it starts to go.
+    private static let settleBeat: TimeInterval = 0.3
+
     private let overlay: UIWindow
     private let identity = UIStackView()
+    private let mark = CircadiaMarkView(size: 84)
     private var armed = false
     private var receded = false
+    private var drawDoneAt: CFTimeInterval = 0
 
     static func install(on scene: UIWindowScene) {
         if let existing = shared {
@@ -91,12 +100,22 @@ final class CircadiaOpenWindow {
     private func arm() {
         guard !armed, !receded else { return }
         armed = true
-        let hold: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0.28 : 0.4
-        DispatchQueue.main.asyncAfter(deadline: .now() + hold) { [weak self] in
+        let reduced = UIAccessibility.isReduceMotionEnabled
+        if reduced {
+            mark.settle()
+            UIView.animate(withDuration: 0.2) { self.mark.alpha = 1 }
+            drawDoneAt = CACurrentMediaTime() + 0.28
+        } else {
+            mark.alpha = 1
+            mark.play()
+            drawDoneAt = CACurrentMediaTime() + CircadiaMarkView.playDuration
+        }
+        // Start asking the diary early; recede() itself waits out the draw.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             self?.waitForDiaryThenRecede()
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { [weak self] in
-            self?.recede()
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.recedeCeiling) { [weak self] in
+            self?.recede(force: true)
         }
     }
 
@@ -120,9 +139,7 @@ final class CircadiaOpenWindow {
             DispatchQueue.main.async {
                 let state = result as? String
                 if state == "complete" || state == "interactive" {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
-                        self?.recede()
-                    }
+                    self?.recede()
                 } else {
                     self?.waitForDiaryTick(ticks: ticks + 1)
                 }
@@ -148,8 +165,19 @@ final class CircadiaOpenWindow {
         return found
     }
 
-    private func recede() {
+    /// Recede after the mark has finished drawing plus a settle beat. Called
+    /// early by the diary-ready poll, it schedules itself for that moment.
+    private func recede(force: Bool = false) {
         guard !receded else { return }
+        if !force {
+            let remaining = (drawDoneAt + Self.settleBeat) - CACurrentMediaTime()
+            if remaining > 0.02 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + remaining) { [weak self] in
+                    self?.recede(force: true)
+                }
+                return
+            }
+        }
         receded = true
         overlay.isUserInteractionEnabled = false
         let duration: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0.2 : 1.1
@@ -205,13 +233,20 @@ final class CircadiaOpenWindow {
         identity.setCustomSpacing(32, after: line)
         identity.addArrangedSubview(build)
         host.addSubview(identity)
+        // The mark sits above the wordmark, outside the stack, so the stack keeps
+        // LaunchScreen's exact position and nothing jumps when the mark appears.
+        host.addSubview(mark)
         NSLayoutConstraint.activate([
             identity.centerXAnchor.constraint(equalTo: host.centerXAnchor),
             identity.centerYAnchor.constraint(equalTo: host.centerYAnchor),
             identity.leadingAnchor.constraint(greaterThanOrEqualTo: host.leadingAnchor, constant: 32),
             identity.trailingAnchor.constraint(lessThanOrEqualTo: host.trailingAnchor, constant: -32),
             line.widthAnchor.constraint(lessThanOrEqualToConstant: 352),
+            mark.centerXAnchor.constraint(equalTo: host.centerXAnchor),
+            mark.bottomAnchor.constraint(equalTo: identity.topAnchor, constant: -40),
         ])
+        // Invisible until arm(); LaunchScreen has no mark, so the first frame must match it.
+        mark.alpha = 0
     }
 
     private static let night = UIColor(red: 5.0 / 255.0, green: 4.0 / 255.0, blue: 10.0 / 255.0, alpha: 1)
