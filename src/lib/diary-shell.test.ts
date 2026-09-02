@@ -13,6 +13,7 @@ import {
   resetOpenHoldForTests,
   takeSkyDebut,
   waitForOpenSurface,
+  type OpenSurfaceWindow,
 } from "./diary-shell";
 
 describe("diary shell phase", () => {
@@ -87,10 +88,47 @@ describe("diary shell phase", () => {
     expect(src).toContain("circadia-surface");
     expect(src).toContain("__CIRCADIA_SURFACE__");
     expect(src).toContain("OPEN_PHONE_SURFACE_WAIT_MS");
+    expect(src).toContain("__CIRCADIA_OPEN_READY__");
+    expect(OPEN_PHONE_SURFACE_WAIT_MS).toBeGreaterThanOrEqual(3000);
   });
 
   it("resolves the open-surface wait on a visible document", async () => {
     await expect(waitForOpenSurface()).resolves.toBeUndefined();
+  });
+
+  it("on a phone host raises open-ready and waits for the native surface ping", async () => {
+    const listeners = new Map<string, Set<(ev?: Event) => void>>();
+    const hostWindow = {
+      location: { protocol: "capacitor:" },
+      __CIRCADIA_SURFACE__: false,
+      addEventListener(type: string, listener: EventListenerOrEventListenerObject) {
+        const fn = typeof listener === "function" ? listener : listener.handleEvent.bind(listener);
+        const set = listeners.get(type) ?? new Set();
+        set.add(fn as (ev?: Event) => void);
+        listeners.set(type, set);
+      },
+      setTimeout: setTimeout as unknown as Window["setTimeout"],
+      clearTimeout: clearTimeout as unknown as Window["clearTimeout"],
+    } as OpenSurfaceWindow;
+    const hostDoc = {
+      visibilityState: "visible" as Document["visibilityState"],
+      readyState: "complete" as DocumentReadyState,
+      addEventListener() {},
+      removeEventListener() {},
+    };
+    let finished = false;
+    const pending = waitForOpenSurface({ window: hostWindow, document: hostDoc }).then(() => {
+      finished = true;
+    });
+    await Promise.resolve();
+    expect(hostWindow.__CIRCADIA_OPEN_READY__).toBe(true);
+    expect(finished).toBe(false);
+    const surface = listeners.get("circadia-surface");
+    expect(surface && surface.size).toBeGreaterThan(0);
+    hostWindow.__CIRCADIA_SURFACE__ = true;
+    surface?.forEach((fn) => fn());
+    await pending;
+    expect(finished).toBe(true);
   });
 
   it("plays the Tonight debut once, then leaves tab switches still", () => {

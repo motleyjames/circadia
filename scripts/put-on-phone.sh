@@ -82,8 +82,16 @@ if [[ ! -f "$INDEX" ]] || ! grep -q '__CIRCADIA_PACK_STATUS__="packed"' "$INDEX"
   exit 8
 fi
 
+if ! node scripts/assert-phone-app.cjs phone/ios/App/App/public; then
+  echo
+  echo "Stopped. The packed iPhone diary is not this Circadia version."
+  echo "CIRCADIA_FORCE_PHONE_SYNC=1 npm run put-on-phone"
+  exit 11
+fi
+
 if [[ "$SYNCED" -eq 1 ]]; then
-  touch phone/ios/App/App/public/index.html 2>/dev/null || true
+  mkdir -p phone/ios/App/App/public
+  touch phone/ios/App/App/public phone/ios/App/App/public/index.html 2>/dev/null || true
   node scripts/phone-pack-fresh.cjs --write || true
 fi
 

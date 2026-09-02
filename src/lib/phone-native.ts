@@ -3,7 +3,7 @@
  * The custom scheme is live before the Capacitor global; read it on first paint.
  */
 export const PHONE_CLASS_BOOT =
-  '(function(){try{var p=(location.protocol||"").toLowerCase();var cap=window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform();if(cap||p==="circadia:"||p==="capacitor:"||p==="ionic:")document.documentElement.classList.add("circadia-phone")}catch(e){}})();';
+  '(function(){try{var p=(location.protocol||"").toLowerCase();var q=location.search||"";var cap=window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform();if(cap||p==="circadia:"||p==="capacitor:"||p==="ionic:"||/(?:^|[?&])circadia-phone=1(?:&|$)/.test(q))document.documentElement.classList.add("circadia-phone")}catch(e){}})();';
 
 function protocolIsPhone(w: Window): boolean {
   const protocol = (w.location?.protocol ?? "").toLowerCase();

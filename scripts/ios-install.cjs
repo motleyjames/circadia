@@ -18,6 +18,7 @@ const { spawnSync } = require("node:child_process");
 const { normalizeTeam } = require("./ios-team.cjs");
 const { resolveSignForDevice, nextSignAfterSessionFailure } = require("./ios-sign.cjs");
 const { isHardwareUdid, isCoreDeviceUuid, wakeDevice, waitForInstallTarget, resolveWaitMs, scanInstallableIphones, collectSources, usbSeesIphone } = require("./ios-target.cjs");
+const { assertPhoneApp } = require("./assert-phone-app.cjs");
 
 function repoRoot() {
   return path.join(__dirname, "..");
@@ -75,6 +76,17 @@ function xcodebuildArgs({ sign, targetId, derivedDataPath, generic = false }) {
 
 function appPathForTarget(derivedDataPath) {
   return path.join(derivedDataPath, "Build", "Products", "Debug-iphoneos", "App.app");
+}
+
+function wipeBuiltApp(derivedDataPath) {
+  const app = appPathForTarget(derivedDataPath);
+  fs.rmSync(app, { recursive: true, force: true });
+  return app;
+}
+
+function packedAppError(app) {
+  const version = JSON.parse(fs.readFileSync(path.join(repoRoot(), "package.json"), "utf8")).version;
+  return assertPhoneApp(app, version);
 }
 
 function describeSign(sign) {
@@ -149,6 +161,7 @@ function buildApp({ sign, targetId, derivedDataPath, nativeDir, generic = false 
 }
 
 function compileForPhone({ decided, fallbackTeam, targetId, derivedDataPath, nativeDir }) {
+  wipeBuiltApp(derivedDataPath);
   let sign = decided;
   let built = buildApp({ sign, targetId, derivedDataPath, nativeDir, generic: false });
   if (built.status !== 0 && destinationMissing(built.log)) {
@@ -302,6 +315,12 @@ function installOnDevice({
     console.error(`xcodebuild finished but ${app} is missing.`);
     return 11;
   }
+  const stale = packedAppError(app);
+  if (stale) {
+    console.error(stale);
+    console.error("Circadia did not install that onto the phone. The Next.js diary in this .app is not this version.");
+    return 11;
+  }
   wakeDevice(coreDeviceId || targetId);
   return deployApp({ app, targetId, coreDeviceId, root });
 }
@@ -320,6 +339,8 @@ function parseCli(argv = process.argv) {
 module.exports = {
   xcodebuildArgs,
   appPathForTarget,
+  wipeBuiltApp,
+  packedAppError,
   nativeRunBin,
   installOnDevice,
   explainXcodebuildFailure,

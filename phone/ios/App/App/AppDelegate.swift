@@ -5,9 +5,16 @@ import Capacitor
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
+    private var surfaceObserver: NSObjectProtocol?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        surfaceObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name("CapacitorViewDidAppear"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            CircadiaSurface.nudge()
+        }
         return true
     }
 

@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { AppShell } from "@/components/app-shell";
 import { CircadiaSafeTree } from "@/context/circadia-store";
 import { PHONE_CLASS_BOOT } from "@/lib/phone-native";
+import { APP_VERSION } from "@/lib/version";
 import "./globals.css";
 
 const outfit = localFont({
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`dark ${outfit.variable} ${fraunces.variable} h-full overflow-hidden antialiased`}>
       <head>
+        <meta name="circadia-version" content={APP_VERSION} />
         <script dangerouslySetInnerHTML={{ __html: PHONE_CLASS_BOOT }} />
       </head>
       <body className="h-full overflow-hidden bg-[#05040a] font-sans text-zinc-100">

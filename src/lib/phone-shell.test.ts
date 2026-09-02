@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.15 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.15");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.15");
+  it("is version 0.8.16 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.16");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.16");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -101,6 +101,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).not.toContain('addEventListener("load"');
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("circadia-surface");
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("__CIRCADIA_SURFACE__");
+    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("__CIRCADIA_OPEN_READY__");
     expect(shell).toContain('aria-label="Circadia, Tonight"');
     expect(shell).toContain("<Mark className=\"size-7 shrink-0\" />");
     expect(shell).toContain(">Circadia</span>");
@@ -121,6 +122,7 @@ describe("phone diary shell", () => {
     expect(store).toContain("STUDY_HELD_ERROR");
     expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain("circadia:");
     expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain("PHONE_CLASS_BOOT");
+    expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain("circadia-phone=1");
     expect(readFileSync("src/app/layout.tsx", "utf8")).toContain("dangerouslySetInnerHTML");
     expect(readFileSync("src/app/layout.tsx", "utf8")).toContain("PHONE_CLASS_BOOT");
     expect(readFileSync("src/lib/study-client.ts", "utf8")).toContain("payload?.inbox === true");
@@ -227,14 +229,36 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.15");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 25");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.16");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 26");
     const scene = readFileSync("phone/ios/App/App/SceneDelegate.swift", "utf8");
     expect(scene).toContain("class CircadiaBridgeViewController: CAPBridgeViewController");
-    expect(scene).toContain("CircadiaBridgeViewController()");
+    expect(scene).toContain("windowScene.windows.first");
+    expect(scene).toContain("CircadiaSurface.ping");
     expect(scene).toContain("circadia-surface");
     expect(scene).toContain("__CIRCADIA_SURFACE__");
+    expect(scene).toContain("__CIRCADIA_OPEN_READY__");
+    expect(scene).toContain("nightCover");
+    expect(scene).toContain("revealAndPing");
+    expect(scene).toContain("startHandshake");
+    expect(scene).toContain("view.window");
+    expect(scene).toContain("rootViewController is CircadiaBridgeViewController");
     expect(scene).not.toContain("rootViewController = CAPBridgeViewController()");
+    expect(scene).not.toContain("startSurfacePings");
+    expect(readFileSync("phone/ios/App/App/AppDelegate.swift", "utf8")).toContain("CapacitorViewDidAppear");
+    expect(readFileSync("phone/ios/App/App/AppDelegate.swift", "utf8")).toContain("CircadiaSurface.nudge");
+    expect(readFileSync("phone/ios/App/App/AppDelegate.swift", "utf8")).not.toContain("CircadiaSurface.ping");
+    expect(readFileSync("phone/ios/App/App/Base.lproj/Main.storyboard", "utf8")).toContain(
+      'customClass="CircadiaBridgeViewController"',
+    );
+    expect(readFileSync("phone/ios/App/App/Base.lproj/Main.storyboard", "utf8")).not.toContain(
+      'customClass="CAPBridgeViewController"',
+    );
+    expect(readFileSync("src/app/layout.tsx", "utf8")).toContain('name="circadia-version"');
+    expect(readFileSync("src/components/you-view.tsx", "utf8")).toContain("APP_VERSION");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("wipeBuiltApp");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("packedAppError");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("assertPhoneApp");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
     expect(readFileSync("next.config.ts", "utf8")).toContain("turbopack: { root: repoRoot }");
     expect(readFileSync("next.config.ts", "utf8")).toContain("outputFileTracingRoot: repoRoot");
@@ -266,7 +290,8 @@ describe("phone diary shell", () => {
     expect(script).toContain("phone-pack-fresh.cjs");
     expect(script).toContain("Skipping the Next.js rebuild");
     expect(script).toContain("CIRCADIA_FORCE_PHONE_SYNC=1 npm run put-on-phone");
-    expect(script).toContain("touch phone/ios/App/App/public/index.html");
+    expect(script).toContain("touch phone/ios/App/App/public");
+    expect(script).toContain("assert-phone-app.cjs");
     expect(script).toContain("--core-device");
     expect(script).toContain("hardware UDID");
     expect(readFileSync("scripts/deps-missing.cjs", "utf8")).toContain("pkg.dependencies");
@@ -327,7 +352,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/lib/locked-diary-file.ts", "utf8")).toContain("foldInboxFilePath");
     expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("absorbPeerNights");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.15");
+    expect(run.stdout).toContain("0.8.16");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
