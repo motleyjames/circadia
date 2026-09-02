@@ -24,6 +24,7 @@ import {
   openFile,
   resetVaultMemoryForTests,
   saveState,
+  setVaultPauseForTests,
   snapshotDisk,
 } from "./storage";
 import { parseLockedDiary, serializeLockedDiary } from "./diary-pack";
@@ -97,6 +98,7 @@ describe("local file vault", () => {
 
   beforeEach(() => {
     resetVaultMemoryForTests();
+    setVaultPauseForTests(async () => undefined);
     sessionKeys = new Map();
     sessionKeyWriteOk = true;
     const mem = new MemoryStorage();

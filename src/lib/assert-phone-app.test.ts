@@ -12,10 +12,10 @@ const { assertPhoneApp } = require("../../scripts/assert-phone-app.cjs") as {
 
 describe("assert-phone-app", () => {
   it("rejects a missing tree and an old index", () => {
-    expect(assertPhoneApp("/tmp/circadia-no-such-app", "0.8.16")).toMatch(/No compiled/);
+    expect(assertPhoneApp("/tmp/circadia-no-such-app", "0.8.17")).toMatch(/No compiled/);
     const dir = mkdtempSync(join(tmpdir(), "circadia-old-www-"));
     writeFileSync(join(dir, "index.html"), "<html><body>old</body></html>\n");
-    expect(assertPhoneApp(dir, "0.8.16")).toMatch(/not Circadia 0\.8\.16/);
+    expect(assertPhoneApp(dir, "0.8.17")).toMatch(/not Circadia 0\.8\.17/);
     rmSync(dir, { recursive: true, force: true });
   });
 

@@ -1,27 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { KEYCHAIN_SERVICE, defaultSecurity, makeKeychain } from "./keychain";
+import { bytesToBase64 } from "./password";
+import { KEYCHAIN_SERVICE, defaultSecurity, makeKeychain, secretForArgv, secretFromArgv } from "./keychain";
 
 describe("keychain", () => {
-  it("writes with add-generic-password -U under service Circadia", () => {
+  it("writes with add-generic-password -U -A and stores a 32-byte master as hex", () => {
     const calls: string[][] = [];
+    const master = bytesToBase64(new Uint8Array(32));
     const kc = makeKeychain((args) => {
       calls.push(args);
       return { status: 0, stdout: "" };
     });
-    expect(kc.set("email:ada@example.com", "YWFh")).toBe(true);
+    expect(kc.set("email:ada@example.com", master)).toBe(true);
     expect(calls[0]).toEqual([
       "add-generic-password",
       "-U",
+      "-A",
       "-s",
       KEYCHAIN_SERVICE,
       "-a",
       "email:ada@example.com",
       "-w",
-      "YWFh",
+      secretForArgv(master),
     ]);
+    expect(calls[0][calls[0].length - 1]).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("returns the password from find-generic-password -w", () => {
+  it("returns a hex keychain secret as base64 so the diary can unlock", () => {
+    const master = bytesToBase64(Uint8Array.from({ length: 32 }, (_, i) => i));
+    const hex = secretForArgv(master);
+    const kc = makeKeychain((args) => {
+      if (args[0] === "find-generic-password") return { status: 0, stdout: `${hex}\n` };
+      return { status: 1, stdout: "" };
+    });
+    expect(kc.get("email:ada@example.com")).toBe(secretFromArgv(hex));
+    expect(Buffer.from(kc.get("email:ada@example.com") ?? "", "base64").length).toBe(32);
+  });
+
+  it("leaves a non-master secret as-is for find-generic-password -w", () => {
     const kc = makeKeychain((args) => {
       if (args[0] === "find-generic-password") return { status: 0, stdout: "secret-b64\n" };
       return { status: 1, stdout: "" };
