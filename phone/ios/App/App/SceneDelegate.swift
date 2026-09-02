@@ -120,7 +120,8 @@ final class CircadiaOpenWindow {
                 if state == "complete" || state == "interactive" {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
                         self?.recede()
-                    } else {
+                    }
+                } else {
                     self?.waitForDiaryTick(ticks: ticks + 1)
                 }
             }
