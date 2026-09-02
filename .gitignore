@@ -80,3 +80,7 @@ next-env.d.ts
 /phone/ios/App/App.xcodeproj/xcuserdata
 /phone/ios/App/App.xcodeproj/project.xcworkspace/xcuserdata
 /phone/ios/App/App.xcworkspace/xcuserdata
+
+# SwiftPM scratch for the iPhone shell (local-path packages; nothing to pin)
+phone/**/.swiftpm/
+phone/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/

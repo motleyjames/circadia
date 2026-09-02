@@ -1,7 +1,11 @@
 export type DiaryShellPhase = "opening" | "gate" | "app";
 
-/** Wordmark fade-in. Must match the identity opacity transition. */
-export const OPEN_IDENTITY_MS = 800;
+/**
+ * The clock draws itself (ring 0–0.7s, hands 0.35–1.25s, moon 0.8–1.2s, halo to 1.45s)
+ * while the wordmark fades up under it. Must match the `mark-*` keyframes in globals.css
+ * and `CircadiaMarkView.playDuration` on the iPhone.
+ */
+export const OPEN_IDENTITY_MS = 1450;
 /** Fully-opaque identity beat after the fade-in. Boot time already spent in play counts; leftover can be 0. */
 export const OPEN_HOLD_MS = 400;
 /** Static identity beat when the system asked for no motion. Still an open, not a skip. */

@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.8.19 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.8.19");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.19");
+  it("is version 0.8.20 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.8.20");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.8.20");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -160,7 +160,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("OpenCover");
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_HOLD_MS = 400");
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_COVER_MS = 1100");
-    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_IDENTITY_MS = 800");
+    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("export const OPEN_IDENTITY_MS = 1450");
     expect(readFileSync("src/lib/wall-clock.ts", "utf8")).toContain("pageshow");
     expect(readFileSync("src/lib/wall-clock.ts", "utf8")).toContain("1000 - (Date.now() % 1000)");
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("waitForOpenSurface");
@@ -230,8 +230,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.19");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 29");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.8.20");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 30");
     const scene = readFileSync("phone/ios/App/App/SceneDelegate.swift", "utf8");
     expect(scene).toContain("class CircadiaBridgeViewController: CAPBridgeViewController");
     expect(scene).toContain("windowScene.windows.first");
@@ -358,7 +358,7 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/lib/locked-diary-file.ts", "utf8")).toContain("foldInboxFilePath");
     expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("absorbPeerNights");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.8.19");
+    expect(run.stdout).toContain("0.8.20");
     if (process.platform === "darwin") {
       expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
     } else {
