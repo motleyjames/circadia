@@ -54,11 +54,12 @@ if ! node scripts/deps-missing.cjs; then
 fi
 
 SYNCED=0
-if [[ "${CIRCADIA_FORCE_PHONE_SYNC:-}" == "1" ]] || ! node scripts/phone-pack-fresh.cjs; then
+  if [[ "${CIRCADIA_FORCE_PHONE_SYNC:-}" == "1" ]] || ! node scripts/phone-pack-fresh.cjs; then
   npm run phone:sync
   SYNCED=1
 else
   echo "iPhone pack already matches this commit, this version, and the locked diary. Skipping the Next.js rebuild."
+  echo "If Tonight still opens like the old install, quit this script and run: CIRCADIA_FORCE_PHONE_SYNC=1 npm run put-on-phone"
 fi
 
 set +e
@@ -82,6 +83,7 @@ if [[ ! -f "$INDEX" ]] || ! grep -q '__CIRCADIA_PACK_STATUS__="packed"' "$INDEX"
 fi
 
 if [[ "$SYNCED" -eq 1 ]]; then
+  touch phone/ios/App/App/public/index.html 2>/dev/null || true
   node scripts/phone-pack-fresh.cjs --write || true
 fi
 

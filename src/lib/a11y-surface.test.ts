@@ -46,11 +46,12 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).not.toContain("countdown-orb-glow");
     expect(css).not.toContain("feGaussianBlur");
     expect(css).toContain("circadia-enter");
-    expect(css).toContain("brand-open-identity-in");
+    expect(css).toContain("brand-open-identity");
     expect(css).toContain("html.circadia-phone .brand-open-cover");
     expect(css).toContain("html.circadia-phone .brand-open-mark");
     expect(css).toContain("brand-open-wait");
-    expect(css).toContain("brand-open-recede 1.1s");
+    expect(css).toContain("transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)");
+    expect(css).toContain("transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1)");
     expect(css).toContain("cubic-bezier(0.4, 0, 0.2, 1)");
     expect(css).toContain("stroke-dashoffset 1s linear");
     expect(css).toMatch(/\.brand-open-cover\.brand-open-wait \.brand-open-identity[\s\S]*opacity: 0/);
@@ -58,8 +59,11 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).toContain(".gate-brand");
     expect(css).not.toContain("brand-open-exit");
     expect(css).not.toContain("mark-draw");
+    expect(css).not.toContain("translateZ");
+    expect(css).not.toContain("will-change: opacity");
     expect(css).not.toMatch(/html\.circadia-phone \.brand-open-mark \{[^}]*brand-breathe/);
     expect(css).not.toMatch(/html\.circadia-phone \.brand-open-mark \{[^}]*transform: scale/);
+    expect(css).not.toMatch(/html\.circadia-phone \.brand-open-cover \{[^}]*translateZ/);
     expect(css).not.toContain("38%");
   });
 
