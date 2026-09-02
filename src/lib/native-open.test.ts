@@ -48,16 +48,17 @@ describe("iPhone UIKit open", () => {
     expect(scene).toContain("mark.alpha = 0");
     expect(scene).toContain("mark.bottomAnchor.constraint(equalTo: identity.topAnchor, constant: -40)");
     expect(scene).toContain("0.28");
-    expect(scene).toContain("1.1");
+    expect(scene).toContain("1.4");
+    expect(scene).toContain("settleBeat: TimeInterval = 0.6");
     expect(scene).toContain("recede(force: true)");
-    expect(OPEN_HOLD_MS).toBe(400);
+    expect(OPEN_HOLD_MS).toBe(600);
     expect(OPEN_HOLD_REDUCED_MS).toBe(280);
-    expect(OPEN_COVER_MS).toBe(1100);
+    expect(OPEN_COVER_MS).toBe(1400);
   });
 
   it("mirrors the SVG mark in Core Animation and is wired into the Xcode target", () => {
     expect(mark).toContain("final class CircadiaMarkView: UIView");
-    expect(mark).toContain("static let playDuration: TimeInterval = 1.45");
+    expect(mark).toContain("static let playDuration: TimeInterval = 3.1");
     expect(mark).toContain("CAShapeLayer");
     expect(mark).toContain("strokeEnd");
     expect(mark).toContain("transform.rotation.z");
@@ -101,7 +102,10 @@ describe("iPhone UIKit open", () => {
     // The cover itself is never transformed — that is the WKWebView bitmap trap.
     expect(css).not.toMatch(/\.brand-open-cover\s*\{[^}]*transform/);
     expect(css).not.toContain(".brand-open-mark .mark-ticks {\n  animation: none;\n  transform: none;");
-    expect(OPEN_IDENTITY_MS).toBe(1450);
+    expect(OPEN_IDENTITY_MS).toBe(3100);
+    // Slow enough to read: no draw beat under 0.4s, hands sweep for well over a second.
+    expect(css).toContain("mark-ring-draw 1.4s");
+    expect(css).toContain("mark-sweep-minute 1.8s");
   });
 
   it("keeps SceneDelegate braces balanced so Xcode can compile", () => {

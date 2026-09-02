@@ -48,9 +48,9 @@ final class CircadiaOpenWindow {
     static var shared: CircadiaOpenWindow?
 
     /// Hard ceiling. A diary that never reports ready still gets the app.
-    private static let recedeCeiling: TimeInterval = 3.8
+    private static let recedeCeiling: TimeInterval = 6.0
     /// Finished mark on screen before it starts to go.
-    private static let settleBeat: TimeInterval = 0.3
+    private static let settleBeat: TimeInterval = 0.6
 
     private let overlay: UIWindow
     private let identity = UIStackView()
@@ -180,7 +180,7 @@ final class CircadiaOpenWindow {
         }
         receded = true
         overlay.isUserInteractionEnabled = false
-        let duration: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0.2 : 1.1
+        let duration: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0.2 : 1.4
         UIView.animate(withDuration: duration, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
             self.overlay.rootViewController?.view.alpha = 0
             self.overlay.alpha = 0

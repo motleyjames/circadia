@@ -1,17 +1,17 @@
 export type DiaryShellPhase = "opening" | "gate" | "app";
 
 /**
- * The clock draws itself (ring 0–0.7s, hands 0.35–1.25s, moon 0.8–1.2s, halo to 1.45s)
- * while the wordmark fades up under it. Must match the `mark-*` keyframes in globals.css
- * and `CircadiaMarkView.playDuration` on the iPhone.
+ * The clock draws itself (ring 0–1.4s, hands 0.8–2.6s, moon 1.7–2.5s, halo to 3.1s)
+ * while the wordmark fades up under it. Slow on purpose — 1.45s read as a flicker.
+ * Must match the `mark-*` keyframes in globals.css and `CircadiaMarkView.playDuration`.
  */
-export const OPEN_IDENTITY_MS = 1450;
+export const OPEN_IDENTITY_MS = 3100;
 /** Fully-opaque identity beat after the fade-in. Boot time already spent in play counts; leftover can be 0. */
-export const OPEN_HOLD_MS = 400;
+export const OPEN_HOLD_MS = 600;
 /** Static identity beat when the system asked for no motion. Still an open, not a skip. */
 export const OPEN_HOLD_REDUCED_MS = 280;
 /** Scrim + identity recede into the diary. Must match the recede opacity transition. */
-export const OPEN_COVER_MS = 1100;
+export const OPEN_COVER_MS = 1400;
 /** Do not hang a dark wait if visibility never fires. */
 export const OPEN_SURFACE_WAIT_MS = 800;
 
