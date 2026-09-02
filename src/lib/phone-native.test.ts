@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { isPhoneNative } from "./phone-native";
+import { isPhoneNative, skipWebOpenCover } from "./phone-native";
 
 describe("isPhoneNative", () => {
   const g = globalThis as {
@@ -34,5 +34,30 @@ describe("isPhoneNative", () => {
     expect(isPhoneNative()).toBe(true);
     g.window = { location: { protocol: "capacitor:" } };
     expect(isPhoneNative()).toBe(true);
+  });
+});
+
+describe("skipWebOpenCover", () => {
+  const g = globalThis as {
+    window?: {
+      Capacitor?: { isNativePlatform: () => boolean };
+      location?: { protocol: string };
+    };
+  };
+  const previous = g.window;
+
+  afterEach(() => {
+    if (previous) g.window = previous;
+    else delete g.window;
+  });
+
+  it("skips when Capacitor is the host", () => {
+    g.window = { Capacitor: { isNativePlatform: () => true } };
+    expect(skipWebOpenCover()).toBe(true);
+  });
+
+  it("does not skip for a browser preview of the phone layout", () => {
+    g.window = { location: { protocol: "http:" }, Capacitor: { isNativePlatform: () => false } };
+    expect(skipWebOpenCover()).toBe(false);
   });
 });

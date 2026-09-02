@@ -5,21 +5,11 @@ import Capacitor
 enum CircadiaSurface {
     static let pingJs =
         "(function(){window.__CIRCADIA_SURFACE__=true;window.dispatchEvent(new Event('circadia-surface'));})();"
-    static let readyJs =
-        "(function(){try{return window.__CIRCADIA_OPEN_READY__===true?'ready':'wait'}catch(e){return 'wait'}})();"
-
-    static weak var host: CircadiaBridgeViewController?
-
-    static func attach(_ vc: CircadiaBridgeViewController) {
-        host = vc
-    }
 
     static func nudge() {
-        host?.startHandshake()
+        CircadiaOpenWindow.arm()
     }
 
-    /// Ping every WKWebView actually attached to a window — including a leftover
-    /// storyboard CAPBridgeViewController, not a second invisible bridge.
     static func ping() {
         func walk(_ view: UIView) {
             if let web = view as? WKWebView {
@@ -32,6 +22,7 @@ enum CircadiaSurface {
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             for window in windowScene.windows {
+                if window.windowLevel >= UIWindow.Level.alert { continue }
                 if let view = window.rootViewController?.view {
                     walk(view)
                 }
@@ -40,103 +31,194 @@ enum CircadiaSurface {
     }
 }
 
-/// WKWebView's view *is* the webview (Capacitor `loadView` is final). A cover
-/// cannot live as a WKWebView subview. We pin a night field on the UIWindow
-/// until the diary paints its wait frame and raises `__CIRCADIA_OPEN_READY__`.
+/// Phone open is a second UIWindow, not CSS inside WKWebView.
 ///
-/// `capacitorDidLoad` runs inside `loadView`, *before* `loadWebView`. A ping
-/// then writes the surface flag onto an empty document that navigation wipes.
-class CircadiaBridgeViewController: CAPBridgeViewController {
-    private let nightCover = UIView()
-    private var handshakeTimer: Timer?
-    private var revealed = false
-    private var handshakeTicks = 0
+/// Capacitor's view *is* the webview (`loadView` is final). Opacity CSS in that
+/// document never faded on device (0.8.13–0.8.17). A night subview on the same
+/// window as the webview only covered the diary until a JS handshake, then
+/// yanked — the identity never lived in UIKit, so the user never saw a fade.
+///
+/// This window is shown in scene connect, above the webview, with the wordmark
+/// already opaque. LaunchScreen is the same frame. Recede (`UIView.animate` on
+/// this window's root alpha) starts after the scene is active, so it cannot
+/// finish under the splash. It does not wait for JS to *show* Circadia.
+final class CircadiaOpenWindow {
+    static var shared: CircadiaOpenWindow?
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        CircadiaSurface.attach(self)
-        nightCover.backgroundColor = UIColor(red: 5.0 / 255.0, green: 4.0 / 255.0, blue: 10.0 / 255.0, alpha: 1)
-        nightCover.isUserInteractionEnabled = true
-        nightCover.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        startHandshake()
-    }
+    private let overlay: UIWindow
+    private let identity = UIStackView()
+    private var armed = false
+    private var receded = false
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        pinNightCover()
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        CircadiaSurface.attach(self)
-        pinNightCover()
-        startHandshake()
-    }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        pinNightCover()
-    }
-
-    override func capacitorDidLoad() {
-        super.capacitorDidLoad()
-        CircadiaSurface.attach(self)
-        startHandshake()
-    }
-
-    deinit {
-        handshakeTimer?.invalidate()
-    }
-
-    fileprivate func startHandshake() {
-        pinNightCover()
-        guard !revealed else { return }
-        handshakeTimer?.invalidate()
-        handshakeTicks = 0
-        tickHandshake()
-        handshakeTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
-            self?.tickHandshake()
-        }
-    }
-
-    private func pinNightCover() {
-        guard !revealed else { return }
-        guard let window = view.window else { return }
-        if nightCover.superview !== window {
-            nightCover.removeFromSuperview()
-            window.addSubview(nightCover)
-        }
-        nightCover.frame = window.bounds
-        window.bringSubviewToFront(nightCover)
-    }
-
-    private func tickHandshake() {
-        guard !revealed else { return }
-        handshakeTicks += 1
-        if handshakeTicks > 40 {
-            revealAndPing()
+    static func install(on scene: UIWindowScene) {
+        if let existing = shared {
+            existing.bringForward()
             return
         }
-        guard let web = webView else { return }
-        web.evaluateJavaScript(CircadiaSurface.readyJs) { [weak self] result, _ in
+        shared = CircadiaOpenWindow(scene: scene)
+    }
+
+    static func arm() {
+        shared?.arm()
+    }
+
+    private init(scene: UIWindowScene) {
+        overlay = UIWindow(windowScene: scene)
+        overlay.windowLevel = UIWindow.Level.alert
+        overlay.backgroundColor = Self.night
+        overlay.frame = scene.coordinateSpace.bounds
+        overlay.isHidden = false
+        overlay.isUserInteractionEnabled = true
+        overlay.accessibilityViewIsModal = true
+
+        let root = UIViewController()
+        root.view.backgroundColor = Self.night
+        buildIdentity(in: root.view)
+        overlay.rootViewController = root
+        identity.alpha = 1
+    }
+
+    private func bringForward() {
+        overlay.windowLevel = UIWindow.Level.alert
+        overlay.isHidden = false
+        overlay.alpha = 1
+        overlay.rootViewController?.view.alpha = 1
+        identity.alpha = 1
+    }
+
+    private func arm() {
+        guard !armed, !receded else { return }
+        armed = true
+        let hold: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0.28 : 0.4
+        DispatchQueue.main.asyncAfter(deadline: .now() + hold) { [weak self] in
+            self?.waitForDiaryThenRecede()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) { [weak self] in
+            self?.recede()
+        }
+    }
+
+    private func waitForDiaryThenRecede() {
+        waitForDiaryTick(ticks: 0)
+    }
+
+    private func waitForDiaryTick(ticks: Int) {
+        if receded { return }
+        if ticks > 20 {
+            recede()
+            return
+        }
+        guard let web = diaryWebView() else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.waitForDiaryTick(ticks: ticks + 1)
+            }
+            return
+        }
+        web.evaluateJavaScript("document.readyState") { [weak self] result, _ in
             DispatchQueue.main.async {
-                if (result as? String) == "ready" {
-                    self?.revealAndPing()
+                let state = result as? String
+                if state == "complete" || state == "interactive" {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+                        self?.recede()
+                    } else {
+                    self?.waitForDiaryTick(ticks: ticks + 1)
                 }
             }
         }
     }
 
-    private func revealAndPing() {
-        guard !revealed else { return }
-        revealed = true
-        handshakeTimer?.invalidate()
-        handshakeTimer = nil
-        nightCover.removeFromSuperview()
-        if let web = webView {
-            web.evaluateJavaScript(CircadiaSurface.pingJs, completionHandler: nil)
+    private func diaryWebView() -> WKWebView? {
+        var found: WKWebView?
+        func walk(_ view: UIView) {
+            if found != nil { return }
+            if let web = view as? WKWebView { found = web; return }
+            for child in view.subviews { walk(child) }
         }
-        CircadiaSurface.ping()
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows where window !== overlay {
+                if let view = window.rootViewController?.view {
+                    walk(view)
+                }
+            }
+        }
+        return found
+    }
+
+    private func recede() {
+        guard !receded else { return }
+        receded = true
+        overlay.isUserInteractionEnabled = false
+        let duration: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0.2 : 1.1
+        UIView.animate(withDuration: duration, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
+            self.overlay.rootViewController?.view.alpha = 0
+            self.overlay.alpha = 0
+        } completion: { _ in
+            self.overlay.isHidden = true
+            self.overlay.isUserInteractionEnabled = false
+            self.overlay.rootViewController = nil
+            CircadiaOpenWindow.shared = nil
+            CircadiaSurface.ping()
+        }
+    }
+
+    private func buildIdentity(in host: UIView) {
+        let title = UILabel()
+        title.text = "Circadia"
+        title.textColor = UIColor(white: 0.98, alpha: 1)
+        title.textAlignment = .center
+        title.font = Self.wordmarkFont()
+        title.adjustsFontForContentSizeCategory = false
+
+        let line = UILabel()
+        line.text = "For falling asleep. For staying asleep. For a clock that holds."
+        line.textColor = UIColor(red: 161 / 255.0, green: 161 / 255.0, blue: 170 / 255.0, alpha: 1)
+        line.textAlignment = .center
+        line.numberOfLines = 0
+        line.font = UIFont.systemFont(ofSize: 15, weight: .regular)
+        line.adjustsFontForContentSizeCategory = false
+
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let build = UILabel()
+        build.text = version
+        build.textColor = UIColor(white: 0.44, alpha: 1)
+        build.textAlignment = .center
+        build.font = UIFont.systemFont(ofSize: 11, weight: .regular)
+        build.adjustsFontForContentSizeCategory = false
+
+        identity.axis = .vertical
+        identity.alignment = .center
+        identity.spacing = 20
+        identity.translatesAutoresizingMaskIntoConstraints = false
+        identity.addArrangedSubview(title)
+        identity.setCustomSpacing(20, after: title)
+        identity.addArrangedSubview(line)
+        identity.setCustomSpacing(32, after: line)
+        identity.addArrangedSubview(build)
+        host.addSubview(identity)
+        NSLayoutConstraint.activate([
+            identity.centerXAnchor.constraint(equalTo: host.centerXAnchor),
+            identity.centerYAnchor.constraint(equalTo: host.centerYAnchor),
+            identity.leadingAnchor.constraint(greaterThanOrEqualTo: host.leadingAnchor, constant: 32),
+            identity.trailingAnchor.constraint(lessThanOrEqualTo: host.trailingAnchor, constant: -32),
+            line.widthAnchor.constraint(lessThanOrEqualToConstant: 352),
+        ])
+    }
+
+    private static let night = UIColor(red: 5.0 / 255.0, green: 4.0 / 255.0, blue: 10.0 / 255.0, alpha: 1)
+
+    private static func wordmarkFont() -> UIFont {
+        if let georgia = UIFont(name: "Georgia", size: 42) { return georgia }
+        let base = UIFont.systemFont(ofSize: 42, weight: .regular)
+        guard let descriptor = base.fontDescriptor.withDesign(.serif) else { return base }
+        return UIFont(descriptor: descriptor, size: 42)
+    }
+}
+
+class CircadiaBridgeViewController: CAPBridgeViewController {
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        CircadiaOpenWindow.arm()
     }
 }
 
@@ -156,9 +238,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if !(window?.rootViewController is CircadiaBridgeViewController) {
             window?.rootViewController = CircadiaBridgeViewController()
         }
+        CircadiaOpenWindow.install(on: windowScene)
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
+    }
+
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        if let windowScene = scene as? UIWindowScene {
+            CircadiaOpenWindow.install(on: windowScene)
+        }
+        CircadiaOpenWindow.arm()
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

@@ -10,6 +10,12 @@ function protocolIsPhone(w: Window): boolean {
   return protocol === "circadia:" || protocol === "capacitor:" || protocol === "ionic:";
 }
 
+/** Packed Capacitor binary and live Capacitor — not `?circadia-phone=1` in a browser. */
+export function skipWebOpenCover(): boolean {
+  if (process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK === "1") return true;
+  return isPhoneNative();
+}
+
 export function isPhoneNative(): boolean {
   const w =
     typeof globalThis === "object"

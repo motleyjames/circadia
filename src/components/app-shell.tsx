@@ -27,6 +27,7 @@ import {
 } from "@/lib/diary-shell";
 import { diaryPathname, useDiaryPath } from "@/lib/diary-route";
 import { hapticLight } from "@/lib/haptics";
+import { skipWebOpenCover } from "@/lib/phone-native";
 import { isOperatorSurface } from "@/lib/surface";
 import { cn } from "@/lib/utils";
 
@@ -127,11 +128,17 @@ function ShellInner() {
   const [consultPath, setConsultPath] = useState<string | null>(null);
   const reducedMotion = useReducedMotion();
   const holdConsumed = useOpenHoldConsumed();
-  const [openPhase, setOpenPhase] = useState<OpenCoverPhase | "gone">(() =>
-    isOpenHoldConsumed() ? "gone" : "wait",
-  );
-  const [surfaceReady, setSurfaceReady] = useState(() => isOpenHoldConsumed());
-  const [appPainted, setAppPainted] = useState(() => isOpenHoldConsumed());
+  const [openPhase, setOpenPhase] = useState<OpenCoverPhase | "gone">(() => {
+    // Capacitor WKWebView cannot fade this cover. The packed iPhone binary
+    // uses CircadiaOpenWindow. Browser `?circadia-phone=1` still plays CSS.
+    if (skipWebOpenCover()) {
+      consumeOpenHold();
+      return "gone";
+    }
+    return isOpenHoldConsumed() ? "gone" : "wait";
+  });
+  const [surfaceReady, setSurfaceReady] = useState(() => isOpenHoldConsumed() || skipWebOpenCover());
+  const [appPainted, setAppPainted] = useState(() => isOpenHoldConsumed() || skipWebOpenCover());
   const identityUpAt = useRef(0);
   const consultOpen = consultPath === pathname;
   const phase = diaryShellPhase({
@@ -144,7 +151,7 @@ function ShellInner() {
   const appChrome = Boolean(signedIn && state.profile?.onboardingComplete && state.study.asked);
 
   useEffect(() => {
-    if (isOpenHoldConsumed()) return;
+    if (isOpenHoldConsumed() || skipWebOpenCover()) return;
     let cancelled = false;
     void waitForOpenSurface().then(() => {
       if (!cancelled) setSurfaceReady(true);
