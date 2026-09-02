@@ -1,15 +1,22 @@
 export type DiaryShellPhase = "opening" | "gate" | "app";
 
-/** Wordmark fade-in. Must match `.brand-open-identity-in`. */
+/** Wordmark fade-in. Must match the identity opacity transition. */
 export const OPEN_IDENTITY_MS = 800;
 /** Fully-opaque identity beat after the fade-in. Boot time already spent in play counts; leftover can be 0. */
 export const OPEN_HOLD_MS = 400;
 /** Static identity beat when the system asked for no motion. Still an open, not a skip. */
 export const OPEN_HOLD_REDUCED_MS = 280;
-/** Scrim + identity recede into the diary. Must match `.brand-open-recede`. */
+/** Scrim + identity recede into the diary. Must match the recede opacity transition. */
 export const OPEN_COVER_MS = 1100;
 /** Do not hang a dark wait if visibility never fires. */
 export const OPEN_SURFACE_WAIT_MS = 800;
+/** Phone: wait for the native surface ping. WKWebView is "visible" under LaunchScreen. */
+export const OPEN_PHONE_SURFACE_WAIT_MS = 2000;
+
+type OpenSurfaceWindow = Window & {
+  __CIRCADIA_SURFACE__?: boolean;
+  Capacitor?: { isNativePlatform?: () => boolean };
+};
 
 function nextPaint(): Promise<void> {
   return new Promise((resolve) => {
@@ -21,16 +28,31 @@ function nextPaint(): Promise<void> {
   });
 }
 
+function isPhoneOpenSurface(w: Window): boolean {
+  try {
+    const protocol = (w.location?.protocol ?? "").toLowerCase();
+    if (protocol === "circadia:" || protocol === "capacitor:" || protocol === "ionic:") return true;
+    return (w as OpenSurfaceWindow).Capacitor?.isNativePlatform?.() === true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Native launch screen is a dark empty field. Clock the open from a painted
  * visible frame — not `window.load`, which waits for every asset and freezes
  * the wait frame. If the CSS open runs under the splash, the user only sees
  * the last keyframe.
+ *
+ * Phone WKWebView reports visibilityState visible while LaunchScreen still
+ * covers it. Wait for the native `circadia-surface` ping (viewDidAppear)
+ * before leaving the wait frame.
  */
 export function waitForOpenSurface(): Promise<void> {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return Promise.resolve();
   }
+  const w = window as OpenSurfaceWindow;
   return new Promise((resolve) => {
     let settled = false;
     const finish = () => {
@@ -39,15 +61,27 @@ export function waitForOpenSurface(): Promise<void> {
       window.clearTimeout(watchdog);
       void nextPaint().then(resolve);
     };
-    const watchdog = window.setTimeout(finish, OPEN_SURFACE_WAIT_MS);
+    const phone = isPhoneOpenSurface(w);
+    const watchdog = window.setTimeout(
+      finish,
+      phone ? OPEN_PHONE_SURFACE_WAIT_MS : OPEN_SURFACE_WAIT_MS,
+    );
     const start = () => {
       if (document.visibilityState === "hidden") {
         document.addEventListener("visibilitychange", function onVis() {
           if (document.visibilityState !== "hidden") {
             document.removeEventListener("visibilitychange", onVis);
-            finish();
+            start();
           }
         });
+        return;
+      }
+      if (phone) {
+        if (w.__CIRCADIA_SURFACE__) {
+          finish();
+          return;
+        }
+        w.addEventListener("circadia-surface", finish, { once: true });
         return;
       }
       finish();

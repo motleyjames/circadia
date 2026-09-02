@@ -162,17 +162,17 @@
 }
 
 /* Open is one atmosphere: LaunchScreen night → identity → recede into the diary.
-   Opacity only. No stroke-draw, no box-scale, no per-element stagger. */
+   Opacity transitions only. No 3D layer promotion — WKWebView rasterizes a
+   transformed cover as a bitmap, so the wordmark never fades in. */
 .brand-open-cover {
-  isolation: isolate;
-  transform: translateZ(0);
-  will-change: opacity;
+  isolation: auto;
 }
 
 .brand-open-scrim {
   position: absolute;
   inset: 0;
   background: #05040a;
+  opacity: 1;
 }
 
 .brand-open-halo {
@@ -187,24 +187,6 @@
 .mark-ring {
   stroke-dasharray: 289;
   stroke-dashoffset: 0;
-}
-
-@keyframes brand-open-identity-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes brand-open-recede {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
 }
 
 .brand-open-cover .brand-open-mark,
@@ -225,35 +207,53 @@
   stroke-dashoffset: 0;
 }
 
-.brand-open-cover.brand-open-wait .brand-open-identity {
+.brand-open-identity {
   opacity: 0;
 }
 
+.brand-open-cover.brand-open-wait .brand-open-identity {
+  opacity: 0;
+  transition: none;
+}
+
 .brand-open-cover.brand-open-play .brand-open-identity {
-  animation: brand-open-identity-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) both;
+  opacity: 1;
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .brand-open-cover.brand-open-hold .brand-open-identity {
   opacity: 1;
-  animation: none;
+  transition: none;
 }
 
-.brand-open-cover.brand-open-recede {
-  animation: brand-open-recede 1.1s cubic-bezier(0.4, 0, 0.2, 1) both;
+.brand-open-cover.brand-open-recede .brand-open-identity,
+.brand-open-cover.brand-open-recede .brand-open-scrim {
+  opacity: 0;
+  transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-html.circadia-phone .brand-open-cover {
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-}
-
+html.circadia-phone .brand-open-cover,
+html.circadia-phone .brand-open-scrim,
+html.circadia-phone .brand-open-identity,
 html.circadia-phone .brand-open-mark,
 html.circadia-phone .brand-open-halo,
 html.circadia-phone .brand-open-ring,
 html.circadia-phone .brand-open-title,
-html.circadia-phone .brand-open-line,
-html.circadia-phone .brand-open-identity {
+html.circadia-phone .brand-open-line {
+  -webkit-transform: none;
   transform: none;
+  will-change: auto;
+}
+
+html.circadia-phone .brand-open-play .brand-open-identity {
+  -webkit-transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.circadia-phone .brand-open-recede .brand-open-identity,
+html.circadia-phone .brand-open-recede .brand-open-scrim {
+  -webkit-transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html:has(.brand-open-cover:not(.brand-open-recede)) .gate-brand {

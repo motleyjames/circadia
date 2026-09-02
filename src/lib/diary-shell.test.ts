@@ -5,6 +5,8 @@ import {
   OPEN_HOLD_MS,
   OPEN_HOLD_REDUCED_MS,
   OPEN_IDENTITY_MS,
+  OPEN_PHONE_SURFACE_WAIT_MS,
+  OPEN_SURFACE_WAIT_MS,
   consumeOpenHold,
   diaryShellPhase,
   isOpenHoldConsumed,
@@ -74,6 +76,7 @@ describe("diary shell phase", () => {
     expect(OPEN_HOLD_REDUCED_MS).toBeLessThan(OPEN_HOLD_MS);
     expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(1000);
     expect(OPEN_COVER_MS).toBeLessThan(1600);
+    expect(OPEN_PHONE_SURFACE_WAIT_MS).toBeGreaterThan(OPEN_SURFACE_WAIT_MS);
   });
 
   it("clocks the open from a visible paint, not window load", () => {
@@ -81,6 +84,9 @@ describe("diary shell phase", () => {
     expect(src).toContain("DOMContentLoaded");
     expect(src).not.toContain('addEventListener("load"');
     expect(src).toContain("readyState === \"loading\"");
+    expect(src).toContain("circadia-surface");
+    expect(src).toContain("__CIRCADIA_SURFACE__");
+    expect(src).toContain("OPEN_PHONE_SURFACE_WAIT_MS");
   });
 
   it("resolves the open-surface wait on a visible document", async () => {
