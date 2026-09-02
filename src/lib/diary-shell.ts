@@ -1,11 +1,13 @@
 export type DiaryShellPhase = "opening" | "gate" | "app";
 
-/** Long enough for the mark to draw and the wordmark to settle. */
-export const OPEN_HOLD_MS = 2400; // phone + dock; BrandStage paused until surfaceReady, then plays in full.
-/** Static mark beat when the system asked for no motion. Still an open, not a skip. */
-export const OPEN_HOLD_REDUCED_MS = 900;
-/** Cover dissolves so the diary never dips to black. Must match `.brand-open-exit`. */
-export const OPEN_COVER_MS = 800;
+/** Wordmark fade-in. Must match `.brand-open-identity-in`. */
+export const OPEN_IDENTITY_MS = 800;
+/** Fully-opaque identity beat after the fade-in. Boot time already spent in play counts; leftover can be 0. */
+export const OPEN_HOLD_MS = 400;
+/** Static identity beat when the system asked for no motion. Still an open, not a skip. */
+export const OPEN_HOLD_REDUCED_MS = 280;
+/** Scrim + identity recede into the diary. Must match `.brand-open-recede`. */
+export const OPEN_COVER_MS = 1100;
 /** Do not hang a dark wait if visibility never fires. */
 export const OPEN_SURFACE_WAIT_MS = 800;
 

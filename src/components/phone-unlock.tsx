@@ -146,8 +146,10 @@ function GateShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <Mark className="size-8" />
-        <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">Circadia</h1>
+        <div className="gate-brand">
+          <Mark className="size-8" />
+          <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">Circadia</h1>
+        </div>
         {children}
       </div>
     </div>

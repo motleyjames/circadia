@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CircadiaProvider, CircadiaSafeTree, useCircadia } from "@/context/circadia-store";
 import { AuthGate } from "@/components/auth-gate";
 import { BottomNav } from "@/components/bottom-nav";
@@ -18,6 +18,7 @@ import {
   OPEN_COVER_MS,
   OPEN_HOLD_MS,
   OPEN_HOLD_REDUCED_MS,
+  OPEN_IDENTITY_MS,
   consumeOpenHold,
   diaryShellPhase,
   isOpenHoldConsumed,
@@ -66,20 +67,24 @@ function Stage({
   );
 }
 
-function OpenCover({ exiting, play }: { exiting: boolean; play: boolean }) {
+type OpenCoverPhase = "wait" | "play" | "hold" | "recede";
+
+function OpenCover({ phase }: { phase: OpenCoverPhase }) {
   return (
     <div
       className={cn(
         "brand-open-cover absolute inset-0 z-40 flex flex-col",
-        !play && "brand-open-wait",
-        exiting ? "brand-open-exit pointer-events-none" : "pointer-events-auto",
+        phase === "wait" && "brand-open-wait",
+        phase === "play" && "brand-open-play",
+        phase === "hold" && "brand-open-hold",
+        phase === "recede" && "brand-open-recede",
+        phase === "recede" ? "pointer-events-none" : "pointer-events-auto",
       )}
-      aria-hidden={exiting}
+      aria-hidden={phase === "recede"}
     >
-      <div className="night-sky absolute inset-0" />
-      <div className="pointer-events-none absolute inset-0 glow-veil" />
+      <div className="brand-open-scrim" />
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        <BrandStage key={play ? "play" : "hold"} />
+        <BrandStage />
       </div>
     </div>
   );
@@ -122,8 +127,12 @@ function ShellInner() {
   const [consultPath, setConsultPath] = useState<string | null>(null);
   const reducedMotion = useReducedMotion();
   const holdConsumed = useOpenHoldConsumed();
-  const [coverLingering, setCoverLingering] = useState(() => !isOpenHoldConsumed());
+  const [openPhase, setOpenPhase] = useState<OpenCoverPhase | "gone">(() =>
+    isOpenHoldConsumed() ? "gone" : "wait",
+  );
   const [surfaceReady, setSurfaceReady] = useState(() => isOpenHoldConsumed());
+  const [appPainted, setAppPainted] = useState(() => isOpenHoldConsumed());
+  const identityUpAt = useRef(0);
   const consultOpen = consultPath === pathname;
   const phase = diaryShellPhase({
     ready,
@@ -131,7 +140,6 @@ function ShellInner() {
     reducedMotion,
     holdConsumed,
   });
-  const showCover = phase === "opening" || coverLingering;
   const signedIn = Boolean(session);
   const appChrome = Boolean(signedIn && state.profile?.onboardingComplete && state.study.asked);
 
@@ -147,20 +155,58 @@ function ShellInner() {
   }, []);
 
   useEffect(() => {
-    if (!surfaceReady) return;
-    if (isOpenHoldConsumed()) return;
-    const hold = window.setTimeout(
-      () => consumeOpenHold(),
-      reducedMotion ? OPEN_HOLD_REDUCED_MS : OPEN_HOLD_MS,
-    );
-    return () => window.clearTimeout(hold);
-  }, [surfaceReady, reducedMotion]);
+    if (!surfaceReady || openPhase !== "wait") return;
+    if (reducedMotion) {
+      identityUpAt.current = Date.now();
+      setOpenPhase("hold");
+      return;
+    }
+    setOpenPhase("play");
+  }, [surfaceReady, openPhase, reducedMotion]);
 
   useEffect(() => {
-    if (!holdConsumed || !ready) return;
-    const cover = window.setTimeout(() => setCoverLingering(false), OPEN_COVER_MS);
+    if (openPhase !== "play") return;
+    const id = window.setTimeout(() => {
+      identityUpAt.current = Date.now();
+      setOpenPhase("hold");
+    }, OPEN_IDENTITY_MS);
+    return () => window.clearTimeout(id);
+  }, [openPhase]);
+
+  useEffect(() => {
+    if (!ready || appPainted) return;
+    let cancelled = false;
+    let inner = 0;
+    const outer = window.requestAnimationFrame(() => {
+      inner = window.requestAnimationFrame(() => {
+        if (!cancelled) setAppPainted(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(outer);
+      window.cancelAnimationFrame(inner);
+    };
+  }, [ready, appPainted]);
+
+  useEffect(() => {
+    if (openPhase !== "hold") return;
+    if (!ready || !appPainted) return;
+    const holdMs = reducedMotion ? OPEN_HOLD_REDUCED_MS : OPEN_HOLD_MS;
+    const elapsed = identityUpAt.current ? Date.now() - identityUpAt.current : 0;
+    const remaining = Math.max(0, holdMs - elapsed);
+    const id = window.setTimeout(() => {
+      setOpenPhase("recede");
+      consumeOpenHold();
+    }, remaining);
+    return () => window.clearTimeout(id);
+  }, [openPhase, ready, appPainted, reducedMotion]);
+
+  useEffect(() => {
+    if (openPhase !== "recede") return;
+    const cover = window.setTimeout(() => setOpenPhase("gone"), OPEN_COVER_MS);
     return () => window.clearTimeout(cover);
-  }, [holdConsumed, ready]);
+  }, [openPhase]);
 
   let destination: React.ReactNode = null;
   if (ready) {
@@ -202,7 +248,7 @@ function ShellInner() {
   return (
     <Stage
       wide={appChrome}
-      cover={showCover ? <OpenCover exiting={phase !== "opening"} play={surfaceReady} /> : null}
+      cover={openPhase === "gone" ? null : <OpenCover phase={openPhase} />}
     >
       {destination}
     </Stage>
