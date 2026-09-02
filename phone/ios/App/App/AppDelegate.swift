@@ -8,6 +8,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private var surfaceObserver: NSObjectProtocol?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Capacitor posts this while the launch screen is still up and the app is
+        // inactive. It is a hint that the webview exists, not permission to play the
+        // open — `CircadiaOpenWindow.arm()` waits for an active app before starting,
+        // or the whole thing finishes off-screen.
         surfaceObserver = NotificationCenter.default.addObserver(
             forName: Notification.Name("CapacitorViewDidAppear"),
             object: nil,

@@ -111,14 +111,13 @@ final class CircadiaOpenWindow {
 
     /// `word-arrive` in globals.css: fade up and settle the last 6pt. Same beats
     /// on both shells — title 1.2s, tagline 1.6s, stamp 2.0s.
-    private func arriveWords() {
-        for (label, delay, duration) in [
-            (title, 1.2, 1.8),
-            (line, 1.6, 1.6),
-            (build, 2.0, 1.4),
-        ] as [(UILabel, TimeInterval, TimeInterval)] {
+    private func arriveWords(moving: Bool) {
+        let beats: [(UILabel, TimeInterval, TimeInterval)] = moving
+            ? [(title, 1.2, 1.8), (line, 1.6, 1.6), (build, 2.0, 1.4)]
+            : [(title, 0.15, 0.7), (line, 0.35, 0.7), (build, 0.55, 0.7)]
+        for (label, delay, duration) in beats {
             label.alpha = 0
-            label.transform = CGAffineTransform(translationX: 0, y: 6)
+            label.transform = moving ? CGAffineTransform(translationX: 0, y: 6) : .identity
             UIView.animate(withDuration: duration, delay: delay,
                            options: [.curveEaseOut, .beginFromCurrentState]) {
                 label.alpha = 1
@@ -127,29 +126,47 @@ final class CircadiaOpenWindow {
         }
     }
 
-    private func settleWords() {
-        for label in [title, line, build] {
-            label.alpha = 1
-            label.transform = .identity
-        }
-    }
+    /**
+     Arm only once the app is genuinely active.
 
-    private func arm() {
+     UIKit *completes* animations scheduled while the app is inactive, and Core
+     Animation added before the first frame is presented never shows either.
+     Capacitor posts `capacitorViewDidAppear` while the launch screen is still up
+     and `AppDelegate` forwards it to `nudge()` — arming there ran the whole open
+     off-screen, so the identity was simply present and the phone looked like it
+     had no animation at all. `viewDidAppear` guarded this; the notification path
+     did not. The guard now lives here, where every caller must pass through it.
+     Not-yet-active is a retry, never a skip.
+     */
+    private func arm(retry: Int = 0) {
         guard !armed, !receded else { return }
+        guard UIApplication.shared.applicationState == .active else {
+            guard retry < 40 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.arm(retry: retry + 1)
+            }
+            return
+        }
         armed = true
         let reduced = UIAccessibility.isReduceMotionEnabled
         if reduced {
+            // Reduce Motion asks for no movement — not for no transition. The clock
+            // arrives finished and everything cross-fades, which is what the system
+            // itself does. Dumping the identity on screen reads as a bug, not care.
             mark.settle()
             sky.settle()
-            settleWords()
-            UIView.animate(withDuration: 0.2) { self.mark.alpha = 1 }
-            drawDoneAt = CACurrentMediaTime() + 0.28
+            UIView.animate(withDuration: 0.7, delay: 0, options: [.curveEaseOut]) {
+                self.mark.alpha = 1
+            }
+            sky.rise(duration: 1.0)
+            arriveWords(moving: false)
+            drawDoneAt = CACurrentMediaTime() + 1.6
         } else {
             mark.alpha = 1
             mark.play()
             // Launch screen is flat night; the sky wakes under the draw so there is no pop.
             sky.rise(duration: 1.8)
-            arriveWords()
+            arriveWords(moving: true)
             drawDoneAt = CACurrentMediaTime() + CircadiaMarkView.playDuration
         }
         // Start asking the diary early; recede() itself waits out the draw.
@@ -225,7 +242,7 @@ final class CircadiaOpenWindow {
         // The diary starts its arrival now, under the lifting scrim — not after it.
         CircadiaSurface.ping()
         if UIAccessibility.isReduceMotionEnabled {
-            UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
+            UIView.animate(withDuration: 0.7, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
                 self.overlay.rootViewController?.view.alpha = 0
             } completion: { _ in
                 self.finishRecede()

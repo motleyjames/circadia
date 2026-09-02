@@ -31,6 +31,26 @@ describe("iPhone UIKit open", () => {
     expect(scene).not.toMatch(/web(View)?\.transform/);
   });
 
+  it("refuses to arm until the app is active, so the open cannot play off-screen", () => {
+    // UIKit finishes animations scheduled while inactive. Capacitor's
+    // capacitorViewDidAppear fires under the launch screen, and AppDelegate
+    // forwards it — arming there ran the entire open before it was on screen and
+    // left the identity simply present. Every caller must pass this guard.
+    expect(scene).toContain("private func arm(retry: Int = 0)");
+    const armBody = scene.slice(scene.indexOf("private func arm(retry: Int = 0)"));
+    const guardAt = armBody.indexOf("UIApplication.shared.applicationState == .active");
+    const armedAt = armBody.indexOf("armed = true");
+    expect(guardAt).toBeGreaterThan(-1);
+    // The guard must come before we mark the open as spent.
+    expect(guardAt).toBeLessThan(armedAt);
+    // Not-yet-active retries rather than dropping the open entirely.
+    expect(armBody).toContain("self?.arm(retry: retry + 1)");
+    // Reduce Motion still gets a cross-faded open, not an instant dump.
+    expect(scene).toContain("arriveWords(moving: false)");
+    expect(scene).toContain("arriveWords(moving: true)");
+    expect(scene).not.toContain("settleWords");
+  });
+
   it("keeps LaunchScreen a dark wait so the overlay owns the whole open", () => {
     // The launch screen used to show the finished wordmark, which left the phone
     // nothing to play. It is now `brand-open-wait`: flat night, no type.
@@ -39,7 +59,7 @@ describe("iPhone UIKit open", () => {
     expect(launch).not.toContain("For falling asleep.");
     expect(launch).not.toContain("Georgia");
     // The identity is built in UIKit instead, on the Dock's beats.
-    expect(scene).toContain("private func arriveWords()");
+    expect(scene).toContain("private func arriveWords(moving: Bool)");
     expect(scene).toContain("(title, 1.2, 1.8)");
     expect(scene).toContain("(line, 1.6, 1.6)");
     expect(scene).toContain("(build, 2.0, 1.4)");
@@ -80,7 +100,8 @@ describe("iPhone UIKit open", () => {
     // LaunchScreen has no mark: the first overlay frame must match it, then the mark appears.
     expect(scene).toContain("mark.alpha = 0");
     expect(scene).toContain("mark.bottomAnchor.constraint(equalTo: identity.topAnchor, constant: -40)");
-    expect(scene).toContain("0.28");
+    // Reduce Motion holds the finished clock rather than the old instant dump.
+    expect(scene).toContain("drawDoneAt = CACurrentMediaTime() + 1.6");
     expect(scene).toContain("settleBeat: TimeInterval = 0.8");
     expect(scene).toContain("recede(force: true)");
     expect(OPEN_HOLD_MS).toBe(800);
