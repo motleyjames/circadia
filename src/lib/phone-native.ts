@@ -10,9 +10,11 @@ function protocolIsPhone(w: Window): boolean {
   return protocol === "circadia:" || protocol === "capacitor:" || protocol === "ionic:";
 }
 
-/** Packed Capacitor binary and live Capacitor — not `?circadia-phone=1` in a browser. */
+/** Capacitor WKWebView cannot fade CSS. Skip the web cover only on a live
+ * Capacitor host — never via NEXT_PUBLIC_CIRCADIA_PHONE_PACK. That flag is
+ * inlined at compile time and poisoned Circadia.app after put-on-phone.
+ */
 export function skipWebOpenCover(): boolean {
-  if (process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK === "1") return true;
   return isPhoneNative();
 }
 

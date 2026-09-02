@@ -76,6 +76,7 @@ final class CircadiaOpenWindow {
         buildIdentity(in: root.view)
         overlay.rootViewController = root
         identity.alpha = 1
+        overlay.makeKeyAndVisible()
     }
 
     private func bringForward() {
@@ -84,6 +85,7 @@ final class CircadiaOpenWindow {
         overlay.alpha = 1
         overlay.rootViewController?.view.alpha = 1
         identity.alpha = 1
+        overlay.makeKeyAndVisible()
     }
 
     private func arm() {
@@ -158,6 +160,12 @@ final class CircadiaOpenWindow {
             self.overlay.isHidden = true
             self.overlay.isUserInteractionEnabled = false
             self.overlay.rootViewController = nil
+            if let scene = self.overlay.windowScene {
+                for window in scene.windows where window !== self.overlay {
+                    window.makeKeyAndVisible()
+                    break
+                }
+            }
             CircadiaOpenWindow.shared = nil
             CircadiaSurface.ping()
         }
@@ -219,7 +227,11 @@ final class CircadiaOpenWindow {
 class CircadiaBridgeViewController: CAPBridgeViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        CircadiaOpenWindow.arm()
+        // LaunchScreen can still be up here. Arming then recedes under the
+        // splash — the diary appears with no open. Only arm while active.
+        if UIApplication.shared.applicationState == .active {
+            CircadiaOpenWindow.arm()
+        }
     }
 }
 
@@ -239,8 +251,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if !(window?.rootViewController is CircadiaBridgeViewController) {
             window?.rootViewController = CircadiaBridgeViewController()
         }
-        CircadiaOpenWindow.install(on: windowScene)
         window?.makeKeyAndVisible()
+        CircadiaOpenWindow.install(on: windowScene)
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
@@ -249,7 +261,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let windowScene = scene as? UIWindowScene {
             CircadiaOpenWindow.install(on: windowScene)
         }
-        CircadiaOpenWindow.arm()
+        // One runloop after active so LaunchScreen has yielded to the overlay.
+        DispatchQueue.main.async {
+            CircadiaOpenWindow.arm()
+        }
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {

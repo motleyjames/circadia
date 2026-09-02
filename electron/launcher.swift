@@ -217,6 +217,14 @@ func startNext(_ install: Install) throws {
   proc.arguments = [serve]
   proc.currentDirectoryURL = URL(fileURLWithPath: install.repo)
   var env = ProcessInfo.processInfo.environment
+  // Finder is usually clean. `open Circadia.app` from the same terminal as
+  // put-on-phone inherits CIRCADIA_PACK_STATIC / NEXT_PUBLIC_CIRCADIA_PHONE_PACK
+  // and Circadia.app would then `next start` the phone distDir.
+  env.removeValue(forKey: "CIRCADIA_PACK_STATIC")
+  env.removeValue(forKey: "CIRCADIA_ELECTRON")
+  env.removeValue(forKey: "NEXT_PUBLIC_CIRCADIA_PHONE_PACK")
+  env.removeValue(forKey: "CIRCADIA_SURFACE")
+  env.removeValue(forKey: "NEXT_PUBLIC_CIRCADIA_SURFACE")
   let nodeDir = URL(fileURLWithPath: install.node).deletingLastPathComponent().path
   let captured = install.path ?? ""
   env["PATH"] = "\(nodeDir):\(captured):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"

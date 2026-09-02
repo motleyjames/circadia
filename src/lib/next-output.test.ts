@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nextImagesUnoptimized, nextOutput } from "./next-output";
+import { nextDistDir, nextImagesUnoptimized, nextOutput } from "./next-output";
 
 describe("nextOutput", () => {
   it("keeps Dock compiles standalone even if CIRCADIA_ELECTRON leaked", () => {
@@ -29,5 +29,18 @@ describe("nextOutput", () => {
     expect(nextOutput({})).toBe("standalone");
     expect(nextImagesUnoptimized({ CIRCADIA_PACK_STATIC: "1" })).toBe(true);
     expect(nextImagesUnoptimized({})).toBe(false);
+  });
+
+  it("keeps operator distDir off the diary tree; pack uses default .next then stash", () => {
+    expect(nextDistDir({ CIRCADIA_PACK_STATIC: "1" })).toBe(".next");
+    expect(nextDistDir({})).toBe(".next");
+    expect(nextDistDir({ CIRCADIA_SURFACE: "mod", NEXT_PUBLIC_CIRCADIA_SURFACE: "mod" })).toBe(".next-mod");
+    expect(
+      nextDistDir({
+        CIRCADIA_PACK_STATIC: "1",
+        CIRCADIA_SURFACE: "mod",
+        NEXT_PUBLIC_CIRCADIA_SURFACE: "mod",
+      }),
+    ).toBe(".next-mod");
   });
 });

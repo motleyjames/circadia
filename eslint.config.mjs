@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     // Default ignores of eslint-config-next:
     ".next/**",
     ".next-mod/**",
+    ".next-phone/**",
+    ".next-dock-stash/**",
     "out/**",
     "build/**",
     "out/**",

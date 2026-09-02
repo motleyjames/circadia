@@ -92,6 +92,7 @@ describe("rebuild-launcher", () => {
     expect(src).toContain("killall");
     expect(src).toContain("sleep 1; open");
     expect(src).not.toContain("CIRCADIA_SESSION_TOKEN");
-    expect(serve).toContain("delete env.CIRCADIA_SESSION_TOKEN");
+    expect(readFileSync("electron/dock-env.cjs", "utf8")).toContain("delete next.CIRCADIA_SESSION_TOKEN");
+    expect(serve).toContain("dockCompileEnv");
   });
 });

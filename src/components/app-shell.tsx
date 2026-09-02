@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CircadiaProvider, CircadiaSafeTree, useCircadia } from "@/context/circadia-store";
 import { AuthGate } from "@/components/auth-gate";
 import { BottomNav } from "@/components/bottom-nav";
@@ -128,20 +128,14 @@ function ShellInner() {
   const [consultPath, setConsultPath] = useState<string | null>(null);
   const reducedMotion = useReducedMotion();
   const holdConsumed = useOpenHoldConsumed();
-  const [openPhase, setOpenPhase] = useState<OpenCoverPhase | "gone">(() => {
-    // Capacitor WKWebView cannot fade this cover. The packed iPhone binary
-    // uses CircadiaOpenWindow. Browser `?circadia-phone=1` still plays CSS.
-    if (skipWebOpenCover()) {
-      consumeOpenHold();
-      return "gone";
-    }
-    return isOpenHoldConsumed() ? "gone" : "wait";
-  });
-  const [surfaceReady, setSurfaceReady] = useState(() => isOpenHoldConsumed() || skipWebOpenCover());
-  const [appPainted, setAppPainted] = useState(() => isOpenHoldConsumed() || skipWebOpenCover());
+  const [openPhase, setOpenPhase] = useState<OpenCoverPhase | "gone">(() =>
+    isOpenHoldConsumed() ? "gone" : "wait",
+  );
+  const [surfaceReady, setSurfaceReady] = useState(() => isOpenHoldConsumed());
+  const [appPainted, setAppPainted] = useState(() => isOpenHoldConsumed());
   const identityUpAt = useRef(0);
   const consultOpen = consultPath === pathname;
-  const phase = diaryShellPhase({
+  void diaryShellPhase({
     ready,
     session,
     reducedMotion,
@@ -149,6 +143,17 @@ function ShellInner() {
   });
   const signedIn = Boolean(session);
   const appChrome = Boolean(signedIn && state.profile?.onboardingComplete && state.study.asked);
+
+  useLayoutEffect(() => {
+    if (!skipWebOpenCover()) return;
+    consumeOpenHold();
+    // Host detection, not a derived render. Must run before paint or the
+    // phone shows a CSS cover WKWebView cannot fade.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpenPhase("gone");
+    setSurfaceReady(true);
+    setAppPainted(true);
+  }, []);
 
   useEffect(() => {
     if (isOpenHoldConsumed() || skipWebOpenCover()) return;
@@ -163,12 +168,11 @@ function ShellInner() {
 
   useEffect(() => {
     if (!surfaceReady || openPhase !== "wait") return;
-    if (reducedMotion) {
-      identityUpAt.current = Date.now();
-      setOpenPhase("hold");
-      return;
-    }
-    setOpenPhase("play");
+    const id = window.requestAnimationFrame(() => {
+      if (reducedMotion) identityUpAt.current = Date.now();
+      setOpenPhase(reducedMotion ? "hold" : "play");
+    });
+    return () => window.cancelAnimationFrame(id);
   }, [surfaceReady, openPhase, reducedMotion]);
 
   useEffect(() => {

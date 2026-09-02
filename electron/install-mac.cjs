@@ -6,6 +6,7 @@ const os = require("node:os");
 const path = require("node:path");
 const { writePackagedApp } = require("./pack-app.cjs");
 const { isElectronApp, repairAll, repairDest } = require("./fix-mac.cjs");
+const { dockCompileEnv, writeDiaryServerKind } = require("./dock-env.cjs");
 
 const operator = process.argv.includes("--operator");
 const APP_DISPLAY = operator ? "Circadia Operator" : "Circadia";
@@ -108,27 +109,14 @@ function buildDiary() {
       ? "Compiling Circadia Operator for the Dock (gold clock, not the diary)…"
       : "Compiling Circadia once for the Dock window (not a live-reload server)…",
   );
-  const env = { ...process.env };
-  delete env.CIRCADIA_ELECTRON;
-  delete env.CIRCADIA_PACK_STATIC;
-  delete env.CIRCADIA_SESSION_TOKEN;
-  if (operator) {
-    env.CIRCADIA_SURFACE = "mod";
-    env.NEXT_PUBLIC_CIRCADIA_SURFACE = "mod";
-  } else {
-    delete env.CIRCADIA_SURFACE;
-    delete env.NEXT_PUBLIC_CIRCADIA_SURFACE;
-  }
-  if (env.CIRCADIA_ELECTRON === "1" || env.CIRCADIA_PACK_STATIC === "1") {
-    console.error("Dock compile refuses static export. CIRCADIA_ELECTRON / CIRCADIA_PACK_STATIC leaked.");
-    process.exit(1);
-  }
+  const env = dockCompileEnv(operator);
   console.log(`Dock compile env: surface=${operator ? "mod" : "diary"} electron=off pack_static=off`);
   const result = spawnSync(process.execPath, [nextBin, "build"], { cwd: root, stdio: "inherit", env });
   if (result.status !== 0) {
     console.error(`next build failed. ${APP_FILE} was not replaced.`);
     process.exit(1);
   }
+  writeDiaryServerKind(root, operator);
 }
 
 function installPayload() {

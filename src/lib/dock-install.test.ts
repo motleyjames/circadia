@@ -111,7 +111,8 @@ describe("Dock install invariants", () => {
     const runMod = readFileSync("electron/run-mod.cjs", "utf8");
     expect(runMod).toContain("43149");
     expect(runMod).toContain('CIRCADIA_SURFACE = "mod"');
-    expect(readFileSync("next.config.ts", "utf8")).toContain(".next-mod");
+    expect(readFileSync("src/lib/next-output.ts", "utf8")).toContain('".next-mod"');
+    expect(readFileSync("src/lib/next-output.ts", "utf8")).not.toContain('".next-phone"');
     const mw = readFileSync("src/proxy.ts", "utf8");
     expect(mw).toContain('CIRCADIA_SURFACE === "mod"');
     expect(mw).toContain("/api/moderator");
@@ -178,7 +179,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("File this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("Notes for this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).not.toContain("The interview is closed");
-    expect(APP_VERSION).toBe("0.8.18");
+    expect(APP_VERSION).toBe("0.8.19");
   });
 
   it("does not run diary views while compiling the operator", () => {
@@ -203,10 +204,24 @@ describe("morning sleep-aid question", () => {
     expect(readFileSync("src/components/app-shell.tsx", "utf8")).toContain("CircadiaSafeTree");
     expect(nextConfig).toContain("CIRCADIA_PACK_STATIC");
     expect(nextConfig).toContain("nextOutput");
-    expect(install).toContain("delete env.CIRCADIA_PACK_STATIC");
-    expect(install).toContain("delete env.CIRCADIA_ELECTRON");
+    expect(nextConfig).toContain("nextDistDir");
+    expect(install).toContain('require("./dock-env.cjs")');
+    expect(install).toContain("dockCompileEnv(operator)");
+    expect(install).not.toContain("delete env.CIRCADIA_PACK_STATIC");
     expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("CIRCADIA_PACK_STATIC");
-    expect(readFileSync("electron/serve-dock.cjs", "utf8")).toContain("CIRCADIA_PACK_STATIC");
+    expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("stashDiaryServer");
+    expect(readFileSync("electron/build-ui.cjs", "utf8")).toContain("restoreDiaryServer");
+    expect(readFileSync("electron/serve-dock.cjs", "utf8")).toContain("dockCompileEnv");
+    expect(readFileSync("electron/serve-dock.cjs", "utf8")).toContain("isDiaryServerKind");
+    expect(readFileSync("electron/serve-dock.cjs", "utf8")).toContain("writeDiaryServerKind");
+    expect(readFileSync("electron/serve-dock.cjs", "utf8")).toContain("next.config.ts");
+    expect(readFileSync("electron/dock-env.cjs", "utf8")).toContain("circadia-kind");
+    expect(readFileSync("electron/dock-env.cjs", "utf8")).toContain("delete next.NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
+    expect(readFileSync("electron/dock-env.cjs", "utf8")).toContain("delete next.CIRCADIA_PACK_STATIC");
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain('env.removeValue(forKey: "CIRCADIA_PACK_STATIC")');
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain('env.removeValue(forKey: "NEXT_PUBLIC_CIRCADIA_PHONE_PACK")');
+    expect(readFileSync("electron/launcher.swift", "utf8")).toContain('env.removeValue(forKey: "CIRCADIA_SURFACE")');
+    expect(readFileSync(".env.example", "utf8")).toContain("NEXT_PUBLIC_CIRCADIA_PHONE_PACK");
   });
 });
 

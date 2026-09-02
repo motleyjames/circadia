@@ -3,6 +3,7 @@
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const { restoreDiaryServer, stashDiaryServer } = require("./dock-env.cjs");
 
 const defaultRoot = path.join(__dirname, "..");
 
@@ -41,8 +42,9 @@ function packStatic(root = defaultRoot) {
   let code = 0;
   try {
     parkSurfaces(root);
+    stashDiaryServer(root);
     fs.rmSync(path.join(root, "out"), { recursive: true, force: true });
-    fs.rmSync(path.join(root, ".next"), { recursive: true, force: true });
+    fs.rmSync(path.join(root, ".next-phone"), { recursive: true, force: true });
     const result = spawnSync(
       process.execPath,
       [path.join(root, "node_modules", "next", "dist", "bin", "next"), "build"],
@@ -66,6 +68,7 @@ function packStatic(root = defaultRoot) {
     console.error(err);
     code = 1;
   } finally {
+    restoreDiaryServer(root);
     restoreSurfaces(root);
   }
   return code;

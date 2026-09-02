@@ -9,6 +9,7 @@
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
+const { dockCompileEnv, writeDiaryServerKind } = require("./dock-env.cjs");
 
 const APP_KINDS = {
   diary: {
@@ -159,23 +160,9 @@ function assembleNativeApp(opts) {
   return { dest, binary, payload, kind };
 }
 
-function nextBuildEnv(kindKey) {
+function nextBuildEnv(kindKey, sourceEnv = process.env) {
   const kind = kindOf(kindKey);
-  const env = { ...process.env };
-  delete env.CIRCADIA_ELECTRON;
-  delete env.CIRCADIA_PACK_STATIC;
-  delete env.CIRCADIA_SESSION_TOKEN;
-  if (kind.surface === "mod") {
-    env.CIRCADIA_SURFACE = "mod";
-    env.NEXT_PUBLIC_CIRCADIA_SURFACE = "mod";
-  } else {
-    delete env.CIRCADIA_SURFACE;
-    delete env.NEXT_PUBLIC_CIRCADIA_SURFACE;
-  }
-  if (env.CIRCADIA_ELECTRON === "1" || env.CIRCADIA_PACK_STATIC === "1") {
-    throw new Error("Dock compile refuses static export");
-  }
-  return env;
+  return dockCompileEnv(kind.surface === "mod", sourceEnv);
 }
 
 function buildNext(repo, kindKey) {
@@ -191,6 +178,7 @@ function buildNext(repo, kindKey) {
   if (result.status !== 0) {
     throw new Error("next build failed for " + kind.display);
   }
+  writeDiaryServerKind(repo, kind.surface === "mod");
 }
 
 module.exports = {

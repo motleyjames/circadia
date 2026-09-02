@@ -22,7 +22,7 @@ const bundle = require("../../electron/native-bundle.cjs") as {
     payload: { repo: string; port: number; surface?: string; title: string; logFile: string };
     kind: { exec: string; bundleId: string; display: string };
   };
-  nextBuildEnv: (kind: string) => NodeJS.ProcessEnv;
+  nextBuildEnv: (kind: string, sourceEnv?: Record<string, string | undefined>) => NodeJS.ProcessEnv;
 };
 const both = require("../../electron/install-both-native.cjs") as {
   selectedKinds: () => string[];
@@ -105,6 +105,32 @@ describe("diary vs operator Dock kinds", () => {
       if (prev === undefined) delete process.env.CIRCADIA_SESSION_TOKEN;
       else process.env.CIRCADIA_SESSION_TOKEN = prev;
     }
+  });
+
+  it("does not bake the phone-pack public flag into a diary next build", () => {
+    const env = bundle.nextBuildEnv("diary", {
+      NEXT_PUBLIC_CIRCADIA_PHONE_PACK: "1",
+      CIRCADIA_PACK_STATIC: "1",
+      CIRCADIA_SURFACE: "mod",
+      NEXT_PUBLIC_CIRCADIA_SURFACE: "mod",
+      PATH: "/usr/bin",
+    });
+    expect(env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK).toBeUndefined();
+    expect(env.CIRCADIA_PACK_STATIC).toBeUndefined();
+    expect(env.CIRCADIA_SURFACE).toBeUndefined();
+    expect(env.NEXT_PUBLIC_CIRCADIA_SURFACE).toBeUndefined();
+  });
+
+  it("keeps operator distDir even if pack flags leaked", () => {
+    const env = bundle.nextBuildEnv("mod", {
+      NEXT_PUBLIC_CIRCADIA_PHONE_PACK: "1",
+      CIRCADIA_PACK_STATIC: "1",
+      PATH: "/usr/bin",
+    });
+    expect(env.CIRCADIA_SURFACE).toBe("mod");
+    expect(env.NEXT_PUBLIC_CIRCADIA_SURFACE).toBe("mod");
+    expect(env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK).toBeUndefined();
+    expect(env.CIRCADIA_PACK_STATIC).toBeUndefined();
   });
 
   it("installs both kinds by default", () => {
