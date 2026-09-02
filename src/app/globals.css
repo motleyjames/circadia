@@ -289,13 +289,10 @@
 }
 
 @keyframes brand-open-exit {
-  0% {
+  from {
     opacity: 1;
   }
-  38% {
-    opacity: 1;
-  }
-  100% {
+  to {
     opacity: 0;
   }
 }
@@ -327,7 +324,8 @@
 }
 
 /* WKWebView rasterizes transform:scale on a square box as a rectangle.
-   Phone open is a still mark that breathes, then dissolves — no scale, no clip. */
+   Phone open is opacity + stroke draw from a dark wait frame that matches
+   LaunchScreen. No box-scale, no still-logo pop, no clip. */
 html.circadia-phone .brand-open-cover {
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
@@ -335,48 +333,43 @@ html.circadia-phone .brand-open-cover {
 
 html.circadia-phone .brand-open-mark {
   transform: none;
-  animation: brand-breathe 4.8s ease-in-out infinite;
+  animation: brand-open-fade 0.9s ease both;
 }
 
 html.circadia-phone .brand-open-halo {
   transform: none;
-  animation: brand-open-fade 1.05s ease both;
+  animation: brand-open-fade 1.05s ease 0.08s both;
 }
 
 html.circadia-phone .brand-open-ring {
   transform: none;
   box-shadow: none;
-  animation: brand-open-fade 0.9s ease both;
+  animation: brand-open-fade 0.9s ease 0.12s both;
 }
 
-html.circadia-phone .brand-open-title,
+html.circadia-phone .brand-open-title {
+  transform: none;
+  animation: brand-open-fade 0.85s ease 0.42s both;
+}
+
 html.circadia-phone .brand-open-line {
   transform: none;
-  animation: none;
-  opacity: 1;
+  animation: brand-open-fade 0.85s ease 0.58s both;
 }
 
 html.circadia-phone .brand-open-sky {
-  animation: none;
-  opacity: 1;
+  animation: brand-open-sky 1.8s ease both;
 }
 
 html.circadia-phone .brand-open-mark .mark-ring {
-  animation: none;
-  stroke-dashoffset: 0;
+  stroke-dashoffset: 289;
+  animation: mark-draw 1.35s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
 }
 
 html.circadia-phone .brand-open-mark .mark-hands,
 html.circadia-phone .brand-open-mark .mark-moon,
 html.circadia-phone .brand-open-mark .mark-ticks {
-  animation: none;
-  opacity: 1;
-}
-
-html.circadia-phone .brand-open-wait .brand-open-mark,
-html.circadia-phone .brand-open-wait .brand-open-halo,
-html.circadia-phone .brand-open-wait .brand-open-ring {
-  animation: none !important;
+  animation: mark-fade-in 0.7s ease 0.52s both;
 }
 
 html.circadia-phone .brand-open-wait .brand-open-mark,
@@ -384,9 +377,22 @@ html.circadia-phone .brand-open-wait .brand-open-halo,
 html.circadia-phone .brand-open-wait .brand-open-ring,
 html.circadia-phone .brand-open-wait .brand-open-title,
 html.circadia-phone .brand-open-wait .brand-open-line,
-html.circadia-phone .brand-open-wait .brand-open-sky {
-  opacity: 1;
+html.circadia-phone .brand-open-wait .brand-open-mark .mark-hands,
+html.circadia-phone .brand-open-wait .brand-open-mark .mark-moon,
+html.circadia-phone .brand-open-wait .brand-open-mark .mark-ticks {
+  animation: none !important;
+  opacity: 0;
   transform: none;
+}
+
+html.circadia-phone .brand-open-wait .brand-open-mark .mark-ring {
+  animation: none !important;
+  stroke-dashoffset: 289;
+}
+
+html.circadia-phone .brand-open-wait .brand-open-sky {
+  animation: none !important;
+  opacity: 1;
 }
 
 .countdown-orb {
@@ -568,6 +574,21 @@ select,
   }
 
   .brand-open-mark .mark-ring {
+    stroke-dashoffset: 0 !important;
+  }
+
+  html.circadia-phone .brand-open-wait .brand-open-mark,
+  html.circadia-phone .brand-open-wait .brand-open-halo,
+  html.circadia-phone .brand-open-wait .brand-open-ring,
+  html.circadia-phone .brand-open-wait .brand-open-title,
+  html.circadia-phone .brand-open-wait .brand-open-line,
+  html.circadia-phone .brand-open-wait .brand-open-mark .mark-hands,
+  html.circadia-phone .brand-open-wait .brand-open-mark .mark-moon,
+  html.circadia-phone .brand-open-wait .brand-open-mark .mark-ticks {
+    opacity: 1 !important;
+  }
+
+  html.circadia-phone .brand-open-wait .brand-open-mark .mark-ring {
     stroke-dashoffset: 0 !important;
   }
 }

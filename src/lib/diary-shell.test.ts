@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   OPEN_COVER_MS,
   OPEN_HOLD_MS,
@@ -69,6 +70,13 @@ describe("diary shell phase", () => {
     expect(OPEN_HOLD_REDUCED_MS).toBeLessThan(OPEN_HOLD_MS);
     expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(700);
     expect(OPEN_COVER_MS).toBeLessThan(1200);
+  });
+
+  it("clocks the open from a visible paint, not window load", () => {
+    const src = readFileSync("src/lib/diary-shell.ts", "utf8");
+    expect(src).toContain("DOMContentLoaded");
+    expect(src).not.toContain('addEventListener("load"');
+    expect(src).toContain("readyState === \"loading\"");
   });
 
   it("resolves the open-surface wait on a visible document", async () => {

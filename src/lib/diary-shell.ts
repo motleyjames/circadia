@@ -4,10 +4,10 @@ export type DiaryShellPhase = "opening" | "gate" | "app";
 export const OPEN_HOLD_MS = 2400; // phone + dock; BrandStage paused until surfaceReady, then plays in full.
 /** Static mark beat when the system asked for no motion. Still an open, not a skip. */
 export const OPEN_HOLD_REDUCED_MS = 900;
-/** Cover stays opaque, then dissolves so the diary never dips to black. Must match `.brand-open-exit`. */
+/** Cover dissolves so the diary never dips to black. Must match `.brand-open-exit`. */
 export const OPEN_COVER_MS = 800;
-/** Do not hang the cover if splash/visibility never fires. */
-export const OPEN_SURFACE_WAIT_MS = 1200;
+/** Do not hang a dark wait if visibility never fires. */
+export const OPEN_SURFACE_WAIT_MS = 800;
 
 function nextPaint(): Promise<void> {
   return new Promise((resolve) => {
@@ -20,9 +20,10 @@ function nextPaint(): Promise<void> {
 }
 
 /**
- * Native launch screen covers WKWebView. CSS open that starts under the splash
- * is already finished when the user can see it. Clock the hold from a painted
- * frame after the document is visible.
+ * Native launch screen is a dark empty field. Clock the open from a painted
+ * visible frame — not `window.load`, which waits for every asset and freezes
+ * the wait frame. If the CSS open runs under the splash, the user only sees
+ * the last keyframe.
  */
 export function waitForOpenSurface(): Promise<void> {
   if (typeof window === "undefined" || typeof document === "undefined") {
@@ -49,8 +50,11 @@ export function waitForOpenSurface(): Promise<void> {
       }
       finish();
     };
-    if (document.readyState === "complete") start();
-    else window.addEventListener("load", start, { once: true });
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", start, { once: true });
+      return;
+    }
+    start();
   });
 }
 
