@@ -26,8 +26,9 @@ describe("iPhone UIKit open", () => {
     expect(scene).not.toContain("revealAndPing");
     expect(scene).not.toContain("__CIRCADIA_OPEN_READY__");
     expect(scene).not.toContain("translateZ");
-    expect(scene).not.toContain("CGAffineTransform");
     expect(scene).not.toContain("nightCover");
+    // UIKit transforms are fine on the overlay's own labels; never on the webview.
+    expect(scene).not.toMatch(/web(View)?\.transform/);
   });
 
   it("matches LaunchScreen to the overlay so splash cannot hide the wordmark", () => {
@@ -48,17 +49,47 @@ describe("iPhone UIKit open", () => {
     expect(scene).toContain("mark.alpha = 0");
     expect(scene).toContain("mark.bottomAnchor.constraint(equalTo: identity.topAnchor, constant: -40)");
     expect(scene).toContain("0.28");
-    expect(scene).toContain("1.4");
-    expect(scene).toContain("settleBeat: TimeInterval = 0.6");
+    expect(scene).toContain("settleBeat: TimeInterval = 0.8");
     expect(scene).toContain("recede(force: true)");
-    expect(OPEN_HOLD_MS).toBe(600);
+    expect(OPEN_HOLD_MS).toBe(800);
     expect(OPEN_HOLD_REDUCED_MS).toBe(280);
-    expect(OPEN_COVER_MS).toBe(1400);
+    expect(OPEN_COVER_MS).toBe(2200);
+  });
+
+  it("recedes in layers and lets the diary arrive under the scrim, on both shells", () => {
+    // Native: ping fires at the start of the recede, not after it — the diary rises under the scrim.
+    const pingAt = scene.indexOf("CircadiaSurface.ping()", scene.indexOf("receded = true"));
+    const firstAnimate = scene.indexOf("UIView.animate", scene.indexOf("receded = true"));
+    expect(pingAt).toBeGreaterThan(-1);
+    expect(pingAt).toBeLessThan(firstAnimate);
+    expect(scene).toContain("mark.lift(delay: 0.3, duration: 1.3)");
+    expect(scene).toContain("CGAffineTransform(scaleX: 1.1, y: 1.1)");
+    expect(scene).toContain("translationX: 0, y: -6");
+    expect(scene).toContain("Self.night.withAlphaComponent(0)");
+    expect(scene).toContain("deadline: .now() + 2.2");
+    expect(scene).toContain("private func finishRecede()");
+    expect(mark).toContain("func lift(delay: TimeInterval, duration: TimeInterval)");
+    // Web: same beats, plus the arrival wrapper.
+    const shellSrc = readFileSync("src/components/app-shell.tsx", "utf8");
+    expect(shellSrc).toContain("brand-arrive");
+    expect(shellSrc).toContain("OPEN_SURFACE_EVENT");
+    expect(shellSrc).toContain("__CIRCADIA_SURFACE__");
+    expect(shellSrc).toContain("arriving={arriving}");
+    const css = readFileSync("src/app/globals.css", "utf8");
+    expect(css).toContain("@keyframes diary-arrive");
+    expect(css).toContain("@keyframes word-lift");
+    expect(css).toContain("@keyframes mark-dissolve");
+    expect(css).toContain("@keyframes halo-bloom");
+    expect(css).toContain("@keyframes scrim-thin");
+    expect(css).toContain(".brand-open-cover.brand-open-recede .brand-open-scrim {\n  animation: scrim-thin 1.6s");
+    expect(css).toContain(".brand-arrive {\n  animation: diary-arrive 1.2s");
+    expect(css).toContain("html.circadia-phone .brand-arrive");
+    expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain('OPEN_SURFACE_EVENT = "circadia-surface"');
   });
 
   it("mirrors the SVG mark in Core Animation and is wired into the Xcode target", () => {
     expect(mark).toContain("final class CircadiaMarkView: UIView");
-    expect(mark).toContain("static let playDuration: TimeInterval = 3.1");
+    expect(mark).toContain("static let playDuration: TimeInterval = 3.6");
     expect(mark).toContain("CAShapeLayer");
     expect(mark).toContain("strokeEnd");
     expect(mark).toContain("transform.rotation.z");
@@ -102,10 +133,11 @@ describe("iPhone UIKit open", () => {
     // The cover itself is never transformed — that is the WKWebView bitmap trap.
     expect(css).not.toMatch(/\.brand-open-cover\s*\{[^}]*transform/);
     expect(css).not.toContain(".brand-open-mark .mark-ticks {\n  animation: none;\n  transform: none;");
-    expect(OPEN_IDENTITY_MS).toBe(3100);
-    // Slow enough to read: no draw beat under 0.4s, hands sweep for well over a second.
-    expect(css).toContain("mark-ring-draw 1.4s");
-    expect(css).toContain("mark-sweep-minute 1.8s");
+    expect(OPEN_IDENTITY_MS).toBe(3600);
+    // Slow enough to read: the ring travels for 1.6s, the hands sweep for over two.
+    expect(css).toContain("mark-ring-draw 1.6s");
+    expect(css).toContain("mark-sweep-minute 2.1s");
+    expect(css).toContain("@keyframes word-arrive");
   });
 
   it("keeps SceneDelegate braces balanced so Xcode can compile", () => {

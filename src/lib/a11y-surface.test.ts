@@ -52,7 +52,10 @@ describe("touch targets, confirms, and fault screens", () => {
     expect(css).toContain("brand-open-build");
     expect(css).toContain("brand-open-wait");
     expect(css).toContain("transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)");
-    expect(css).toContain("transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1)");
+    // Recede is layered keyframes, not one opacity transition; the diary arrives underneath.
+    expect(css).toContain("animation: scrim-thin 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both");
+    expect(css).toContain("animation: diary-arrive 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both");
+    expect(css).toMatch(/prefers-reduced-motion[\s\S]*\.brand-arrive \{\s*animation: none !important;/);
     expect(css).toContain("cubic-bezier(0.4, 0, 0.2, 1)");
     expect(css).toContain("stroke-dashoffset 1s linear");
     expect(css).toMatch(/\.brand-open-cover\.brand-open-wait \.brand-open-identity[\s\S]*opacity: 0/);

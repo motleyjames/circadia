@@ -75,8 +75,8 @@ describe("diary shell phase", () => {
     expect(OPEN_HOLD_MS).toBeLessThan(1200);
     expect(OPEN_HOLD_REDUCED_MS).toBeGreaterThanOrEqual(200);
     expect(OPEN_HOLD_REDUCED_MS).toBeLessThan(OPEN_HOLD_MS);
-    expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(1000);
-    expect(OPEN_COVER_MS).toBeLessThan(1600);
+    expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(1800);
+    expect(OPEN_COVER_MS).toBeLessThan(2800);
     expect(OPEN_SURFACE_WAIT_MS).toBeGreaterThan(0);
   });
 

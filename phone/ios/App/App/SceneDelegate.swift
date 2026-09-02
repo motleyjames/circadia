@@ -48,13 +48,16 @@ final class CircadiaOpenWindow {
     static var shared: CircadiaOpenWindow?
 
     /// Hard ceiling. A diary that never reports ready still gets the app.
-    private static let recedeCeiling: TimeInterval = 6.0
+    private static let recedeCeiling: TimeInterval = 7.0
     /// Finished mark on screen before it starts to go.
-    private static let settleBeat: TimeInterval = 0.6
+    private static let settleBeat: TimeInterval = 0.8
 
     private let overlay: UIWindow
     private let identity = UIStackView()
     private let mark = CircadiaMarkView(size: 84)
+    private let title = UILabel()
+    private let line = UILabel()
+    private let build = UILabel()
     private var armed = false
     private var receded = false
     private var drawDoneAt: CFTimeInterval = 0
@@ -180,34 +183,64 @@ final class CircadiaOpenWindow {
         }
         receded = true
         overlay.isUserInteractionEnabled = false
-        let duration: TimeInterval = UIAccessibility.isReduceMotionEnabled ? 0.2 : 1.4
-        UIView.animate(withDuration: duration, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
-            self.overlay.rootViewController?.view.alpha = 0
-            self.overlay.alpha = 0
-        } completion: { _ in
-            self.overlay.isHidden = true
-            self.overlay.isUserInteractionEnabled = false
-            self.overlay.rootViewController = nil
-            if let scene = self.overlay.windowScene {
-                for window in scene.windows where window !== self.overlay {
-                    window.makeKeyAndVisible()
-                    break
-                }
+        // The diary starts its arrival now, under the lifting scrim — not after it.
+        CircadiaSurface.ping()
+        if UIAccessibility.isReduceMotionEnabled {
+            UIView.animate(withDuration: 0.3, delay: 0, options: [.curveEaseInOut, .beginFromCurrentState]) {
+                self.overlay.rootViewController?.view.alpha = 0
+            } completion: { _ in
+                self.finishRecede()
             }
-            CircadiaOpenWindow.shared = nil
-            CircadiaSurface.ping()
+            return
+        }
+        // Layered, outgoing before incoming: version and tagline lift, the title
+        // follows, the mark dissolves outward, and the night thins to nothing.
+        // Total 2.2s — the same beats as `.brand-open-recede` in globals.css.
+        let drift = CGAffineTransform(translationX: 0, y: -6)
+        overlay.backgroundColor = .clear
+        UIView.animate(withDuration: 0.8, delay: 0, options: [.curveEaseInOut]) {
+            self.build.alpha = 0
+            self.build.transform = drift
+            self.line.alpha = 0
+            self.line.transform = drift
+        }
+        UIView.animate(withDuration: 0.9, delay: 0.15, options: [.curveEaseInOut]) {
+            self.title.alpha = 0
+            self.title.transform = drift
+        }
+        mark.lift(delay: 0.3, duration: 1.3)
+        UIView.animate(withDuration: 1.3, delay: 0.3, options: [.curveEaseInOut]) {
+            self.mark.alpha = 0
+            self.mark.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+        }
+        UIView.animate(withDuration: 1.6, delay: 0.2, options: [.curveEaseInOut]) {
+            self.overlay.rootViewController?.view.backgroundColor = Self.night.withAlphaComponent(0)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { [weak self] in
+            self?.finishRecede()
         }
     }
 
+    private func finishRecede() {
+        overlay.isHidden = true
+        overlay.isUserInteractionEnabled = false
+        overlay.rootViewController = nil
+        if let scene = overlay.windowScene {
+            for window in scene.windows where window !== overlay {
+                window.makeKeyAndVisible()
+                break
+            }
+        }
+        CircadiaOpenWindow.shared = nil
+    }
+
     private func buildIdentity(in host: UIView) {
-        let title = UILabel()
         title.text = "Circadia"
         title.textColor = UIColor(white: 0.98, alpha: 1)
         title.textAlignment = .center
         title.font = Self.wordmarkFont()
         title.adjustsFontForContentSizeCategory = false
 
-        let line = UILabel()
         line.text = "For falling asleep. For staying asleep. For a clock that holds."
         line.textColor = UIColor(red: 161 / 255.0, green: 161 / 255.0, blue: 170 / 255.0, alpha: 1)
         line.textAlignment = .center
@@ -216,7 +249,6 @@ final class CircadiaOpenWindow {
         line.adjustsFontForContentSizeCategory = false
 
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-        let build = UILabel()
         build.text = version
         build.textColor = UIColor(white: 0.44, alpha: 1)
         build.textAlignment = .center
