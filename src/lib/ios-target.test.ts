@@ -151,6 +151,27 @@ James-iPhone   James-iPhone.coredevice.local   ${CORE}   unavailable   iPhone 16
     expect(formatTargetLine(pick!)).toBe(`James-iPhone\t${HARDWARE}\t${CORE}`);
   });
 
+  it("does not treat a native-run UDID as live when CoreDevice is silent", () => {
+    const pick = scanInstallableIphones({
+      nativeRunJson: `{"devices":[{"id":"${HARDWARE}","name":"James-iPhone"}],"virtualDevices":[]}`,
+    });
+    expect(pick?.id).toBe(HARDWARE);
+    expect(pick?.reachable).toBe(false);
+  });
+
+  it("is live only when DDI services are up, not merely USB-wired", () => {
+    const wired = structuredClone(JAMES_IDLE_JSON);
+    wired.result.devices[0].connectionProperties.transportType = "wired";
+    wired.result.devices[0].connectionProperties.tunnelState = "";
+    wired.result.devices[0].deviceProperties.ddiServicesAvailable = false;
+    expect(scanInstallableIphones({ devicectlJson: wired })?.reachable).toBe(false);
+    const live = structuredClone(JAMES_IDLE_JSON);
+    live.result.devices[0].connectionProperties.transportType = "wired";
+    live.result.devices[0].connectionProperties.tunnelState = "connected";
+    live.result.devices[0].deviceProperties.ddiServicesAvailable = true;
+    expect(scanInstallableIphones({ devicectlJson: live })?.reachable).toBe(true);
+  });
+
   it("does not treat an xctrace listing or a native-run UDID as a live tunnel", () => {
     const pick = scanInstallableIphones({
       nativeRunJson: `{"devices":[{"id":"${HARDWARE}","name":"James-iPhone"}],"virtualDevices":[]}`,
@@ -166,7 +187,9 @@ iPhone 16 Pro (26.0) (AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE)
     expect(pick?.reachable).toBe(false);
     expect(connectionLive({ tunnelState: "disconnected", transportType: "localNetwork" })).toBe(false);
     expect(connectionLive({ tunnelState: "connected", transportType: "localNetwork" })).toBe(true);
-    expect(connectionLive({ transportType: "wired" })).toBe(true);
+    expect(connectionLive({ transportType: "wired" })).toBe(false);
+    expect(connectionLive({ transportType: "wired", ddiServicesAvailable: false })).toBe(false);
+    expect(connectionLive({ transportType: "wired", ddiServicesAvailable: true })).toBe(true);
     expect(usbSeesIphone("USB:\n\n    iPhone:\n      Product ID: 0x12a8\n")).toBe(true);
     expect(usbSeesIphone("USB:\n\n    Hub:\n      Product ID: 0x0000\n")).toBe(false);
   });

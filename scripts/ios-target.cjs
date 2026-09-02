@@ -103,11 +103,14 @@ function parseDevicectlTable(text) {
 }
 
 function connectionLive(conn = {}) {
+  // USB plugged in is not a CoreDevice tunnel. `transportType: wired` with no
+  // DDI is how James-iPhone sat for ten minutes: native-run then 1011.
+  if (conn.ddiServicesAvailable === false) return false;
+  if (conn.ddiServicesAvailable === true) return true;
   const tunnel = String(conn.tunnelState || conn.state || "").toLowerCase();
   if (tunnel === "disconnected" || tunnel === "unavailable") return false;
   if (tunnel === "connected" || tunnel === "available") return true;
-  const transport = String(conn.transportType || "").toLowerCase();
-  return transport === "wired" || transport === "usb";
+  return false;
 }
 
 function usbSeesIphone(text) {
@@ -133,6 +136,8 @@ function parseDevicectlJson(payload) {
     const udid = hardware.udid || row.udid || "";
     const coreDeviceId = row.identifier || row.coreDeviceId || "";
     if (!isHardwareUdid(udid)) continue;
+    const ddi =
+      typeof device.ddiServicesAvailable === "boolean" ? device.ddiServicesAvailable : undefined;
     const mapped = {
       id: udid,
       name: name || "iPhone",
@@ -145,7 +150,12 @@ function parseDevicectlJson(payload) {
       pairingState: conn.pairingState || "",
       transportType: conn.transportType || "",
       tunnelState: conn.tunnelState || "",
-      reachable: connectionLive(conn),
+      ddiServicesAvailable: ddi,
+      reachable: connectionLive({
+        tunnelState: conn.tunnelState || "",
+        transportType: conn.transportType || "",
+        ddiServicesAvailable: ddi,
+      }),
     };
     if (mapped.virtual) continue;
     if (!isIphone(mapped)) continue;
@@ -244,13 +254,18 @@ function mergeDeviceRows(rows) {
       pairingState: row.pairingState || prev.pairingState,
       transportType: row.transportType || prev.transportType,
       tunnelState: row.tunnelState || prev.tunnelState,
+      ddiServicesAvailable:
+        row.ddiServicesAvailable === true || prev.ddiServicesAvailable === true
+          ? true
+          : row.ddiServicesAvailable === false || prev.ddiServicesAvailable === false
+            ? false
+            : prev.ddiServicesAvailable ?? row.ddiServicesAvailable,
       virtual: prev.virtual === true || row.virtual === true,
     });
   }
   return [...byId.values()].map((row) => ({
     ...row,
-    reachable:
-      row.tunnelState || row.transportType ? connectionLive(row) : Boolean(row.reachable),
+    reachable: connectionLive(row),
   }));
 }
 
@@ -260,7 +275,7 @@ function scanInstallableIphones({ nativeRunJson, devicectlJson, xctraceText } = 
     const extracted = typeof nativeRunJson === "string" ? extractJson(nativeRunJson) : nativeRunJson;
     for (const d of asList(extracted).devices) {
       if (d.virtual === true) continue;
-      rows.push({ ...d, reachable: isHardwareUdid(d.id) });
+      rows.push({ ...d, reachable: false });
     }
   }
   if (devicectlJson != null && devicectlJson !== "") {
@@ -333,10 +348,10 @@ function formatTargetLine(pick) {
 
 function wakeDevice(deviceId, spawn = spawnSync) {
   if (!deviceId || process.platform !== "darwin") return;
-  spawn("xcrun", ["devicectl", "device", "info", "details", "--device", deviceId], {
-    encoding: "utf8",
-    timeout: 4_000,
-  });
+  const opts = { encoding: "utf8", timeout: 8_000 };
+  spawn("xcrun", ["devicectl", "device", "info", "details", "--device", deviceId], opts);
+  // Mounts the developer disk image. USB + paired is not enough on iOS 17+.
+  spawn("xcrun", ["devicectl", "device", "info", "ddiServices", "--device", deviceId], opts);
 }
 
 function readDevicectlJsonFile(spawn = spawnSync) {

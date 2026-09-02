@@ -199,6 +199,18 @@ function installWithDevicectl(app, device, spawn = spawnSync) {
   return result.status ?? 1;
 }
 
+function uniqueIds(ids) {
+  const out = [];
+  const seen = new Set();
+  for (const raw of ids) {
+    const id = String(raw || "").trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
 function readUsbProfiler(spawn = spawnSync) {
   if (process.platform !== "darwin") return "";
   try {
@@ -259,11 +271,18 @@ function deployApp({
   if (bin) {
     const deployed = run(bin, ["ios", "--app", app, "--target", targetId], { cwd: phone });
     if (deployed === 0) return 0;
-    log("native-run could not reach the phone. Trying Apple's installer with the hardware UDID.");
+    log("native-run could not reach the phone. Trying Apple's installer.");
   } else {
     log("native-run is missing. Installing with Apple's installer.");
   }
-  const status = installWithDevicectl(app, targetId, spawn);
+  const status = uniqueIds([
+    targetId,
+    live.coreDeviceId || coreDeviceId,
+    live.name,
+  ]).reduce((prev, device) => {
+    if (prev === 0) return 0;
+    return installWithDevicectl(app, device, spawn);
+  }, 11);
   if (status === 0) return 0;
   log(
     "CoreDevice still cannot see James-iPhone. Unlock it, keep the screen on, plug in USB, then run this again. The .app is already compiled — the next run skips the Next.js pack.",
@@ -349,6 +368,7 @@ module.exports = {
   describeSign,
   deployApp,
   installWithDevicectl,
+  uniqueIds,
 };
 
 if (require.main === module) {
