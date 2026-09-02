@@ -69,8 +69,8 @@ describe("diary shell phase", () => {
 
   it("keeps identity as a short beat and recedes unhurried into the diary", () => {
     // Long enough for the clock to draw, short enough that nobody waits on a logo.
-    expect(OPEN_IDENTITY_MS).toBeGreaterThanOrEqual(1200);
-    expect(OPEN_IDENTITY_MS).toBeLessThan(1800);
+    expect(OPEN_IDENTITY_MS).toBeGreaterThanOrEqual(2500);
+    expect(OPEN_IDENTITY_MS).toBeLessThan(4000);
     expect(OPEN_HOLD_MS).toBeGreaterThanOrEqual(300);
     expect(OPEN_HOLD_MS).toBeLessThan(1200);
     expect(OPEN_HOLD_REDUCED_MS).toBeGreaterThanOrEqual(200);

@@ -179,7 +179,8 @@
   transform: rotate(-55deg);
 }
 
-/* Open is one atmosphere: night → the clock draws itself → wordmark → recede into the diary.
+/* Open is one atmosphere: night → the clock draws itself (~3s) → wordmark → recede into the diary.
+   Slow on purpose. 0.8.20 ran it in 1.45s and it read as a flicker.
    The cover itself is never transformed (WKWebView rasterizes a transformed cover as a
    bitmap and nothing inside it fades). Only SVG internals and opacity move. */
 .brand-open-cover {
@@ -223,54 +224,54 @@
 }
 
 .brand-open-cover.brand-open-play .mark-ring {
-  animation: mark-ring-draw 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: mark-ring-draw 1.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .brand-open-cover.brand-open-play .brand-open-ring {
-  animation: mark-fade-in 0.6s ease-out 0.1s both;
+  animation: mark-fade-in 1.2s ease-out 0.2s both;
 }
 
 .brand-open-cover.brand-open-play .mark-tick {
-  animation: mark-fade-in 0.22s ease-out both;
+  animation: mark-fade-in 0.4s ease-out both;
 }
 .brand-open-cover.brand-open-play .mark-tick:nth-child(1) {
-  animation-delay: 0.42s;
+  animation-delay: 0.9s;
 }
 .brand-open-cover.brand-open-play .mark-tick:nth-child(2) {
-  animation-delay: 0.51s;
+  animation-delay: 1.1s;
 }
 .brand-open-cover.brand-open-play .mark-tick:nth-child(3) {
-  animation-delay: 0.6s;
+  animation-delay: 1.3s;
 }
 
 .brand-open-cover.brand-open-play .mark-pivot {
-  animation: mark-pivot-land 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+  animation: mark-pivot-land 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both;
 }
 
 .brand-open-cover.brand-open-play .mark-pivot-dot {
-  animation: mark-fade-in 0.2s ease-out 0.42s both;
+  animation: mark-fade-in 0.4s ease-out 0.9s both;
 }
 
 .brand-open-cover.brand-open-play .mark-hand-minute {
-  animation: mark-sweep-minute 0.9s linear 0.35s both;
+  animation: mark-sweep-minute 1.8s linear 0.8s both;
 }
 
 .brand-open-cover.brand-open-play .mark-hand-hour {
-  animation: mark-sweep-hour 0.85s linear 0.35s both;
+  animation: mark-sweep-hour 1.7s linear 0.8s both;
 }
 
 .brand-open-cover.brand-open-play .mark-moon {
-  animation: mark-moon-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.8s both;
+  animation: mark-moon-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.7s both;
 }
 
 .brand-open-cover.brand-open-play .brand-open-halo {
-  animation: mark-halo-breathe 0.6s ease-out 0.85s both;
+  animation: mark-halo-breathe 1.2s ease-out 1.9s both;
 }
 
 .brand-open-cover.brand-open-play .brand-open-title,
 .brand-open-cover.brand-open-play .brand-open-line,
 .brand-open-cover.brand-open-play .brand-open-build {
-  animation: mark-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.45s both;
+  animation: mark-fade-in 1.6s cubic-bezier(0.4, 0, 0.2, 1) 1s both;
 }
 
 /* hold — everything at rest, fully opaque. */
@@ -283,7 +284,7 @@
 .brand-open-cover.brand-open-recede .brand-open-identity,
 .brand-open-cover.brand-open-recede .brand-open-scrim {
   opacity: 0;
-  transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes mark-ring-draw {
@@ -404,8 +405,8 @@ html.circadia-phone .brand-open-play .brand-open-identity {
 
 html.circadia-phone .brand-open-recede .brand-open-identity,
 html.circadia-phone .brand-open-recede .brand-open-scrim {
-  -webkit-transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
-  transition: opacity 1.1s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: opacity 1.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 html:has(.brand-open-cover:not(.brand-open-recede)) .gate-brand {

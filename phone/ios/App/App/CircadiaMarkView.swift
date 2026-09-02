@@ -8,9 +8,13 @@ import UIKit
 /// strokes in from 12, ticks blink, hands sweep from 12 and settle with a small
 /// overshoot, the moon fades up, the halo breathes once. `settle()` shows the
 /// finished mark with no motion (Reduce Motion).
+///
+/// Pace: about three seconds. 0.8.20 ran this in 1.45s and it read as a flicker —
+/// a clock should be watched, not glimpsed. Keep every beat here in step with
+/// the `mark-*` keyframes in `src/app/globals.css`.
 final class CircadiaMarkView: UIView {
     /// Wall-clock length of `play()`. The open window recedes no earlier than this.
-    static let playDuration: TimeInterval = 1.45
+    static let playDuration: TimeInterval = 3.1
 
     private let unit: CGFloat
     private let halo = CAGradientLayer()
@@ -188,44 +192,44 @@ final class CircadiaMarkView: UIView {
         let easeInOut = CAMediaTimingFunction(name: .easeInEaseOut)
         let softOut = CAMediaTimingFunction(controlPoints: 0.22, 1, 0.36, 1)
 
-        // 0.00–0.70  ring strokes in from 12.
-        ring.add(basic("strokeEnd", from: 0, to: 1, at: now, duration: 0.7, timing: easeInOut), forKey: "draw")
-        orbit.add(basic("opacity", from: 0, to: 1, at: now + 0.1, duration: 0.6, timing: easeOut), forKey: "in")
+        // 0.0–1.4  ring strokes in from 12. Slow enough to watch it travel.
+        ring.add(basic("strokeEnd", from: 0, to: 1, at: now, duration: 1.4, timing: easeInOut), forKey: "draw")
+        orbit.add(basic("opacity", from: 0, to: 1, at: now + 0.2, duration: 1.2, timing: easeOut), forKey: "in")
 
-        // 0.42–0.72  ticks blink in, 3 → 6 → 9.
+        // 0.6–1.5  pivot lands.
+        pivot.add(basic("opacity", from: 0, to: 1, at: now + 0.6, duration: 0.4, timing: easeOut), forKey: "in")
+        pivot.add(basic("transform.scale", from: 0.2, to: 1, at: now + 0.6, duration: 0.9, timing: softOut), forKey: "pop")
+        pivotDot.add(basic("opacity", from: 0, to: 1, at: now + 0.9, duration: 0.4, timing: easeOut), forKey: "in")
+
+        // 0.9–1.7  ticks blink in, 3 → 6 → 9.
         for (i, tick) in ticks.enumerated() {
-            tick.add(basic("opacity", from: 0, to: 1, at: now + 0.42 + Double(i) * 0.09, duration: 0.22, timing: easeOut), forKey: "in")
+            tick.add(basic("opacity", from: 0, to: 1, at: now + 0.9 + Double(i) * 0.2, duration: 0.4, timing: easeOut), forKey: "in")
         }
 
-        // 0.30–0.55  pivot lands.
-        pivot.add(basic("opacity", from: 0, to: 1, at: now + 0.3, duration: 0.2, timing: easeOut), forKey: "in")
-        pivot.add(basic("transform.scale", from: 0.2, to: 1, at: now + 0.3, duration: 0.45, timing: softOut), forKey: "pop")
-        pivotDot.add(basic("opacity", from: 0, to: 1, at: now + 0.42, duration: 0.2, timing: easeOut), forKey: "in")
-
-        // 0.35–1.25  hands sweep from 12 and settle with a small overshoot.
-        minuteHand.add(basic("opacity", from: 0, to: 1, at: now + 0.35, duration: 0.18, timing: easeOut), forKey: "in")
-        hourHand.add(basic("opacity", from: 0, to: 1, at: now + 0.35, duration: 0.18, timing: easeOut), forKey: "in")
+        // 0.8–2.6  hands sweep from 12 and settle with a small overshoot.
+        minuteHand.add(basic("opacity", from: 0, to: 1, at: now + 0.8, duration: 0.35, timing: easeOut), forKey: "in")
+        hourHand.add(basic("opacity", from: 0, to: 1, at: now + 0.8, duration: 0.35, timing: easeOut), forKey: "in")
         minuteHand.add(
-            sweep(to: Self.minuteAngle, overshoot: 6 * .pi / 180, at: now + 0.35, duration: 0.9),
+            sweep(to: Self.minuteAngle, overshoot: 6 * .pi / 180, at: now + 0.8, duration: 1.8),
             forKey: "sweep"
         )
         hourHand.add(
-            sweep(to: Self.hourAngle, overshoot: -4 * .pi / 180, at: now + 0.35, duration: 0.85),
+            sweep(to: Self.hourAngle, overshoot: -4 * .pi / 180, at: now + 0.8, duration: 1.7),
             forKey: "sweep"
         )
 
-        // 0.80–1.20  moon rises into place.
-        moon.add(basic("opacity", from: 0, to: 1, at: now + 0.8, duration: 0.4, timing: easeOut), forKey: "in")
-        moon.add(basic("transform.translation.y", from: 3 * unit, to: 0, at: now + 0.8, duration: 0.45, timing: softOut), forKey: "rise")
+        // 1.7–2.5  moon rises into place.
+        moon.add(basic("opacity", from: 0, to: 1, at: now + 1.7, duration: 0.8, timing: easeOut), forKey: "in")
+        moon.add(basic("transform.translation.y", from: 3 * unit, to: 0, at: now + 1.7, duration: 0.9, timing: softOut), forKey: "rise")
 
-        // 0.85–1.45  halo breathes in once.
-        halo.add(basic("opacity", from: 0, to: 1, at: now + 0.85, duration: 0.6, timing: easeOut), forKey: "in")
+        // 1.9–3.1  halo breathes in once.
+        halo.add(basic("opacity", from: 0, to: 1, at: now + 1.9, duration: 1.2, timing: easeOut), forKey: "in")
         let breath = CAKeyframeAnimation(keyPath: "transform.scale")
         breath.values = [0.94, 1.03, 1.0]
         breath.keyTimes = [0, 0.6, 1]
         breath.timingFunctions = [easeOut, easeInOut]
-        breath.beginTime = now + 0.85
-        breath.duration = 0.6
+        breath.beginTime = now + 1.9
+        breath.duration = 1.2
         breath.fillMode = .backwards
         halo.add(breath, forKey: "breathe")
     }
