@@ -324,8 +324,9 @@ describe("phone diary shell", () => {
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("devicectl");
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("isHardwareUdid");
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("waitForInstallTarget");
-    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("Trying Apple's installer with the hardware UDID");
+    expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("Trying Apple's installer");
     expect(readFileSync("scripts/ios-install.cjs", "utf8")).toContain("No live CoreDevice tunnel");
+    expect(readFileSync("scripts/ios-target.cjs", "utf8")).toContain("ddiServices");
     expect(script).toContain("CIRCADIA_IPHONE_WAIT_MS");
     expect(script).toContain("live tunnel");
     expect(readFileSync("scripts/ios-sign.cjs", "utf8")).toContain("app.circadia.diary");

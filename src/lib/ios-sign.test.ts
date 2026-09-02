@@ -403,7 +403,7 @@ describe("ios-install signing args", () => {
     expect(logs.join("\n")).not.toMatch(/Trying Apple's installer/);
   });
 
-  it("installs with the hardware UDID once CoreDevice is live, and does not retry the UUID", () => {
+  it("installs with Apple's installer using UDID, then CoreDevice id, then the phone name", () => {
     const devices: string[] = [];
     const logs: string[] = [];
     const status = install.deployApp({
@@ -432,8 +432,8 @@ describe("ios-install signing args", () => {
         };
       },
     });
-    expect(devices).toEqual([DEVICE]);
-    expect(logs.join("\n")).toMatch(/Trying Apple's installer with the hardware UDID|Installing with Apple's installer/);
+    expect(devices).toEqual([DEVICE, "3BF49769-5494-56B1-8F32-F329DC6F058F", "James-iPhone"]);
+    expect(logs.join("\n")).toMatch(/Installing with Apple's installer/);
     expect(logs.join("\n")).toMatch(/CoreDevice still cannot see James-iPhone/);
     expect(status).toBe(1);
   });
