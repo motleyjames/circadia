@@ -33,8 +33,10 @@ export function AuthGate() {
     return (
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-          <Mark className="size-8" />
-          <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">Circadia</h1>
+          <div className="gate-brand">
+            <Mark className="size-8" />
+            <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">Circadia</h1>
+          </div>
         </div>
       </div>
     );
@@ -107,10 +109,12 @@ function DesktopAuthGate() {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(2.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        <Mark className="size-8" />
-        <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">
-          Circadia
-        </h1>
+        <div className="gate-brand">
+          <Mark className="size-8" />
+          <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">
+            Circadia
+          </h1>
+        </div>
         <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
           {brought
             ? "The locked diary is on this device. Log in with the same email or phone and password."

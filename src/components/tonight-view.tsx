@@ -6,7 +6,7 @@ import { DiaryLink } from "@/components/diary-tab-link";
 import { InstallHint } from "@/components/install-hint";
 import { WindDown } from "@/components/wind-down";
 import { buildSleepNotes } from "@/lib/advisor";
-import { isOpenHoldConsumed, subscribeOpenHold, takeSkyDebut } from "@/lib/diary-shell";
+import { isOpenHoldConsumed, subscribeOpenHold } from "@/lib/diary-shell";
 import { shouldBeOffScreens } from "@/lib/notifications";
 import { morningPageStatus } from "@/lib/morning-file";
 import {
@@ -18,7 +18,6 @@ import {
   screenOffClock,
   secondsUntilClock,
 } from "@/lib/time";
-import { cn } from "@/lib/utils";
 import { useWallClock } from "@/lib/wall-clock";
 
 const ORB_C = 2 * Math.PI * 46;
@@ -131,8 +130,7 @@ function CountdownHero({
   const horizon = 12 * 3600;
   const t = screensDown ? 1 : Math.max(0.06, Math.min(1, 1 - untilOff / horizon));
   const holdConsumed = useSyncExternalStore(subscribeOpenHold, isOpenHoldConsumed, () => false);
-  const [debuting, setDebuting] = useState(false);
-  const [drawn, setDrawn] = useState(false);
+  const [drawn, setDrawn] = useState(() => isOpenHoldConsumed());
   const progress = drawn ? t : 0;
   const dashoffset = ORB_C * (1 - progress);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
@@ -141,16 +139,7 @@ function CountdownHero({
 
   useEffect(() => {
     if (!holdConsumed) return;
-    const reduced =
-      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const frame = window.requestAnimationFrame(() => {
-      if (reduced) {
-        setDrawn(true);
-        return;
-      }
-      if (takeSkyDebut()) setDebuting(true);
-      setDrawn(true);
-    });
+    const frame = window.requestAnimationFrame(() => setDrawn(true));
     return () => window.cancelAnimationFrame(frame);
   }, [holdConsumed]);
 
@@ -162,12 +151,7 @@ function CountdownHero({
       >
         {nowLabel}
       </p>
-      <div
-        className={cn(
-          "countdown-orb relative size-[13.5rem] overflow-hidden rounded-full sm:size-[17.5rem] lg:size-[20rem]",
-          debuting && "countdown-orb-debut",
-        )}
-      >
+      <div className="countdown-orb relative size-[13.5rem] overflow-hidden rounded-full sm:size-[17.5rem] lg:size-[20rem]">
         <svg
           viewBox="0 0 128 128"
           fill="none"

@@ -4,6 +4,7 @@ import {
   OPEN_COVER_MS,
   OPEN_HOLD_MS,
   OPEN_HOLD_REDUCED_MS,
+  OPEN_IDENTITY_MS,
   consumeOpenHold,
   diaryShellPhase,
   isOpenHoldConsumed,
@@ -64,12 +65,15 @@ describe("diary shell phase", () => {
     ).toBe("app");
   });
 
-  it("holds the open long enough for the mark to draw", () => {
-    expect(OPEN_HOLD_MS).toBeGreaterThanOrEqual(2400);
-    expect(OPEN_HOLD_REDUCED_MS).toBeGreaterThanOrEqual(700);
+  it("keeps identity as a short beat and recedes unhurried into the diary", () => {
+    expect(OPEN_IDENTITY_MS).toBeGreaterThanOrEqual(700);
+    expect(OPEN_IDENTITY_MS).toBeLessThan(1100);
+    expect(OPEN_HOLD_MS).toBeGreaterThanOrEqual(300);
+    expect(OPEN_HOLD_MS).toBeLessThan(1200);
+    expect(OPEN_HOLD_REDUCED_MS).toBeGreaterThanOrEqual(200);
     expect(OPEN_HOLD_REDUCED_MS).toBeLessThan(OPEN_HOLD_MS);
-    expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(700);
-    expect(OPEN_COVER_MS).toBeLessThan(1200);
+    expect(OPEN_COVER_MS).toBeGreaterThanOrEqual(1000);
+    expect(OPEN_COVER_MS).toBeLessThan(1600);
   });
 
   it("clocks the open from a visible paint, not window load", () => {
