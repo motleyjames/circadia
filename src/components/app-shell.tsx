@@ -19,6 +19,7 @@ import {
   OPEN_HOLD_MS,
   OPEN_HOLD_REDUCED_MS,
   OPEN_IDENTITY_MS,
+  OPEN_SURFACE_EVENT,
   consumeOpenHold,
   diaryShellPhase,
   isOpenHoldConsumed,
@@ -47,16 +48,19 @@ function Stage({
   children,
   wide = false,
   cover = null,
+  arriving = false,
 }: {
   children: React.ReactNode;
   wide?: boolean;
   cover?: React.ReactNode;
+  /** The diary rises into place while the open recedes. Class is removed once it has landed. */
+  arriving?: boolean;
 }) {
   return (
     <div className="night-sky relative flex h-full max-h-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0 glow-veil" />
       <div className="native-drag relative z-50" aria-hidden />
-      <div className="relative z-10 flex min-h-0 min-w-0 flex-1">
+      <div className={cn("relative z-10 flex min-h-0 min-w-0 flex-1", arriving && "brand-arrive")}>
         {wide ? (
           children
         ) : (
@@ -133,6 +137,7 @@ function ShellInner() {
   );
   const [surfaceReady, setSurfaceReady] = useState(() => isOpenHoldConsumed());
   const [appPainted, setAppPainted] = useState(() => isOpenHoldConsumed());
+  const [arriving, setArriving] = useState(false);
   const identityUpAt = useRef(0);
   const consultOpen = consultPath === pathname;
   void diaryShellPhase({
@@ -153,6 +158,24 @@ function ShellInner() {
     setOpenPhase("gone");
     setSurfaceReady(true);
     setAppPainted(true);
+  }, []);
+
+  // Phone: the UIKit open window pings when its recede starts. The diary rises
+  // into place under the thinning native scrim, same beats as the Dock.
+  useEffect(() => {
+    if (!skipWebOpenCover()) return;
+    const w = window as Window & { __CIRCADIA_SURFACE__?: boolean };
+    if (w.__CIRCADIA_SURFACE__) return; // already on screen — never re-run the arrival
+    let landed = 0;
+    const onSurface = () => {
+      setArriving(true);
+      landed = window.setTimeout(() => setArriving(false), OPEN_COVER_MS);
+    };
+    window.addEventListener(OPEN_SURFACE_EVENT, onSurface, { once: true });
+    return () => {
+      window.removeEventListener(OPEN_SURFACE_EVENT, onSurface);
+      window.clearTimeout(landed);
+    };
   }, []);
 
   useEffect(() => {
@@ -215,7 +238,12 @@ function ShellInner() {
 
   useEffect(() => {
     if (openPhase !== "recede") return;
-    const cover = window.setTimeout(() => setOpenPhase("gone"), OPEN_COVER_MS);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setArriving(true);
+    const cover = window.setTimeout(() => {
+      setOpenPhase("gone");
+      setArriving(false);
+    }, OPEN_COVER_MS);
     return () => window.clearTimeout(cover);
   }, [openPhase]);
 
@@ -259,6 +287,7 @@ function ShellInner() {
   return (
     <Stage
       wide={appChrome}
+      arriving={arriving}
       cover={openPhase === "gone" ? null : <OpenCover phase={openPhase} />}
     >
       {destination}
