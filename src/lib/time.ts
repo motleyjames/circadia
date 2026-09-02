@@ -198,15 +198,30 @@ export function lbToKg(lb: number): number {
 }
 
 export function newId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
-  return `id_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  // Non-secure contexts have no randomUUID. The study validator requires a real
+  // UUID, so the fallback mints a v4 rather than an `id_…` string it would reject.
+  const bytes = new Uint8Array(16);
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+/**
+ * National Sleep Foundation duration bands. Intake accepts age 13, and 13 sits in
+ * the school-age band (9-11 h), not the teen band — it was being told 8-10.
+ */
 export function sleepNeedHours(age: number): { min: number; max: number; label: string } {
+  if (age <= 13) return { min: 9, max: 11, label: "Most people your age need 9–11 hours" };
   if (age < 18) return { min: 8, max: 10, label: "Most people your age need 8–10 hours" };
-  if (age <= 25) return { min: 7, max: 9, label: "Most people your age need 7–9 hours" };
   if (age <= 64) return { min: 7, max: 9, label: "Most people your age need 7–9 hours" };
   return { min: 7, max: 8, label: "Most people your age need 7–8 hours" };
 }

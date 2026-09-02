@@ -107,6 +107,7 @@ export function Onboarding() {
   );
   const offClock = screenOffClock(targetSleep);
   const bodyReady = Number(age) >= 13;
+  const ageHint = age.trim() === "" ? "Add your age to continue." : !bodyReady ? "Circadia is for ages 13 and up." : null;
 
   function pickPhase(next: Phase) {
     setPhase(next);
@@ -199,6 +200,11 @@ export function Onboarding() {
               />
             </div>
             <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">{need.label}.</p>
+            {ageHint ? (
+              <p role="status" className="mt-2 text-[13px] leading-relaxed text-amber-200">
+                {ageHint}
+              </p>
+            ) : null}
           </section>
         )}
 
@@ -309,7 +315,7 @@ export function Onboarding() {
               Next you choose whether nights can leave this device. The diary itself stays here
               either way.
             </p>
-            <p className="mt-4 max-w-[52ch] text-[12px] leading-relaxed text-zinc-600">
+            <p className="mt-4 max-w-[52ch] text-[12px] leading-relaxed text-zinc-400">
               {MEDICAL_DISCLAIMER}
             </p>
             {error ? <p className="mt-4 text-[13px] text-red-300">{error}</p> : null}
@@ -333,12 +339,12 @@ export function Onboarding() {
         {step < 5 ? (
           <button
             type="button"
+            disabled={step === 0 && !bodyReady}
             onClick={() => {
-              if (step === 0 && !bodyReady) return;
               void hapticSelect();
               setStep((s) => s + 1);
             }}
-            className="h-14 flex-1 rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950"
+            className="h-14 flex-1 rounded-full btn-primary text-[17px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
           >
             Continue
           </button>
@@ -352,7 +358,7 @@ export function Onboarding() {
                 setBusy(false);
               })
             }
-            className="h-14 flex-1 rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950 disabled:opacity-50"
+            className="h-14 flex-1 rounded-full btn-primary text-[17px] font-semibold disabled:opacity-50"
           >
             {busy ? "Opening…" : "Open Circadia"}
           </button>

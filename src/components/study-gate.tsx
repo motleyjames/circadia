@@ -14,7 +14,7 @@ export function StudyGate() {
         Optional study
       </p>
       <h1 className="font-heading mt-3 max-w-[16ch] text-[2.4rem] leading-[1.05] tracking-tight text-zinc-50">
-        Yes is the only send.
+        Nothing leaves this device unless you say yes.
       </h1>
       <p className="mt-5 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
         If you join, this device starts a pipeline. You will not press Send. After each morning, a
@@ -37,7 +37,7 @@ export function StudyGate() {
             void hapticLight();
             joinStudy();
           }}
-          className="h-14 rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950"
+          className="h-14 rounded-full btn-primary text-[17px] font-semibold"
         >
           Join the study
         </button>

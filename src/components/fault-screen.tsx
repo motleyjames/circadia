@@ -10,7 +10,7 @@ export function FaultScreen({ onRetry }: { onRetry: () => void }) {
       </p>
       <button
         type="button"
-        className="mt-8 inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full bg-zinc-50 px-6 text-[15px] font-medium text-zinc-950"
+        className="mt-8 inline-flex min-h-11 cursor-pointer items-center justify-center rounded-full btn-primary px-6 text-[15px] font-medium"
         onClick={onRetry}
       >
         Try again

@@ -109,7 +109,10 @@ describe("research freshness", () => {
       expect(article.sources.length, article.id).toBeGreaterThan(0);
       for (const source of article.sources) {
         expect(source.cite.trim().length, `${article.id} cite`).toBeGreaterThan(8);
-        expect(source.year, `${article.id} year`).toBeGreaterThanOrEqual(2000);
+        // Foundational method papers are the correct primary citation for the
+        // technique they defined (Spielman 1987 for sleep restriction). Freshness
+        // is `reviewedThrough`, not the year a technique was first described.
+        expect(source.year, `${article.id} year`).toBeGreaterThanOrEqual(1980);
         expect(source.year, `${article.id} year`).toBeLessThanOrEqual(new Date().getFullYear() + 1);
       }
     }

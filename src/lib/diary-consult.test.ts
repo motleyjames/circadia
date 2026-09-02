@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { answerQuestion, makeChatMessage } from "./chat";
+import { answerQuestion, makeChatMessage, isWithhold } from "./chat";
 import { answerDiaryQuestion, parseDiaryAsk } from "./diary-consult";
 import type { MorningReport, Profile } from "./types";
 import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
@@ -80,7 +80,7 @@ describe("diary consult", () => {
     expect(reply.text).toMatch(/75 minutes/);
     expect(reply.text).toMatch(/Phone in bed|falling-asleep/i);
     expect(reply.text).toMatch(/Aug 27/);
-    expect(reply.text.toLowerCase()).not.toMatch(/solid note/);
+    expect(isWithhold(reply)).toBe(false);
     expect(reply.citations.length).toBeGreaterThan(0);
     expect(reply.text.toLowerCase()).not.toMatch(/aasm|cbt-i|\bscn\b/);
   });
@@ -90,7 +90,7 @@ describe("diary consult", () => {
     expect(reply?.text).toMatch(/do not have a morning for Aug 3/i);
     expect(reply?.text).toMatch(/Aug 27/);
     expect(reply?.text).toMatch(/Aug 28/);
-    expect(reply?.text.toLowerCase()).not.toMatch(/solid note/);
+    expect(reply ? isWithhold(reply) : false).toBe(false);
   });
 
   it("folds what about the 27th onto the last night question", () => {
@@ -102,14 +102,12 @@ describe("diary consult", () => {
     const reply = answerQuestion("what about the 27th", profile, nights, history);
     expect(reply.text).toMatch(/Aug 27/);
     expect(reply.text).toMatch(/3\/5/);
-    expect(reply.text.toLowerCase()).not.toMatch(/solid note/);
+    expect(isWithhold(reply)).toBe(false);
   });
 
   it("does not steal Unisom or a sports withhold", () => {
     expect(answerQuestion("tell me about unisom", profile, nights).citations).toContain("otc-antihistamines");
-    expect(answerQuestion("who won the game last night", profile, nights).text.toLowerCase()).toMatch(
-      /solid note/,
-    );
+    expect(isWithhold(answerQuestion("who won the game last night", profile, nights))).toBe(true);
   });
 
   it("returns null when the chart is empty so the corpus still withholds", () => {

@@ -74,9 +74,12 @@ function Stage({
 
 type OpenCoverPhase = "wait" | "play" | "hold" | "recede";
 
-function OpenCover({ phase }: { phase: OpenCoverPhase }) {
+function OpenCover({ phase, onSkip }: { phase: OpenCoverPhase; onSkip: () => void }) {
   return (
     <div
+      // Someone who opened this app at 3 a.m. wants the wind-down button, not a
+      // logo. The open is worth watching once; after that a tap ends it.
+      onPointerDown={phase === "recede" ? undefined : onSkip}
       className={cn(
         "brand-open-cover absolute inset-0 z-40 flex flex-col",
         phase === "wait" && "brand-open-wait",
@@ -100,7 +103,9 @@ function PhoneAsk({ onAsk }: { onAsk: () => void }) {
     <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-[calc(env(safe-area-inset-top)+2.75rem)] items-end justify-between bg-gradient-to-b from-[#05040a]/85 to-transparent px-[max(0.35rem,env(safe-area-inset-left))] pr-[max(0.35rem,env(safe-area-inset-right))] xl:hidden">
       <DiaryTabLink
         href="/"
-        className="pointer-events-auto inline-flex h-11 items-center gap-2.5 px-3"
+        // The sidebar already shows the mark and wordmark from `md` up. Without
+        // this, every window between 768 and 1280px drew Circadia twice.
+        className="pointer-events-auto inline-flex h-11 items-center gap-2.5 px-3 md:hidden"
         aria-label="Circadia, Tonight"
         onClick={() => {
           void hapticLight();
@@ -288,7 +293,18 @@ function ShellInner() {
     <Stage
       wide={appChrome}
       arriving={arriving}
-      cover={openPhase === "gone" ? null : <OpenCover phase={openPhase} />}
+      cover={
+        openPhase === "gone" ? null : (
+          <OpenCover
+            phase={openPhase}
+            onSkip={() => {
+              consumeOpenHold();
+              setArriving(true);
+              setOpenPhase("recede");
+            }}
+          />
+        )
+      }
     >
       {destination}
     </Stage>

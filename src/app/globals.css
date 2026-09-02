@@ -108,6 +108,18 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /**
+   * Keyboard focus. Every interactive element in this app is a hand-rolled
+   * button or anchor, and none of them had a focus style — the Mac app was
+   * unusable from the keyboard. `:where()` keeps specificity at zero so any
+   * component can still override it.
+   */
+  :where(a, button, [role="button"], input, textarea, select, summary):focus-visible {
+    outline: 2px solid rgba(196, 181, 253, 0.85);
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
   html {
     @apply font-sans;
     color-scheme: dark;
@@ -165,10 +177,6 @@
 .mark-ring {
   stroke-dasharray: 289 289;
   stroke-dashoffset: 0;
-}
-
-.mark-ring-seat {
-  transform: rotate(-90deg);
 }
 
 .mark-hand-minute {
@@ -531,6 +539,30 @@ html:has(.brand-open-cover:not(.brand-open-recede)) .gate-brand {
   transition: stroke-dashoffset 1s linear;
 }
 
+/**
+ * The primary action, for a dark bedroom.
+ *
+ * Every gate, every intake step and the study consent used `bg-zinc-50` — pure
+ * white at 19.6:1 against the night, the brightest possible object on an OLED
+ * screen, on the only screens a new user sees at 3 a.m. This reads as clearly
+ * primary at roughly half the luminance.
+ */
+.btn-primary {
+  background: linear-gradient(180deg, rgb(216 205 255) 0%, rgb(190 176 248) 100%);
+  color: #0a0812;
+  border: 1px solid rgba(226, 218, 255, 0.55);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgb(226 218 255) 0%, rgb(201 188 252) 100%);
+}
+
+.btn-primary:disabled {
+  background: rgba(196, 181, 253, 0.22);
+  color: rgba(228, 228, 231, 0.5);
+  border-color: rgba(196, 181, 253, 0.18);
+}
+
 .night-sky {
   background:
     radial-gradient(ellipse 90% 55% at 50% -8%, rgba(88, 70, 180, 0.38), transparent 58%),
@@ -623,8 +655,16 @@ select,
   }
 }
 
-.phone-page-y {
-  padding-top: max(3.5rem, calc(env(safe-area-inset-top) + 2.85rem));
+/**
+ * Phone header clearance. This lives in `@layer components` on purpose: unlayered
+ * CSS beats every Tailwind utility regardless of specificity, so as a bare rule it
+ * silently overrode the `md:pt-*` on all five views and the Mac app carried 56px of
+ * phone padding on every screen.
+ */
+@layer components {
+  .phone-page-y {
+    padding-top: max(3.5rem, calc(env(safe-area-inset-top) + 2.85rem));
+  }
 }
 
 @keyframes circadia-sheet-in {

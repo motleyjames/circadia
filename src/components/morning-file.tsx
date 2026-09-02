@@ -29,7 +29,7 @@ export function MorningFile({
         </p>
         <p className="mt-3 text-center text-[14px] text-zinc-400">
           {night.asleepLabel}
-          <span className="mx-2 text-zinc-600">→</span>
+          <span className="mx-2 text-zinc-400">→</span>
           {night.wakeLabel}
         </p>
 
@@ -63,7 +63,7 @@ export function MorningFile({
 
         {night.dream ? (
           <p className="mt-6 text-[13px] leading-relaxed text-zinc-400">
-            <span className="text-zinc-600">Dream · </span>
+            <span className="text-zinc-400">Dream · </span>
             {night.dream}
           </p>
         ) : null}

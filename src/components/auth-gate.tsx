@@ -123,7 +123,7 @@ function DesktopAuthGate() {
             : named.length
               ? "Log in to the diary on this device. After that, Circadia stays signed in here until you log out. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
               : empty
-                ? "There is no diary on this device yet. Circadia lives here, not in the cloud. If this app was packed from another Circadia, log in with that same email or phone and password. Otherwise sign up here, or bring a locked copy."
+                ? "There is no diary on this device yet. Circadia lives here, not in the cloud — so there is no account to recover and no reset email. If you already have a diary on another device, log in with the same details, or bring a locked copy across."
                 : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this device — not a way for anyone to reach you. Circadia stays signed in here until you log out."}
         </p>
 
@@ -242,7 +242,7 @@ function DesktopAuthGate() {
             <button
               type="submit"
               disabled={busy}
-              className="h-14 w-full rounded-full bg-zinc-50 text-[17px] font-semibold text-zinc-950 disabled:opacity-50"
+              className="h-14 w-full rounded-full btn-primary text-[17px] font-semibold disabled:opacity-50"
             >
               {busy ? (mode === "signup" ? "Signing up…" : "Logging in…") : mode === "signup" ? "Sign up" : "Log in"}
             </button>
@@ -272,10 +272,10 @@ function DesktopAuthGate() {
           }}
         />
 
-        <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-600">
+        <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-400">
           The password is checked on this device. It is not sent to the person who built Circadia.
         </p>
-        <p className="mt-3 text-[11px] tracking-[0.18em] text-zinc-700 uppercase">{APP_VERSION}</p>
+        <p className="mt-3 text-[11px] tracking-[0.18em] text-zinc-500 uppercase">{APP_VERSION}</p>
       </div>
     </div>
   );
@@ -344,7 +344,7 @@ function ModeTab({
       }}
       className={cn(
         "h-11 cursor-pointer rounded-full text-[13px] font-medium transition-colors",
-        active ? "bg-zinc-50 text-zinc-950" : "text-zinc-400 hover:text-zinc-200",
+        active ? "btn-primary" : "text-zinc-400 hover:text-zinc-200",
       )}
     >
       {children}

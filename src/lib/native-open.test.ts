@@ -172,7 +172,12 @@ describe("iPhone UIKit open", () => {
     const svg = readFileSync("src/components/mark.tsx", "utf8");
     expect(svg).toContain('className="mark-hand mark-hand-minute"');
     expect(svg).toContain('className="mark-hand mark-hand-hour"');
-    expect(svg).toContain('className="mark-ring-seat"');
+    // The ring is positioned by attribute and animated only via stroke-dashoffset.
+    // A CSS transform on it would replace the attribute and draw the circle around
+    // the viewBox origin — which is exactly what happened in 0.8.20.
+    expect(svg).toContain('transform="rotate(-90 64 64)"');
+    expect(svg).toContain('cx="64"');
+    expect(css).not.toContain(".mark-ring-seat");
     // Rotation lives in CSS so the open can animate it; a CSS transform would override an attribute.
     expect(svg).not.toMatch(/mark-hand-minute"[^>]*transform=/);
     expect(css).toContain(".mark-hand-minute {\n  transform: rotate(60deg);");

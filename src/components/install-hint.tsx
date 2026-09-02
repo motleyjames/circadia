@@ -31,7 +31,7 @@ export function InstallHint() {
       </p>
       <button
         type="button"
-        className="mt-2 text-[11px] font-medium tracking-[0.16em] text-zinc-600 uppercase"
+        className="mt-2 text-[11px] font-medium tracking-[0.16em] text-zinc-400 uppercase"
         onClick={() => {
           window.sessionStorage.setItem(KEY, "1");
           setDismissed(true);

@@ -351,7 +351,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Unisom, Benadryl, and other aisle sleep aids",
     summary:
       "They are old allergy medicines sold for sleep. They can knock you out. They are not good sleep, and they are not a nightly plan.",
-    body: "Unisom SleepTabs are usually doxylamine. Some Unisom gels, ZzzQuil, Tylenol PM, Advil PM, and Benadryl use diphenhydramine. Both are first-generation antihistamines. They make you drowsy by blocking a wake signal (histamine), not by fixing the clock or sleep pressure. The AASM 2017 pharmacologic guideline suggests clinicians not use diphenhydramine for chronic insomnia (weak). Next-day fog is common, the effect fades if you take them often, and the sleep you get is often lighter and more broken. The 2025 restless-legs guideline separately notes that diphenhydramine and similar antihistamines can worsen that urge-to-move pattern. Rare backup for a one-off night is a different question than a habit. Do not mix with alcohol. Older adults (Beers criteria), glaucoma, urinary retention, and other drowsy meds raise the risk — pharmacist or doctor, not an aisle. Circadia will not tell you to start these.",
+    body: "Unisom SleepTabs are usually doxylamine. Some Unisom gels, ZzzQuil, Tylenol PM, Advil PM, and Benadryl use diphenhydramine. Both are first-generation antihistamines. The \u201cPM\u201d products are combination drugs \u2014 the antihistamine plus a painkiller (acetaminophen in Tylenol PM, ibuprofen in Advil PM) \u2014 which is a common way to exceed a daily acetaminophen limit without noticing. They make you drowsy by blocking a wake signal (histamine), not by fixing the clock or sleep pressure. The AASM 2017 pharmacologic guideline suggests clinicians not use diphenhydramine for chronic insomnia (weak). Next-day fog is common, the effect fades if you take them often, and the sleep you get is often lighter and more broken. The 2025 restless-legs guideline separately notes that diphenhydramine and similar antihistamines can worsen that urge-to-move pattern. Rare backup for a one-off night is a different question than a habit. Do not mix with alcohol. Older adults (Beers criteria), glaucoma, urinary retention, and other drowsy meds raise the risk — pharmacist or doctor, not an aisle. Circadia will not tell you to start these.",
     tags: ["unisom", "benadryl", "zzzquil", "doxylamine", "diphenhydramine", "otc", "sleep aid"],
     aliases: [
       "unisom",
@@ -369,7 +369,7 @@ export const RESEARCH: ResearchArticle[] = [
       "sleeping pill",
       "sleeping pills",
     ],
-    say: "Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep — next-day fog is common, and they work less if you take them often. Not a nightly plan. Do not mix with alcohol.",
+    say: "Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep — next-day fog is common, and they work less if you take them often. Not a nightly plan. Do not mix with alcohol. Doxylamine especially can still be working the next morning \u2014 do not drive until you know how it hits you. And the \u201cPM\u201d versions have a painkiller in them too, so check the label if you already take acetaminophen or ibuprofen in the day.",
     reviewedThrough: "2026-08",
     confidence: "high",
     sources: [
@@ -462,7 +462,7 @@ export const RESEARCH: ResearchArticle[] = [
     reviewedThrough: "2026-08",
     confidence: "high",
     sources: [
-      { year: 2015, cite: "AASM 2015 melatonin CPG still the jet-lag timing document: melatonin as a clock signal, not a knockout dose" },
+      { year: 2007, cite: "Morgenthaler TI et al. AASM practice parameters for the clinical evaluation and treatment of circadian rhythm sleep disorders (jet lag and shift work types). Sleep. 2007;30(11):1445-1459 — melatonin as a clock signal, not a knockout dose" },
       { year: 2024, cite: "Eastward travel is harder; timed outdoor light at the destination is first-line" },
     ],
   },
@@ -488,7 +488,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "An urge to move, worse at rest in the evening, needs a clinician — sometimes iron. Not Unisom.",
     say: "Restless legs is an urge to move, worse at rest, worse in the evening. It is not the same as a racing mind. A clinician may check iron. Unisom and other drowsy antihistamines can make it worse for some people. I will not diagnose you from a chat line — if this is you, say it to a human.",
-    body: "A crawling or aching urge to move the legs, worse in the evening, better when you walk — that pattern is restless legs, not ordinary tossing. It is common, under-diagnosed, and it wrecks sleep because it hits exactly when you are trying to fall asleep. Iron is still the first thing a clinician checks; low ferritin is a treatable cause. The 2025 AASM restless-legs / periodic-limb-movement guideline (Winkelman et al., J Clin Sleep Med) updates the 2012 parameter: iron evaluation stays central, several over-the-counter sedating antihistamines (diphenhydramine among them) can make the urge worse, and valerian is specifically suggested against for RLS. Some antidepressants and dopamine-blocking drugs can worsen it too. Caffeine and alcohol often do as well. Circadia does not diagnose restless legs, score severity, or pick a medicine. If the pattern matches, that is a clinic conversation, not a diary tweak or an aisle sedative.",
+    body: "A crawling or aching urge to move the legs, worse in the evening, better when you walk — that pattern is restless legs, not ordinary tossing. It is common, under-diagnosed, and it wrecks sleep because it hits exactly when you are trying to fall asleep. Iron is still the first thing a clinician checks; low ferritin is a treatable cause. The 2025 AASM restless-legs / periodic-limb-movement guideline (Winkelman et al., J Clin Sleep Med) updates the 2012 parameter: iron evaluation stays central, several over-the-counter sedating antihistamines (diphenhydramine among them) can make the urge worse, and valerian is specifically suggested against for RLS. The larger change is the move away from pramipexole and ropinirole as first-line because of augmentation \u2014 symptoms becoming more intense, starting earlier in the day, or spreading \u2014 toward alpha-2-delta ligands and, in the right patient, intravenous iron. Some antidepressants and dopamine-blocking drugs can worsen it too. Caffeine and alcohol often do as well. Circadia does not diagnose restless legs, score severity, or pick a medicine. If the pattern matches, that is a clinic conversation, not a diary tweak or an aisle sedative.",
     tags: ["rls", "restless", "legs", "iron"],
     aliases: ["restless legs", "rls", "jimmy legs", "urge to move"],
     reviewedThrough: "2026-08",
@@ -551,14 +551,14 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Warm then cool can help you fall asleep",
     summary:
       "A warm shower, then a cooler room, uses the body's temperature drop. Not a gadget requirement.",
-    say: "A warm shower or bath, then a cooler dark room, can help you fall asleep because body temperature dropping is part of the 'it is night' signal. You do not need a $2000 mattress. If you are overheating at 3 a.m., cooler is the experiment, not another pill.",
-    body: "Core temperature decline facilitates sleep onset. Warm bathing before bed followed by a cooler sleep environment is a low-risk behavioral lever. Marketing around smart mattresses outruns the need.",
+    say: "A warm shower or bath, then a cooler dark room, helps because your body temperature dropping is part of the 'it is night' signal. The timing is the trick: about an hour or two before bed, not right before you get in. It buys roughly ten minutes off how long it takes to drop off. You do not need a $2000 mattress. If you are overheating at 3 a.m., cooler is the experiment, not another pill.",
+    body: "Core temperature falls by roughly half a degree to a degree Celsius across the night, and that decline facilitates sleep onset. Passive body heating exploits it: a warm bath or shower dilates the skin, and the heat loss that follows exaggerates the drop. The meta-analytic finding is that the timing matters more than the temperature \u2014 bathing about one to two hours before bed shortened time to fall asleep by around ten minutes, while a bath immediately before bed did not help. A cooler bedroom supports the same decline. Marketing around smart mattresses outruns the need.",
     tags: ["temperature", "shower", "bath", "hot", "cool"],
     aliases: ["hot shower", "warm bath", "hot bath", "too hot at night", "cooling mattress"],
     reviewedThrough: "2026-08",
     confidence: "high",
     sources: [
-      { year: 2024, cite: "A 1–2°C drop in core temperature is part of sleep onset. A cool room and warm extremities help that drop." },
+      { year: 2019, cite: "Haghayegh S et al. Before-bedtime passive body heating improves sleep: a systematic review and meta-analysis. Sleep Med Rev. 2019;46:124-135 — bathing 1-2 h before bed shortened sleep onset by ~10 min" },
       { year: 2024, cite: "Pre-sleep warm bathing then a cooler room is a low-risk lever. Extreme cold or a hot bedroom both work against it. Physiology, not a gadget." },
     ],
   },
@@ -576,6 +576,126 @@ export const RESEARCH: ResearchArticle[] = [
     sources: [
       { year: 2024, cite: "Sleep restriction in the laboratory is unambiguous. Field recovery is slower than people expect." },
       { year: 2024, cite: "'Catching up' on the weekend does not fully reverse weekday restriction. This app reports the gap; it does not medicalize a late night." },
+    ],
+  },
+  {
+    id: "racing-mind",
+    title: "A mind that will not stop at bedtime",
+    summary:
+      "The most common reason people cannot fall asleep is not being under-tired. It is being switched on.",
+    body: "Chronic insomnia is better explained by hyperarousal than by a sleep deficit: the system that should be powering down stays up, and lying in the dark with nothing to do is when the thinking gets loudest. Harvey's cognitive model describes the loop — worry about not sleeping raises arousal, arousal delays sleep, the delay confirms the worry. The cognitive components of CBT-I target the loop rather than the thoughts' content: a worry window earlier in the evening, writing tomorrow's list down before bed so the brain stops rehearsing it, and getting out of bed when the mind is racing rather than lying there arguing with it. Relaxation practice (progressive muscle relaxation, a body scan, paced breathing) is a supporting component, and it works better with rehearsal than on the first attempt. If the worry is not about sleep — if it is constant, most days, across most areas of life — that is anxiety in its own right and it is very treatable; a clinician is the better route than a sleep app.",
+    tags: ["insomnia", "falling", "anxiety", "arousal", "cbt-i"],
+    aliases: [
+      "racing mind", "mind racing", "racing thoughts", "cannot switch off", "can't switch off",
+      "overthinking", "worrying", "worry", "anxiety", "anxious", "panic", "stressed", "stress",
+      "ruminating", "rumination", "brain won't shut up", "thoughts", "cant stop thinking",
+    ],
+    say: "A busy mind at night is the most common version of this, and it is not a personality flaw — it is arousal. Two things help more than trying harder to relax: get the list out of your head and onto paper earlier in the evening, and get out of bed when you are arguing with yourself, because lying there teaches the bed to be where you think. If the worry is not really about sleep and it is most days, that is worth treating on its own with someone.",
+    reviewedThrough: "2026-09",
+    confidence: "high",
+    sources: [
+      { year: 2021, cite: "AASM 2021 clinical practice guideline: behavioral and psychological treatments for chronic insomnia (multicomponent CBT-I, strong recommendation)" },
+      { year: 2002, cite: "Harvey AG. A cognitive model of insomnia. Behav Res Ther. 2002;40(8):869-893" },
+      { year: 2010, cite: "Riemann D et al. The hyperarousal model of insomnia: a review. Sleep Med Rev. 2010;14(1):19-31" },
+    ],
+  },
+  {
+    id: "sleep-restriction",
+    title: "Shrinking time in bed, and who should not",
+    summary:
+      "The most effective single piece of insomnia therapy is also the most uncomfortable, and it is not safe for everyone to run alone.",
+    body: "Sleep restriction therapy (Spielman) compresses time in bed toward the sleep a person is actually getting, which raises sleep pressure and consolidates a broken night into a solid block; the window is then widened as sleep efficiency improves. It is a core component of CBT-I and carries the strongest evidence in the package. It is also genuinely hard for the first one to two weeks: daytime sleepiness increases before it improves, which is why it is not a self-help manoeuvre for everyone. Contraindications and cautions are specific — bipolar disorder (sleep loss can precipitate mania), seizure disorders (sleep deprivation lowers the threshold), untreated obstructive sleep apnea, parasomnias, and anyone who drives professionally or operates machinery. Circadia will tell you when time in bed looks too long for the sleep you are getting; it will not set a restriction window, because the titration and the safety screening belong with a clinician.",
+    tags: ["insomnia", "cbt-i", "treatment", "staying"],
+    aliases: [
+      "sleep restriction", "restrict sleep", "cut time in bed", "shrink my window", "shrink the window",
+      "less time in bed", "sleep window", "time in bed", "sleep efficiency", "sleep consolidation",
+    ],
+    say: "There is a real treatment behind this: spend less time in bed for a couple of weeks so the sleep you do get packs together instead of spreading thin. It works better than any pill for long-run insomnia, and it feels worse before it feels better — you are more tired in week one, on purpose. That is exactly why I will not hand you a window to try. It is not safe to run alone if you have had mania, a seizure disorder, untreated apnea, or you drive for a living. Ask a sleep clinician to set it with you.",
+    reviewedThrough: "2026-09",
+    confidence: "high",
+    sources: [
+      { year: 2021, cite: "AASM 2021 CBT-I guideline: sleep restriction therapy recommended as a component of multicomponent CBT-I" },
+      { year: 1987, cite: "Spielman AJ, Saskin P, Thorpy MJ. Treatment of chronic insomnia by restriction of time in bed. Sleep. 1987;10(1):45-56" },
+      { year: 2014, cite: "Kyle SD et al. Sleep restriction therapy acutely increases objective sleepiness and reduces vigilance. Sleep. 2014;37(2):229-237 — the basis for the driving and machinery caution" },
+    ],
+  },
+  {
+    id: "nocturia",
+    title: "Waking up to use the bathroom",
+    summary:
+      "A very common reason for second-half wakings, and often not really a bladder problem.",
+    body: "Nocturia is one of the most frequently reported causes of night waking in adults and rises sharply with age. The distinction that matters clinically: did the bladder wake you, or did you wake anyway and then notice the bladder? People with insomnia commonly report the second, and treating it as a urological problem misses the point. Genuine nocturia has treatable drivers — evening fluid and alcohol timing, diuretics taken late, untreated obstructive sleep apnea (which raises nocturnal urine production through atrial natriuretic peptide release, and is under-recognised as a cause), poorly controlled diabetes, prostatic enlargement in men, and pelvic floor changes in women. Two or more trips a night, or a recent change in pattern, is worth a clinician's time rather than a fluid restriction experiment run alone.",
+    tags: ["staying", "waking", "older", "apnea"],
+    aliases: [
+      "nocturia", "pee", "peeing", "urinate", "urination", "bathroom", "toilet", "bladder", "loo", "wee",
+      "get up to pee", "waking to pee", "up to the bathroom",
+    ],
+    say: "Getting up to the bathroom is one of the most common reasons for waking in the second half of the night. The useful question is whether your bladder woke you, or you woke anyway and then noticed it — with insomnia it is very often the second, and then it is a sleep problem wearing a bladder costume. Worth trying: last drink an hour or two earlier, and alcohol earlier still. Worth a doctor: two or more trips a night, or a recent change. Snoring alongside it points at the airway, which is a surprisingly common cause of this.",
+    reviewedThrough: "2026-09",
+    confidence: "moderate",
+    sources: [
+      { year: 2019, cite: "Bliwise DL et al. Nocturia and disturbed sleep in the elderly. Sleep Med — nocturia as a leading cause of sleep maintenance complaints" },
+      { year: 2019, cite: "International Continence Society standardisation of terminology for nocturia" },
+      { year: 2016, cite: "Association of obstructive sleep apnea with nocturia; resolution with CPAP treatment in a substantial share of patients" },
+    ],
+  },
+  {
+    id: "menopause-sleep",
+    title: "Perimenopause, hot flashes, and broken nights",
+    summary:
+      "Sleep complaints rise sharply through the menopause transition, and the night sweats are only part of it.",
+    body: "Sleep disturbance is among the most commonly reported symptoms of the menopause transition, with prevalence estimates around 40-60%. Vasomotor symptoms (hot flashes and night sweats) fragment sleep directly, and there is evidence the arousal can precede the subjective flash. But the transition also raises insomnia risk independently of vasomotor symptoms, and increases the incidence of obstructive sleep apnea — the loss of the premenopausal protective effect means apnea in women is routinely missed, because the presentation is more often insomnia and fatigue than loud snoring. CBT-I has been shown to work well in this population and improves sleep even when hot flashes persist, which makes it the reasonable first move. Hormone therapy and non-hormonal options for vasomotor symptoms are a clinician conversation; the Menopause Society's position is that treatment choice depends on symptom burden, age, and time since menopause.",
+    tags: ["women", "hormones", "staying", "waking"],
+    aliases: [
+      "menopause", "menopausal", "perimenopause", "perimenopausal", "hot flash", "hot flashes",
+      "hot flushes", "night sweats", "sweating at night", "hrt", "hormone therapy", "estrogen", "oestrogen",
+    ],
+    say: "Broken sleep through perimenopause and menopause is extremely common, and it is not only the night sweats — the transition raises insomnia risk on its own. Two things worth knowing. Sleep apnea becomes much more common after menopause and is regularly missed in women, because it shows up as insomnia and exhaustion rather than loud snoring. And the talking therapy for insomnia works well here, improving sleep even when the flashes carry on. Treatment for the flashes themselves, hormonal or not, is a conversation with your doctor.",
+    reviewedThrough: "2026-09",
+    confidence: "moderate",
+    sources: [
+      { year: 2023, cite: "The Menopause Society 2023 nonhormone therapy position statement; 2022 hormone therapy position statement" },
+      { year: 2019, cite: "Drake CL et al. Treating chronic insomnia in postmenopausal women: a randomized clinical trial of CBT-I. Sleep. 2019;42(2)" },
+      { year: 2018, cite: "Baker FC et al. Sleep problems during the menopausal transition. Nat Sci Sleep. 2018;10:73-95" },
+    ],
+  },
+  {
+    id: "delayed-phase",
+    title: "Night owls, and when late is a disorder",
+    summary:
+      "Some people are not failing at sleep. Their clock genuinely runs late — and that is treatable on its own terms.",
+    body: "Delayed sleep-wake phase disorder (DSWPD) is a circadian rhythm disorder, not insomnia: sleep is normal in quality and duration when it is allowed to happen at the person's preferred late hours, and the complaint appears only because school or work demands an early start. It is most prevalent in adolescents and young adults, and chronotype has a substantial heritable component. The distinction matters because the treatments differ — a person with a delayed clock treated as an insomniac will fail at sleep hygiene indefinitely. The AASM guideline for intrinsic circadian rhythm sleep-wake disorders recommends strategically timed melatonin for DSWPD (low dose, several hours before the desired sleep time, acting as a phase-shifting signal rather than a sedative) and supports appropriately timed light exposure. Bright light on waking advances the clock; bright light late at night delays it further. Shifts are gradual and, critically, they are lost quickly when weekend rise times drift back.",
+    tags: ["clock", "circadian", "teens", "falling"],
+    aliases: [
+      "night owl", "night owls", "delayed sleep phase", "dswpd", "dsps", "late chronotype",
+      "chronotype", "i'm nocturnal", "cannot sleep before", "can't sleep until 3", "always been a night person",
+      "early bird", "morning person",
+    ],
+    say: "Some people's clocks genuinely run late, and that is different from insomnia — if you sleep fine when nobody makes you get up, and badly when they do, that is a timing problem, not a sleeping problem. It matters because the fix is different: sleep hygiene will not move a clock. Light does. Daylight in your eyes soon after you get up pulls it earlier; bright light late pushes it later. A low dose of melatonin several hours before you want to sleep is used as a clock signal for exactly this, and that one is worth setting up with a clinician rather than guessing. And the whole thing unwinds fast if weekends drift.",
+    reviewedThrough: "2026-09",
+    confidence: "high",
+    sources: [
+      { year: 2015, cite: "Auger RR et al. AASM clinical practice guideline: treatment of intrinsic circadian rhythm sleep-wake disorders (DSWPD, ASWPD, N24SWD, ISWRD). J Clin Sleep Med. 2015;11(10):1199-1236" },
+      { year: 2007, cite: "Sack RL et al. Circadian rhythm sleep disorders part II: advanced, delayed, irregular and free-running types. Sleep. 2007;30(11):1484-1501" },
+    ],
+  },
+  {
+    id: "sleep-trackers",
+    title: "What your ring or watch actually knows",
+    summary:
+      "Consumer trackers estimate sleep from movement and heart rate. Chasing the score can make sleep worse.",
+    body: "Consumer wearables infer sleep from actigraphy plus heart rate and variability. They are reasonably good at total sleep time and at detecting sleep versus wake in people who sleep normally, and considerably weaker at staging — the deep/REM/light breakdown presented with the most confidence in the app is the least reliable number on the screen, and validation against polysomnography varies widely by device and by generation. The clinical concern has a name: orthosomnia, described in a 2017 case series, where the pursuit of a perfect sleep score itself drives arousal, extended time in bed, and worse sleep. This is the same mechanism as clock-watching, with better graphics. A tracker is genuinely useful for one thing an insomnia diary also captures: the consistency of your timing across weeks. It is not a diagnostic device, and a normal-looking score does not rule out sleep apnea.",
+    tags: ["measurement", "arousal", "insomnia"],
+    aliases: [
+      "sleep tracker", "tracker", "oura", "oura ring", "whoop", "fitbit", "apple watch", "garmin",
+      "sleep score", "deep sleep", "rem score", "my watch says", "my ring says", "orthosomnia", "wearable",
+    ],
+    say: "Your ring or watch is decent at roughly how long you slept, and weakest at exactly the part it shows most confidently — the deep and dream sleep breakdown. There is a real problem with chasing the number: it raises arousal and makes people lie in bed longer trying to earn a better score, which is the same trap as watching the clock. Use it for one thing only, whether your timing is consistent week to week. How you feel is better data than the score, and a good-looking score does not rule out sleep apnea.",
+    reviewedThrough: "2026-09",
+    confidence: "moderate",
+    sources: [
+      { year: 2017, cite: "Baron KG et al. Orthosomnia: are some patients taking the quantified self too far? J Clin Sleep Med. 2017;13(2):351-354" },
+      { year: 2019, cite: "Chinoy ED et al. Performance of seven consumer sleep-tracking devices compared with polysomnography. Sleep — staging accuracy substantially below total-sleep-time accuracy" },
     ],
   },
 ];

@@ -3,10 +3,11 @@
  * where `globals.css` draws it: ring strokes in from 12, ticks blink, hands
  * sweep from 12 and settle, moon rises, halo breathes once.
  *
- * Hands and ring are wrapped in `<g>` seats so their resting rotation lives in
- * CSS (`.mark-hand-minute`, `.mark-hand-hour`, `.mark-ring-seat`) and the open
- * can animate it. A CSS `transform` overrides an SVG `transform` attribute, so
- * the seats carry no attribute rotation of their own.
+ * The hands sit in `<g>` seats so their resting rotation lives in CSS
+ * (`.mark-hand-minute`, `.mark-hand-hour`) and the open can animate it. Those
+ * seats carry no transform attribute, because a CSS transform would replace it.
+ * The ring is the opposite case: it is positioned by attribute and animated only
+ * through `stroke-dashoffset`, so nothing competes for its transform.
  *
  * Same geometry as `phone/ios/App/App/CircadiaMarkView.swift`.
  */
@@ -18,9 +19,18 @@ export function Mark({ className = "size-16" }: { className?: string }) {
       aria-hidden="true"
       fill="none"
     >
-      <g className="mark-ring-seat" transform="translate(64 64)">
+      {/*
+        Rotated by attribute, about the centre, so the stroke starts at 12 o'clock.
+        This must NOT be a CSS transform: a CSS transform replaces the element's
+        `transform` attribute outright, which silently dropped the translate and
+        drew the ring around the top-left corner of the viewBox. Only
+        `stroke-dashoffset` is animated here, which is not a transform at all.
+      */}
+      <g transform="rotate(-90 64 64)">
         <circle
           className="mark-ring"
+          cx="64"
+          cy="64"
           r="46"
           stroke="rgba(125,211,252,0.42)"
           strokeWidth="1.5"

@@ -102,7 +102,11 @@ export async function readPhoneVaultDetailed(): Promise<PhoneVaultRead> {
     try {
       return { status: "ok", vault: parseDiskVault(JSON.parse(normalized.data) as unknown) };
     } catch {
-      return { status: "ok", vault: emptyDiskVault() };
+      // Bytes are there but unreadable — a truncated write, most likely. Reporting
+      // this as a successful empty read is what let the app overwrite the only
+      // remaining copy of a diary with `{}`. Callers treat "unavailable" as
+      // "do not touch the disk".
+      return { status: "unavailable", vault: emptyDiskVault() };
     }
   } catch {
     return { status: "unavailable", vault: emptyDiskVault() };
@@ -115,6 +119,12 @@ export async function readPhoneVault(): Promise<DiskVault> {
 
 export async function writePhoneVault(vault: DiskVault): Promise<boolean> {
   try {
+    // Refuse to write an empty vault over a file that has something in it. An
+    // interrupted write plus an evicted localStorage should not add up to erasure.
+    if (Object.keys(vault.files).length === 0) {
+      const existing = await readPhoneVaultDetailed();
+      if (existing.status === "unavailable" || Object.keys(existing.vault.files).length > 0) return false;
+    }
     await io.writeFile(JSON.stringify(vault));
     return true;
   } catch {

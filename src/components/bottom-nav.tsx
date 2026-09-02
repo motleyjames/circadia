@@ -35,11 +35,18 @@ export function BottomNav() {
             )}
           >
             <span className="relative">
-              <Icon
-                className="size-[25px]"
-                strokeWidth={active ? 2.1 : 1.6}
-                fill={active ? "currentColor" : "none"}
-              />
+              {/*
+                No fill. These are outline glyphs — flooding BookOpen or User with
+                currentColor turns them into an unreadable solid blob. The active
+                state is colour, a slightly heavier stroke, and the halo below.
+              */}
+              <Icon className="relative size-[25px]" strokeWidth={active ? 2.1 : 1.6} fill="none" />
+              {active ? (
+                <span
+                  className="pointer-events-none absolute -inset-1.5 -z-10 rounded-full bg-sky-300/12"
+                  aria-hidden
+                />
+              ) : null}
               {tab.href === "/check-in" && morningDue ? (
                 <span className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-sky-300" aria-hidden />
               ) : null}

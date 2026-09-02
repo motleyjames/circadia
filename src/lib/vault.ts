@@ -34,11 +34,37 @@ function jsonSize(value: unknown): number {
   }
 }
 
-/** Union local + disk. For a key in both, keep the larger blob (more mornings, not an empty overwrite). */
+/** Envelope revision, when the writer stamped one. Older files have none. */
+function fileRev(value: unknown): number {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return 0;
+  const rev = (value as { rev?: unknown }).rev;
+  return typeof rev === "number" && Number.isFinite(rev) ? rev : 0;
+}
+
+/**
+ * Union local + disk.
+ *
+ * Revision wins. Size is only a tie-breaker for files written before revisions
+ * existed — and it is a bad one: AES-GCM ciphertext length tracks plaintext length,
+ * so editing a rating from 3 to 4 produces an exact tie, and `>=` handed that tie to
+ * the stale disk copy. Withdrawing a morning made the new blob *smaller* and lost
+ * outright. Both silently reverted the user's edit on the next launch.
+ */
 export function mergeDiskVault(local: DiskVault, disk: DiskVault): DiskVault {
   const files: Record<string, unknown> = { ...local.files };
   for (const [key, value] of Object.entries(disk.files)) {
-    if (!(key in files) || jsonSize(value) >= jsonSize(files[key])) files[key] = value;
+    if (!(key in files)) {
+      files[key] = value;
+      continue;
+    }
+    const diskRev = fileRev(value);
+    const localRev = fileRev(files[key]);
+    if (diskRev !== localRev) {
+      if (diskRev > localRev) files[key] = value;
+      continue;
+    }
+    // Same revision (or neither stamped): fall back to size, and let local win ties.
+    if (jsonSize(value) > jsonSize(files[key])) files[key] = value;
   }
   const locks: Record<string, PasswordLock> = { ...local.locks };
   for (const [key, value] of Object.entries(disk.locks)) {

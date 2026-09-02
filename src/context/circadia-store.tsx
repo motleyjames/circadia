@@ -552,7 +552,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
         ...prev.study,
         asked: true,
         consented: true,
-        participantId: prev.study.participantId ?? crypto.randomUUID(),
+        participantId: prev.study.participantId ?? newId(),
         lastError: null,
         rosterSentAt: null,
       },

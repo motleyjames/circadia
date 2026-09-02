@@ -50,8 +50,13 @@ describe("safety copy — surfaces", () => {
     expect(onboardSrc).toContain("MEDICAL_DISCLAIMER");
   });
 
-  it("does not shout the crisis line as a red banner or keyword gate", () => {
-    expect(crisisSrc).toContain("zinc-600");
+  it("does not shout the crisis line as a red banner", () => {
+    // Quiet, not invisible. It was `zinc-600` at 10px — about 2.6:1 on the night
+    // sky, roughly half the readable floor, for the one line someone might need
+    // at their worst. Still no red, still no alert role, still always on.
+    expect(crisisSrc).toContain("zinc-400");
+    expect(crisisSrc).not.toContain("zinc-600");
+    expect(crisisSrc).not.toContain("text-[10px]");
     expect(crisisSrc).not.toMatch(/bg-red|text-red|role="alert"/);
     expect(consultSrc).not.toMatch(/suicid|crisis keyword|crisisGate/i);
     expect(youSrc).not.toMatch(/suicid|crisis keyword/i);
@@ -75,11 +80,13 @@ describe("safety copy — surfaces", () => {
     expect(onboardSrc.split("{MEDICAL_DISCLAIMER}").length - 1).toBe(1);
   });
 
-  it("CrisisLine renders the shared 988 sentence as quiet zinc copy", () => {
+  it("CrisisLine renders the shared 988 sentence, readable and dialable", () => {
     const html = renderToString(createElement(CrisisLine));
     expect(html).toContain("988");
     expect(html).toContain("Suicide &amp; Crisis Lifeline");
-    expect(html).toContain("zinc-600");
+    expect(html).toContain("zinc-400");
+    // iOS will not auto-link it: layout.tsx sets formatDetection.telephone false.
+    expect(html).toContain('href="tel:988"');
     expect(html).not.toMatch(/bg-red|text-red|role="alert"/);
     expect(html).not.toMatch(ENGINE_JARGON);
   });

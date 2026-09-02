@@ -36,9 +36,17 @@ export function TonightView() {
   const untilOff = secondsUntilClock(offClock, now);
   const untilSleep = secondsUntilClock(profile.targetSleep, now);
   const windowMin = overnightDuration(profile.targetSleep, profile.targetWake);
+  const untilWake = secondsUntilClock(profile.targetWake, now);
+  /**
+   * Inside the sleep window. `shouldBeOffScreens` covers only the hour *before*
+   * bedtime, so without this the hero fell through to "time until screens down" and
+   * showed a 19-hour countdown at 3 a.m. — to the one person most likely to be
+   * looking at it.
+   */
+  const inWindow = untilWake <= windowMin * 60;
   const notes = firstOpen ? [] : buildSleepNotes(profile, state.reports);
   const headline = notes.find((n) => n.kind === "alert" || n.kind === "lever" || n.kind === "steady");
-  const openingLine = openingCopy(profile.struggles, screensDown);
+  const openingLine = openingCopy(profile.struggles, screensDown, inWindow);
 
   return (
     <div className="phone-page-y flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-10">
@@ -47,8 +55,11 @@ export function TonightView() {
           <CountdownHero
             nowLabel={formatWallClock(now, profile.units)}
             screensDown={screensDown}
+            inWindow={inWindow}
             untilOff={untilOff}
             untilSleep={untilSleep}
+            untilWake={untilWake}
+            windowSeconds={windowMin * 60}
             offLabel={formatClock(offClock, profile.units)}
             sleepLabel={formatClock(profile.targetSleep, profile.units)}
             wakeLabel={formatClock(profile.targetWake, profile.units)}
@@ -73,10 +84,10 @@ export function TonightView() {
               className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full px-6 text-[15px] text-zinc-100 ring-1 ring-white/14"
             >
               {page === "filed"
-                ? "This morning is filed"
+                ? "Open this morning's page"
                 : page === "unfiled-open"
-                  ? "Morning interview is open"
-                  : "This morning is not filed"}
+                  ? "Start the morning interview"
+                  : "File this morning"}
             </DiaryLink>
           ) : null}
         </div>
@@ -91,14 +102,23 @@ export function TonightView() {
   );
 }
 
-function openingCopy(struggles: Array<"falling" | "staying">, screensDown: boolean): string {
+function openingCopy(
+  struggles: Array<"falling" | "staying">,
+  screensDown: boolean,
+  inWindow: boolean,
+): string {
+  if (inWindow) {
+    // Whoever reads this is awake in the middle of their own sleep window. No
+    // scolding, no maths about what they have lost.
+    return "If you are reading this, you are awake in the middle of your night. That happens, and it is not a failure. If you have been lying there a while, get up, keep the lights low, do something dull, and come back when you feel sleepy.";
+  }
   if (screensDown) {
     return "This is the hour. Dim the room. The phone is a lamp, not a feed.";
   }
   const falling = struggles.includes("falling");
   const staying = struggles.includes("staying");
   if (falling && staying) {
-    return "Onset and maintenance are different problems. Tonight we only hold the clock. Mornings will tell us which one is actually yours.";
+    return "Getting to sleep and staying asleep are different problems. Tonight we only hold the clock. The mornings will tell us which one is actually yours.";
   }
   if (staying) {
     return "Staying asleep is usually the second half of the night — alcohol, a drifting wake, or time in bed that is too long. We will not guess until you have mornings.";
@@ -109,8 +129,11 @@ function openingCopy(struggles: Array<"falling" | "staying">, screensDown: boole
 function CountdownHero({
   nowLabel,
   screensDown,
+  inWindow,
   untilOff,
   untilSleep,
+  untilWake,
+  windowSeconds,
   offLabel,
   sleepLabel,
   wakeLabel,
@@ -119,8 +142,11 @@ function CountdownHero({
 }: {
   nowLabel: string;
   screensDown: boolean;
+  inWindow: boolean;
   untilOff: number;
   untilSleep: number;
+  untilWake: number;
+  windowSeconds: number;
   offLabel: string;
   sleepLabel: string;
   wakeLabel: string;
@@ -128,7 +154,14 @@ function CountdownHero({
   notificationsEnabled: boolean;
 }) {
   const horizon = 12 * 3600;
-  const t = screensDown ? 1 : Math.max(0.06, Math.min(1, 1 - untilOff / horizon));
+  // Inside the window the arc tracks the night elapsing; before it, the approach to
+  // screens-down. The old single expression went negative past bedtime and pinned
+  // the arc to its 6% floor exactly when it should have been full.
+  const t = inWindow
+    ? Math.max(0.06, Math.min(1, 1 - untilWake / Math.max(1, windowSeconds)))
+    : screensDown
+      ? 1
+      : Math.max(0.06, Math.min(1, 1 - untilOff / horizon));
   const holdConsumed = useSyncExternalStore(subscribeOpenHold, isOpenHoldConsumed, () => false);
   const [drawn, setDrawn] = useState(() => isOpenHoldConsumed());
   const progress = drawn ? t : 0;
@@ -186,13 +219,26 @@ function CountdownHero({
           />
         </svg>
         <div className="absolute inset-[1.35rem] flex flex-col items-center justify-center px-5 text-center sm:inset-[1.55rem]">
-          {screensDown ? (
+          {inWindow ? (
+            <>
+              <p
+                className="font-heading text-[2.05rem] leading-none tracking-tight text-zinc-50 tabular-nums sm:text-[2.55rem] lg:text-[2.85rem]"
+                suppressHydrationWarning
+              >
+                {formatCountdownHms(untilWake)}
+              </p>
+              <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-400">
+                until your
+                <span className="mt-0.5 block">wake time</span>
+              </p>
+            </>
+          ) : screensDown ? (
             <>
               <p className="font-heading text-[1.55rem] leading-[1.08] tracking-tight text-zinc-50 sm:text-[1.85rem] lg:text-[2.05rem]">
                 Screens
                 <span className="block">down</span>
               </p>
-              <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-500">
+              <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-400">
                 Asleep-by
                 <span className="mt-0.5 block">{formatCountdownHms(untilSleep)}</span>
               </p>
@@ -202,7 +248,7 @@ function CountdownHero({
               <p className="font-heading text-[2.05rem] leading-none tracking-tight text-zinc-50 tabular-nums sm:text-[2.55rem] lg:text-[2.85rem]" suppressHydrationWarning>
                 {formatCountdownHms(untilOff)}
               </p>
-              <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-500">
+              <p className="mt-3 text-[11px] leading-snug tracking-[0.12em] text-zinc-400">
                 to screens
                 <span className="mt-0.5 block">down</span>
               </p>
