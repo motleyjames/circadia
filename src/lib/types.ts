@@ -21,6 +21,12 @@ export type WindDownHelp = "yes" | "a_bit" | "no" | "did_not_use";
 
 export type NightWakingDuration = 0 | 10 | 25 | 45 | 70;
 
+/** How many separate awakenings, not counting the final one. 4 means "four or more". */
+export type AwakeningCount = 0 | 1 | 2 | 3 | 4;
+
+/** Yesterday's daytime sleep. Naps change sleep pressure, so a night cannot be read without them. */
+export type NapMinutes = 0 | 20 | 45 | 90;
+
 export type SoundscapeId = "brown" | "pink" | "rain" | "ocean";
 
 export type MeditationId = "478" | "body-scan" | "pmr";
@@ -80,6 +86,22 @@ export type MorningReport = {
   windDownHelped: WindDownHelp;
   dream?: DreamReport;
   createdAt: string;
+
+  /**
+   * Consensus Sleep Diary fields (Carney et al., Sleep 2012). All optional: nights
+   * filed before these existed keep working, and anything derived from them returns
+   * null rather than a guess. See claude/sleep-data-spec-1.0.md in the project.
+   *
+   * `wokeAt` is the FINAL awakening. `outOfBedAt` is when they actually got up —
+   * the gap between them is terminal wakefulness, and without it there is no
+   * denominator for sleep efficiency.
+   */
+  inBedAt?: string;
+  /** Lights out — when they started trying, which is often later than getting in. */
+  triedToSleepAt?: string;
+  outOfBedAt?: string;
+  awakeningCount?: AwakeningCount;
+  napMinutes?: NapMinutes;
 };
 
 export type WindDownSession = {

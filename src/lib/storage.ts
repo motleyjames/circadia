@@ -1280,6 +1280,14 @@ function coerceSupplementKind(value: unknown): MorningReport["supplementKind"] {
   return undefined;
 }
 
+function coerceAwakeningCount(value: unknown): MorningReport["awakeningCount"] {
+  return value === 0 || value === 1 || value === 2 || value === 3 || value === 4 ? value : undefined;
+}
+
+function coerceNapMinutes(value: unknown): MorningReport["napMinutes"] {
+  return value === 0 || value === 20 || value === 45 || value === 90 ? value : undefined;
+}
+
 function coerceReport(value: unknown): MorningReport | null {
   if (!value || typeof value !== "object") return null;
   const r = value as Partial<MorningReport>;
@@ -1313,5 +1321,12 @@ function coerceReport(value: unknown): MorningReport | null {
         ? { text: r.dream.text, wantMeaning: Boolean(r.dream.wantMeaning) }
         : undefined,
     createdAt: typeof r.createdAt === "string" ? r.createdAt : new Date().toISOString(),
+    // Consensus-diary fields. Absent on every night filed before 0.10, and left
+    // absent on purpose — a back-filled guess would poison sleep efficiency.
+    inBedAt: isClock(r.inBedAt) ? normalizeClock(r.inBedAt) : undefined,
+    triedToSleepAt: isClock(r.triedToSleepAt) ? normalizeClock(r.triedToSleepAt) : undefined,
+    outOfBedAt: isClock(r.outOfBedAt) ? normalizeClock(r.outOfBedAt) : undefined,
+    awakeningCount: coerceAwakeningCount(r.awakeningCount),
+    napMinutes: coerceNapMinutes(r.napMinutes),
   };
 }

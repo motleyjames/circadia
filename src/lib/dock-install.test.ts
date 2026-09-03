@@ -179,7 +179,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("File this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("Notes for this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).not.toContain("The interview is closed");
-    expect(APP_VERSION).toBe("0.9.0");
+    expect(APP_VERSION).toBe("0.10.0");
   });
 
   it("does not run diary views while compiling the operator", () => {
@@ -226,14 +226,32 @@ describe("morning sleep-aid question", () => {
 });
 
 describe("put-on-dock script", () => {
-  it("refuses Linux and prints the 0.6.5 version gate", () => {
-    const run = spawnSync("bash", ["scripts/put-on-dock.sh"], { encoding: "utf8" });
-    expect(run.stdout).toContain("0.6.5");
+  // CIRCADIA_GATE_ONLY stops the script after its checks. Without it this test
+  // ran a real production build, which parks src/app/api out of the tree and
+  // failed four unrelated suites that were reading route files at the time.
+  it("names the tree it is standing in and refuses a non-Mac", () => {
+    const run = spawnSync("bash", ["scripts/put-on-dock.sh"], {
+      encoding: "utf8",
+      env: { ...process.env, CIRCADIA_GATE_ONLY: "1" },
+    });
     if (process.platform === "darwin") {
+      expect(run.stdout).toContain(`Circadia ${APP_VERSION}`);
+      expect(run.stdout).not.toContain("Compiling Circadia");
       expect([0, 5]).toContain(run.status);
     } else {
       expect(run.status).toBe(4);
       expect(run.stdout).toContain("macOS");
+      // The refusal still names the oldest tree the Dock install accepts.
+      expect(run.stdout).toContain("0.6.5");
     }
+  });
+
+  it("refuses an old rest-ai clone by version, not by folder name", () => {
+    const gate = readFileSync("scripts/put-on-dock.sh", "utf8");
+    expect(gate).toContain('p.name !== "circadia"');
+    expect(gate).toContain("min === 6 && pat >= 5");
+    // The gate must sit above the guard, or a stale clone would still build.
+    expect(gate.indexOf("Dock install needs 0.6.5+")).toBeLessThan(gate.indexOf("CIRCADIA_GATE_ONLY"));
+    expect(gate.indexOf("CIRCADIA_GATE_ONLY")).toBeLessThan(gate.indexOf("npm run dock"));
   });
 });

@@ -1,0 +1,311 @@
+
+> circadia@0.10.0 test
+> vitest run --exclude src/lib/static-surface.test.ts && vitest run src/lib/static-surface.test.ts
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.11 [39m[90m/Users/jamesmotley/circadia[39m
+
+[90mstdout[2m | src/lib/electron-pack.test.ts[2m > [22m[2mElectron packaged main path[2m > [22m[2mrepairs an already-installed Electron app that still has an absolute main
+[22m[39mPatched Electron main (did not compile Next): /var/folders/w0/4fv748nx63gbl3t_ypz74qhr0000gn/T/circadia-repair-vsshsg/Circadia.app
+Done. [33m1[39m app(s). Open Circadia from /Applications. Do not run npm run dock until this rest-ai tree has native-only install.
+
+[90mstderr[2m | src/lib/electron-pack.test.ts[2m > [22m[2mElectron packaged main path[2m > [22m[2mrepairs an already-installed Electron app that still has an absolute main
+[22m[39mcodesign failed: /var/folders/w0/4fv748nx63gbl3t_ypz74qhr0000gn/T/circadia-repair-vsshsg/Circadia.app: bundle format unrecognized, invalid, or unsuitable
+
+ [31m❯[39m src/lib/electron-pack.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 53[2mms[22m[39m
+     [32m✓[39m reproduces the Circadia.app concatenation crash[32m 1[2mms[22m[39m
+     [32m✓[39m refuses an absolute main field[32m 0[2mms[22m[39m
+[31m     [31m×[31m writes a bundle Electron can actually load, then verifies require.resolve[39m[32m 5[2mms[22m[39m
+[31m     [31m×[31m places a file at the concatenated crash path so a stale absolute main still loads[39m[32m 2[2mms[22m[39m
+     [32m✓[39m repairs an already-installed Electron app that still has an absolute main[32m 45[2mms[22m[39m
+ [31m❯[39m src/lib/meditations.test.ts [2m([22m[2m9 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 10[2mms[22m[39m
+     [32m✓[39m refuses novelty and robot Mac voices[32m 1[2mms[22m[39m
+     [32m✓[39m prefers a calm named voice over the first English voice in the list[32m 0[2mms[22m[39m
+     [32m✓[39m keeps pitch at or above 1 so the guide is not pitched into a villain[32m 0[2mms[22m[39m
+     [32m✓[39m speaks every visual beat so the eyes can close[32m 0[2mms[22m[39m
+     [32m✓[39m only speaks on a real visual beat, in full phrases, never a barked cue[32m 2[2mms[22m[39m
+     [32m✓[39m keeps on-screen copy free of engine jargon[32m 0[2mms[22m[39m
+     [32m✓[39m ships a recorded clip for every spoken line[32m 0[2mms[22m[39m
+[31m     [31m×[31m ships mono 16-bit PCM WebKit does not have to decode[39m[32m 5[2mms[22m[39m
+     [32m✓[39m advances the orb through the script[32m 0[2mms[22m[39m
+ [31m❯[39m src/lib/operator.test.ts [2m([22m[2m14 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 22[2mms[22m[39m
+     [32m✓[39m accepts email or phone, not an empty file[32m 2[2mms[22m[39m
+     [32m✓[39m keeps names and login identifiers out of both packs[32m 4[2mms[22m[39m
+     [32m✓[39m omits all six identifying fields from a v2 roster[32m 1[2mms[22m[39m
+     [32m✓[39m still parses a legacy roster that carried a name[32m 1[2mms[22m[39m
+     [32m✓[39m rejects a roster that smuggles dream text[32m 0[2mms[22m[39m
+     [32m✓[39m blocks a fault whose message embeds the user's email[32m 1[2mms[22m[39m
+     [32m✓[39m validates a fault without diary fields[32m 0[2mms[22m[39m
+     [32m✓[39m counts unique people from roster, nights, and faults without exposing PII[32m 5[2mms[22m[39m
+     [32m✓[39m groups three packs for one person into one row, newest first[32m 1[2mms[22m[39m
+     [32m✓[39m sorts inbox files by the ISO stamp, not the participant id in the filename[32m 0[2mms[22m[39m
+     [32m✓[39m groups faults under the person, not as a flat stack[32m 0[2mms[22m[39m
+     [32m✓[39m opens a per-person night ledger instead of one card per pack[32m 0[2mms[22m[39m
+[31m     [31m×[31m still parses every pack in data/study-inbox and shows them in Operator[39m[32m 5[2mms[22m[39m
+     [32m✓[39m routes roster, study, and fault through assertSendable[32m 0[2mms[22m[39m
+ [32m✓[39m src/lib/ios-pull-vault.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 225[2mms[22m[39m
+ [32m✓[39m src/lib/native-dock.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 113[2mms[22m[39m
+ [32m✓[39m src/lib/dock-update.test.ts [2m([22m[2m6 tests[22m[2m)[22m[33m 387[2mms[22m[39m
+ [32m✓[39m src/lib/native-open.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 154[2mms[22m[39m
+ [32m✓[39m src/lib/chat.corpus.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 227[2mms[22m[39m
+ [32m✓[39m src/lib/stay-signed-in.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 214[2mms[22m[39m
+ [32m✓[39m src/lib/static-server.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 65[2mms[22m[39m
+ [32m✓[39m src/lib/password.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 89[2mms[22m[39m
+ [32m✓[39m src/lib/login.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 522[2mms[22m[39m
+ [32m✓[39m src/lib/advisor.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/lib/fold-inbox.route.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+ [32m✓[39m src/lib/safety-triage.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m src/lib/social-jetlag-copy.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m src/lib/morning-reading.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m src/lib/session-token.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m src/lib/packed-diary.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 822[2mms[22m[39m
+ [32m✓[39m src/lib/week-review.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+ [32m✓[39m src/lib/storage.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/morning-file.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m src/lib/diary-consult.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 102[2mms[22m[39m
+ [31m❯[39m src/lib/study-client.test.ts [2m([22m[2m7 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 99[2mms[22m[39m
+     [32m✓[39m holds the pack when the inbox route is missing[32m 80[2mms[22m[39m
+     [32m✓[39m holds the pack when a static shell serves HTML at /api/study[32m 0[2mms[22m[39m
+     [32m✓[39m holds the pack when a 200 is not the inbox JSON[32m 0[2mms[22m[39m
+     [32m✓[39m holds the pack when POST returns HTML with status 200[32m 0[2mms[22m[39m
+     [32m✓[39m posts once the inbox answers the probe[32m 0[2mms[22m[39m
+     [32m✓[39m surfaces a real inbox HTTP error instead of holding[32m 13[2mms[22m[39m
+[31m     [31m×[31m does not write on the GET probe in the Next route or the Dock static server[39m[32m 3[2mms[22m[39m
+ [32m✓[39m src/lib/vault.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m src/lib/diary-fold.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m src/lib/social-jetlag.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+[90mstderr[2m | src/lib/ios-sign.test.ts[2m > [22m[2mios-install signing args[2m > [22m[2mcompiles generic iOS without saying Any iOS Device, and refuses a CoreDevice UUID
+[22m[39mThat id is not an iPhone hardware UDID. CoreDevice list ids cannot be passed to native-run or xcodebuild.
+
+ [32m✓[39m src/lib/ios-sign.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/lib/safety-copy.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/license-surface.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m src/lib/consult-threads.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [31m❯[39m src/lib/locked-diary.route.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m src/lib/ios-target.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/lib/keychain.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/audio.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [31m❯[39m src/lib/session-key.route.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m src/context/circadia-prerender.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m src/lib/research.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/phone-vault.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [31m❯[39m src/lib/vault.route.test.ts [2m([22m[2m0 test[22m[2m)[22m
+ [32m✓[39m src/lib/font-local.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/assert-phone-app.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/study.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/time.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/dock-env.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/diary-shell.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/notifications.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/lib/schedule.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/lib/rebuild-launcher.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/lib/sleep-metrics.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/lib/a11y-surface.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/phone-scroll.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/ios-team.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m src/lib/diary-nav.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/haptics.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/lib/confirm-dialog.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m src/lib/diary-pack.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/ci-workflow.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/phone-native.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/lib/next-output.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/lib/phone-pack-fresh.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [32m✓[39m src/lib/diary-route.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/lib/study-inbox.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 1[2mms[22m[39m
+ [31m❯[39m src/lib/phone-shell.test.ts [2m([22m[2m9 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 2244[2mms[22m[39m
+     [32m✓[39m is version 0.10.0 and keeps the vault key local:this-computer[32m 1[2mms[22m[39m
+     [32m✓[39m keeps five diary tabs and never adds Consult as a sixth[32m 3[2mms[22m[39m
+     [32m✓[39m uses a quiet Ask word and a full-screen sheet, not a consult dock[32m 1[2mms[22m[39m
+     [32m✓[39m plays the open on a painted frame, warms guides as PCM, and holds the study pack on the phone[32m 2[2mms[22m[39m
+     [32m✓[39m gives Tonight and the inner pages air under Ask, and hides the Mac install hint on a phone[32m 1[2mms[22m[39m
+     [32m✓[39m ships an iPhone diary shell that is not the Operator[32m 2[2mms[22m[39m
+[31m     [31m×[31m put-on-phone signs from this Mac's cert, installs onto a reachable iPhone, and refuses Linux[39m[33m 2233[2mms[22m[39m
+     [32m✓[39m lets an empty iPhone log in with a packed Mac diary, or bring a locked copy[32m 1[2mms[22m[39m
+     [32m✓[39m keeps user-facing copy on this device, not this computer[32m 0[2mms[22m[39m
+ [31m❯[39m src/lib/dock-install.test.ts [2m([22m[2m11 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 4140[2mms[22m[39m
+     [32m✓[39m builds a native WKWebView launcher, not a renamed Electron binary[32m 1[2mms[22m[39m
+     [32m✓[39m runs production Next via serve-dock, never turbopack in the Dock window[32m 1[2mms[22m[39m
+     [32m✓[39m does not silently quit when a second Electron already exists[32m 0[2mms[22m[39m
+     [32m✓[39m sends CORS headers so Safari font fetches do not throw Load failed[32m 0[2mms[22m[39m
+     [32m✓[39m does not let the Next.js overlay steal clicks[32m 0[2mms[22m[39m
+     [32m✓[39m does not prefetch routes from login or sleep intake[32m 1[2mms[22m[39m
+     [32m✓[39m runs the operator as a second app on its own port, not a page in the diary[32m 1[2mms[22m[39m
+     [32m✓[39m does not put an absolute repo path in Electron's package.json main[32m 0[2mms[22m[39m
+     [32m✓[39m asks about any sleep supplement, not only melatonin or magnesium[32m 0[2mms[22m[39m
+     [32m✓[39m does not run diary views while compiling the operator[32m 1[2mms[22m[39m
+[31m     [31m×[31m refuses Linux and prints the 0.6.5 version gate[39m[33m 4134[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Suites 3 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/lib/locked-diary.route.test.ts[2m [ src/lib/locked-diary.route.test.ts ][22m
+[31m[1mError[22m: Cannot find package '@/app/api/locked-diary/route' imported from /Users/jamesmotley/circadia/src/lib/locked-diary.route.test.ts[39m
+[36m [2m❯[22m src/lib/locked-diary.route.test.ts:[2m12:1[22m[39m
+    [90m 10|[39m }))[33m;[39m
+    [90m 11|[39m
+    [90m 12|[39m [35mimport[39m { [33mPOST[39m } [35mfrom[39m [32m"@/app/api/locked-diary/route"[39m[33m;[39m
+    [90m   |[39m [31m^[39m
+    [90m 13|[39m
+    [90m 14|[39m [35mconst[39m [33mTOKEN[39m [33m=[39m [32m"test-launch-token"[39m[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/lib/session-key.route.test.ts[2m [ src/lib/session-key.route.test.ts ][22m
+[31m[1mError[22m: Cannot find package '@/app/api/session-key/route' imported from /Users/jamesmotley/circadia/src/lib/session-key.route.test.ts[39m
+[36m [2m❯[22m src/lib/session-key.route.test.ts:[2m19:1[22m[39m
+    [90m 17|[39m [35mimport[39m { bytesToBase64 } [35mfrom[39m [32m"@/lib/password"[39m[33m;[39m
+    [90m 18|[39m [35mimport[39m { [33mSESSION_HEADER[39m } [35mfrom[39m [32m"@/lib/session-token-shared"[39m[33m;[39m
+    [90m 19|[39m [35mimport[39m { [33mDELETE[39m[33m,[39m [33mGET[39m[33m,[39m [33mPOST[39m } [35mfrom[39m [32m"@/app/api/session-key/route"[39m[33m;[39m
+    [90m   |[39m [31m^[39m
+    [90m 20|[39m
+    [90m 21|[39m [35mconst[39m [33mMASTER[39m [33m=[39m [34mbytesToBase64[39m([35mnew[39m [33mUint8Array[39m([34m32[39m))[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/lib/vault.route.test.ts[2m [ src/lib/vault.route.test.ts ][22m
+[31m[1mError[22m: Cannot find package '@/app/api/vault/route' imported from /Users/jamesmotley/circadia/src/lib/vault.route.test.ts[39m
+[36m [2m❯[22m src/lib/vault.route.test.ts:[2m8:1[22m[39m
+    [90m  6|[39m }))[33m;[39m
+    [90m  7|[39m
+    [90m  8|[39m [35mimport[39m { [33mGET[39m[33m,[39m [33mPUT[39m } [35mfrom[39m [32m"@/app/api/vault/route"[39m[33m;[39m
+    [90m   |[39m [31m^[39m
+    [90m  9|[39m [35mimport[39m { [33mSESSION_HEADER[39m } [35mfrom[39m [32m"@/lib/session-token-shared"[39m[33m;[39m
+    [90m 10|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯[22m[39m
+
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 7 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m src/lib/dock-install.test.ts[2m > [22mput-on-dock script[2m > [22mrefuses Linux and prints the 0.6.5 version gate
+[31m[1mAssertionError[22m: expected 'Circadia 0.10.0\n\n> circadia@0.10.0 …' to contain '0.6.5'[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 0.6.5[39m
+[31m+ Circadia 0.10.0[39m
+[31m+[39m
+[31m+ > circadia@0.10.0 dock[39m
+[31m+ > node electron/install-both-native.cjs[39m
+[31m+[39m
+[31m+ Compiling Circadia …[39m
+[31m+ ▲ Next.js 16.3.3 (Turbopack)[39m
+[31m+ ✓ Running next.config.ts took 20ms[39m
+[31m+[39m
+[31m+   Creating an optimized production build ...[39m
+[31m+[39m
+
+[36m [2m❯[22m src/lib/dock-install.test.ts:[2m231:24[22m[39m
+    [90m229|[39m   [34mit[39m([32m"refuses Linux and prints the 0.6.5 version gate"[39m[33m,[39m () [33m=>[39m {
+    [90m230|[39m     const run = spawnSync("bash", ["scripts/put-on-dock.sh"], { encodi…
+    [90m231|[39m     [34mexpect[39m(run[33m.[39mstdout)[33m.[39m[34mtoContain[39m([32m"0.6.5"[39m)[33m;[39m
+    [90m   |[39m                        [31m^[39m
+    [90m232|[39m     [35mif[39m (process[33m.[39mplatform [33m===[39m [32m"darwin"[39m) {
+    [90m233|[39m       [34mexpect[39m([[34m0[39m[33m,[39m [34m5[39m])[33m.[39m[34mtoContain[39m(run[33m.[39mstatus)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/lib/electron-pack.test.ts[2m > [22mElectron packaged main path[2m > [22mwrites a bundle Electron can actually load, then verifies require.resolve
+[31m[1mAssertionError[22m: expected '/private/var/folders/w0/4fv748nx63gbl…' to be '/var/folders/w0/4fv748nx63gbl3t_ypz74…' // Object.is equality[39m
+
+Expected: [32m"/var/folders/w0/4fv748nx63gbl3t_ypz74qhr0000gn/T/circadia-pack-OnsWNN/Contents/Resources/app/main.cjs"[39m
+Received: [31m"[7m/private[27m/var/folders/w0/4fv748nx63gbl3t_ypz74qhr0000gn/T/circadia-pack-OnsWNN/Contents/Resources/app/main.cjs"[39m
+
+[36m [2m❯[22m src/lib/electron-pack.test.ts:[2m63:22[22m[39m
+    [90m 61|[39m
+    [90m 62|[39m       [35mconst[39m loaded [33m=[39m require[33m.[39m[34mresolve[39m(resolved)[33m;[39m
+    [90m 63|[39m       [34mexpect[39m(loaded)[33m.[39m[34mtoBe[39m(resolved)[33m;[39m
+    [90m   |[39m                      [31m^[39m
+    [90m 64|[39m       expect(readFileSync(resolved, "utf8")).toContain("serve-dock.cjs…
+    [90m 65|[39m       expect(readFileSync(resolved, "utf8")).toContain('require("elect…
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/lib/electron-pack.test.ts[2m > [22mElectron packaged main path[2m > [22mplaces a file at the concatenated crash path so a stale absolute main still loads
+[31m[1mAssertionError[22m: expected '/private/var/folders/w0/4fv748nx63gbl…' to be '/var/folders/w0/4fv748nx63gbl3t_ypz74…' // Object.is equality[39m
+
+Expected: [32m"/var/folders/w0/4fv748nx63gbl3t_ypz74qhr0000gn/T/circadia-shim-x3bHO2/Contents/Resources/app/Users/jamesmotley/rest-ai/electron/main.cjs"[39m
+Received: [31m"[7m/private[27m/var/folders/w0/4fv748nx63gbl3t_ypz74qhr0000gn/T/circadia-shim-x3bHO2/Contents/Resources/app/Users/jamesmotley/rest-ai/electron/main.cjs"[39m
+
+[36m [2m❯[22m src/lib/electron-pack.test.ts:[2m88:37[22m[39m
+    [90m 86|[39m       expect(shim).toBe(path.join(appDir, "Users/jamesmotley/rest-ai/e…
+    [90m 87|[39m       [34mexpect[39m([34mexistsSync[39m(shim))[33m.[39m[34mtoBe[39m([35mtrue[39m)[33m;[39m
+    [90m 88|[39m       [34mexpect[39m(require[33m.[39m[34mresolve[39m(shim))[33m.[39m[34mtoBe[39m(shim)[33m;[39m
+    [90m   |[39m                                     [31m^[39m
+    [90m 89|[39m       [34mexpect[39m([34mreadFileSync[39m(shim[33m,[39m [32m"utf8"[39m))[33m.[39m[34mtoContain[39m([32m"serve-dock.cjs"[39m)[33m;[39m
+    [90m 90|[39m     } [35mfinally[39m {
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/lib/meditations.test.ts[2m > [22mmeditation guide copy[2m > [22mships mono 16-bit PCM WebKit does not have to decode
+[31m[1mAssertionError[22m: expected null to be +0 // Object.is equality[39m
+
+[32m- Expected:[39m
+0
+
+[31m+ Received:[39m
+null
+
+[36m [2m❯[22m src/lib/meditations.test.ts:[2m98:26[22m[39m
+    [90m 96|[39m       { encoding[33m:[39m [32m"utf8"[39m }[33m,[39m
+    [90m 97|[39m     )[33m;[39m
+    [90m 98|[39m     [34mexpect[39m(probe[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m0[39m)[33m;[39m
+    [90m   |[39m                          [31m^[39m
+    [90m 99|[39m     [34mexpect[39m(probe[33m.[39mstdout)[33m.[39m[34mtoContain[39m([32m"pcm_s16le"[39m)[33m;[39m
+    [90m100|[39m     [34mexpect[39m(probe[33m.[39mstdout)[33m.[39m[34mtoContain[39m([32m"22050"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/lib/operator.test.ts[2m > [22mcaptured inbox files[2m > [22mstill parses every pack in data/study-inbox and shows them in Operator
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m❯[22m src/lib/operator.test.ts:[2m345:91[22m[39m
+    [90m343|[39m     [35mconst[39m snapshot [33m=[39m [34msummarizeInbox[39m(rows)[33m;[39m
+    [90m344|[39m     [34mexpect[39m(snapshot[33m.[39muserCount)[33m.[39m[34mtoBeGreaterThanOrEqual[39m([34m1[39m)[33m;[39m
+    [90m345|[39m     expect(snapshot.people.some((person) => person.participantId.start…
+    [90m   |[39m                                                                                           [31m^[39m
+    [90m346|[39m     [34mexpect[39m(snapshot[33m.[39mfaultCount)[33m.[39m[34mtoBeGreaterThanOrEqual[39m([34m1[39m)[33m;[39m
+    [90m347|[39m     [34mexpect[39m(snapshot[33m.[39mnightPackCount)[33m.[39m[34mtoBeGreaterThanOrEqual[39m([34m1[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/lib/phone-shell.test.ts[2m > [22mphone diary shell[2m > [22mput-on-phone signs from this Mac's cert, installs onto a reachable iPhone, and refuses Linux
+[31m[1mAssertionError[22m: expected [ +0, 5, 6, 8, 10, 11, 13 ] to include 1[39m
+[36m [2m❯[22m src/lib/phone-shell.test.ts:[2m372:40[22m[39m
+    [90m370|[39m     [34mexpect[39m(run[33m.[39mstdout)[33m.[39m[34mtoContain[39m([32m"0.10.0"[39m)[33m;[39m
+    [90m371|[39m     [35mif[39m (process[33m.[39mplatform [33m===[39m [32m"darwin"[39m) {
+    [90m372|[39m       [34mexpect[39m([[34m0[39m[33m,[39m [34m5[39m[33m,[39m [34m6[39m[33m,[39m [34m8[39m[33m,[39m [34m10[39m[33m,[39m [34m11[39m[33m,[39m [34m13[39m])[33m.[39m[34mtoContain[39m(run[33m.[39mstatus)[33m;[39m
+    [90m   |[39m                                        [31m^[39m
+    [90m373|[39m     } [35melse[39m {
+    [90m374|[39m       [34mexpect[39m(run[33m.[39mstatus)[33m.[39m[34mtoBe[39m([34m4[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m src/lib/study-client.test.ts[2m > [22mstudy inbox client[2m > [22mdoes not write on the GET probe in the Next route or the Dock static server
+[31m[1mError[22m: ENOENT: no such file or directory, open 'src/app/api/study/route.ts'[39m
+[36m [2m❯[22m src/lib/study-client.test.ts:[2m95:19[22m[39m
+    [90m 93|[39m
+    [90m 94|[39m   it("does not write on the GET probe in the Next route or the Dock st…
+    [90m 95|[39m     [35mconst[39m route [33m=[39m [34mreadFileSync[39m([32m"src/app/api/study/route.ts"[39m[33m,[39m [32m"utf8"[39m)[33m;[39m
+    [90m   |[39m                   [31m^[39m
+    [90m 96|[39m     const getFn = route.slice(route.indexOf("export async function GET…
+    [90m 97|[39m     [34mexpect[39m(getFn)[33m.[39m[34mtoContain[39m([32m"inbox: true"[39m)[33m;[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/10]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m9 failed[39m[22m[2m | [22m[1m[32m56 passed[39m[22m[90m (65)[39m
+[2m      Tests [22m [1m[31m7 failed[39m[22m[2m | [22m[1m[32m458 passed[39m[22m[90m (465)[39m
+[2m   Start at [22m 20:14:03
+[2m   Duration [22m 4.34s[2m (transform 1.28s, setup 0ms, import 2.91s, tests 10.01s, environment 4ms)[22m
+

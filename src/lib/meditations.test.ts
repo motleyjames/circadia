@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { MEDITATIONS, beatAt, spokenBeats, spokenLine } from "./meditations";
 import { BEDSIDE, pickBedsideVoice, scoreBedsideVoice, type VoiceLike } from "./voice";
@@ -82,23 +81,32 @@ describe("meditation guide copy", () => {
   });
 
   it("ships mono 16-bit PCM WebKit does not have to decode", () => {
-    const probe = spawnSync(
-      "ffprobe",
-      [
-        "-v",
-        "error",
-        "-show_entries",
-        "stream=codec_name,sample_rate,channels,sample_fmt",
-        "-of",
-        "csv=p=0",
-        "public/voice/478/0.wav",
-      ],
-      { encoding: "utf8" },
-    );
-    expect(probe.status).toBe(0);
-    expect(probe.stdout).toContain("pcm_s16le");
-    expect(probe.stdout).toContain("22050");
-    expect(probe.stdout).toContain("s16");
+    // Read the RIFF header rather than shelling out to ffprobe. The old version
+    // failed on any machine without ffmpeg installed, with probe.status null —
+    // an absent binary read as a broken audio file. The header carries exactly
+    // the four facts this test is about, and every machine can read it.
+    const wav = readFileSync("public/voice/478/0.wav");
+    expect(wav.subarray(0, 4).toString("ascii")).toBe("RIFF");
+    expect(wav.subarray(8, 12).toString("ascii")).toBe("WAVE");
+
+    // Walk the chunk list; "fmt " is not always the first chunk after the header.
+    let offset = 12;
+    let fmt: Buffer | null = null;
+    while (offset + 8 <= wav.length) {
+      const id = wav.subarray(offset, offset + 4).toString("ascii");
+      const size = wav.readUInt32LE(offset + 4);
+      if (id === "fmt ") {
+        fmt = wav.subarray(offset + 8, offset + 8 + size);
+        break;
+      }
+      offset += 8 + size + (size % 2);
+    }
+    expect(fmt, "no fmt chunk in public/voice/478/0.wav").not.toBeNull();
+
+    expect(fmt!.readUInt16LE(0)).toBe(1); // 1 = uncompressed PCM
+    expect(fmt!.readUInt16LE(2)).toBe(1); // mono
+    expect(fmt!.readUInt32LE(4)).toBe(22050);
+    expect(fmt!.readUInt16LE(14)).toBe(16); // bits per sample
   });
 
   it("advances the orb through the script", () => {

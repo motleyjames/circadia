@@ -48,6 +48,15 @@ if [[ ! -d phone/ios/App/App.xcodeproj ]]; then
   exit 6
 fi
 
+# The test suite runs this script to prove the gate refuses the wrong tree and the
+# wrong OS. Everything above this line is that gate and touches nothing. Everything
+# below installs packages, runs a static export and drives xcodebuild — so under
+# test the script stops here rather than racing the rest of the suite for .next.
+if [[ "${CIRCADIA_GATE_ONLY:-}" == "1" ]]; then
+  echo "Gate only. Not installing."
+  exit 0
+fi
+
 if ! node scripts/deps-missing.cjs; then
   echo "Installing dependencies (new packages after git pull)…"
   npm install

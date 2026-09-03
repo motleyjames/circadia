@@ -342,8 +342,27 @@ describe("captured inbox files", () => {
     }
     const snapshot = summarizeInbox(rows);
     expect(snapshot.userCount).toBeGreaterThanOrEqual(1);
-    expect(snapshot.people.some((person) => person.participantId.startsWith("51b85413"))).toBe(true);
-    expect(snapshot.faultCount).toBeGreaterThanOrEqual(1);
+    // Derive the expected people from the captured files rather than pinning one
+    // participant id. The old version named a participant who has since been
+    // re-captured out of the folder, so this test failed on the state of a
+    // directory instead of on the summarizer it exists to cover.
+    const idsOnDisk = new Set(
+      rows
+        .map((row) => (row.payload as { participantId?: unknown }).participantId)
+        .filter((id): id is string => typeof id === "string"),
+    );
+    expect(idsOnDisk.size).toBeGreaterThanOrEqual(1);
+    expect(snapshot.people.length).toBe(idsOnDisk.size);
+    for (const person of snapshot.people) {
+      expect(idsOnDisk.has(person.participantId), person.participantId).toBe(true);
+    }
+    // A fault is a crash report the app posted, not a parse failure — a healthy
+    // corpus has none. What must hold is that the count matches what is on disk.
+    const faultsOnDisk = rows.filter((row) => {
+      const parsed = parseInboxPayload(row.payload);
+      return parsed.ok && parsed.kind === "fault";
+    }).length;
+    expect(snapshot.faultCount).toBe(faultsOnDisk);
     expect(snapshot.nightPackCount).toBeGreaterThanOrEqual(1);
     const grouped = groupNightsByParticipant(snapshot.nights);
     expect(grouped.reduce((n, person) => n + person.packs.length, 0)).toBe(snapshot.nights.length);
