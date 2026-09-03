@@ -27,6 +27,12 @@ export function formatClock(clock: string, units: "imperial" | "metric" = "imper
 }
 
 /** Overnight duration from sleep clock to wake clock, in minutes. */
+/** Clock plus minutes, wrapping past midnight. Used to derive out-of-bed and sleep onset. */
+export function addMinutesToClock(clock: string, minutes: number): string {
+  const total = ((clockToMinutes(clock) + Math.round(minutes)) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 export function overnightDuration(sleepClock: string, wakeClock: string): number {
   const sleep = clockToMinutes(sleepClock);
   let wake = clockToMinutes(wakeClock);

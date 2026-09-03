@@ -9,8 +9,10 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type {
+  AwakeningCount,
   LatencyBucket,
   MorningReport,
+  NapMinutes,
   NightWakingDuration,
   ScreenOffMinutes,
   SleepRating,
@@ -19,13 +21,16 @@ import type {
 } from "@/lib/types";
 import { reportForMorning } from "@/lib/morning-file";
 import { formatMorningDate, shiftIsoDate } from "@/lib/schedule";
-import { clockFromDate, formatClock, todayIsoDate } from "@/lib/time";
+import { addMinutesToClock, clockFromDate, formatClock, overnightDuration, todayIsoDate } from "@/lib/time";
 import { SLEEP_AID_QUESTION } from "@/lib/intake";
 import { hapticLight, hapticSelect } from "@/lib/haptics";
 import { navigateDiary } from "@/lib/diary-route";
 
 const SLEEP_TIMES = ["21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00"];
 const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00"];
+const BED_TIMES = ["21:00", "21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30"];
+/** Minutes after the final awakening. "Straight away" is the common answer. */
+const GET_UP_DELAYS = [0, 10, 20, 45, 90] as const;
 
 export function CheckInFlow() {
   const { state, withdrawMorning } = useCircadia();
@@ -81,9 +86,28 @@ function MorningInterview({
     (s) => s.startedAt.slice(0, 10) === priorNight || s.startedAt.slice(0, 10) === today,
   );
 
+  // Bedtime barely moves for most people, so last night's answer is offered as the
+  // default rather than asked cold. Confirm-or-correct is the whole tap budget.
+  const lastNight = useMemo(
+    () => [...state.reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate)).at(-1),
+    [state.reports],
+  );
+
   const [step, setStep] = useState(0);
   const [wokeAt, setWokeAt] = useState(existing?.wokeAt ?? clockFromDate(new Date()));
-  const [fellAsleepAt, setFellAsleepAt] = useState(existing?.fellAsleepAt ?? state.profile?.targetSleep ?? "23:30");
+  // Consensus Sleep Diary geometry. `fellAsleepAt` is no longer asked — nobody can
+  // report the clock time they fell asleep, and asking teaches clock-watching. It
+  // is derived from lights-out plus latency at save time.
+  const [inBedAt, setInBedAt] = useState(existing?.inBedAt ?? lastNight?.inBedAt ?? state.profile?.targetSleep ?? "23:00");
+  const [lightsOutSame, setLightsOutSame] = useState(
+    existing ? (existing.triedToSleepAt ?? existing.inBedAt) === existing.inBedAt : true,
+  );
+  const [triedToSleepAt, setTriedToSleepAt] = useState(existing?.triedToSleepAt ?? existing?.inBedAt ?? state.profile?.targetSleep ?? "23:00");
+  const [getUpDelay, setGetUpDelay] = useState<number | undefined>(
+    existing?.outOfBedAt ? overnightDuration(existing.wokeAt, existing.outOfBedAt) : undefined,
+  );
+  const [awakeningCount, setAwakeningCount] = useState<AwakeningCount | undefined>(existing?.awakeningCount);
+  const [napMinutes, setNapMinutes] = useState<NapMinutes | undefined>(existing?.napMinutes);
   const [rating, setRating] = useState<SleepRating | undefined>(existing?.rating);
   const [drank, setDrank] = useState<boolean | undefined>(existing?.drank);
   const [drinkCount, setDrinkCount] = useState<number | undefined>(existing?.drinkCount);
@@ -105,7 +129,9 @@ function MorningInterview({
   const units = state.profile?.units ?? "imperial";
 
   const steps = useMemo(() => {
-    const list = ["wake", "asleep", "rating", "drink", "screens", "latency", "stay", "supp", "wind", "dream"] as const;
+    // In the order the night happened — recall is markedly better that way than
+    // jumping around the clock.
+    const list = ["bed", "latency", "stay", "wake", "up", "rating", "nap", "drink", "screens", "supp", "wind", "dream"] as const;
     return list;
   }, []);
 
@@ -115,8 +141,12 @@ function MorningInterview({
     switch (current) {
       case "wake":
         return Boolean(wokeAt);
-      case "asleep":
-        return Boolean(fellAsleepAt);
+      case "bed":
+        return Boolean(inBedAt) && (lightsOutSame || Boolean(triedToSleepAt));
+      case "up":
+        return getUpDelay !== undefined;
+      case "nap":
+        return napMinutes !== undefined;
       case "rating":
         return rating !== undefined;
       case "drink":
@@ -128,7 +158,11 @@ function MorningInterview({
       case "latency":
         return sleepLatencyMinutes !== undefined;
       case "stay":
-        return wokeInNight !== undefined;
+        if (wokeInNight === undefined) return false;
+        // Count and duration are different clinical facts: one 90-minute waking is
+        // not five 18-minute ones. Only asked when there was a waking.
+        if (wokeInNight && awakeningCount === undefined) return false;
+        return true;
       case "supp":
         if (usedSupplement === undefined) return false;
         if (!usedSupplement) return true;
@@ -159,6 +193,9 @@ function MorningInterview({
       (usedSupplement && !supplementKind) ||
       (usedSupplement && supplementKind === "other" && !supplementNote.trim()) ||
       windDownHelped === undefined ||
+      getUpDelay === undefined ||
+      napMinutes === undefined ||
+      (wokeInNight && awakeningCount === undefined) ||
       (drank && (drinkCount === undefined || spins === undefined))
     ) {
       setSaveError("Something above is still blank. Step back and finish it, then file.");
@@ -171,10 +208,17 @@ function MorningInterview({
       return;
     }
     setSaveError(null);
+    const lightsOut = lightsOutSame ? inBedAt : triedToSleepAt;
     const payload: Omit<MorningReport, "id" | "createdAt"> = {
       morningDate: today,
       wokeAt,
-      fellAsleepAt,
+      // Derived, not asked. Lights-out plus how long it took.
+      fellAsleepAt: addMinutesToClock(lightsOut, sleepLatencyMinutes),
+      inBedAt,
+      triedToSleepAt: lightsOut,
+      outOfBedAt: addMinutesToClock(wokeAt, getUpDelay),
+      awakeningCount: wokeInNight ? awakeningCount : 0,
+      napMinutes,
       rating,
       drank,
       screenOffMinutes,
@@ -247,16 +291,88 @@ function MorningInterview({
           </Block>
         ) : null}
 
-        {current === "asleep" ? (
-          <Block title="About when did you fall asleep?" hint="Not when you got into bed — when you actually dropped.">
+        {current === "bed" ? (
+          <Block
+            title="What time did you get into bed?"
+            hint={lastNight?.inBedAt ? `Last night you said ${formatClock(lastNight.inBedAt, units)}. Tap to keep it or pick another.` : "Getting in — not falling asleep."}
+          >
+            <div className="space-y-4">
+              <BubbleGroup
+                value={inBedAt}
+                onChange={(v) => {
+                  setInBedAt(v);
+                  if (lightsOutSame) setTriedToSleepAt(v);
+                }}
+                columns={3}
+                options={BED_TIMES.map((t) => ({ value: t, label: formatClock(t, units) }))}
+              />
+              <p className="text-xs text-zinc-400">Did you try to sleep straight away?</p>
+              <YesNo
+                value={lightsOutSame}
+                onChange={(v) => {
+                  setLightsOutSame(v);
+                  if (v) {
+                    setTriedToSleepAt(inBedAt);
+                    advance();
+                  }
+                }}
+                yesLabel="Straight away"
+                noLabel="Read or watched first"
+              />
+              {lightsOutSame ? null : (
+                <div className="space-y-2">
+                  <p className="text-xs text-zinc-400">Lights out at?</p>
+                  <BubbleGroup
+                    value={triedToSleepAt}
+                    onChange={(v) => {
+                      setTriedToSleepAt(v);
+                      advance();
+                    }}
+                    columns={3}
+                    options={SLEEP_TIMES.map((t) => ({ value: t, label: formatClock(t, units) }))}
+                  />
+                </div>
+              )}
+            </div>
+          </Block>
+        ) : null}
+
+        {current === "up" ? (
+          <Block
+            title="And when did you get out of bed?"
+            hint="Time lying there after waking counts against you, so it is worth being honest."
+          >
             <BubbleGroup
-              value={fellAsleepAt}
+              value={getUpDelay}
               onChange={(v) => {
-                setFellAsleepAt(v);
+                setGetUpDelay(v);
                 advance();
               }}
-              columns={3}
-              options={SLEEP_TIMES.map((t) => ({ value: t, label: formatClock(t, units) }))}
+              columns={2}
+              options={GET_UP_DELAYS.map((m) => ({
+                value: m as number,
+                label: m === 0 ? "Straight away" : `${m} min later`,
+                hint: formatClock(addMinutesToClock(wokeAt, m), units),
+              }))}
+            />
+          </Block>
+        ) : null}
+
+        {current === "nap" ? (
+          <Block title="Did you nap yesterday?" hint="Naps change how much sleep pressure you brought to the night.">
+            <BubbleGroup
+              value={napMinutes}
+              onChange={(v) => {
+                setNapMinutes(v);
+                advance();
+              }}
+              columns={2}
+              options={[
+                { value: 0 as NapMinutes, label: "No nap" },
+                { value: 20 as NapMinutes, label: "About 20 min" },
+                { value: 45 as NapMinutes, label: "About 45 min" },
+                { value: 90 as NapMinutes, label: "An hour or more" },
+              ]}
             />
           </Block>
         ) : null}
@@ -366,21 +482,39 @@ function MorningInterview({
               }}
             />
             {wokeInNight ? (
-              <div className="mt-5">
-                <p className="mb-2 text-xs text-zinc-400">About how long were you up?</p>
-                <BubbleGroup
-                  value={nightWakingMinutes}
-                  onChange={(v) => {
-                    setNightWakingMinutes(v);
-                    advance();
-                  }}
-                  options={[
-                    { value: 10 as NightWakingDuration, label: "~10m" },
-                    { value: 25 as NightWakingDuration, label: "~25m" },
-                    { value: 45 as NightWakingDuration, label: "~45m" },
-                    { value: 70 as NightWakingDuration, label: "1h+" },
-                  ]}
-                />
+              <div className="mt-5 space-y-5">
+                <div>
+                  {/* Count and duration are separate facts. One long waking and five
+                      short ones are different nights, and only the count says which. */}
+                  <p className="mb-2 text-xs text-zinc-400">How many times?</p>
+                  <BubbleGroup
+                    value={awakeningCount}
+                    onChange={setAwakeningCount}
+                    columns={4}
+                    options={[
+                      { value: 1 as AwakeningCount, label: "Once" },
+                      { value: 2 as AwakeningCount, label: "Twice" },
+                      { value: 3 as AwakeningCount, label: "3" },
+                      { value: 4 as AwakeningCount, label: "4+" },
+                    ]}
+                  />
+                </div>
+                <div>
+                  <p className="mb-2 text-xs text-zinc-400">Awake for how long in total?</p>
+                  <BubbleGroup
+                    value={nightWakingMinutes}
+                    onChange={(v) => {
+                      setNightWakingMinutes(v);
+                      if (awakeningCount !== undefined) advance();
+                    }}
+                    options={[
+                      { value: 10 as NightWakingDuration, label: "~10m" },
+                      { value: 25 as NightWakingDuration, label: "~25m" },
+                      { value: 45 as NightWakingDuration, label: "~45m" },
+                      { value: 70 as NightWakingDuration, label: "1h+" },
+                    ]}
+                  />
+                </div>
               </div>
             ) : null}
           </Block>

@@ -10,10 +10,13 @@ import { weekBreakdown } from "@/lib/metrics";
 import { researchById } from "@/lib/research";
 import { socialJetLagCopyFromReports, socialJetLagSleepNote } from "@/lib/social-jetlag-copy";
 import { formatClock, formatDuration, minutesToClock } from "@/lib/time";
-import type { SleepNote } from "@/lib/types";
+import type { MorningReport, SleepNote } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { MorningReadingCard } from "@/components/morning-reading";
 import { suggestMorningReadingForLogs } from "@/lib/morning-reading";
 import { buildWeekReview, formatMorningDate, lastSevenReports } from "@/lib/week-review";
+import { MidpointStrip, WeekRaster, weekdayLabel } from "@/components/week-raster";
+import { efficiencyBand, weekGeometry } from "@/lib/sleep-metrics";
 
 /** The note taxonomy is internal. Users were reading raw "LEVER" and "STEADY". */
 const NOTE_KIND_LABEL: Record<string, string> = {
@@ -71,6 +74,8 @@ export function InsightsView() {
           to replace it.
         </p>
       ) : null}
+
+      <WeekGeometrySection reports={lastSevenReports(state.reports)} units={state.profile?.units ?? "imperial"} />
 
       {sjlNote ? (
         <section className="mt-8 space-y-3">
@@ -281,6 +286,99 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="rounded-3xl border border-white/8 bg-white/4 px-3 py-3">
       <p className="text-[10px] tracking-[0.16em] text-zinc-500 uppercase">{label}</p>
       <p className="mt-1 text-lg text-zinc-50">{value}</p>
+    </div>
+  );
+}
+
+/**
+ * The week as a picture, then as numbers.
+ *
+ * Renders nothing at all until some nights carry the consensus-diary fields. A
+ * partial week shows what it can and says how many nights it is standing on —
+ * rather than averaging two nights into a confident-looking figure.
+ */
+function WeekGeometrySection({
+  reports,
+  units,
+}: {
+  reports: MorningReport[];
+  units: "imperial" | "metric";
+}) {
+  const week = weekGeometry(reports);
+  if (!week) return null;
+
+  const nights = reports
+    .filter((report) => report.inBedAt && report.outOfBedAt)
+    .map((report) => ({ report, label: weekdayLabel(report.morningDate) }));
+  const band = efficiencyBand(week.meanEfficiencyPct);
+
+  return (
+    <section className="mt-8 space-y-3">
+      <p className="text-[11px] tracking-[0.22em] text-zinc-500 uppercase">Your nights</p>
+      <WeekRaster nights={nights} units={units} />
+
+      <div className="grid grid-cols-2 gap-2">
+        <GeoStat
+          span
+          label="Sleep efficiency"
+          value={`${Math.round(week.meanEfficiencyPct)}%`}
+          foot={band.label}
+          tone={band.tone}
+        />
+        <GeoStat label="Asleep" value={formatDuration(week.meanTotalSleepMinutes)} />
+        <GeoStat label="In bed" value={formatDuration(week.meanTimeInBedMinutes)} />
+        <GeoStat label="To fall asleep" value={`${week.meanLatencyMinutes} min`} />
+        <GeoStat label="Awake in the night" value={`${week.meanWasoMinutes} min`} />
+      </div>
+
+      <MidpointStrip nights={nights} units={units} />
+
+      <p className="text-[12px] leading-relaxed text-zinc-500">
+        Efficiency is time asleep divided by time in bed, across{" "}
+        {week.nights} night{week.nights === 1 ? "" : "s"}. Sleep clinics treat 85% and up as healthy;
+        under that usually means too much time in bed rather than too little sleep. Circadia will not
+        set you a sleep window — that part belongs with a clinician.
+      </p>
+    </section>
+  );
+}
+
+function GeoStat({
+  label,
+  value,
+  foot,
+  tone,
+  span = false,
+}: {
+  label: string;
+  value: string;
+  foot?: string;
+  tone?: "steady" | "watch";
+  span?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-white/8 bg-white/[0.03] px-3.5 py-3",
+        span && "col-span-2",
+      )}
+    >
+      <p className="text-[11px] tracking-[0.14em] text-zinc-500 uppercase">{label}</p>
+      <p className={cn("font-heading mt-0.5 tabular-nums text-zinc-50", span ? "text-[2.4rem] leading-none" : "text-[1.75rem] leading-tight")}>
+        {value}
+      </p>
+      {foot ? (
+        <p
+          className={cn(
+            "mt-2 inline-flex rounded-full border px-2.5 py-1 text-[11.5px]",
+            tone === "watch"
+              ? "border-amber-300/30 bg-amber-300/[0.07] text-amber-200"
+              : "border-white/10 text-zinc-400",
+          )}
+        >
+          {foot}
+        </p>
+      ) : null}
     </div>
   );
 }

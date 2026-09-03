@@ -1,8 +1,20 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+
+/**
+ * A temp dir whose path is already resolved.
+ *
+ * On macOS os.tmpdir() is /var/folders/..., a symlink to /private/var/folders/....
+ * require.resolve returns the real path, so comparing it against the path we built
+ * from os.tmpdir() fails on a Mac and passes everywhere else. Resolve up front and
+ * both sides agree on every platform.
+ */
+function tempDir(prefix: string): string {
+  return realpathSync(mkdtempSync(path.join(os.tmpdir(), prefix)));
+}
 
 const require = createRequire(import.meta.url);
 const pack = require("../../electron/pack-app.cjs") as {
@@ -38,7 +50,7 @@ describe("Electron packaged main path", () => {
   });
 
   it("writes a bundle Electron can actually load, then verifies require.resolve", () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "circadia-pack-"));
+    const dir = tempDir("circadia-pack-");
     try {
       const appDir = path.join(dir, "Contents", "Resources", "app");
       const resolved = pack.writePackagedApp(appDir, {
@@ -69,7 +81,7 @@ describe("Electron packaged main path", () => {
   });
 
   it("places a file at the concatenated crash path so a stale absolute main still loads", () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "circadia-shim-"));
+    const dir = tempDir("circadia-shim-");
     try {
       const appDir = path.join(dir, "Contents", "Resources", "app");
       pack.writePackagedApp(appDir, {
@@ -93,7 +105,7 @@ describe("Electron packaged main path", () => {
   });
 
   it("repairs an already-installed Electron app that still has an absolute main", () => {
-    const root = mkdtempSync(path.join(os.tmpdir(), "circadia-repair-"));
+    const root = tempDir("circadia-repair-");
     const prev = process.env.CIRCADIA_REPAIR_ROOT;
     try {
       const dest = path.join(root, "Circadia.app");
