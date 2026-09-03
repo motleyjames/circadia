@@ -13,6 +13,7 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/ios": "8.5.0",
     "@capacitor/keyboard": "8.0.5",
+    "@capacitor/local-notifications": "8.3.1",
     "@capacitor/status-bar": "8.0.3",
     "circadia-keychain": "file:./plugins/circadia-keychain"
   },

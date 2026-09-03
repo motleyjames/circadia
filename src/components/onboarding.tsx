@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { ensureNotificationPermission } from "@/lib/notifications";
 import {
   DEFAULT_HEIGHT_CM,
   DEFAULT_WEIGHT_KG,
@@ -127,7 +126,9 @@ export function Onboarding() {
   async function finish() {
     setBusy(true);
     setError(null);
-    const granted = await ensureNotificationPermission();
+    // No permission prompt here. iOS asks once, and asked on the install screen most
+    // people decline — which cannot be undone from inside the app. This records that
+    // they want reminders; the prompt comes after the first morning is filed.
     const struggles: Struggle[] = problem === "both" ? ["falling", "staying"] : [problem];
     const med = stimulant.trim();
     const profile: Profile = {
@@ -147,7 +148,7 @@ export function Onboarding() {
       targetSleep,
       targetWake: normalizeClock(wakeTime || "07:00"),
       units: "imperial",
-      notificationsEnabled: granted,
+      notificationsEnabled: true,
       onboardingComplete: true,
       scheduledDays,
     };

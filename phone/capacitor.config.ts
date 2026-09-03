@@ -22,6 +22,11 @@ const config: CapacitorConfig = {
     "@capacitor/keyboard",
     "@capacitor/status-bar",
     "@capacitor/haptics",
+    // Without this the plugin is compiled out of the app entirely: includePlugins is
+    // an allowlist, so an unlisted plugin is simply absent at runtime and
+    // isPluginAvailable("LocalNotifications") is false. That is the same silent
+    // nothing the Web Notification version produced, arrived at a different way.
+    "@capacitor/local-notifications",
     "circadia-keychain",
   ],
   plugins: {
