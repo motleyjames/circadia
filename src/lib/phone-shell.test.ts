@@ -6,9 +6,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.10.0 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.10.0");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.10.0");
+  it("is version 0.11.0 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.11.0");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.11.0");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -209,6 +209,15 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("phone/ios/App/App/capacitor.config.json", "utf8")).plugins?.Keyboard?.resize).toBe(
       "native",
     );
+    // The generated native config carries its own allowlists. A plugin missing from
+    // either one is compiled out, and every notification it would send is dropped
+    // with no error anywhere — which is how the last notification bug hid for weeks.
+    const nativeConfig = JSON.parse(
+      readFileSync("phone/ios/App/App/capacitor.config.json", "utf8"),
+    ) as { includePlugins?: string[]; packageClassList?: string[] };
+    expect(nativeConfig.includePlugins).toContain("@capacitor/local-notifications");
+    expect(nativeConfig.packageClassList).toContain("LocalNotificationsPlugin");
+    expect(phonePkg.dependencies?.["@capacitor/local-notifications"]).toMatch(/^8\./);
     expect(phonePkg.description?.toLowerCase()).toMatch(/diary/);
     expect(phonePkg.description?.toLowerCase()).toMatch(/not the operator/);
     expect(phonePkg.dependencies?.["circadia-keychain"]).toBe("file:./plugins/circadia-keychain");
@@ -230,8 +239,8 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.10.0");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 37");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.11.0");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 38");
     const scene = readFileSync("phone/ios/App/App/SceneDelegate.swift", "utf8");
     expect(scene).toContain("class CircadiaBridgeViewController: CAPBridgeViewController");
     expect(scene).toContain("windowScene.windows.first");
@@ -372,7 +381,7 @@ describe("phone diary shell", () => {
       encoding: "utf8",
       env: { ...process.env, CIRCADIA_GATE_ONLY: "1" },
     });
-    expect(run.stdout).toContain("0.10.0");
+    expect(run.stdout).toContain("0.11.0");
     expect(run.stdout).not.toContain("Compiling");
     // The guard must sit above the first mutating step, or the gate is decorative.
     const shell = readFileSync("scripts/put-on-phone.sh", "utf8");

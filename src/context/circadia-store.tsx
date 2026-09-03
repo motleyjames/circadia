@@ -14,7 +14,7 @@ import { answerQuestion, makeChatMessage } from "@/lib/chat";
 import { threadFromLive, upsertConsult } from "@/lib/consult-threads";
 import { sampleWeekState } from "@/lib/demo";
 import { installFaultReporter } from "@/lib/fault-reporter";
-import { startScreenOffWatcher } from "@/lib/notifications";
+import { requestNotificationPermission, syncNotifications } from "@/lib/notify-device";
 import { buildFault, buildRoster } from "@/lib/operator";
 import { AUTH_ERRORS, sessionAllowsLogout } from "@/lib/login";
 import {
@@ -324,10 +324,27 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     void finishVaultBoot();
   }, []);
 
+  // Re-plan the device's notifications whenever anything they depend on moves: the
+  // toggle, either target, or the set of filed mornings. syncNotifications replaces
+  // the whole pending set, so a reminder can never outlive the reason for it — the
+  // morning ping for a morning just filed is gone before the app finishes saving.
+  const notifyKey = state.profile
+    ? [
+        state.profile.notificationsEnabled,
+        state.profile.targetSleep,
+        state.profile.targetWake,
+        state.profile.scheduledDays.join(""),
+        state.reports.length,
+        state.reports.at(-1)?.morningDate ?? "",
+      ].join("|")
+    : "";
   useEffect(() => {
-    if (!state.profile?.notificationsEnabled || !state.profile.targetSleep) return;
-    return startScreenOffWatcher(state.profile.targetSleep, true);
-  }, [state.profile?.notificationsEnabled, state.profile?.targetSleep]);
+    const profile = snapshot().profile;
+    if (!profile) return;
+    void syncNotifications({ profile, reports: snapshot().reports });
+    // notifyKey carries every input; snapshot() is read inside so the effect never
+    // closes over a stale diary.
+  }, [notifyKey]);
 
   useEffect(() => {
     return installFaultReporter((message, extra) => {
@@ -381,8 +398,16 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
 
   const addReport = useCallback((report: Omit<MorningReport, "id" | "createdAt">) => {
     let shouldSend = false;
+    let askToNotify = false;
     patch((prev) => {
       shouldSend = Boolean(prev.study.consented && !prev.demoWeek);
+      // Ask for notification permission after the FIRST real morning is filed, never
+      // at install. iOS only ever presents this prompt once, and asked cold on day
+      // one most people decline — a refusal the app cannot undo from the inside. By
+      // now they have used the thing the reminders are for.
+      askToNotify =
+        Boolean(prev.profile?.notificationsEnabled) &&
+        prev.reports.length === 0;
       const existing = reportForMorning(prev.reports, report.morningDate);
       const full: MorningReport = {
         ...report,
@@ -398,6 +423,14 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     if (shouldSend) {
       if (!snapshot().study.rosterSentAt) void transmitRoster();
       void transmitStudy();
+    }
+    if (askToNotify) {
+      void requestNotificationPermission().then((granted) => {
+        // A decline turns the setting off rather than leaving a toggle that is on
+        // and does nothing. They can turn it back on in You, which re-prompts or
+        // sends them to Settings depending on what iOS still allows.
+        if (!granted) patch((prev) => (prev.profile ? { ...prev, profile: { ...prev.profile, notificationsEnabled: false } } : prev));
+      });
     }
   }, []);
 

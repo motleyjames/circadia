@@ -12,7 +12,7 @@ import { ERASE_CONFIRM_WORD } from "@/lib/confirm-word";
 import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { ensureNotificationPermission } from "@/lib/notifications";
+import { requestNotificationPermission } from "@/lib/notify-device";
 import { displayName, prettyContactDisplay } from "@/lib/login";
 import { compactScheduledDays } from "@/lib/schedule";
 import { hapticSelect } from "@/lib/haptics";
@@ -177,7 +177,7 @@ export function YouView() {
                       persist({ notificationsEnabled: false });
                       return;
                     }
-                    persist({ notificationsEnabled: await ensureNotificationPermission() });
+                    persist({ notificationsEnabled: await requestNotificationPermission() });
                   })();
                 }}
               />
