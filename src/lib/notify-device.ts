@@ -131,6 +131,37 @@ export const TEST_PING_ID = 999_999_999;
 /** Set once, on this device, the first time reminders are confirmed working. */
 const CONFIRMED_KEY = "circadia:notify-confirmed";
 
+/** Set once, on this device, when the OS prompt has been put in front of someone. */
+const OFFERED_KEY = "circadia:notify-offered";
+
+/**
+ * Whether this device has ever been offered reminders.
+ *
+ * `notificationsEnabled` cannot answer this. It defaults to false, so for every
+ * profile created before reminders existed it reads exactly like a deliberate "no"
+ * while actually meaning "never asked" — and gating the prompt on it meant the app
+ * never asked, never appeared in iOS Settings, and gave the person no way in. The OS
+ * itself knows whether it has ever asked; this records that we were the ones to ask,
+ * so the offer happens once and never turns into nagging.
+ */
+export function reminderOfferMade(): boolean {
+  try {
+    return window.localStorage.getItem(OFFERED_KEY) !== null;
+  } catch {
+    // No storage means no memory of having offered, and an offer that could repeat
+    // every launch is worse than one that never happens.
+    return true;
+  }
+}
+
+export function markReminderOffered(): void {
+  try {
+    window.localStorage.setItem(OFFERED_KEY, new Date().toISOString());
+  } catch {
+    /* Nothing to record it in. */
+  }
+}
+
 /**
  * One ping, once ever, the first time this device has working reminders.
  *
