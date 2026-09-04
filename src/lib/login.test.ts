@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { bytesToBase64, newPasswordLock } from "./password";
+import { PBKDF2_ITERATIONS, bytesToBase64 } from "./password";
 import { AUTH_ERRORS, LOCAL_FILE_KEY, defaultAuthMode, defaultContactField, formatLoginForDisplay, identitiesFromVaultKeys, loginKeyCandidates, loginKeyFromInput, loginKeyFromProfile, prettyContactDisplay } from "./login";
 import {
   LAST_LOGIN_KEY,
@@ -506,12 +506,29 @@ describe("local file vault", () => {
   });
 
   it("upgrades a 0.6.19 lock so the stored hash is no longer the AES key", async () => {
-    const minted = await newPasswordLock(PASS);
+    // A genuine 0.6.19 lock: the key IS the stretched password, and the stored hash
+    // IS that key. Built here rather than borrowed from newPasswordLock, which now
+    // mints a random key that no password can reproduce.
+    const legacySalt = crypto.getRandomValues(new Uint8Array(16));
+    const legacyKey = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(PASS),
+      "PBKDF2",
+      false,
+      ["deriveBits"],
+    );
+    const legacyMaster = new Uint8Array(
+      await crypto.subtle.deriveBits(
+        { name: "PBKDF2", hash: "SHA-256", salt: legacySalt, iterations: PBKDF2_ITERATIONS },
+        legacyKey,
+        256,
+      ),
+    );
     const v1 = {
       algo: "pbkdf2-sha256" as const,
-      iterations: minted.lock.iterations,
-      salt: minted.lock.salt,
-      hash: bytesToBase64(minted.master),
+      iterations: PBKDF2_ITERATIONS,
+      salt: bytesToBase64(legacySalt),
+      hash: bytesToBase64(legacyMaster),
     };
     localStorage.setItem(
       VAULT_KEY,
@@ -543,7 +560,7 @@ describe("local file vault", () => {
     expect(await openFile("ada@example.com", PASS)).toMatchObject({ ok: true });
   });
 
-  it("re-encrypts the diary when the password changes", async () => {
+  it("re-wraps the key when the password changes, keeping the diary readable", async () => {
     const created = await createFile({
       firstName: "Ada",
       lastName: "Lovelace",
@@ -566,6 +583,16 @@ describe("local file vault", () => {
     });
     const opened = await openFile("ada@example.com", NEXT_PASS);
     expect(opened.ok).toBe(true);
+    // A rewrap, not a re-key: the diary was never re-encrypted, and the legacy
+    // verifier is gone so the old password has no second route back in.
+    const rotated = JSON.parse(localStorage.getItem(LOCKS_KEY) ?? "{}")["email:ada@example.com"] as {
+      kdf?: number;
+      hash?: string;
+      wrap?: unknown;
+    };
+    expect(rotated.kdf).toBe(3);
+    expect(rotated.wrap).toBeTruthy();
+    expect(rotated.hash).toBeUndefined();
     if (!opened.ok) return;
     expect(opened.state.researchNotes).toBe("after rotate");
   });

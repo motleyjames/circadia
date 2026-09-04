@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup } from "@/components/bubbles";
@@ -12,7 +12,12 @@ import { ERASE_CONFIRM_WORD } from "@/lib/confirm-word";
 import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { requestNotificationPermission } from "@/lib/notify-device";
+import {
+  notificationPermission,
+  requestNotificationPermission,
+  sendTestNotification,
+  type NotificationPermission,
+} from "@/lib/notify-device";
 import { displayName, prettyContactDisplay } from "@/lib/login";
 import { compactScheduledDays } from "@/lib/schedule";
 import { hapticSelect } from "@/lib/haptics";
@@ -163,25 +168,10 @@ export function YouView() {
               />
             </div>
 
-            <SettingRow
-              label="Screen-off reminder"
-              hint="One ping an hour before asleep-by."
-            >
-              <Switch
-                checked={profile.notificationsEnabled}
-                aria-label="Screen-off reminder"
-                onCheckedChange={(on) => {
-                  void hapticSelect();
-                  void (async () => {
-                    if (!on) {
-                      persist({ notificationsEnabled: false });
-                      return;
-                    }
-                    persist({ notificationsEnabled: await requestNotificationPermission() });
-                  })();
-                }}
-              />
-            </SettingRow>
+            <NotificationSetting
+              enabled={profile.notificationsEnabled}
+              onChange={(notificationsEnabled) => persist({ notificationsEnabled })}
+            />
           </Panel>
 
           <div className="grid items-start gap-4 lg:grid-cols-2">
@@ -777,5 +767,103 @@ function Chips({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The reminder switch, and the truth about what the operating system is doing.
+ *
+ * A switch on its own was not enough. iOS can be dropping every ping while the
+ * setting reads on, and the only way out of that is Settings — which the app has to
+ * say out loud, because nothing inside it can fix a denial. The test ping exists
+ * because every real reminder is hours away: without it there is no way to answer
+ * "is this even working?" except to wait until bedtime and find out.
+ */
+function NotificationSetting({
+  enabled,
+  onChange,
+}: {
+  enabled: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  const [permission, setPermission] = useState<NotificationPermission | null>(null);
+  const [sent, setSent] = useState<"idle" | "sent" | "failed">("idle");
+
+  useEffect(() => {
+    let alive = true;
+    void notificationPermission().then((state) => {
+      if (alive) setPermission(state);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [enabled]);
+
+  const blocked = permission === "denied";
+  const unavailable = permission === "unavailable";
+
+  return (
+    <>
+      <SettingRow
+        label="Reminders"
+        hint="Screens down an hour before asleep-by, a nudge after waking, and the week when it is in."
+      >
+        <Switch
+          checked={enabled && !blocked}
+          disabled={blocked || unavailable}
+          aria-label="Reminders"
+          onCheckedChange={(on) => {
+            void hapticSelect();
+            void (async () => {
+              if (!on) {
+                onChange(false);
+                setPermission(await notificationPermission());
+                return;
+              }
+              const granted = await requestNotificationPermission();
+              onChange(granted);
+              setPermission(await notificationPermission());
+            })();
+          }}
+        />
+      </SettingRow>
+
+      {blocked ? (
+        <p className="mt-2 text-[13px] leading-relaxed text-amber-200">
+          iOS is blocking notifications for Circadia, and only Settings can undo that:
+          Settings → Notifications → Circadia → Allow Notifications. Nothing will arrive
+          until then.
+        </p>
+      ) : null}
+
+      {unavailable ? (
+        <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">
+          Reminders need the installed app. In a browser tab there is nothing to schedule
+          them with.
+        </p>
+      ) : null}
+
+      {enabled && permission === "granted" ? (
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center rounded-full border border-white/15 px-4 text-[14px] text-zinc-200"
+            onClick={() => {
+              void hapticSelect();
+              void sendTestNotification().then((ok) => setSent(ok ? "sent" : "failed"));
+            }}
+          >
+            Send a test
+          </button>
+          <span aria-live="polite" className="text-[13px] text-zinc-400">
+            {sent === "sent"
+              ? "On its way — about five seconds."
+              : sent === "failed"
+                ? "That did not send. Reminders may be off at the system level."
+                : ""}
+          </span>
+        </div>
+      ) : null}
+    </>
   );
 }

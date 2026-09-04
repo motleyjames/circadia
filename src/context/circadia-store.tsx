@@ -14,7 +14,12 @@ import { answerQuestion, makeChatMessage } from "@/lib/chat";
 import { threadFromLive, upsertConsult } from "@/lib/consult-threads";
 import { sampleWeekState } from "@/lib/demo";
 import { installFaultReporter } from "@/lib/fault-reporter";
-import { requestNotificationPermission, syncNotifications } from "@/lib/notify-device";
+import {
+  confirmNotificationsOnce,
+  notificationPermission,
+  requestNotificationPermission,
+  syncNotifications,
+} from "@/lib/notify-device";
 import { buildFault, buildRoster } from "@/lib/operator";
 import { AUTH_ERRORS, sessionAllowsLogout } from "@/lib/login";
 import {
@@ -42,7 +47,7 @@ import {
   withdrawMorningReport,
 } from "@/lib/morning-file";
 import type { CircadiaState, MorningReport, Profile, WindDownSession } from "@/lib/types";
-import { newId } from "@/lib/time";
+import { formatClock, newId, screenOffClock } from "@/lib/time";
 import type { DiskVault } from "@/lib/vault";
 
 export type AuthResult = { ok: true } | { ok: false; error: string };
@@ -338,10 +343,46 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
         state.reports.at(-1)?.morningDate ?? "",
       ].join("|")
     : "";
+  // Asked at most once per session, and only once the OS says asking is still
+  // possible. The previous version asked only while filing the very first morning
+  // ever, so anyone who already had a diary — which is everyone who had been using
+  // the app — could never be prompted at all: the toggle read on, permission was
+  // never granted, and every ping was dropped in silence.
+  const askedThisSession = useRef(false);
+
   useEffect(() => {
     const profile = snapshot().profile;
     if (!profile) return;
-    void syncNotifications({ profile, reports: snapshot().reports });
+    void (async () => {
+      if (profile.notificationsEnabled) {
+        const state = await notificationPermission();
+
+        // "Ask late" still holds: not at install, only once they have used the thing
+        // the reminders are for. But late must not mean never.
+        if (state === "prompt" && snapshot().reports.length > 0 && !askedThisSession.current) {
+          askedThisSession.current = true;
+          await requestNotificationPermission();
+        }
+
+        // Never leave a switch claiming to be on while the OS is dropping every
+        // ping. Turning it back on in You is what routes them to Settings.
+        if ((await notificationPermission()) === "denied") {
+          patch((prev) =>
+            prev.profile ? { ...prev, profile: { ...prev.profile, notificationsEnabled: false } } : prev,
+          );
+          return;
+        }
+      }
+      const live = snapshot().profile ?? profile;
+      await syncNotifications({ profile: live, reports: snapshot().reports });
+
+      // Confirm the feature works the first time it does, while the phone is still
+      // in their hand. Without it the first thing anyone learns about reminders is
+      // hours of silence, which is exactly what a broken build looks like.
+      if (live.notificationsEnabled) {
+        void confirmNotificationsOnce(formatClock(screenOffClock(live.targetSleep), live.units));
+      }
+    })();
     // notifyKey carries every input; snapshot() is read inside so the effect never
     // closes over a stale diary.
   }, [notifyKey]);
@@ -398,16 +439,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
 
   const addReport = useCallback((report: Omit<MorningReport, "id" | "createdAt">) => {
     let shouldSend = false;
-    let askToNotify = false;
     patch((prev) => {
       shouldSend = Boolean(prev.study.consented && !prev.demoWeek);
-      // Ask for notification permission after the FIRST real morning is filed, never
-      // at install. iOS only ever presents this prompt once, and asked cold on day
-      // one most people decline — a refusal the app cannot undo from the inside. By
-      // now they have used the thing the reminders are for.
-      askToNotify =
-        Boolean(prev.profile?.notificationsEnabled) &&
-        prev.reports.length === 0;
       const existing = reportForMorning(prev.reports, report.morningDate);
       const full: MorningReport = {
         ...report,
@@ -423,14 +456,6 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     if (shouldSend) {
       if (!snapshot().study.rosterSentAt) void transmitRoster();
       void transmitStudy();
-    }
-    if (askToNotify) {
-      void requestNotificationPermission().then((granted) => {
-        // A decline turns the setting off rather than leaving a toggle that is on
-        // and does nothing. They can turn it back on in You, which re-prompts or
-        // sends them to Settings depending on what iOS still allows.
-        if (!granted) patch((prev) => (prev.profile ? { ...prev, profile: { ...prev.profile, notificationsEnabled: false } } : prev));
-      });
     }
   }, []);
 
