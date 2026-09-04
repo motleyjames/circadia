@@ -321,12 +321,75 @@ describe("the wiring that made this silent before", () => {
     expect(listed).toContain("@capacitor/local-notifications");
   });
 
-  it("asks for permission after the first morning, never at install", () => {
+  it("asks for permission after a morning exists, never at install", () => {
     const onboarding = read("src/components/onboarding.tsx");
     expect(onboarding).not.toMatch(/requestNotificationPermission|ensureNotificationPermission/);
     const store = read("src/context/circadia-store.tsx");
     expect(store).toContain("requestNotificationPermission");
-    expect(store).toContain("prev.reports.length === 0");
+    // Gated on the OS still being willing to ask, plus at least one filed morning.
+    expect(store).toContain('=== "prompt"');
+    expect(store).toContain("snapshot().reports.length > 0");
+  });
+
+  it("can still ask someone who already had a diary before reminders existed", () => {
+    // The regression: the prompt fired only while filing the FIRST morning ever, so
+    // every existing user was permanently unaskable — toggle on, permission never
+    // granted, every ping dropped silently. That condition must not come back.
+    const store = read("src/context/circadia-store.tsx");
+    expect(store).not.toMatch(/reports\.length === 0/);
+    expect(store).not.toContain("askToNotify");
+  });
+
+  it("never leaves a switch claiming to be on while the OS is dropping every ping", () => {
+    const store = read("src/context/circadia-store.tsx");
+    expect(store).toContain('=== "denied"');
+    expect(store).toContain("notificationsEnabled: false");
+    const you = read("src/components/you-view.tsx");
+    // A denial cannot be undone from inside the app, so the UI has to say so.
+    expect(you).toMatch(/Settings/);
+    expect(you).toContain("notificationPermission");
+  });
+
+  it("keeps the test ping's id clear of every id a real ping can take", () => {
+    // Derived ids are (YYYYMMDD % 1e6) * 10 + slot, so they top out in the millions.
+    let highest = 0;
+    for (const y of [2026, 2030, 2099]) {
+      for (const m of [0, 5, 11]) {
+        for (const d of [1, 28]) {
+          for (const kind of ["screens-down", "morning", "weekly"] as const) {
+            highest = Math.max(highest, pingId(kind, new Date(y, m, d)));
+          }
+        }
+      }
+    }
+    const TEST_PING_ID = 999_999_999;
+    expect(highest).toBeLessThan(TEST_PING_ID);
+    expect(read("src/lib/notify-device.ts")).toContain(`TEST_PING_ID = 999_999_999`);
+  });
+
+  it("confirms itself once, the first time reminders actually work", () => {
+    const device = read("src/lib/notify-device.ts");
+    expect(device).toContain("confirmNotificationsOnce");
+    // Remembered per device, so it is a confirmation and not a greeting on every launch.
+    expect(device).toContain("circadia:notify-confirmed");
+    // The flag is set BEFORE the send: a failure must not turn it into a repeat.
+    const body = device.slice(device.indexOf("export async function confirmNotificationsOnce"));
+    expect(body.indexOf("setItem(CONFIRMED_KEY")).toBeLessThan(body.indexOf("LocalNotifications.schedule"));
+    // Gated on permission, so it cannot fire into a void.
+    expect(body).toContain("hasNotificationPermission");
+
+    const store = read("src/context/circadia-store.tsx");
+    expect(store).toContain("confirmNotificationsOnce");
+    // It names when the first real one lands rather than saying "test".
+    expect(device).toContain("First one lands at");
+  });
+
+  it("offers a way to see one arrive without waiting until bedtime", () => {
+    const device = read("src/lib/notify-device.ts");
+    expect(device).toContain("sendTestNotification");
+    // Outside the derived id range, so a test can never collide with a real ping.
+    expect(device).toContain("TEST_PING_ID");
+    expect(read("src/components/you-view.tsx")).toContain("sendTestNotification");
   });
 
   it("re-plans whenever a target, the toggle or the diary moves", () => {

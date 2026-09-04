@@ -1,19 +1,69 @@
-export const PASSWORD_MIN = 8;
+/**
+ * Raised from 8 in 0.12.0, when the vault stopped being a file only someone
+ * holding this Mac could attack. Only checked when minting a lock — signup and
+ * change-password — never on login, so an existing shorter password keeps working.
+ */
+export const PASSWORD_MIN = 10;
 export const PASSWORD_MAX = 128;
+
+/** Legacy work factor. Still read, never written. */
 export const PBKDF2_ITERATIONS = 100_000;
+
+/**
+ * Work factor for wrapping keys, at the OWASP figure for PBKDF2-SHA256.
+ *
+ * 100k was sized for an attacker who must first steal the machine. Once ciphertext
+ * can sit anywhere but this Mac, one breach hands an attacker every vault at once
+ * to grind offline in parallel, and the old floor does not hold up against that.
+ *
+ * Argon2id would be better still, but it needs a WASM build behaving identically in
+ * Node, Electron and a WKWebView under a custom scheme. PBKDF2 is native in all
+ * three, so this buys most of the margin with none of that risk.
+ */
+export const PBKDF2_ITERATIONS_V3 = 600_000;
+
 export const CRYPTO_UNAVAILABLE = "WEB_CRYPTO_UNAVAILABLE";
+
+/** HKDF labels. Two keys from one password so the server never sees the other. */
+const WRAP_INFO = "circadia/wrap/v1";
+const AUTH_INFO = "circadia/auth/v1";
+
+/** The wrapped data key. Present means this lock has moved to the v3 scheme. */
+export type KeyWrap = {
+  /** Salt for the wrapping key. Separate from the legacy verifier salt. */
+  salt: string;
+  iterations: number;
+  iv: string;
+  /** AES-GCM(wrapKey, dataKey). The tag is what proves the password. */
+  ct: string;
+};
 
 export type PasswordLock = {
   algo: "pbkdf2-sha256";
   iterations: number;
   salt: string;
-  hash: string;
+  /** Legacy verifier. Absent on locks minted at v3. */
+  hash?: string;
   /**
    * 2 = `hash` is SHA-256(master). 1 or omitted = `hash` is the master itself (0.6.19).
-   * The lock file never stores the AES key — the verifier cannot decrypt the diary.
-   * Stay-signed-in holds the master in the macOS Keychain until Log out.
+   * 3 = there is no legacy verifier; `wrap` is the only way in.
+   *
+   * A lock MIGRATED to v3 deliberately stays at kdf 2 and keeps its `hash`, because
+   * a Mac and a phone fold into each other and one of them updates later than the
+   * other. Old code reads the legacy fields and unlocks exactly as before; new code
+   * sees `wrap` and prefers it. Bumping the marker instead would send old code down
+   * its 0.6.19 branch and make the correct password look wrong.
    */
-  kdf?: 1 | 2;
+  kdf?: 1 | 2 | 3;
+  /**
+   * The data key, encrypted under a key derived from the password.
+   *
+   * Before this, the key WAS the password stretched — so changing a password meant
+   * re-encrypting the whole diary, and a second password (a recovery code) could
+   * never open the same data. Wrapping separates the two: the data key is now just
+   * a key, and a password is only a way to reach it.
+   */
+  wrap?: KeyWrap;
 };
 
 export type VaultEnvelope = {
@@ -106,25 +156,137 @@ async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(digest);
 }
 
+/** HKDF-SHA256. Splits one stretched password into keys that cannot derive each other. */
+async function hkdf(ikm: Uint8Array, info: string): Promise<Uint8Array> {
+  if (!hasWebCrypto()) throw cryptoUnavailable();
+  const key = await crypto.subtle.importKey("raw", asBufferSource(ikm), "HKDF", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "HKDF",
+      hash: "SHA-256",
+      salt: new Uint8Array(0),
+      info: new TextEncoder().encode(info),
+    },
+    key,
+    256,
+  );
+  return new Uint8Array(bits);
+}
+
+/** Stretch the password, then split it into the wrapping key and the auth key. */
+async function stretch(
+  password: string,
+  salt: Uint8Array,
+  iterations: number,
+): Promise<{ wrapKey: Uint8Array; authKey: Uint8Array }> {
+  const kek = await derive(password, salt, iterations);
+  const [wrapKey, authKey] = await Promise.all([hkdf(kek, WRAP_INFO), hkdf(kek, AUTH_INFO)]);
+  kek.fill(0);
+  return { wrapKey, authKey };
+}
+
+async function wrapDataKey(
+  password: string,
+  dataKey: Uint8Array,
+  iterations = PBKDF2_ITERATIONS_V3,
+): Promise<KeyWrap> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const { wrapKey, authKey } = await stretch(password, salt, iterations);
+  authKey.fill(0);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await crypto.subtle.importKey("raw", asBufferSource(wrapKey), { name: "AES-GCM" }, false, ["encrypt"]);
+  wrapKey.fill(0);
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: asBufferSource(iv) }, key, asBufferSource(dataKey));
+  return {
+    salt: bytesToBase64(salt),
+    iterations,
+    iv: bytesToBase64(iv),
+    ct: bytesToBase64(new Uint8Array(ct)),
+  };
+}
+
+async function unwrapDataKey(password: string, wrap: KeyWrap): Promise<Uint8Array | null> {
+  const iterations = Number(wrap.iterations);
+  if (!Number.isFinite(iterations) || iterations < 10_000) return null;
+  if (!wrap.salt || !wrap.iv || !wrap.ct) return null;
+  const { wrapKey, authKey } = await stretch(password, bytesFromBase64(wrap.salt), iterations);
+  authKey.fill(0);
+  const key = await crypto.subtle.importKey("raw", asBufferSource(wrapKey), { name: "AES-GCM" }, false, ["decrypt"]);
+  wrapKey.fill(0);
+  try {
+    const pt = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: asBufferSource(bytesFromBase64(wrap.iv)) },
+      key,
+      asBufferSource(bytesFromBase64(wrap.ct)),
+    );
+    // The GCM tag is the verifier now. A wrong password fails to authenticate, so
+    // there is nothing on disk that confirms a password without also opening it.
+    return new Uint8Array(pt);
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Stretch the password into a 256-bit master, then store SHA-256(master) as the verifier.
- * After unlock, the master is in RAM. Stay-signed-in also writes it to this origin's
- * WebKit data — not to Application Support vault.json.
+ * Mint a lock for a brand-new account.
+ *
+ * The data key is random, not derived, so no password — including this first one —
+ * can ever reproduce it. Change the password later and the old one is genuinely
+ * dead rather than still able to re-derive the key.
+ *
+ * These locks carry no legacy verifier, so a client older than 0.12.0 cannot open
+ * an account created here. That is the one direction of the compatibility window
+ * left open, and it only affects accounts made after the update.
  */
 export async function newPasswordLock(password: string): Promise<{ lock: PasswordLock; master: Uint8Array }> {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const master = await derive(password, salt, PBKDF2_ITERATIONS);
-  const verifier = await sha256(master);
+  const master = crypto.getRandomValues(new Uint8Array(32));
+  const wrap = await wrapDataKey(password, master);
   return {
     lock: {
       algo: "pbkdf2-sha256",
-      iterations: PBKDF2_ITERATIONS,
-      salt: bytesToBase64(salt),
-      hash: bytesToBase64(verifier),
-      kdf: 2,
+      iterations: PBKDF2_ITERATIONS_V3,
+      salt: wrap.salt,
+      kdf: 3,
+      wrap,
     },
     master,
   };
+}
+
+/**
+ * Re-wrap an existing data key under a new password.
+ *
+ * This is what a password change is now: about thirty bytes re-encrypted, instead
+ * of every night in the diary. It drops the legacy fields on purpose — changing a
+ * password is exactly the moment the old one must stop opening the vault, and a
+ * kept verifier would leave it working forever.
+ */
+export async function rewrapLock(password: string, dataKey: Uint8Array): Promise<PasswordLock> {
+  const wrap = await wrapDataKey(password, dataKey);
+  return {
+    algo: "pbkdf2-sha256",
+    iterations: PBKDF2_ITERATIONS_V3,
+    salt: wrap.salt,
+    kdf: 3,
+    wrap,
+  };
+}
+
+/**
+ * The half of the stretched password a server may hold, once one exists.
+ *
+ * Unused today, and deliberately shipped early: it has to exist before the
+ * migration or every vault would have to be migrated twice.
+ */
+export async function authKeyFor(password: string, lock: PasswordLock): Promise<Uint8Array | null> {
+  if (!lock.wrap) return null;
+  const { wrapKey, authKey } = await stretch(
+    password,
+    bytesFromBase64(lock.wrap.salt),
+    Number(lock.wrap.iterations),
+  );
+  wrapKey.fill(0);
+  return authKey;
 }
 
 export async function hashPassword(password: string): Promise<PasswordLock> {
@@ -134,35 +296,56 @@ export async function hashPassword(password: string): Promise<PasswordLock> {
 
 export type UnlockedMaster = {
   master: Uint8Array;
-  /** Present when a 0.6.19 lock was rewritten so the stored hash is no longer the AES key. */
+  /** Set when the lock on disk should be replaced with the one returned here. */
   migratedLock: PasswordLock | null;
 };
 
+/**
+ * Open a lock, whatever generation it is.
+ *
+ * v3 first, because a migrated lock still carries the legacy fields and the whole
+ * point is to stop using them. The fallback path adopts the derived key AS the data
+ * key and wraps it — the existing envelopes are never touched, so migrating costs
+ * one extra derivation on one login and nothing else.
+ */
 export async function unlockMaster(password: string, lock: PasswordLock): Promise<UnlockedMaster | null> {
   if (lock.algo !== "pbkdf2-sha256") return null;
+
+  if (lock.wrap) {
+    const master = await unwrapDataKey(password, lock.wrap);
+    return master ? { master, migratedLock: null } : null;
+  }
+  // A v3 lock with no wrap is unopenable rather than weakly openable.
+  if (lock.kdf === 3) return null;
+
   if (!lock.salt || !lock.hash) return null;
   const iterations = Number(lock.iterations);
   if (!Number.isFinite(iterations) || iterations < 10_000) return null;
   const salt = bytesFromBase64(lock.salt);
   const expected = bytesFromBase64(lock.hash);
   const master = await derive(password, salt, iterations);
-  if (lock.kdf === 2) {
-    const verifier = await sha256(master);
-    if (!timingSafeEqual(verifier, expected)) return null;
+
+  const verifier = await sha256(master);
+  const ok = lock.kdf === 2 ? timingSafeEqual(verifier, expected) : timingSafeEqual(master, expected);
+  if (!ok) return null;
+
+  // Keep every legacy field exactly as it was. Old code on the other device reads
+  // those and unlocks; new code takes the wrap. Dropping them is a later release,
+  // once both surfaces are known to be updated.
+  const wrap = await wrapDataKey(password, master);
+
+  // Prove the new wrap opens, in memory, before anything is written. A migration
+  // that produces an unopenable lock would take the diary with it, and there is no
+  // reset to recover from — so the wrap has to earn its place before it replaces
+  // anything. On any doubt, unlock still succeeds and migration simply waits.
+  const proof = await unwrapDataKey(password, wrap);
+  if (!proof || !timingSafeEqual(proof, master)) {
+    proof?.fill(0);
     return { master, migratedLock: null };
   }
-  if (!timingSafeEqual(master, expected)) return null;
-  const verifier = await sha256(master);
-  return {
-    master,
-    migratedLock: {
-      algo: "pbkdf2-sha256",
-      iterations,
-      salt: lock.salt,
-      hash: bytesToBase64(verifier),
-      kdf: 2,
-    },
-  };
+  proof.fill(0);
+
+  return { master, migratedLock: { ...lock, hash: bytesToBase64(verifier), kdf: 2, wrap } };
 }
 
 export async function verifyPassword(password: string, lock: PasswordLock): Promise<boolean> {

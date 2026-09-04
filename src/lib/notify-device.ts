@@ -56,11 +56,27 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 export async function hasNotificationPermission(): Promise<boolean> {
-  if (!canNotify()) return false;
+  return (await notificationPermission()) === "granted";
+}
+
+/**
+ * What the operating system currently says.
+ *
+ * "prompt" is the state that matters: it means iOS has never asked, so asking is
+ * still possible. "denied" cannot be undone from inside the app — only in Settings —
+ * so the UI has to say that rather than offer a switch that quietly does nothing.
+ */
+export type NotificationPermission = "granted" | "denied" | "prompt" | "unavailable";
+
+export async function notificationPermission(): Promise<NotificationPermission> {
+  if (!canNotify()) return "unavailable";
   try {
-    return (await LocalNotifications.checkPermissions()).display === "granted";
+    const { display } = await LocalNotifications.checkPermissions();
+    if (display === "granted") return "granted";
+    if (display === "denied") return "denied";
+    return "prompt";
   } catch {
-    return false;
+    return "unavailable";
   }
 }
 
@@ -100,6 +116,99 @@ export async function syncNotifications(input: PlanInput, now = new Date()): Pro
     return plan.length;
   } catch {
     return 0;
+  }
+}
+
+/**
+ * Fire one ping a few seconds from now, so a person can see the thing work.
+ *
+ * Every real notification here is hours away by design, which makes "is this even
+ * on?" unanswerable without waiting until bedtime. Uses an id outside the derived
+ * range so it can never collide with a scheduled ping or survive as a stale one.
+ */
+export const TEST_PING_ID = 999_999_999;
+
+/** Set once, on this device, the first time reminders are confirmed working. */
+const CONFIRMED_KEY = "circadia:notify-confirmed";
+
+/**
+ * One ping, once ever, the first time this device has working reminders.
+ *
+ * Every real reminder is hours away, so without this the first thing a person learns
+ * about the feature is silence — indistinguishable from it being broken, which it
+ * genuinely was until 0.12.0. This fires seconds after the app opens with permission
+ * granted, while the phone is still in their hand, and then never again: the flag is
+ * set before the send so a failure cannot turn it into a repeating greeting.
+ *
+ * Deliberately not on a schedule and deliberately not repeated per version — it is a
+ * confirmation, not an announcement, and an app that greets you at every update is
+ * the kind of thing this whole module is written to avoid being.
+ */
+export async function confirmNotificationsOnce(screensDownAt: string): Promise<boolean> {
+  if (!canNotify()) return false;
+  try {
+    if (window.localStorage.getItem(CONFIRMED_KEY)) return false;
+  } catch {
+    // No storage means no way to remember having sent it, and a greeting that could
+    // repeat on every launch is worse than one that never arrives.
+    return false;
+  }
+  if (!(await hasNotificationPermission())) return false;
+
+  try {
+    window.localStorage.setItem(CONFIRMED_KEY, new Date().toISOString());
+  } catch {
+    return false;
+  }
+
+  try {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: TEST_PING_ID,
+          title: "Reminders are on",
+          body: `First one lands at ${screensDownAt}, an hour before your asleep-by. Nothing will arrive between then and the morning.`,
+          schedule: { at: new Date(Date.now() + 4000), allowWhileIdle: true },
+        },
+      ],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Testing seam: lets someone re-confirm from You after clearing the flag. */
+export function resetNotificationConfirmation(): void {
+  try {
+    window.localStorage.removeItem(CONFIRMED_KEY);
+  } catch {
+    /* Nothing to clear. */
+  }
+}
+
+export async function sendTestNotification(seconds = 5): Promise<boolean> {
+  if (!canNotify()) return false;
+  if (!(await hasNotificationPermission())) return false;
+  try {
+    await LocalNotifications.cancel({ notifications: [{ id: TEST_PING_ID }] });
+  } catch {
+    /* Nothing pending under that id. */
+  }
+  try {
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: TEST_PING_ID,
+          title: "Circadia",
+          body: `Reminders are on. This is the only one that will ever arrive on demand.`,
+          schedule: { at: new Date(Date.now() + seconds * 1000), allowWhileIdle: true },
+        },
+      ],
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 

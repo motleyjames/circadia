@@ -12,6 +12,7 @@ import {
   holdMaster,
   isVaultEnvelope,
   newPasswordLock,
+  rewrapLock,
   passwordIssue,
   unlockMaster,
   type PasswordLock,
@@ -1141,13 +1142,25 @@ export async function changePassword(
   if (!live) return { ok: false, error: AUTH_ERRORS.missing };
   const lock = readLocks()[login];
   try {
+    // Re-wrap the SAME data key under the new password rather than minting a new
+    // one. The diary is not re-keyed, so a password change is thirty bytes of work
+    // instead of every night on file, and it cannot half-fail partway through a
+    // rewrite. rewrapLock drops the legacy verifier, which is what actually retires
+    // the old password — leaving it in place would keep it opening the vault.
+    let master: Uint8Array;
+    let nextLock: PasswordLock;
     if (lock) {
       const unlocked = await unlockMaster(currentPassword, lock);
       if (!unlocked) return { ok: false, error: "Current password is wrong." };
+      master = unlocked.master;
+      nextLock = await rewrapLock(nextPassword, master);
+    } else {
+      const minted = await newPasswordLock(nextPassword);
+      master = minted.master;
+      nextLock = minted.lock;
     }
-    const minted = await newPasswordLock(nextPassword);
-    holdMaster(login, minted.master);
-    setLock(login, minted.lock);
+    holdMaster(login, master);
+    setLock(login, nextLock);
     await persistUnlockNow(login);
     const gen = bumpGen(login);
     await persistEncrypted(login, cloneState(live), gen);
