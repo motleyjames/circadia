@@ -331,6 +331,32 @@ describe("the wiring that made this silent before", () => {
     expect(store).toContain("snapshot().reports.length > 0");
   });
 
+  it("does not hide the prompt behind a flag that defaults to off", () => {
+    // notificationsEnabled defaults to false, so on every profile created before
+    // reminders existed it reads like a decision and means "never asked". Gating the
+    // OS prompt on it meant the app never asked and never appeared in iOS Settings
+    // at all — the person had no way in. The offer is gated on the OS state instead.
+    const store = read("src/context/circadia-store.tsx");
+    const effect = store.slice(store.indexOf("const askedThisSession"));
+    const start = effect.indexOf('state === "prompt"');
+    const call = effect.indexOf("await requestNotificationPermission()");
+    expect(start).toBeGreaterThan(-1);
+    expect(call).toBeGreaterThan(start);
+    // The condition standing between the two must not consult the stored flag.
+    const guard = effect.slice(start, call);
+    expect(guard).not.toContain("notificationsEnabled");
+    expect(guard).toContain("reminderOfferMade()");
+    expect(effect).toContain("markReminderOffered()");
+  });
+
+  it("offers reminders once per device, never repeatedly", () => {
+    const device = read("src/lib/notify-device.ts");
+    expect(device).toContain("circadia:notify-offered");
+    // No storage to remember an offer means do not offer, rather than offer forever.
+    const fn = device.slice(device.indexOf("export function reminderOfferMade"));
+    expect(fn.slice(0, fn.indexOf("markReminderOffered"))).toContain("return true;");
+  });
+
   it("can still ask someone who already had a diary before reminders existed", () => {
     // The regression: the prompt fired only while filing the FIRST morning ever, so
     // every existing user was permanently unaskable — toggle on, permission never

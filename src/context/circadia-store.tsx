@@ -16,7 +16,9 @@ import { sampleWeekState } from "@/lib/demo";
 import { installFaultReporter } from "@/lib/fault-reporter";
 import {
   confirmNotificationsOnce,
+  markReminderOffered,
   notificationPermission,
+  reminderOfferMade,
   requestNotificationPermission,
   syncNotifications,
 } from "@/lib/notify-device";
@@ -354,24 +356,39 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     const profile = snapshot().profile;
     if (!profile) return;
     void (async () => {
-      if (profile.notificationsEnabled) {
-        const state = await notificationPermission();
+      const state = await notificationPermission();
 
-        // "Ask late" still holds: not at install, only once they have used the thing
-        // the reminders are for. But late must not mean never.
-        if (state === "prompt" && snapshot().reports.length > 0 && !askedThisSession.current) {
-          askedThisSession.current = true;
-          await requestNotificationPermission();
-        }
-
-        // Never leave a switch claiming to be on while the OS is dropping every
-        // ping. Turning it back on in You is what routes them to Settings.
-        if ((await notificationPermission()) === "denied") {
+      // Offer once per device, when the OS says it has never asked and there is a
+      // diary worth reminding someone about. Deliberately NOT gated on
+      // notificationsEnabled: that flag defaults to false, so on every profile made
+      // before reminders existed it reads like a decision and means "never asked".
+      // Gating on it is why this app never appeared in iOS Settings at all.
+      //
+      // "Ask late" still holds — not at install, only once they have used the thing
+      // the reminders are for. But late must not mean never.
+      if (
+        state === "prompt" &&
+        snapshot().reports.length > 0 &&
+        !askedThisSession.current &&
+        !reminderOfferMade()
+      ) {
+        askedThisSession.current = true;
+        markReminderOffered();
+        const granted = await requestNotificationPermission();
+        if (granted) {
           patch((prev) =>
-            prev.profile ? { ...prev, profile: { ...prev.profile, notificationsEnabled: false } } : prev,
+            prev.profile ? { ...prev, profile: { ...prev.profile, notificationsEnabled: true } } : prev,
           );
-          return;
         }
+      }
+
+      // Never leave a switch claiming to be on while the OS is dropping every ping.
+      // Turning it back on in You is what routes them to Settings.
+      if (snapshot().profile?.notificationsEnabled && (await notificationPermission()) === "denied") {
+        patch((prev) =>
+          prev.profile ? { ...prev, profile: { ...prev.profile, notificationsEnabled: false } } : prev,
+        );
+        return;
       }
       const live = snapshot().profile ?? profile;
       await syncNotifications({ profile: live, reports: snapshot().reports });
