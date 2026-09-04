@@ -806,7 +806,7 @@ function NotificationSetting({
     <>
       <SettingRow
         label="Reminders"
-        hint="Screens down an hour before asleep-by, a nudge after waking, and the week when it is in."
+        hint="A heads-up an hour before wind-down, the wind-down cue itself, a nudge at wake time, and the week when it is in."
       >
         <Switch
           checked={enabled && !blocked}
