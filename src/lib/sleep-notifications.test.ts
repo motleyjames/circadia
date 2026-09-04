@@ -4,6 +4,7 @@ import {
   HORIZON_DAYS,
   MORNING_DELAY_MINUTES,
   WEEKLY_MIN_NIGHTS,
+  WIND_DOWN_WARNING_MINUTES,
   pingId,
   planNotifications,
   weeklyClock,
@@ -62,20 +63,21 @@ const WED_MORNING = new Date(2026, 8, 2, 9, 0, 0);
 
 describe("the quiet window", () => {
   it("covers the whole night from screens-down to the morning ping", () => {
-    const inside = ["22:01", "23:00", "00:30", "03:00", "06:59", "07:24"];
+    const inside = ["22:01", "23:00", "00:30", "03:00", "05:00", "06:59"];
     for (const clock of inside) {
       expect(withinQuietHours(clock, "23:00", "07:00"), clock).toBe(true);
     }
   });
 
   it("leaves the evening and the day open", () => {
-    for (const clock of ["07:26", "09:00", "15:00", "20:00", "21:59"]) {
+    // 07:00 is the morning ping itself — the window ends exactly there.
+    for (const clock of ["07:00", "07:26", "09:00", "15:00", "21:00", "21:59"]) {
       expect(withinQuietHours(clock, "23:00", "07:00"), clock).toBe(false);
     }
   });
 
   it("holds for a night shift, where the window does not cross midnight", () => {
-    // Asleep at 9am, up at 5pm. Screens down 8am, morning ping 5:25pm.
+    // Asleep at 9am, up at 5pm. Screens down 8am, morning ping 5pm.
     expect(withinQuietHours("10:00", "09:00", "17:00")).toBe(true);
     expect(withinQuietHours("23:00", "09:00", "17:00")).toBe(false);
     expect(withinQuietHours("02:00", "09:00", "17:00")).toBe(false);
@@ -180,12 +182,16 @@ describe("planning", () => {
     expect(new Set(once.map((p) => p.id)).size).toBe(once.length);
   });
 
-  it("gives different days different ids", () => {
-    const a = pingId("screens-down", new Date(2026, 8, 2));
-    const b = pingId("screens-down", new Date(2026, 8, 3));
-    const c = pingId("morning", new Date(2026, 8, 2));
-    expect(new Set([a, b, c]).size).toBe(3);
-    for (const id of [a, b, c]) expect(id).toBeLessThan(2 ** 31);
+  it("gives every kind and every day its own id", () => {
+    const ids = [
+      pingId("screens-down", new Date(2026, 8, 2)),
+      pingId("screens-down", new Date(2026, 8, 3)),
+      pingId("morning", new Date(2026, 8, 2)),
+      pingId("wind-down", new Date(2026, 8, 2)),
+      pingId("weekly", new Date(2026, 8, 2)),
+    ];
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const id of ids) expect(id).toBeLessThan(2 ** 31);
   });
 
   it("returns pings in the order they will fire", () => {
@@ -247,7 +253,7 @@ describe("the weekly read", () => {
 
   it("lands with an evening still left to read it in", () => {
     const clock = weeklyClock(profile());
-    expect(clock).toBe("20:00");
+    expect(clock).toBe("19:00");
     expect(withinQuietHours(clock, "23:00", "07:00")).toBe(false);
   });
 });
@@ -424,5 +430,85 @@ describe("the wiring that made this silent before", () => {
     for (const dep of ["notificationsEnabled", "targetSleep", "targetWake", "scheduledDays"]) {
       expect(store, dep).toContain(dep);
     }
+  });
+});
+
+describe("the evening pair", () => {
+  it("warns an hour before the cue, then gives the cue", () => {
+    const pings = planNotifications({ profile: profile(), reports: [] }, WED_MORNING);
+    const warn = pings.find((p) => p.kind === "wind-down")!;
+    const cue = pings.find((p) => p.kind === "screens-down")!;
+    expect(warn.at.getHours()).toBe(21);
+    expect(cue.at.getHours()).toBe(22);
+    expect(cue.at.getTime() - warn.at.getTime()).toBe(WIND_DOWN_WARNING_MINUTES * 60_000);
+  });
+
+  it("says what is coming and when, so the warning stands alone", () => {
+    const warn = planNotifications({ profile: profile(), reports: [] }, WED_MORNING).find(
+      (p) => p.kind === "wind-down",
+    )!;
+    expect(warn.title).toMatch(/hour/i);
+    // Names the actual clock time, not "soon".
+    expect(warn.body).toContain("10 pm");
+    expect(warn.body).not.toMatch(/tap|open the app/i);
+  });
+
+  it("keeps both evening pings out of the quiet window", () => {
+    for (const target of [
+      { targetSleep: "23:00", targetWake: "07:00" },
+      { targetSleep: "01:30", targetWake: "09:30" },
+      { targetSleep: "21:00", targetWake: "05:00" },
+      { targetSleep: "09:00", targetWake: "17:00" },
+    ]) {
+      const pings = planNotifications(
+        { profile: profile(target), reports: sevenNights() },
+        WED_MORNING,
+      ).filter((p) => p.kind === "wind-down" || p.kind === "screens-down");
+      expect(pings.length).toBeGreaterThan(0);
+      for (const ping of pings) {
+        const clock = `${String(ping.at.getHours()).padStart(2, "0")}:${String(ping.at.getMinutes()).padStart(2, "0")}`;
+        expect(withinQuietHours(clock, target.targetSleep, target.targetWake), `${ping.kind} ${clock}`).toBe(false);
+      }
+    }
+  });
+
+  it("lands the morning ping at wake time, not after it", () => {
+    const morning = planNotifications(
+      { profile: profile(), reports: [] },
+      new Date(2026, 8, 2, 5, 0, 0),
+    ).find((p) => p.kind === "morning")!;
+    expect(morning.at.getHours()).toBe(7);
+    expect(morning.at.getMinutes()).toBe(0);
+  });
+
+  it("does not stack the weekly read into the same hour as the warning", () => {
+    const pings = planNotifications({ profile: profile(), reports: sevenNights() }, WED_MORNING);
+    const weekly = pings.find((p) => p.kind === "weekly")!;
+    const sameEvening = pings.filter(
+      (p) => p.kind === "wind-down" && p.at.toDateString() === weekly.at.toDateString(),
+    );
+    for (const other of sameEvening) {
+      expect(Math.abs(other.at.getTime() - weekly.at.getTime())).toBeGreaterThanOrEqual(60 * 60_000);
+    }
+  });
+
+  it("still fits well inside the platform's pending cap with four kinds", () => {
+    const pings = planNotifications({ profile: profile(), reports: sevenNights() }, WED_MORNING);
+    expect(pings.length).toBeLessThanOrEqual(64);
+  });
+
+  it("keeps reminding for the whole horizon after the weekly read", () => {
+    // The weekly used to `break` the day loop, so every day after it was dropped —
+    // the phone held reminders up to the weekly and then nothing at all, and anyone
+    // who did not reopen the app stopped being reminded partway through the week.
+    const pings = planNotifications({ profile: profile(), reports: sevenNights() }, WED_MORNING);
+    const weekly = pings.find((p) => p.kind === "weekly")!;
+    const later = pings.filter(
+      (p) => p.kind === "screens-down" && p.at.getTime() > weekly.at.getTime(),
+    );
+    expect(later.length).toBeGreaterThanOrEqual(4);
+    const days = new Set(pings.map((p) => p.at.toDateString()));
+    expect(days.size).toBeGreaterThanOrEqual(6);
+    expect(pings.filter((p) => p.kind === "weekly")).toHaveLength(1);
   });
 });

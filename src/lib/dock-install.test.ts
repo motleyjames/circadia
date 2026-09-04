@@ -179,7 +179,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("File this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("Notes for this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).not.toContain("The interview is closed");
-    expect(APP_VERSION).toBe("0.12.1");
+    expect(APP_VERSION).toBe("0.13.0");
   });
 
   it("does not run diary views while compiling the operator", () => {
