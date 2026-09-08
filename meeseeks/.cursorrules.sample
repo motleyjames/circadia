@@ -1,0 +1,52 @@
+# Meeseeks Project Rules
+
+## TOP MODELS ONLY - NO EXCEPTIONS
+
+When referencing LLM models in this codebase, use ONLY the top-tier models:
+
+| Provider | Model | NO ALTERNATIVES |
+|----------|-------|-----------------|
+| **OpenAI** | `gpt-5.3-codex` | Never use gpt-4o, gpt-5.2-chat-latest, o4-mini |
+| **Anthropic** | `claude-opus-4-6` | Never use claude-sonnet, claude-haiku |
+| **Google Text** | `gemini-3.1-pro-preview` | Never use gemini-2.5-flash, gemini-2.5-pro |
+| **Google Image** | `gemini-3-pro-image-preview` | Never use gemini-2.5-flash-image |
+
+### Why This Rule Exists
+
+- Quality over cost - we pay for the best
+- Consistency across the codebase
+- No "fast" or "cheap" model options
+- The config file (`box/00_llm_router_config.json`) defines all models, but code defaults MUST use top-tier only
+
+### Violations
+
+If you see ANY of these in code defaults, it's a bug:
+- `gemini-2.5-flash`
+- `claude-sonnet`
+- `claude-haiku`
+- `gpt-4o`
+- `o4-mini`
+- `gemini-2.5-flash-image`
+
+Fix them immediately by replacing with the top-tier equivalent.
+
+---
+
+## LOG LOCATION (MANDATORY) — NO EXCEPTIONS
+
+All run artifacts/logs for this repo must live under:
+
+- `meeseeks/logs/**`
+
+Hard rules:
+
+- **Never create or write to** a root-level `logs/` directory.
+- If a root `logs/` ever appears, **immediately move its contents** into `meeseeks/logs/` and remove the root `logs/`.
+- When the runbook references `logs/agent_runs/<RUN_ID>/...`, interpret it as:
+  - `meeseeks/logs/agent_runs/<RUN_ID>/...`
+
+Canonical paths:
+
+- **agent runs**: `meeseeks/logs/agent_runs/<RUN_ID>/...`
+- **prompt lists**: `meeseeks/logs/prompt_lists/...`
+- **sessions/traces**: `meeseeks/logs/sessions/...` and `meeseeks/logs/agent_runs/<RUN_ID>/traces/...`

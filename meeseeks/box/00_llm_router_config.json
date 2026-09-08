@@ -1,0 +1,1150 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-03-02",
+  
+  "providers": {
+    "openai": {
+      "base_url": "https://api.openai.com/v1",
+      "auth_header": "Authorization",
+      "auth_prefix": "Bearer "
+    },
+    "anthropic": {
+      "base_url": "https://api.anthropic.com/v1",
+      "auth_header": "x-api-key",
+      "auth_prefix": ""
+    },
+    "google": {
+      "base_url": "https://generativelanguage.googleapis.com/v1beta",
+      "auth_header": "x-goog-api-key",
+      "auth_prefix": ""
+    }
+  },
+
+  "models": {
+    "gpt-5.2": {
+      "provider": "openai",
+      "api_string": "gpt-5.2",
+      "display_name": "GPT-5.2 (Thinking)",
+      "type": "text",
+      "tier": "frontier",
+      "capabilities": {
+        "reasoning": 0.98,
+        "coding": 0.95,
+        "creative": 0.92,
+        "math": 0.96,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": true,
+        "web_search": false
+      },
+      "context_window": 256000,
+      "max_output_tokens": 32000,
+      "cost": {
+        "input_per_1m": 15.00,
+        "output_per_1m": 60.00,
+        "cached_input_per_1m": 3.75
+      },
+      "latency_profile": "slow",
+      "judge_eligible": true,
+      "judge_tier": 1,
+      "can_judge": ["*"],
+      "routing_hints": {
+        "use_for": [
+          "complex_reasoning",
+          "multi_step_planning",
+          "hard_math",
+          "architecture_decisions",
+          "final_review"
+        ],
+        "avoid_for": [
+          "simple_queries",
+          "high_volume_tasks",
+          "latency_sensitive"
+        ]
+      }
+    },
+
+    "gpt-5.2-chat-latest": {
+      "provider": "openai",
+      "api_string": "gpt-5.2-chat-latest",
+      "display_name": "GPT-5.2 (Instant/Chat)",
+      "type": "text",
+      "tier": "frontier",
+      "capabilities": {
+        "reasoning": 0.92,
+        "coding": 0.93,
+        "creative": 0.94,
+        "math": 0.88,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": false,
+        "agentic": true,
+        "web_search": false
+      },
+      "context_window": 128000,
+      "max_output_tokens": 16000,
+      "cost": {
+        "input_per_1m": 5.00,
+        "output_per_1m": 15.00,
+        "cached_input_per_1m": 1.25
+      },
+      "latency_profile": "fast",
+      "judge_eligible": true,
+      "judge_tier": 2,
+      "can_judge": ["tier_3", "tier_4", "worker"],
+      "routing_hints": {
+        "use_for": [
+          "conversational",
+          "quick_coding",
+          "creative_writing",
+          "general_assistance"
+        ],
+        "avoid_for": [
+          "deep_reasoning",
+          "complex_math"
+        ]
+      }
+    },
+
+    "gpt-5.2-pro": {
+      "provider": "openai",
+      "api_string": "gpt-5.2-pro",
+      "display_name": "GPT-5.2 Pro",
+      "type": "text",
+      "tier": "frontier_max",
+      "capabilities": {
+        "reasoning": 0.99,
+        "coding": 0.97,
+        "creative": 0.94,
+        "math": 0.98,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": true,
+        "web_search": false
+      },
+      "context_window": 512000,
+      "max_output_tokens": 64000,
+      "cost": {
+        "input_per_1m": 30.00,
+        "output_per_1m": 120.00,
+        "cached_input_per_1m": 7.50
+      },
+      "latency_profile": "very_slow",
+      "judge_eligible": true,
+      "judge_tier": 0,
+      "can_judge": ["*"],
+      "routing_hints": {
+        "use_for": [
+          "supreme_arbiter",
+          "final_council_vote",
+          "impossible_problems",
+          "critical_decisions"
+        ],
+        "avoid_for": [
+          "routine_tasks",
+          "cost_sensitive"
+        ]
+      }
+    },
+
+    "gpt-5.3-codex": {
+      "provider": "openai",
+      "api_string": "gpt-5.3-codex",
+      "display_name": "GPT-5.3 Codex",
+      "type": "text",
+      "tier": "frontier",
+      "capabilities": {
+        "reasoning": 0.90,
+        "coding": 0.99,
+        "creative": 0.70,
+        "math": 0.92,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": true,
+        "code_execution": true,
+        "file_operations": true,
+        "web_search": false
+      },
+      "context_window": 256000,
+      "max_output_tokens": 128000,
+      "cost": {
+        "input_per_1m": 20.00,
+        "output_per_1m": 80.00,
+        "cached_input_per_1m": 5.00
+      },
+      "latency_profile": "variable",
+      "judge_eligible": true,
+      "judge_tier": 1,
+      "can_judge": ["coding_tasks"],
+      "routing_hints": {
+        "use_for": [
+          "agentic_coding",
+          "large_refactors",
+          "codebase_analysis",
+          "multi_file_changes",
+          "debugging_complex"
+        ],
+        "avoid_for": [
+          "non_code_tasks",
+          "simple_snippets"
+        ]
+      }
+    },
+
+    "o3": {
+      "provider": "openai",
+      "api_string": "o3",
+      "display_name": "o3",
+      "type": "text",
+      "tier": "reasoning_specialist",
+      "capabilities": {
+        "reasoning": 0.995,
+        "coding": 0.94,
+        "creative": 0.75,
+        "math": 0.99,
+        "vision": false,
+        "function_calling": false,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": false,
+        "web_search": false
+      },
+      "context_window": 128000,
+      "max_output_tokens": 100000,
+      "cost": {
+        "input_per_1m": 10.00,
+        "output_per_1m": 40.00,
+        "reasoning_per_1m": 15.00
+      },
+      "latency_profile": "very_slow",
+      "judge_eligible": true,
+      "judge_tier": 0,
+      "can_judge": ["reasoning_tasks", "math_tasks", "logic_tasks"],
+      "routing_hints": {
+        "use_for": [
+          "mathematical_proofs",
+          "logic_puzzles",
+          "chain_of_thought",
+          "verification",
+          "formal_reasoning"
+        ],
+        "avoid_for": [
+          "creative_tasks",
+          "conversational",
+          "agentic_workflows"
+        ]
+      }
+    },
+
+    "o4-mini": {
+      "provider": "openai",
+      "api_string": "o4-mini",
+      "display_name": "o4-mini",
+      "type": "text",
+      "tier": "reasoning_fast",
+      "capabilities": {
+        "reasoning": 0.92,
+        "coding": 0.88,
+        "creative": 0.70,
+        "math": 0.94,
+        "vision": false,
+        "function_calling": false,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": false,
+        "web_search": false
+      },
+      "context_window": 128000,
+      "max_output_tokens": 65000,
+      "cost": {
+        "input_per_1m": 1.10,
+        "output_per_1m": 4.40,
+        "reasoning_per_1m": 1.65
+      },
+      "latency_profile": "medium",
+      "judge_eligible": true,
+      "judge_tier": 3,
+      "can_judge": ["simple_tasks", "worker_outputs"],
+      "routing_hints": {
+        "use_for": [
+          "cost_effective_reasoning",
+          "batch_verification",
+          "quick_math",
+          "structured_extraction"
+        ],
+        "avoid_for": [
+          "frontier_quality_needed",
+          "creative_tasks"
+        ]
+      }
+    },
+
+    "gpt-image-1": {
+      "provider": "openai",
+      "api_string": "gpt-image-1",
+      "display_name": "GPT Image 1.5",
+      "type": "image_generation",
+      "tier": "image_gen",
+      "capabilities": {
+        "text_rendering": 0.95,
+        "photorealism": 0.92,
+        "artistic_styles": 0.90,
+        "inpainting": true,
+        "outpainting": true,
+        "variations": true
+      },
+      "output_formats": ["png", "webp"],
+      "max_resolution": "4096x4096",
+      "cost": {
+        "standard_per_image": 0.04,
+        "hd_per_image": 0.08
+      },
+      "latency_profile": "medium",
+      "judge_eligible": false,
+      "routing_hints": {
+        "use_for": [
+          "image_generation",
+          "text_in_images",
+          "photorealistic"
+        ]
+      }
+    },
+
+    "claude-opus-4-6": {
+      "provider": "anthropic",
+      "api_string": "claude-opus-4-6",
+      "display_name": "Claude Opus 4.6",
+      "type": "text",
+      "tier": "frontier_max",
+      "capabilities": {
+        "reasoning": 0.99,
+        "coding": 0.97,
+        "creative": 0.98,
+        "math": 0.96,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": true,
+        "computer_use": true,
+        "web_search": true
+      },
+      "context_window": 1000000,
+      "max_output_tokens": 32000,
+      "cost": {
+        "input_per_1m": 15.00,
+        "output_per_1m": 75.00,
+        "cached_input_per_1m": 1.50
+      },
+      "latency_profile": "slow",
+      "judge_eligible": true,
+      "judge_tier": 0,
+      "can_judge": ["*"],
+      "routing_hints": {
+        "use_for": [
+          "nuanced_analysis",
+          "creative_excellence",
+          "ethical_reasoning",
+          "complex_writing",
+          "council_arbiter"
+        ],
+        "avoid_for": [
+          "simple_tasks",
+          "high_volume"
+        ]
+      }
+    },
+
+    "claude-sonnet-4-6": {
+      "provider": "anthropic",
+      "api_string": "claude-sonnet-4-6",
+      "display_name": "Claude Sonnet 4.6",
+      "type": "text",
+      "tier": "frontier",
+      "capabilities": {
+        "reasoning": 0.95,
+        "coding": 0.96,
+        "creative": 0.94,
+        "math": 0.92,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": true,
+        "computer_use": true,
+        "web_search": true
+      },
+      "context_window": 1000000,
+      "max_output_tokens": 16000,
+      "cost": {
+        "input_per_1m": 3.00,
+        "output_per_1m": 15.00,
+        "cached_input_per_1m": 0.30
+      },
+      "latency_profile": "medium",
+      "judge_eligible": true,
+      "judge_tier": 2,
+      "can_judge": ["tier_3", "tier_4", "worker"],
+      "routing_hints": {
+        "use_for": [
+          "balanced_tasks",
+          "coding",
+          "agentic_workflows",
+          "general_purpose"
+        ],
+        "avoid_for": [
+          "extreme_reasoning"
+        ]
+      }
+    },
+
+    "claude-haiku-4-5-20251001": {
+      "provider": "anthropic",
+      "api_string": "claude-haiku-4-5-20251001",
+      "display_name": "Claude Haiku 4.5",
+      "type": "text",
+      "tier": "fast",
+      "capabilities": {
+        "reasoning": 0.82,
+        "coding": 0.85,
+        "creative": 0.80,
+        "math": 0.78,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": false,
+        "agentic": true,
+        "computer_use": true,
+        "web_search": false
+      },
+      "context_window": 200000,
+      "max_output_tokens": 8000,
+      "cost": {
+        "input_per_1m": 0.80,
+        "output_per_1m": 4.00,
+        "cached_input_per_1m": 0.08
+      },
+      "latency_profile": "very_fast",
+      "judge_eligible": false,
+      "judge_tier": 4,
+      "can_judge": [],
+      "routing_hints": {
+        "use_for": [
+          "high_volume",
+          "simple_tasks",
+          "classification",
+          "extraction",
+          "worker_tasks"
+        ],
+        "avoid_for": [
+          "complex_reasoning",
+          "judging"
+        ]
+      }
+    },
+
+    "gemini-3.1-pro-preview": {
+      "provider": "google",
+      "api_string": "gemini-3.1-pro-preview",
+      "display_name": "Gemini 3.1 Pro (Preview)",
+      "type": "text",
+      "tier": "frontier",
+      "capabilities": {
+        "reasoning": 0.94,
+        "coding": 0.93,
+        "creative": 0.90,
+        "math": 0.92,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": true,
+        "grounding": true,
+        "web_search": true
+      },
+      "context_window": 2000000,
+      "max_output_tokens": 65000,
+      "cost": {
+        "input_per_1m": 2.50,
+        "output_per_1m": 10.00,
+        "cached_input_per_1m": 0.625
+      },
+      "latency_profile": "medium",
+      "judge_eligible": true,
+      "judge_tier": 1,
+      "can_judge": ["tier_2", "tier_3", "tier_4", "worker"],
+      "routing_hints": {
+        "use_for": [
+          "massive_context",
+          "long_document_analysis",
+          "multimodal",
+          "grounded_responses"
+        ],
+        "avoid_for": []
+      }
+    },
+
+    "gemini-2.5-flash": {
+      "provider": "google",
+      "api_string": "gemini-2.5-flash",
+      "display_name": "Gemini 2.5 Flash",
+      "type": "text",
+      "tier": "fast",
+      "capabilities": {
+        "reasoning": 0.88,
+        "coding": 0.90,
+        "creative": 0.85,
+        "math": 0.87,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": true,
+        "grounding": true,
+        "web_search": true
+      },
+      "context_window": 1000000,
+      "max_output_tokens": 65000,
+      "cost": {
+        "input_per_1m": 0.15,
+        "output_per_1m": 0.60,
+        "thinking_input_per_1m": 0.10,
+        "thinking_output_per_1m": 0.40
+      },
+      "latency_profile": "fast",
+      "judge_eligible": true,
+      "judge_tier": 3,
+      "can_judge": ["tier_4", "worker"],
+      "routing_hints": {
+        "use_for": [
+          "cost_effective",
+          "high_volume",
+          "long_context_cheap",
+          "batch_processing"
+        ],
+        "avoid_for": [
+          "frontier_quality"
+        ]
+      }
+    },
+
+    "gemini-2.5-pro": {
+      "provider": "google",
+      "api_string": "gemini-2.5-pro",
+      "display_name": "Gemini 2.5 Pro",
+      "type": "text",
+      "tier": "frontier",
+      "capabilities": {
+        "reasoning": 0.93,
+        "coding": 0.94,
+        "creative": 0.88,
+        "math": 0.91,
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true,
+        "extended_thinking": true,
+        "agentic": true,
+        "grounding": true,
+        "web_search": true
+      },
+      "context_window": 2000000,
+      "max_output_tokens": 65000,
+      "cost": {
+        "input_per_1m": 1.25,
+        "output_per_1m": 5.00,
+        "cached_input_per_1m": 0.3125
+      },
+      "latency_profile": "medium",
+      "judge_eligible": true,
+      "judge_tier": 2,
+      "can_judge": ["tier_3", "tier_4", "worker"],
+      "routing_hints": {
+        "use_for": [
+          "long_context",
+          "code_analysis",
+          "document_processing"
+        ],
+        "avoid_for": []
+      }
+    },
+
+    "gemini-3-pro-image-preview": {
+      "provider": "google",
+      "api_string": "gemini-3-pro-image-preview",
+      "display_name": "Nano Banana Pro",
+      "type": "image_generation",
+      "tier": "image_gen",
+      "capabilities": {
+        "text_rendering": 0.90,
+        "photorealism": 0.88,
+        "artistic_styles": 0.92,
+        "native_multimodal": true,
+        "interleaved_generation": true
+      },
+      "output_formats": ["png"],
+      "cost": {
+        "per_image": 0.03
+      },
+      "latency_profile": "medium",
+      "judge_eligible": false,
+      "routing_hints": {
+        "use_for": [
+          "artistic_images",
+          "multimodal_generation"
+        ]
+      }
+    },
+
+    "gemini-3-pro-image-preview-edit": {
+      "provider": "google",
+      "api_string": "gemini-3-pro-image-preview-edit",
+      "display_name": "Nano Banana Pro Edit",
+      "type": "image_editing",
+      "tier": "image_gen",
+      "capabilities": {
+        "inpainting": true,
+        "outpainting": true,
+        "style_transfer": true,
+        "object_removal": true,
+        "image_to_image": true
+      },
+      "output_formats": ["png"],
+      "cost": {
+        "per_edit": 0.04
+      },
+      "latency_profile": "medium",
+      "judge_eligible": false,
+      "routing_hints": {
+        "use_for": [
+          "image_editing",
+          "inpainting",
+          "modifications"
+        ]
+      }
+    },
+
+    "gemini-3.1-flash-image-preview": {
+      "provider": "google",
+      "api_string": "gemini-3.1-flash-image-preview",
+      "display_name": "Nano Banana 2",
+      "type": "image_generation",
+      "tier": "image_gen_fast",
+      "capabilities": {
+        "text_rendering": 0.88,
+        "photorealism": 0.85,
+        "artistic_styles": 0.90,
+        "native_multimodal": true,
+        "interleaved_generation": true
+      },
+      "output_formats": ["png"],
+      "cost": {
+        "per_image": 0.02
+      },
+      "latency_profile": "fast",
+      "judge_eligible": false,
+      "routing_hints": {
+        "use_for": [
+          "quick_images",
+          "high_volume_images",
+          "drafts",
+          "batch_image_generation"
+        ]
+      }
+    },
+
+    "gemini-2.5-flash-image": {
+      "provider": "google",
+      "api_string": "gemini-2.5-flash-image",
+      "display_name": "Nano Banana (Legacy)",
+      "type": "image_generation",
+      "tier": "image_gen_legacy",
+      "capabilities": {
+        "text_rendering": 0.82,
+        "photorealism": 0.80,
+        "artistic_styles": 0.85,
+        "native_multimodal": true
+      },
+      "output_formats": ["png"],
+      "cost": {
+        "per_image": 0.01
+      },
+      "latency_profile": "fast",
+      "judge_eligible": false,
+      "routing_hints": {
+        "use_for": [
+          "legacy_fallback"
+        ]
+      }
+    }
+  },
+
+  "judge_hierarchy": {
+    "description": "Models with lower tier numbers can judge models with higher tier numbers",
+    "tiers": {
+      "0": {
+        "name": "Supreme Arbiters",
+        "models": ["gpt-5.2-pro", "claude-opus-4-6", "o3"],
+        "can_judge": "*",
+        "use_for": "Final decisions, deadlock resolution, critical judgments"
+      },
+      "1": {
+        "name": "Senior Judges",
+        "models": ["gpt-5.2", "gpt-5.3-codex", "gemini-3.1-pro-preview"],
+        "can_judge": ["tier_2", "tier_3", "tier_4", "worker"],
+        "use_for": "Complex evaluations, multi-criteria assessments"
+      },
+      "2": {
+        "name": "Standard Judges",
+        "models": ["gpt-5.2-chat-latest", "claude-sonnet-4-6", "gemini-2.5-pro"],
+        "can_judge": ["tier_3", "tier_4", "worker"],
+        "use_for": "Routine evaluations, quality checks"
+      },
+      "3": {
+        "name": "Fast Judges",
+        "models": ["o4-mini", "gemini-2.5-flash"],
+        "can_judge": ["tier_4", "worker"],
+        "use_for": "High-volume screening, simple pass/fail"
+      },
+      "4": {
+        "name": "Workers (Non-Judging)",
+        "models": ["claude-haiku-4-5-20251001"],
+        "can_judge": [],
+        "use_for": "Task execution only"
+      }
+    }
+  },
+
+  "council_configurations": {
+    "default_council": {
+      "description": "Balanced multi-provider council for general decisions",
+      "members": [
+        "claude-opus-4-6",
+        "gpt-5.3-codex",
+        "gemini-3.1-pro-preview"
+      ],
+      "voting": "majority",
+      "arbiter": "gpt-5.2-pro",
+      "use_for": ["architecture_decisions", "complex_tradeoffs"]
+    },
+    
+    "code_council": {
+      "description": "Specialized council for code quality and architecture",
+      "members": [
+        "gpt-5.3-codex",
+        "claude-sonnet-4-6",
+        "gemini-2.5-pro"
+      ],
+      "voting": "weighted",
+      "weights": {
+        "gpt-5.3-codex": 1.5,
+        "claude-sonnet-4-6": 1.0,
+        "gemini-2.5-pro": 1.0
+      },
+      "arbiter": "gpt-5.2",
+      "use_for": ["code_review", "refactoring_decisions"]
+    },
+    
+    "reasoning_council": {
+      "description": "Council for logic, math, and formal reasoning",
+      "members": [
+        "o3",
+        "gpt-5.2-pro",
+        "claude-opus-4-6"
+      ],
+      "voting": "consensus",
+      "arbiter": "o3",
+      "use_for": ["mathematical_proofs", "logical_verification"]
+    },
+    
+    "fast_council": {
+      "description": "Cost-effective council for routine decisions",
+      "members": [
+        "gemini-2.5-flash",
+        "claude-sonnet-4-6",
+        "o4-mini"
+      ],
+      "voting": "majority",
+      "arbiter": "gpt-5.2-chat-latest",
+      "use_for": ["quick_evaluations", "batch_processing"]
+    }
+  },
+
+  "recursive_improvement": {
+    "description": "Configuration for recursive self-improvement patterns",
+    
+    "generation_chain": {
+      "description": "Generate -> Judge -> Refine loop",
+      "generator_tiers": ["tier_2", "tier_3"],
+      "judge_tiers": ["tier_1", "tier_0"],
+      "max_iterations": 5,
+      "convergence_threshold": 0.95
+    },
+    
+    "self_critique": {
+      "description": "Model critiques own output, higher model validates",
+      "enabled": true,
+      "validator_tier_delta": 1,
+      "require_different_provider": true
+    },
+    
+    "debate_protocol": {
+      "description": "Two models debate, third judges",
+      "debater_selection": "different_providers",
+      "judge_selection": "highest_available",
+      "rounds": 3,
+      "synthesis_model": "claude-opus-4-6"
+    },
+    
+    "constitutional_ai": {
+      "description": "Apply principles to refine outputs",
+      "principle_applier": "claude-sonnet-4-6",
+      "principle_verifier": "claude-opus-4-6"
+    }
+  },
+
+  "routing_rules": {
+    "task_classifications": {
+      "simple_query": {
+        "complexity": "low",
+        "default_models": ["claude-haiku-4-5-20251001", "gemini-2.5-flash"],
+        "fallback": "claude-sonnet-4-6"
+      },
+      "coding": {
+        "complexity": "medium",
+        "default_models": ["claude-sonnet-4-6", "gpt-5.2-chat-latest"],
+        "complex_fallback": "gpt-5.3-codex"
+      },
+      "agentic_coding": {
+        "complexity": "high",
+        "default_models": ["gpt-5.3-codex"],
+        "fallback": "claude-sonnet-4-6"
+      },
+      "reasoning": {
+        "complexity": "high",
+        "default_models": ["o3", "gpt-5.2"],
+        "fallback": "o4-mini"
+      },
+      "creative": {
+        "complexity": "medium",
+        "default_models": ["claude-opus-4-6", "gpt-5.2-chat-latest"],
+        "fallback": "claude-sonnet-4-6"
+      },
+      "long_context": {
+        "complexity": "variable",
+        "default_models": ["gemini-2.5-pro", "gemini-3.1-pro-preview"],
+        "threshold_tokens": 100000
+      },
+      "image_generation": {
+        "complexity": "medium",
+        "default_models": ["gpt-image-1", "gemini-3-pro-image-preview"],
+        "fast_option": "gemini-3.1-flash-image-preview"
+      },
+      "image_editing": {
+        "complexity": "medium",
+        "default_models": ["gemini-3-pro-image-preview-edit"]
+      }
+    },
+    
+    "cost_optimization": {
+      "budget_tiers": {
+        "minimal": {
+          "primary": ["gemini-2.5-flash", "claude-haiku-4-5-20251001"],
+          "max_cost_per_1k_tokens": 0.005
+        },
+        "balanced": {
+          "primary": ["claude-sonnet-4-6", "gemini-2.5-pro"],
+          "max_cost_per_1k_tokens": 0.02
+        },
+        "quality": {
+          "primary": ["claude-opus-4-6", "gpt-5.2"],
+          "max_cost_per_1k_tokens": 0.10
+        },
+        "unlimited": {
+          "primary": ["gpt-5.2-pro", "o3"],
+          "max_cost_per_1k_tokens": null
+        }
+      }
+    },
+    
+    "latency_requirements": {
+      "realtime": {
+        "max_latency_ms": 500,
+        "models": ["claude-haiku-4-5-20251001", "gemini-2.5-flash"]
+      },
+      "interactive": {
+        "max_latency_ms": 3000,
+        "models": ["claude-sonnet-4-6", "gpt-5.2-chat-latest", "gemini-2.5-pro"]
+      },
+      "batch": {
+        "max_latency_ms": null,
+        "models": ["*"]
+      }
+    }
+  },
+
+  "fallback_chains": {
+    "openai_down": {
+      "gpt-5.3-codex": ["claude-opus-4-6", "gemini-3.1-pro-preview"],
+      "gpt-5.2": ["claude-opus-4-6", "gemini-3.1-pro-preview"],
+      "gpt-5.2-chat-latest": ["claude-sonnet-4-6", "gemini-2.5-pro"],
+      "gpt-5.3-codex": ["claude-sonnet-4-6"],
+      "o3": ["claude-opus-4-6", "gemini-3.1-pro-preview"],
+      "o4-mini": ["gemini-2.5-flash"]
+    },
+    "anthropic_down": {
+      "claude-opus-4-6": ["gpt-5.2-pro", "gpt-5.2"],
+      "claude-sonnet-4-6": ["gpt-5.2-chat-latest", "gemini-2.5-pro"],
+      "claude-haiku-4-5-20251001": ["gemini-2.5-flash"]
+    },
+    "google_down": {
+      "gemini-3.1-pro-preview": ["gpt-5.2", "claude-opus-4-6"],
+      "gemini-2.5-pro": ["claude-sonnet-4-6", "gpt-5.2-chat-latest"],
+      "gemini-2.5-flash": ["claude-haiku-4-5-20251001", "o4-mini"]
+    }
+  },
+
+  "quality_metrics": {
+    "output_evaluation": {
+      "dimensions": [
+        "accuracy",
+        "completeness", 
+        "coherence",
+        "relevance",
+        "safety"
+      ],
+      "scoring_model": "claude-opus-4-6",
+      "fast_scoring_model": "gemini-2.5-flash"
+    },
+    "confidence_calibration": {
+      "enabled": true,
+      "calibration_model": "o3"
+    }
+  },
+
+  "performance_tracking": {
+    "_comment": "IMPROVEMENT 1: Dynamic adaptation based on actual performance, not static scores",
+    "enabled": true,
+    "storage": "telemetry_db",
+    "metrics_tracked": {
+      "success_rate": "Per model, per task type success/failure",
+      "latency_p50": "Median response time",
+      "latency_p99": "Tail latency for reliability",
+      "judge_agreement_rate": "How often judges agree with human feedback",
+      "task_type_performance": "Model performance breakdown by task classification"
+    },
+    "adaptation_rules": {
+      "reweight_after_n_calls": 100,
+      "decay_factor": 0.95,
+      "promote_threshold": 0.1,
+      "demote_threshold": -0.1,
+      "min_calls_for_routing": 10
+    },
+    "alerts": {
+      "success_rate_below": 0.7,
+      "latency_spike_multiplier": 3.0,
+      "judge_disagreement_rate": 0.3
+    }
+  },
+
+  "pipelines": {
+    "_comment": "IMPROVEMENT 2: Explicit multi-stage pipelines with model assignments",
+    
+    "think_plan_execute_reflect": {
+      "description": "Standard goal execution pipeline",
+      "stages": [
+        {
+          "name": "think",
+          "model_selection": {"task_type": "reasoning", "budget": "quality"},
+          "output": "reasoning"
+        },
+        {
+          "name": "plan", 
+          "model_selection": {"task_type": "reasoning", "budget": "quality", "required": ["structured_output"]},
+          "input": "reasoning",
+          "output": "plan"
+        },
+        {
+          "name": "execute",
+          "delegate_to": "opencode",
+          "input": "plan",
+          "output": "result"
+        },
+        {
+          "name": "reflect",
+          "model_selection": {"judge_for": "execute.model", "prefer_different_provider": true},
+          "input": ["plan", "result"],
+          "output": "reflection"
+        }
+      ],
+      "on_low_score": {"threshold": 70, "action": "trigger_improvement"},
+      "on_failure": {"action": "retry_with_fallback", "max_retries": 2}
+    },
+
+    "recursive_refinement": {
+      "description": "Generate -> Critique -> Refine loop until convergence",
+      "max_iterations": 5,
+      "stages": [
+        {
+          "name": "generate",
+          "model": "claude-sonnet-4-6",
+          "output": "draft"
+        },
+        {
+          "name": "critique",
+          "model": "o3",
+          "different_provider": true,
+          "input": "draft",
+          "output": "critique"
+        },
+        {
+          "name": "refine",
+          "model": "claude-opus-4-6",
+          "input": ["draft", "critique"],
+          "output": "refined"
+        },
+        {
+          "name": "judge",
+          "model": "gpt-5.2-pro",
+          "input": ["draft", "refined"],
+          "output": "score"
+        }
+      ],
+      "convergence": {
+        "metric": "score",
+        "threshold": 0.95,
+        "or_no_improvement_for": 2
+      }
+    },
+
+    "council_decision": {
+      "description": "Multi-model voting for critical decisions",
+      "stages": [
+        {
+          "name": "gather_opinions",
+          "parallel": true,
+          "models": ["claude-opus-4-6", "gpt-5.3-codex", "gemini-3.1-pro-preview"],
+          "input": "question",
+          "output": "opinions"
+        },
+        {
+          "name": "synthesize",
+          "model": "claude-opus-4-6",
+          "input": "opinions",
+          "output": "synthesis"
+        },
+        {
+          "name": "arbiter_decision",
+          "model": "gpt-5.2-pro",
+          "input": ["question", "opinions", "synthesis"],
+          "output": "final_decision",
+          "on_deadlock": "use_arbiter"
+        }
+      ]
+    }
+  },
+
+  "playbook_model_affinity": {
+    "_comment": "IMPROVEMENT 3: Map playbook patterns to optimal model combinations",
+
+    "file_creation": {
+      "description": "Creating new files from scratch",
+      "model_assignments": {
+        "planner": "gemini-2.5-flash",
+        "executor": "opencode",
+        "validator": "claude-sonnet-4-6"
+      },
+      "reason": "Fast planning sufficient, reliable execution, thorough validation"
+    },
+
+    "complex_refactor": {
+      "description": "Large-scale codebase changes",
+      "model_assignments": {
+        "analyzer": "gemini-3.1-pro-preview",
+        "planner": "o3",
+        "executor": "gpt-5.3-codex",
+        "reviewer": "claude-opus-4-6"
+      },
+      "reason": "2M context for analysis, logical planning, code specialist execution, nuanced review"
+    },
+
+    "bug_fix": {
+      "description": "Debugging and fixing issues",
+      "model_assignments": {
+        "diagnoser": "o3",
+        "fixer": "claude-sonnet-4-6",
+        "tester": "gemini-2.5-flash"
+      },
+      "reason": "Logical diagnosis, balanced fix generation, fast test creation"
+    },
+
+    "documentation": {
+      "description": "Writing docs, comments, READMEs",
+      "model_assignments": {
+        "drafter": "claude-sonnet-4-6",
+        "reviewer": "claude-opus-4-6"
+      },
+      "reason": "Claude excels at clear, nuanced technical writing"
+    },
+
+    "architecture_decision": {
+      "description": "Major architectural choices",
+      "model_assignments": {
+        "council": ["claude-opus-4-6", "gpt-5.3-codex", "gemini-3.1-pro-preview"],
+        "arbiter": "gpt-5.2-pro"
+      },
+      "reason": "Multi-provider council prevents bias, supreme arbiter for deadlocks"
+    },
+
+    "math_proof": {
+      "description": "Mathematical reasoning and proofs",
+      "model_assignments": {
+        "solver": "o3",
+        "verifier": "gpt-5.2-pro"
+      },
+      "reason": "o3 is reasoning specialist, GPT-5.2-Pro as supreme verifier"
+    },
+
+    "creative_generation": {
+      "description": "UI design, creative content",
+      "model_assignments": {
+        "generator": "claude-opus-4-6",
+        "critic": "gpt-5.2-chat-latest"
+      },
+      "reason": "Opus excels at creative, GPT for practical feedback"
+    }
+  },
+
+  "model_roles": {
+    "_comment": "Single source of truth for default model selection. String roles return one model, list roles return a council.",
+
+    "google_top": "gemini-3.1-pro-preview",
+    "google_fast": "gemini-2.5-flash",
+    "anthropic_top": "claude-opus-4-6",
+    "anthropic_balanced": "claude-sonnet-4-6",
+    "anthropic_fast": "claude-haiku-4-5-20251001",
+    "openai_top": "gpt-5.3-codex",
+    "openai_chat": "gpt-5.2-chat-latest",
+    "openai_reasoning": "o3",
+    "openai_reasoning_fast": "o4-mini",
+
+    "council_default": ["gpt-5.3-codex", "gemini-3.1-pro-preview", "claude-opus-4-6"],
+    "council_code": ["gpt-5.3-codex", "claude-sonnet-4-6", "gemini-2.5-pro"],
+    "council_arbiter": "claude-opus-4-6",
+    "code_review": "claude-opus-4-6",
+    "vision": "gpt-5.2",
+
+    "think_shallow": "gemini-2.5-flash",
+    "think_medium": "o3",
+    "think_deep": "gpt-5.2-pro",
+    "plan": "gemini-3.1-pro-preview",
+    "reflect": "claude-opus-4-6",
+    "recursive_improve": ["gpt-5.2-pro", "claude-opus-4-6", "o3"]
+  }
+}

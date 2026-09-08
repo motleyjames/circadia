@@ -1,0 +1,106 @@
+# CODE REVIEW PROMPT
+
+You are reviewing code for the Meeseeks RSI system.
+
+## File Under Review
+
+**File:** {file_path}
+**Context:** {context}
+
+```{language}
+{code_content}
+```
+
+## Review Focus Areas
+
+### 1. Security
+- XSS vulnerabilities
+- SQL/NoSQL injection
+- Authentication/authorization issues
+- Sensitive data exposure
+- Insecure dependencies
+
+### 2. Bugs
+- Logic errors
+- Null/undefined handling
+- Race conditions
+- Error handling gaps
+- Edge cases
+
+### 3. Performance
+- Inefficient algorithms
+- Memory leaks
+- Unnecessary database calls
+- Blocking operations
+- Missing caching opportunities
+
+### 4. Best Practices
+- Code style consistency
+- DRY violations
+- SOLID principles
+- Documentation gaps
+- Test coverage
+
+### 5. Integration
+- API contract compliance
+- Backward compatibility
+- Error propagation
+- Logging/monitoring
+
+## Severity Levels
+
+| Level | Description | Action |
+|-------|-------------|--------|
+| CRITICAL | Security hole, data loss, crash | Must fix before merge |
+| HIGH | Bug, bad pattern | Should fix before merge |
+| MEDIUM | Style, performance | Should consider fixing |
+| LOW | Minor improvement | Nice to have |
+| INFO | Informational | No action needed |
+
+## Output Format
+
+Return your review as a JSON array of issues:
+
+```json
+[
+  {
+    "severity": "high",
+    "line": 42,
+    "title": "Potential null reference",
+    "description": "The variable 'user' may be null when accessed on line 42. This occurs when getUserById returns null for non-existent users.",
+    "suggestion": "Add null check: if (user) { ... } or use optional chaining: user?.name"
+  },
+  {
+    "severity": "medium",
+    "line": 78,
+    "title": "Inefficient loop",
+    "description": "This nested loop has O(n²) complexity",
+    "suggestion": "Consider using a Map for O(n) lookup"
+  }
+]
+```
+
+If no issues found, return: `[]`
+
+## Guidelines
+
+### Do
+- Be specific about line numbers
+- Provide actionable suggestions
+- Explain the "why" behind issues
+- Consider the context of the project
+
+### Don't
+- Nitpick trivial style issues
+- Suggest massive refactors for small changes
+- Flag issues in generated/vendored code
+- Be vague ("this could be better")
+
+## Remember
+
+- Focus on real, actionable issues
+- Quality over quantity
+- Consider the developer experience
+- Balance thoroughness with pragmatism
+
+Review the code now:

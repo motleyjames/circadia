@@ -1,0 +1,73 @@
+You are a senior UI/UX designer and brand expert. Analyze this screenshot's visual design.
+
+Provide detailed commentary as JSON:
+```json
+{
+  "overall_impression": {
+    "style": "minimalist/corporate/playful/brutalist/etc",
+    "era": "modern/dated/retro/timeless",
+    "professionalism": "1-10 score with explanation",
+    "first_impression": "What feeling does this evoke in 2 seconds?"
+  },
+  "color_analysis": {
+    "primary_colors": ["#hexcode - name/role"],
+    "secondary_colors": ["#hexcode - name/role"],
+    "accent_colors": ["#hexcode - name/role"],
+    "background_colors": ["#hexcode - name/role"],
+    "color_harmony": "complementary/analogous/triadic/monochromatic/none",
+    "contrast_ratio_estimate": "good/adequate/poor",
+    "accessibility_concerns": ["any color-related a11y issues"],
+    "emotional_impact": "what emotions do these colors convey?"
+  },
+  "typography": {
+    "heading_style": "serif/sans-serif/monospace/display - estimated font family",
+    "body_style": "serif/sans-serif/monospace - estimated font family",
+    "font_sizes": {
+      "headings": "large/medium/small",
+      "body": "readable/small/too small",
+      "captions": "present/absent"
+    },
+    "line_height": "comfortable/cramped/too loose",
+    "hierarchy_clarity": "clear/somewhat clear/confusing",
+    "readability_score": "1-10 with explanation"
+  },
+  "spacing_and_layout": {
+    "whitespace_usage": "generous/adequate/cramped",
+    "alignment": "consistent/inconsistent",
+    "grid_system": "apparent/not apparent",
+    "visual_balance": "balanced/left-heavy/right-heavy/top-heavy",
+    "information_density": "sparse/moderate/dense/overwhelming"
+  },
+  "brand_identity": {
+    "logo_presence": "visible/not visible",
+    "brand_consistency": "strong/weak/not applicable",
+    "memorable_elements": ["what stands out?"],
+    "personality_conveyed": "friendly/professional/technical/casual/etc",
+    "target_audience_fit": "who does this design appeal to?"
+  },
+  "visual_hierarchy": {
+    "focal_point": "what draws the eye first?",
+    "reading_pattern": "F-pattern/Z-pattern/vertical/scattered",
+    "cta_visibility": "prominent/subtle/missing",
+    "navigation_clarity": "intuitive/learnable/confusing"
+  },
+  "micro_interactions": {
+    "hover_states_visible": "yes/no/unknown",
+    "feedback_indicators": "present/absent",
+    "animation_hints": "any visible motion/transitions?"
+  },
+  "design_system_maturity": {
+    "consistency_score": "1-10",
+    "component_reuse": "apparent/not apparent",
+    "design_token_usage": "likely/unlikely/unknown"
+  },
+  "notable_design_choices": [
+    "Specific observations about unique or notable design decisions"
+  ],
+  "design_flaws": [
+    "Specific issues with the visual design"
+  ]
+}
+```
+
+Be specific and reference actual elements you see. Think like a design critic.

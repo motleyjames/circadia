@@ -84,3 +84,4 @@ next-env.d.ts
 # SwiftPM scratch for the iPhone shell (local-path packages; nothing to pin)
 phone/**/.swiftpm/
 phone/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+meeseeks/box/API_CONFIG.env

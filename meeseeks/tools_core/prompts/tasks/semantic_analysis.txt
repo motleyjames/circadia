@@ -1,0 +1,113 @@
+# SEMANTIC CROSS-VALIDATION ANALYSIS
+
+You are analyzing extracted canon for cross-page coherence and completeness signals.
+
+## Context
+
+This page's extracted canon:
+{canon_json}
+
+This page's transcription:
+{transcription}
+
+## Analysis Tasks
+
+### 1. CONTINUATION DETECTION
+Does this page continue from a previous page or continue to the next?
+
+Signals:
+- Sentence fragments at top/bottom
+- "...continued" or "(cont.)" markers
+- Mid-list items (starting with "5." suggests 1-4 elsewhere)
+- Section numbers without headers (suggests header on previous page)
+- Pronouns without antecedents ("The Trustee shall..." but Trustee not defined on this page)
+
+### 2. SEQUENCE INTEGRITY
+Are there numbered/lettered sequences? Are they complete on this page?
+
+Check for:
+- Lists that start mid-sequence (e.g., items 6-10 but not 1-5)
+- Lists that end mid-sequence (e.g., items 1-3 but "(continued)" or context suggests more)
+- Article/Section numbering gaps
+
+### 3. CROSS-REFERENCE MAPPING
+What does this page reference that exists elsewhere?
+
+Look for:
+- "See Section X", "as defined in Article Y"
+- "pursuant to", "in accordance with"
+- Page number references
+- Exhibit/Schedule references
+- External document references
+
+### 4. DEFINITIONAL DEPENDENCIES
+What terms are USED but not DEFINED on this page?
+
+Flag terms that:
+- Are capitalized (suggesting defined term)
+- Are in quotes
+- Are used with specific meaning but no definition visible
+
+### 5. KNOWLEDGE GAPS
+What would a professional need to know that ISN'T on this page?
+
+Consider:
+- Obligations without clear triggers
+- Conditions without clear consequences
+- Parties mentioned but not identified
+- Dates/amounts referenced but not specified
+
+## Output Format
+
+```json
+{
+  "page_number": <extracted from context>,
+  "continuation_analysis": {
+    "continues_from_previous": true/false,
+    "continues_to_next": true/false,
+    "continuation_signals": ["list of specific evidence"],
+    "suspected_previous_content": "what likely precedes this",
+    "suspected_following_content": "what likely follows this"
+  },
+  "sequence_analysis": {
+    "sequences_found": [
+      {
+        "name": "sequence identifier",
+        "items_on_page": [1, 2, 3],
+        "suspected_missing_before": [0],
+        "suspected_missing_after": [4, 5],
+        "completeness": "complete|partial_start|partial_end|fragment"
+      }
+    ]
+  },
+  "cross_references": [
+    {
+      "reference_text": "verbatim reference",
+      "target_type": "section|article|page|exhibit|external",
+      "target_identifier": "Section 5.2",
+      "resolution_status": "needs_page_X|external|unknown"
+    }
+  ],
+  "undefined_terms": [
+    {
+      "term": "the term",
+      "usage_context": "how it's used on this page",
+      "likely_definition_location": "where to look"
+    }
+  ],
+  "knowledge_gaps": [
+    {
+      "gap_type": "missing_trigger|missing_consequence|unidentified_party|unspecified_value",
+      "description": "what's missing",
+      "importance": "critical|important|minor",
+      "likely_resolution": "where the answer might be"
+    }
+  ],
+  "validation_queries": [
+    "Specific questions to validate when processing other pages"
+  ]
+}
+```
+
+
+

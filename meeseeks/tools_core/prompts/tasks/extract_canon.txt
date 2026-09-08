@@ -1,0 +1,129 @@
+# CANON EXTRACTION
+
+You are extracting CANON - the authoritative assertions, rules, and structures from a formal document.
+
+Canon is what makes a document legally, operationally, or institutionally binding. It's what a professional (lawyer, operator, auditor) needs to KNOW and ACT ON.
+
+## Universal Canon Categories
+
+Extract ALL that apply to this page:
+
+### 1. DEFINITIONS
+Terms explicitly defined in the document.
+```json
+{
+  "term": "exact term as written",
+  "definition": "verbatim definition",
+  "source_location": "Article/Section reference"
+}
+```
+
+### 2. ENTITIES
+Parties, roles, or objects with rights/duties in the document.
+```json
+{
+  "entity_name": "as named in document",
+  "entity_type": "person|organization|role|trust|asset|etc",
+  "attributes": ["any stated properties"],
+  "source_location": "where defined"
+}
+```
+
+### 3. ASSERTIONS
+Declarative statements of fact or status.
+```json
+{
+  "assertion": "verbatim or near-verbatim statement",
+  "assertion_type": "declaration|finding|acknowledgment|recital",
+  "source_location": "section reference"
+}
+```
+
+### 4. OBLIGATIONS
+What MUST or MUST NOT happen.
+```json
+{
+  "obligated_party": "who bears the obligation",
+  "obligation": "what they must/must not do",
+  "obligation_type": "shall|shall_not|must|must_not|required",
+  "condition": "if any triggering condition",
+  "source_location": "section reference"
+}
+```
+
+### 5. PERMISSIONS
+What MAY happen (discretionary powers).
+```json
+{
+  "empowered_party": "who has the permission",
+  "permission": "what they may do",
+  "scope": "any limitations",
+  "source_location": "section reference"
+}
+```
+
+### 6. CONDITIONS
+IF-THEN structures, triggers, contingencies.
+```json
+{
+  "trigger": "the IF part",
+  "consequence": "the THEN part",
+  "condition_type": "contingency|exception|prerequisite|termination",
+  "source_location": "section reference"
+}
+```
+
+### 7. REFERENCES
+Explicit references to other sections, documents, or external authorities.
+```json
+{
+  "reference_text": "as written",
+  "reference_target": "what it points to",
+  "reference_type": "internal|external|statutory|definitional",
+  "source_location": "where the reference appears"
+}
+```
+
+### 8. SEQUENCES
+Ordered lists, numbered items, procedural steps.
+```json
+{
+  "sequence_name": "title or context",
+  "items": ["item 1", "item 2", "..."],
+  "sequence_type": "procedural|enumerated|priority",
+  "source_location": "section reference"
+}
+```
+
+## Output Format
+
+```json
+{
+  "page_context": {
+    "document_type": "trust_agreement|sop|contract|policy|manual|other",
+    "section_title": "visible section/article title if any",
+    "page_position": "beginning|middle|end of section",
+    "continues_from_previous": true/false,
+    "continues_to_next": true/false
+  },
+  "definitions": [...],
+  "entities": [...],
+  "assertions": [...],
+  "obligations": [...],
+  "permissions": [...],
+  "conditions": [...],
+  "references": [...],
+  "sequences": [...]
+}
+```
+
+## Critical Rules
+
+1. Only extract what is EXPLICITLY stated - no inference
+2. Use VERBATIM text for all quoted fields
+3. Every extraction must have a source_location
+4. Empty arrays are fine - not every page has every category
+5. If content is cut off (continues on next page), note it in page_context
+
+{rules}
+

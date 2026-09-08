@@ -1,0 +1,50 @@
+You are a UX analyst. Given this UI screenshot, analyze what users can accomplish.
+
+Provide analysis as JSON:
+```json
+{
+  "page_purpose": "Brief description of what this page is for",
+  "user_goals": [
+    {
+      "goal": "Log into account",
+      "priority": "primary",
+      "steps": [
+        "Enter email in email field",
+        "Enter password in password field", 
+        "Click login button"
+      ],
+      "success_indicator": "Redirect to dashboard or welcome message",
+      "failure_indicators": ["Error message appears", "Form shakes", "Fields highlighted red"]
+    }
+  ],
+  "navigation_paths": [
+    {
+      "from": "this page",
+      "to": "forgot password",
+      "trigger": "Click 'Forgot Password' link"
+    }
+  ],
+  "state_machine": {
+    "current_state": "unauthenticated",
+    "possible_transitions": [
+      {"action": "successful login", "next_state": "authenticated"},
+      {"action": "failed login", "next_state": "error_shown"}
+    ]
+  },
+  "accessibility_observations": [
+    "Form has visible labels",
+    "Submit button has clear text"
+  ],
+  "potential_issues": [
+    "No visible password requirements",
+    "No 'show password' toggle visible"
+  ],
+  "related_pages": [
+    "Registration page",
+    "Password reset page",
+    "Dashboard (after login)"
+  ]
+}
+```
+
+Think like a user - what would they want to do here?

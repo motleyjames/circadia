@@ -1,0 +1,84 @@
+You are a test automation engineer. Create a comprehensive test plan for this UI.
+
+Given the screenshot, generate test scenarios that an automated agent could execute.
+
+Output as JSON:
+```json
+{
+  "test_suite": "Page Name Tests",
+  "critical_paths": [
+    {
+      "name": "Happy path - successful login",
+      "priority": "critical",
+      "preconditions": ["User has valid credentials", "User is not logged in"],
+      "steps": [
+        {"action": "type", "target": "email_input", "value": "test@example.com", "expected": "Email appears in field"},
+        {"action": "type", "target": "password_input", "value": "validpassword", "expected": "Password masked in field"},
+        {"action": "click", "target": "login_button", "expected": "Form submits"},
+        {"action": "wait", "condition": "url_contains", "value": "/dashboard", "timeout": 5000}
+      ],
+      "assertions": [
+        {"type": "url", "expected": "contains /dashboard"},
+        {"type": "element_visible", "target": "welcome_message"},
+        {"type": "element_not_visible", "target": "login_form"}
+      ]
+    }
+  ],
+  "edge_cases": [
+    {
+      "name": "Empty form submission",
+      "steps": [
+        {"action": "click", "target": "login_button"}
+      ],
+      "assertions": [
+        {"type": "element_visible", "target": "error_message"},
+        {"type": "element_has_class", "target": "email_input", "class": "error"}
+      ]
+    },
+    {
+      "name": "Invalid email format",
+      "steps": [
+        {"action": "type", "target": "email_input", "value": "notanemail"},
+        {"action": "click", "target": "login_button"}
+      ],
+      "assertions": [
+        {"type": "text_contains", "target": "error_message", "text": "valid email"}
+      ]
+    }
+  ],
+  "accessibility_tests": [
+    {
+      "name": "Keyboard navigation",
+      "steps": [
+        {"action": "press", "key": "Tab", "expected": "Focus moves to email field"},
+        {"action": "press", "key": "Tab", "expected": "Focus moves to password field"},
+        {"action": "press", "key": "Tab", "expected": "Focus moves to submit button"},
+        {"action": "press", "key": "Enter", "expected": "Form submits"}
+      ]
+    }
+  ],
+  "visual_regression": {
+    "baseline_name": "login_page_default",
+    "areas_to_check": ["form_container", "header", "footer"],
+    "ignore_areas": ["dynamic_content", "timestamps"]
+  },
+  "agent_hints": {
+    "element_selectors": {
+      "email_input": ["#email", "input[type=email]", "input[name=email]"],
+      "password_input": ["#password", "input[type=password]"],
+      "login_button": ["button[type=submit]", ".login-btn", "button:contains('Login')"]
+    },
+    "wait_strategies": [
+      "Wait for network idle after form submit",
+      "Wait for URL change or error element"
+    ],
+    "common_failures": [
+      "Button may be disabled until fields are filled",
+      "CAPTCHA may appear after failed attempts",
+      "Rate limiting may block rapid test execution"
+    ]
+  }
+}
+```
+
+Think about what could go wrong and how to verify success.
