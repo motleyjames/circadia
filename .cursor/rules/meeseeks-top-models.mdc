@@ -1,0 +1,26 @@
+---
+description: Enforce top-tier LLM models only in Meeseeks code — no cheap or fast alternatives
+globs: meeseeks/**/*.py, meeseeks/**/*.json
+alwaysApply: false
+---
+
+# Top Models Only — No Exceptions
+
+When referencing LLM models in this codebase, use ONLY top-tier models:
+
+| Provider | Model | Forbidden Alternatives |
+|----------|-------|------------------------|
+| **OpenAI** | `gpt-5.3-codex` | `gpt-4o`, `gpt-5.2-chat-latest`, `o4-mini` |
+| **Anthropic** | `claude-opus-4-6` | `claude-sonnet`, `claude-haiku` |
+| **Google Text** | `gemini-3.1-pro-preview` | `gemini-2.5-flash`, `gemini-2.5-pro` |
+| **Google Image** | `gemini-3-pro-image-preview` | `gemini-2.5-flash-image` |
+
+The config file (`meeseeks/box/00_llm_router_config.json`) defines all models, but code defaults MUST use top-tier only.
+
+Any of these in code defaults is a bug — fix immediately:
+- `gemini-2.5-flash`
+- `claude-sonnet`
+- `claude-haiku`
+- `gpt-4o`
+- `o4-mini`
+- `gemini-2.5-flash-image`

@@ -491,7 +491,25 @@
       }
     },
 
+    "gemini-flash-latest": {
+      "provider": "google",
+      "api_string": "gemini-flash-latest",
+      "display_name": "Gemini Flash (latest alias)",
+      "type": "text",
+      "tier": "fast",
+      "_note": "Moving alias. Google retires pinned versions (gemini-2.5-flash now 404s), so roles point here to avoid the config going stale. Free-tier callable; Pro models return 429 without billing.",
+      "capabilities": {
+        "vision": true,
+        "function_calling": true,
+        "structured_output": true
+      },
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "latency_profile": "fast",
+      "judge_eligible": false
+    },
     "gemini-2.5-flash": {
+      "_retired": "Returns 404 from generativelanguage.googleapis.com as of 2026-09. Kept for reference; no role points here.",
       "provider": "google",
       "api_string": "gemini-2.5-flash",
       "display_name": "Gemini 2.5 Flash",
@@ -536,6 +554,7 @@
     },
 
     "gemini-2.5-pro": {
+      "_retired": "Returns 404 from generativelanguage.googleapis.com as of 2026-09. Kept for reference; no role points here.",
       "provider": "google",
       "api_string": "gemini-2.5-pro",
       "display_name": "Gemini 2.5 Pro",
@@ -1124,8 +1143,8 @@
   "model_roles": {
     "_comment": "Single source of truth for default model selection. String roles return one model, list roles return a council.",
 
-    "google_top": "gemini-3.1-pro-preview",
-    "google_fast": "gemini-2.5-flash",
+    "google_top": "gemini-flash-latest",
+    "google_fast": "gemini-flash-latest",
     "anthropic_top": "claude-opus-4-6",
     "anthropic_balanced": "claude-sonnet-4-6",
     "anthropic_fast": "claude-haiku-4-5-20251001",
@@ -1134,16 +1153,16 @@
     "openai_reasoning": "o3",
     "openai_reasoning_fast": "o4-mini",
 
-    "council_default": ["gpt-5.3-codex", "gemini-3.1-pro-preview", "claude-opus-4-6"],
-    "council_code": ["gpt-5.3-codex", "claude-sonnet-4-6", "gemini-2.5-pro"],
+    "council_default": ["claude-opus-4-6", "gemini-flash-latest", "claude-sonnet-4-6"],
+    "council_code": ["claude-sonnet-4-6", "gemini-flash-latest", "claude-opus-4-6"],
     "council_arbiter": "claude-opus-4-6",
     "code_review": "claude-opus-4-6",
     "vision": "gpt-5.2",
 
-    "think_shallow": "gemini-2.5-flash",
+    "think_shallow": "gemini-flash-latest",
     "think_medium": "o3",
     "think_deep": "gpt-5.2-pro",
-    "plan": "gemini-3.1-pro-preview",
+    "plan": "gemini-flash-latest",
     "reflect": "claude-opus-4-6",
     "recursive_improve": ["gpt-5.2-pro", "claude-opus-4-6", "o3"]
   }

@@ -1,0 +1,23 @@
+---
+description: All Meeseeks logs must live under meeseeks/logs/ — never at repo root
+alwaysApply: true
+---
+
+# Log Location — No Exceptions
+
+All run artifacts and logs for this repo must live under `meeseeks/logs/**`.
+
+## Hard Rules
+
+- **Never** create or write to a root-level `logs/` directory.
+- If a root `logs/` ever appears, **immediately move its contents** into `meeseeks/logs/` and remove the root `logs/`.
+- When a runbook references `logs/agent_runs/<RUN_ID>/...`, interpret it as `meeseeks/logs/agent_runs/<RUN_ID>/...`.
+
+## Canonical Paths
+
+| Purpose | Path |
+|---------|------|
+| Agent runs | `meeseeks/logs/agent_runs/<RUN_ID>/...` |
+| Prompt lists | `meeseeks/logs/prompt_lists/...` |
+| Sessions | `meeseeks/logs/sessions/...` |
+| Traces | `meeseeks/logs/agent_runs/<RUN_ID>/traces/...` |

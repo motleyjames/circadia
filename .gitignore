@@ -85,3 +85,9 @@ next-env.d.ts
 phone/**/.swiftpm/
 phone/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 meeseeks/box/API_CONFIG.env
+
+# Meeseeks harness — run artifacts and caches are ephemeral
+meeseeks/logs/
+meeseeks/tools_spawned/
+meeseeks/**/__pycache__/
+meeseeks/.venv/
