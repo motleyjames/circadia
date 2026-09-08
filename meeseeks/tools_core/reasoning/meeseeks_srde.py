@@ -210,6 +210,14 @@ class SelfResolvingDissentEngine:
                 logger.info(f"SRDE: Resolved via context resolver: {result.method}")
                 self.resolution_history.append(result)
                 return result
+            if result.status == ResolutionStatus.NEEDS_HUMAN:
+                # The resolver did not fail to answer - it answered that the
+                # dissent is CONFIRMED. Falling through here would hand the
+                # concern to a pattern resolver that papers over it, and report
+                # disconfirming evidence as "no resolution strategy". Return it.
+                logger.info(f"SRDE: Dissent confirmed by evidence: {result.method}")
+                self.resolution_history.append(result)
+                return result
         
         # 2. Cross-reference with existing probes
         cross_ref = self._cross_reference_probes(dissent_id, dissent_content)

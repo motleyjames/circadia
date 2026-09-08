@@ -22,6 +22,8 @@ from .meeseeks_code_reviewer import (
 )
 
 # Metacognitive Probe Factory - Dynamic probe synthesis
+from .meeseeks_code_probe_executor import CodeProbeExecutor, create_code_probe_executor
+from .meeseeks_llm_synthesizer import LLMProbeSynthesizer, create_llm_synthesizer
 from .meeseeks_probe_factory import (
     MetacognitiveProbeFactory,
     ProbeTemplate,
@@ -65,6 +67,10 @@ from .meeseeks_self_healer import (
 )
 
 __all__ = [
+    'CodeProbeExecutor',
+    'create_code_probe_executor',
+    'LLMProbeSynthesizer',
+    'create_llm_synthesizer',
     # Code Review
     'review_code',
     'review_file',

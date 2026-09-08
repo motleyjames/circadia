@@ -132,7 +132,10 @@ class ProbeTemplate:
     ) -> SynthesizedProbe:
         """Create a SynthesizedProbe from this template"""
         return SynthesizedProbe(
-            name=f"{self.name}_{hash(str(params)) % 10000}",
+            # Hashing params alone collides: two dissents that extract no
+            # parameters both hash {} and get the same probe_id, so one
+            # silently overwrites the other on the bridge and in SRDE.
+            name=f"{self.name}_{abs(hash((str(params), from_dissent or ''))) % 100000}",
             probe_type=self.probe_type,
             description=self.description,
             code=self.code,
@@ -209,6 +212,7 @@ class MetacognitiveProbeFactory:
              ProbeType.CHECK_INVARIANT, self._extract_invariant_params),
         ]
         
+        self.synthesizer = None
         # Register generic templates
         self._register_generic_templates()
     
@@ -231,6 +235,18 @@ class MetacognitiveProbeFactory:
     def set_executor(self, executor: ProbeExecutor):
         """Set the domain-specific probe executor"""
         self.executor = executor
+
+    def set_synthesizer(self, synthesizer):
+        """
+        Register an object with .synthesize(dissent, generated_by) -> probe|None.
+
+        When set, it is tried first for every dissent and the regex path becomes
+        the fallback. See probes/meeseeks_llm_synthesizer.py - the regexes match
+        substrings inside ordinary words ("diff" inside "different") and pull
+        parameters out of prose, which produces probes that run but establish
+        nothing.
+        """
+        self.synthesizer = synthesizer
     
     def synthesize_from_council(
         self,
@@ -275,6 +291,18 @@ class MetacognitiveProbeFactory:
         model: str,
     ) -> Optional[SynthesizedProbe]:
         """Synthesize a probe from a dissenting point"""
+        if getattr(self, "synthesizer", None) is not None:
+            try:
+                probe = self.synthesizer.synthesize(dissent, generated_by=model)
+                if probe is not None:
+                    return probe
+                if getattr(self.synthesizer, "skipped", None) and \
+                        self.synthesizer.skipped[-1]["dissent"][:60] == dissent[:60]:
+                    # Declined on purpose: no probe can settle this concern.
+                    return None
+            except Exception as exc:
+                logger.warning(f"Synthesizer raised, falling back to patterns: {exc}")
+
         dissent_lower = dissent.lower()
         
         for pattern, probe_type, param_extractor in self.dissent_patterns:

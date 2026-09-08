@@ -56,6 +56,7 @@ from .meeseeks_srde import (
     PatternResolver,
     create_srde,
 )
+from .meeseeks_code_context_resolver import CodeContextResolver, create_code_context_resolver
 from .meeseeks_semantic_bridge import (
     SemanticBridge,
     BridgeStatistics,
@@ -89,6 +90,8 @@ from .meeseeks_opportunity_discovery import (
 )
 
 __all__ = [
+    'CodeContextResolver',
+    'create_code_context_resolver',
     # Spinning Meeseeks (full orchestrator)
     'SpinningMeeseeks',
     'SpinResult',
