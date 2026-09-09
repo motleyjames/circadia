@@ -476,7 +476,14 @@ See individual trace files for detailed reasoning:
         """Get list of artifact paths for a session"""
         session_dir = self.base_dir / session_id
         artifacts = []
-        
+
+        # The findings report FIRST - it is the one artifact a person reads.
+        # It was written to the session directory but never listed, so runs
+        # advertised "Artifacts: 4" and omitted the deliverable.
+        findings_path = session_dir / "findings.md"
+        if findings_path.exists():
+            artifacts.append(str(findings_path))
+
         # Reasoning logs
         reasoning_dir = session_dir / "reasoning"
         if reasoning_dir.exists():

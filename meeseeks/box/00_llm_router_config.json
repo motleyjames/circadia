@@ -486,9 +486,8 @@
       "context_window": 2000000,
       "max_output_tokens": 65000,
       "cost": {
-        "input_per_1m": 2.5,
-        "output_per_1m": 10.0,
-        "cached_input_per_1m": 0.625
+        "input_per_1m": 2.0,
+        "output_per_1m": 12.0
       },
       "latency_profile": "medium",
       "judge_eligible": true,
@@ -507,7 +506,8 @@
           "grounded_responses"
         ],
         "avoid_for": []
-      }
+      },
+      "_pricing": "was 2.50/10.00 - stale. Prompts <=200k ($4.00/$18.00 above). Source: ai.google.dev/gemini-api/docs/pricing, checked 2026-09-09"
     },
     "gemini-flash-latest": {
       "provider": "google",
@@ -524,7 +524,12 @@
       "context_window": 1000000,
       "max_output_tokens": 8192,
       "latency_profile": "fast",
-      "judge_eligible": false
+      "judge_eligible": false,
+      "cost": {
+        "input_per_1m": 0.75,
+        "output_per_1m": 3.75
+      },
+      "_pricing": "alias -> gemini-3.8-flash. Promotional rate through 2026-12-31; rises to $1.50/$7.50 on 2027-01-01. Source: ai.google.dev/gemini-api/docs/pricing, checked 2026-09-09"
     },
     "gemini-2.5-flash": {
       "_retired": "Returns 404 from generativelanguage.googleapis.com as of 2026-09. Kept for reference; no role points here.",
@@ -549,10 +554,8 @@
       "context_window": 1000000,
       "max_output_tokens": 65000,
       "cost": {
-        "input_per_1m": 0.15,
-        "output_per_1m": 0.6,
-        "thinking_input_per_1m": 0.1,
-        "thinking_output_per_1m": 0.4
+        "input_per_1m": 0.3,
+        "output_per_1m": 2.5
       },
       "latency_profile": "fast",
       "judge_eligible": true,
@@ -571,7 +574,8 @@
         "avoid_for": [
           "frontier_quality"
         ]
-      }
+      },
+      "_pricing": "was 0.15/0.60 in this config - stale. Source: ai.google.dev/gemini-api/docs/pricing, checked 2026-09-09"
     },
     "gemini-2.5-pro": {
       "_retired": "Returns 404 from generativelanguage.googleapis.com as of 2026-09. Kept for reference; no role points here.",
@@ -597,8 +601,7 @@
       "max_output_tokens": 65000,
       "cost": {
         "input_per_1m": 1.25,
-        "output_per_1m": 5.0,
-        "cached_input_per_1m": 0.3125
+        "output_per_1m": 10.0
       },
       "latency_profile": "medium",
       "judge_eligible": true,
@@ -615,7 +618,8 @@
           "document_processing"
         ],
         "avoid_for": []
-      }
+      },
+      "_pricing": "was 1.25/5.00 - output stale. Prompts <=200k ($2.50/$15.00 above). Source: ai.google.dev/gemini-api/docs/pricing, checked 2026-09-09"
     },
     "gemini-3-pro-image-preview": {
       "provider": "google",
@@ -772,8 +776,11 @@
       "display_name": "Gemini 3.8 Flash",
       "type": "text",
       "tier": "frontier",
-      "cost": null,
-      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+      "cost": {
+        "input_per_1m": 0.75,
+        "output_per_1m": 3.75
+      },
+      "_pricing": "Promotional through 2026-12-31; $1.50/$7.50 from 2027-01-01. Source: ai.google.dev/gemini-api/docs/pricing, checked 2026-09-09"
     },
     "gemini-3.5-flash": {
       "provider": "google",
@@ -781,8 +788,11 @@
       "display_name": "Gemini 3.5 Flash",
       "type": "text",
       "tier": "frontier",
-      "cost": null,
-      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+      "cost": {
+        "input_per_1m": 1.5,
+        "output_per_1m": 9.0
+      },
+      "_pricing": "Source: ai.google.dev/gemini-api/docs/pricing, checked 2026-09-09"
     },
     "gemini-pro-latest": {
       "provider": "google",
@@ -790,8 +800,11 @@
       "display_name": "Gemini Pro (latest)",
       "type": "text",
       "tier": "frontier",
-      "cost": null,
-      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+      "cost": {
+        "input_per_1m": 2.0,
+        "output_per_1m": 12.0
+      },
+      "_pricing": "alias -> current Gemini 3.1 Pro tier, prompts <=200k tokens ($4.00/$18.00 above 200k). Source: ai.google.dev/gemini-api/docs/pricing, checked 2026-09-09"
     }
   },
   "judge_hierarchy": {
