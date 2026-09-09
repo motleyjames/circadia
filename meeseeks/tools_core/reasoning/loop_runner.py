@@ -651,10 +651,31 @@ class MeeseeksLoopRunner:
                     'source': 'council_dissent'
                 })
             
-            # Also extract considerations from each opinion as potential dissents
-            for opinion in council_result.opinions:
+            # Also extract considerations from each opinion as potential
+            # dissents. The filter was five hardcoded words - a model that
+            # wrote "this could break under load" contributed nothing. Widened,
+            # and a model whose call FAILED is skipped so its error text cannot
+            # become a finding.
+            CONCERN_WORDS = (
+                'concern', 'risk', 'issue', 'problem', 'warning', 'caveat',
+                'unclear', 'missing', 'lack', 'fail', 'break', 'unsafe',
+                'insecure', 'leak', 'race condition', 'silently', 'not handled',
+                'no test', 'untested', 'assumes', 'brittle', 'may not',
+                'might not', "doesn't", 'does not',
+            )
+            # The arbiter's explicit DISSENTS section is the better source: the
+            # concerns are stated as claims rather than inferred from whether a
+            # sentence happens to contain a keyword. Only fall back to scanning
+            # considerations when the arbiter named none, so the same concern is
+            # not raised twice from two places.
+            for opinion in ([] if council_dissents else council_result.opinions):
+                if str(getattr(opinion, "position", "")).startswith("Failed to get opinion"):
+                    continue
                 for consideration in opinion.considerations:
-                    if any(word in consideration.lower() for word in ['concern', 'risk', 'issue', 'problem', 'warning']):
+                    consideration = str(consideration)
+                    if len(consideration) < 25:
+                        continue
+                    if any(word in consideration.lower() for word in CONCERN_WORDS):
                         council_dissents.append({
                             'id': f"d_{loop_num}_{len(council_dissents)}",
                             'content': consideration,
@@ -1280,8 +1301,8 @@ Test this hypothesis now:"""
         
         elif self.confidence >= self.spawn_threshold:
             # Spawn a helper Meeseeks
-            spawned_tool = self._spawn_helper()
             logger.info(f"   Spawning helper Meeseeks to tools_spawned/...")
+            spawned_tool = self._spawn_helper()
             return self._create_result(
                 status=MeeseeksStatus.SPAWNED_HELPER,
                 message="🔵 Spawning more Meeseeks to spawned/...",
@@ -1305,14 +1326,44 @@ Test this hypothesis now:"""
             Dict with tool_id, path, and reason
         """
         tool_id = f"helper_{self.session_id}"
+        reason = (f"Confidence {self.confidence:.0%} insufficient. Spawning helper for: "
+                  f"{self.prime_directive[:100]}")
+        hypotheses = [h.hypothesis for h in self.current_hypotheses]
+
+        # This used to be `# placeholder for now`: it returned a path string and
+        # created nothing, while the caller printed "Spawning helper Meeseeks to
+        # tools_spawned/". The directory it named never existed.
         tool_path = f"tools_spawned/{tool_id}"
-        
-        # This would create the actual tool - placeholder for now
+        created = None
+        try:
+            try:
+                from ..tools_registry import create_spawned_tool
+            except ImportError:
+                from tools_registry import create_spawned_tool
+            created = create_spawned_tool(
+                name=tool_id,
+                description=f"Helper spawned because the loop could not reach confidence: {reason}",
+                usage=f"Investigate: {self.prime_directive[:300]}",
+                when_to_use="When the parent session escalated this task for want of evidence.",
+                examples=hypotheses[:3] or ["No hypotheses were carried forward."],
+                created_by=self.session_id,
+                spawned_dir=self.repo_root / "meeseeks" / "tools_spawned"
+                if (self.repo_root / "meeseeks" / "tools_spawned").exists() else None,
+            )
+            tool_path = str(created)
+            logger.info(f"   Helper written to {tool_path}")
+        except Exception as exc:
+            # Say so rather than reporting a path that does not exist.
+            logger.warning(f"   Helper could NOT be written ({type(exc).__name__}: {exc}); "
+                           f"nothing was created in tools_spawned/")
+            tool_path = None
+
         return {
             "tool_id": tool_id,
             "path": tool_path,
-            "reason": f"Confidence {self.confidence:.0%} insufficient. Spawning helper for: {self.prime_directive[:100]}",
-            "hypotheses_to_pursue": [h.hypothesis for h in self.current_hypotheses]
+            "created": created is not None,
+            "reason": reason,
+            "hypotheses_to_pursue": hypotheses,
         }
     
     def _create_result(

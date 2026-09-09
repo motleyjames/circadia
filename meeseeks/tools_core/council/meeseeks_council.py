@@ -9,6 +9,7 @@ Part of the Meeseeks RSI Toolkit.
 """
 
 import json
+import re
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
@@ -189,11 +190,57 @@ Provide:
 2. A clear final decision/recommendation
 3. Any important caveats or dissenting points to consider
 
+Then, as the LAST thing in your reply, a section delimited exactly like this:
+
+DISSENTS:
+- <one specific concern, stated as a checkable claim about the code where possible>
+- <another>
+
+Rules for that section: one concern per line, each self-contained. State what
+might be wrong, not that someone should think about it. If the council genuinely
+raised nothing, write "DISSENTS:" followed by "- none".
+
 Be specific and actionable. The team needs to execute on this decision immediately.
 """
     if arbiter_model is None:
         arbiter_model = get_default_model("anthropic_top")
     return call_model(arbiter_model, prompt)
+
+
+_DISSENT_HEADER = re.compile(r"^\s*(?:#+\s*|\*\*)?DISSENTS?\s*:?\**\s*$",
+                             re.IGNORECASE | re.MULTILINE)
+_BULLET = re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])\s+(.*\S)\s*$")
+
+
+def _extract_dissents(synthesis: str) -> List[str]:
+    """Pull the arbiter's dissenting points out of its reply.
+
+    This was `dissenting_points=[]  # Could be extracted from synthesis`. The
+    arbiter is asked for dissenting points, produces them, and they were thrown
+    away - so the only dissents the RSI loop ever saw came from a scan for five
+    hardcoded words in the per-model considerations. A council that objected in
+    prose raised nothing, and the whole verification pipeline sat idle.
+    """
+    if not synthesis:
+        return []
+    m = _DISSENT_HEADER.search(synthesis)
+    if not m:
+        return []
+    out: List[str] = []
+    for line in synthesis[m.end():].splitlines():
+        if not line.strip():
+            if out:
+                break
+            continue
+        bullet = _BULLET.match(line)
+        if not bullet:
+            break
+        text = bullet.group(1).strip().strip("*").strip()
+        if text.lower().rstrip(".") in ("none", "n/a", "no dissents"):
+            continue
+        if len(text) > 15:
+            out.append(text[:600])
+    return out[:8]
 
 
 def council_vote(
@@ -269,6 +316,7 @@ def council_vote(
     
     # Extract final decision from synthesis
     final_decision = synthesis[:500] if len(synthesis) > 500 else synthesis
+    dissents = _extract_dissents(synthesis)
     
     decision = CouncilDecision(
         question=question,
@@ -277,7 +325,7 @@ def council_vote(
         final_decision=final_decision,
         voting_method=voting_method,
         agreement_level=agreement_level,
-        dissenting_points=[],  # Could be extracted from synthesis
+        dissenting_points=dissents,
     )
     
     # Log the decision
