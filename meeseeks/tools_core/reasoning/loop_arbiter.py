@@ -50,7 +50,15 @@ except ImportError:
     try:
         from ..tools_registry import create_spawned_tool
     except ImportError:
-        create_spawned_tool = None
+        try:
+            # The CLIs put tools_core/ on sys.path, so tools_registry is a
+            # TOP-LEVEL module and neither import above can succeed. Without
+            # this branch create_spawned_tool was None on every CLI run, the
+            # guard logged at debug level, and the loop printed "Spawning
+            # helper Meeseeks to tools_spawned/" while writing nothing.
+            from tools_registry import create_spawned_tool
+        except ImportError:
+            create_spawned_tool = None
 
 logger = logging.getLogger(__name__)
 

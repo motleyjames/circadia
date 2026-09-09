@@ -77,10 +77,10 @@ class CodeContextResolver(ContextResolver):
 
     def __init__(self, probes: Optional[List[ProbeResult]] = None):
         self._probes: List[ProbeResult] = list(probes or [])
-        # SRDE accepts only RESOLVED from a context resolver (meeseeks_srde.py:209).
-        # A refutation - evidence that a dissent's premise is FALSE - is therefore
-        # discarded by the engine and flattened into "no_resolver". That is real
-        # information, so it is kept here for the caller to read after the pass.
+        # SRDE now returns PARTIALLY_RESOLVED and NEEDS_HUMAN from a context
+        # resolver as well as RESOLVED, so refutations do reach the loop. This
+        # ledger is kept because it survives the whole session, while the loop
+        # only logs each refutation as it happens.
         self.refutations: List[ResolutionAttempt] = []
         # A probe answers at most one dissent. Without this the highest-scoring
         # probe wins every match and one piece of evidence closes several
@@ -94,6 +94,28 @@ class CodeContextResolver(ContextResolver):
         # matches nothing and the dissent it was built to settle comes back
         # "no_resolver". Provenance is exact; keywords are the fallback.
         self._origin: Dict[str, str] = {}
+
+    def reset(self) -> None:
+        """Clear per-loop state.
+
+        _spent, _origin and _probes are keyed by probe id, and probe ids are
+        derived from dissent text - so a dissent the council repeats in a later
+        loop produces the SAME id. Without a reset, the fresh probe is filtered
+        out as already spent and its evidence is never cited. refutations is
+        kept: it is a report for the whole session, not one loop.
+        """
+        self._probes.clear()
+        self._spent.clear()
+        self._origin.clear()
+
+    def evidence_strength(self, probe: ProbeResult) -> str:
+        """"strong" or "weak" - how much a verdict from this probe is worth.
+
+        Public because the semantic bridge grades LINK strength (is this probe
+        about this dissent?) and never evidence strength (did it establish
+        anything?), so the loop needs this to grade what the bridge hands back.
+        """
+        return self._strength(probe)
 
     def add_probe(self, result: ProbeResult, origin_dissent: Optional[str] = None) -> None:
         self._probes.append(result)
@@ -207,7 +229,12 @@ class CodeContextResolver(ContextResolver):
         if self._is_origin(probe, dissent):
             return 100
 
-        if target and len(target) > 2 and target in low:
+        # Word-boundary, not containment. `target in low` matched "delete"
+        # inside "soft-deleted, never removed" and let an unrelated probe win
+        # the match and be spent on it - the same substring mistake the module
+        # docstring above says this class exists to fix.
+        if target and len(target) > 2 and re.search(
+                rf"(?<![a-z0-9_]){re.escape(target)}(?![a-z0-9_])", low):
             score += 10
 
         for tok in self._tokens(dissent):
@@ -240,8 +267,9 @@ class CodeContextResolver(ContextResolver):
             return True
         # Synthesizers truncate the dissent they record, so one may be a prefix
         # of the other. Require a real span, not a shared opening clause.
+        # One is a truncation of the other: the shorter must prefix the longer.
         shortest = min(len(a), len(b))
-        return shortest >= 40 and (a.startswith(b[:shortest]) or b.startswith(a[:shortest]))
+        return shortest >= 40 and (a[:shortest] == b[:shortest])
 
     @staticmethod
     def _tokens(text: str) -> List[str]:
@@ -254,7 +282,7 @@ class CodeContextResolver(ContextResolver):
     # --------------------------------------------------------------- reporting
 
     def refutation_report(self) -> str:
-        """Dissents that probes actively contradicted. SRDE cannot surface these."""
+        """Dissents that probe evidence actively contradicted, for the whole session."""
         if not self.refutations:
             return "No dissent was contradicted by probe evidence."
         lines = [f"{len(self.refutations)} dissent(s) CONFIRMED as real problems by probe evidence:"]

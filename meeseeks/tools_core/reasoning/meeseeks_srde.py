@@ -15,6 +15,7 @@ Extracted from the battle-tested RSI v3.2 Excel engine.
 
 import re
 import logging
+from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Any, Callable, Tuple, Pattern
 
@@ -24,6 +25,7 @@ try:
         ResolutionAttempt,
         DissentPoint,
         ProbeResult,
+        ProbeType,
     )
 except ImportError:
     # Support running from different contexts
@@ -32,6 +34,7 @@ except ImportError:
         ResolutionAttempt,
         DissentPoint,
         ProbeResult,
+        ProbeType,
     )
 
 logger = logging.getLogger(__name__)
@@ -119,6 +122,8 @@ class SelfResolvingDissentEngine:
         self.context_resolver: Optional[ContextResolver] = None
         self.pattern_resolvers: List[PatternResolver] = []
         self.probe_results: Dict[str, ProbeResult] = {}
+        # Probes already used to answer a dissent by cross-reference.
+        self._cross_ref_spent: set = set()
         self.resolution_history: List[ResolutionAttempt] = []
         self.domain_context: Dict[str, Any] = {}
         
@@ -227,8 +232,12 @@ class SelfResolvingDissentEngine:
         
         # 2. Cross-reference with existing probes
         cross_ref = self._cross_reference_probes(dissent_id, dissent_content)
-        if cross_ref and cross_ref.status == ResolutionStatus.RESOLVED:
-            logger.info(f"SRDE: Resolved via probe cross-reference")
+        if cross_ref and cross_ref.status in (ResolutionStatus.RESOLVED,
+                                              ResolutionStatus.PARTIALLY_RESOLVED):
+            # PARTIALLY_RESOLVED is accepted too. Discarding it would hand the
+            # dissent to a pattern resolver that claims more than the probe
+            # evidence supports - the failure this whole path exists to avoid.
+            logger.info(f"SRDE: {cross_ref.status.value} via probe cross-reference")
             self.resolution_history.append(cross_ref)
             return cross_ref
         
@@ -292,11 +301,35 @@ class SelfResolvingDissentEngine:
         directly addresses concerns.
         """
         content_lower = content.lower()
-        
+
         for probe_id, probe_result in self.probe_results.items():
+            # One probe answers at most one dissent. Without this the same
+            # verified probe closed every dissent its keyword happened to touch,
+            # and its confidence_impact was counted once per dissent.
+            if probe_id in self._cross_ref_spent:
+                continue
             # Check if probe target relates to dissent
             if self._probe_relates_to_dissent(probe_result, content_lower):
                 if probe_result.verified:
+                    # Grade the EVIDENCE, not just the keyword link. A
+                    # check_value probe that found a literal string present
+                    # cannot fail for any plausible input, so it is not an
+                    # answer to a design question - the same distinction
+                    # CodeContextResolver draws.
+                    weak = probe_result.probe_type in (
+                        ProbeType.CHECK_VALUE, ProbeType.CHECK_TYPE)
+                    self._cross_ref_spent.add(probe_id)
+                    if weak:
+                        return ResolutionAttempt(
+                            dissent_id=dissent_id,
+                            dissent_content=content,
+                            status=ResolutionStatus.PARTIALLY_RESOLVED,
+                            method="probe_cross_reference_weak",
+                            evidence=(f"Probe '{probe_id}' found supporting text but cannot "
+                                      f"settle this: {probe_result.evidence}"),
+                            confidence_impact=probe_result.confidence_impact * 0.5,
+                            tool_used=probe_id,
+                        )
                     return ResolutionAttempt(
                         dissent_id=dissent_id,
                         dissent_content=content,
@@ -306,7 +339,7 @@ class SelfResolvingDissentEngine:
                         confidence_impact=probe_result.confidence_impact,
                         tool_used=probe_id,
                     )
-        
+
         return None
     
     def _probe_relates_to_dissent(
@@ -352,25 +385,41 @@ class SelfResolvingDissentEngine:
     ) -> ResolutionAttempt:
         """Resolve backup/rollback related dissents"""
         backup_path = context.get('backup_path')
-        
-        if backup_path:
+
+        # A path in the context is a claim, not a backup. Check that the file is
+        # actually on disk before saying rollback is possible.
+        if backup_path and Path(str(backup_path)).exists():
             return ResolutionAttempt(
                 dissent_id=dissent_id,
                 dissent_content=content,
                 status=ResolutionStatus.RESOLVED,
                 method="backup_exists",
-                evidence=f"Backup created at: {backup_path}. Rollback is possible.",
+                evidence=f"Backup file exists at: {backup_path}. Rollback is possible.",
                 confidence_impact=0.08,
             )
-        else:
+        if backup_path:
             return ResolutionAttempt(
                 dissent_id=dissent_id,
                 dissent_content=content,
-                status=ResolutionStatus.RESOLVED,
-                method="backup_policy",
-                evidence="System automatically creates backups before modifications.",
-                confidence_impact=0.05,
+                status=ResolutionStatus.CANNOT_RESOLVE,
+                method="backup_missing",
+                evidence=f"context['backup_path'] is {backup_path!r} but no such file exists.",
+                confidence_impact=0.0,
             )
+        # This branch used to return RESOLVED at +0.05 with the evidence
+        # "System automatically creates backups before modifications." Nothing
+        # checked that, nothing in this harness creates backups, and because the
+        # live path never sets a domain context it was the ONLY reachable branch
+        # - so any dissent containing "backup", "rollback", "restore" or "undo"
+        # was closed, and paid for, by a sentence in a Python file.
+        return ResolutionAttempt(
+            dissent_id=dissent_id,
+            dissent_content=content,
+            status=ResolutionStatus.CANNOT_RESOLVE,
+            method="backup_unknown",
+            evidence="No backup was verified. This resolver cannot confirm a rollback path exists.",
+            confidence_impact=0.0,
+        )
     
     def _resolve_validation(
         self,
@@ -382,6 +431,17 @@ class SelfResolvingDissentEngine:
         schema = context.get('schema')
         validation_results = context.get('validation_results')
         
+        # A results object is not a passing result. {"errors": [...]} is truthy.
+        if isinstance(validation_results, dict) and (
+                validation_results.get("errors") or validation_results.get("failures")):
+            return ResolutionAttempt(
+                dissent_id=dissent_id,
+                dissent_content=content,
+                status=ResolutionStatus.NEEDS_HUMAN,
+                method="validation_failed",
+                evidence=f"Validation reported problems: {validation_results}",
+                confidence_impact=-0.10,
+            )
         if validation_results:
             return ResolutionAttempt(
                 dissent_id=dissent_id,

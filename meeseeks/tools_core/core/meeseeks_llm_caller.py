@@ -59,7 +59,13 @@ def load_env() -> Dict[str, str]:
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
                     key, value = line.split('=', 1)
-                    value = value.strip('"').strip("'")
+                    # Neither side was stripped: "KEY = v" stored the key as
+                    # "KEY " (lookup misses, reported as "key not found") and
+                    # the value with a leading space (401 from the provider).
+                    key = key.strip()
+                    if key.startswith("export "):
+                        key = key[len("export "):].strip()
+                    value = value.strip().strip('"').strip("'")
                     env[key] = value
     return env
 

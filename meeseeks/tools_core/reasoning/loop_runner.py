@@ -322,6 +322,14 @@ class MeeseeksLoopRunner:
         self.probe_timeout = probe_timeout
         self.repo_root = Path(repo_root) if repo_root else Path(__file__).resolve().parents[3]
         self.probe_factory = None
+        # probe_id -> ProbeResult for probes THIS loop actually executed.
+        self._probe_results: Dict[str, Any] = {}
+        self._declined: Dict[str, tuple] = {}
+        self._last_dissent_tracking: Optional[Dict[str, Any]] = None
+        # How many probes actually executed and verified this session. Nothing
+        # else in this class is evidence: council opinions, SRDE pattern
+        # matches and hypothesis verdicts are all models talking.
+        self._verified_probes: int = 0
         if self.verify:
             try:
                 try:
@@ -382,6 +390,7 @@ class MeeseeksLoopRunner:
             )
             
             for loop_num in range(1, self.MAX_LOOPS + 1):
+                self._current_loop = loop_num
                 logger.info(f"\n🔵 LOOP {loop_num}/{self.MAX_LOOPS} - LOOK AT ME!")
                 
                 # Load prior hypotheses to test (if any)
@@ -415,6 +424,7 @@ class MeeseeksLoopRunner:
                 self.current_hypotheses = reasoning_log.hypotheses_for_next_loop
                 
                 # Check for early exit on high confidence
+                self.confidence = self._apply_evidence_ceiling(self.confidence, "loop end")
                 if self.confidence >= self.execute_threshold:
                     logger.info(f"🔵 TASK COMPLETE! Ooh yeah, CAN DO! *poof*")
                     return self._create_result(
@@ -527,17 +537,15 @@ class MeeseeksLoopRunner:
         }
         self.confidence_trajectory = confidence_trajectory
         
-        # Minimal dissent tracking (full SRDE/bridge integration lives elsewhere)
-        dissent_tracking = {
+        # Real numbers. This block used to hardcode resolution_rate 1.0 and
+        # zeroed SRDE stats into every persisted log, so a loop that resolved
+        # nothing wrote "perfect run" to the artifact a human reads.
+        dissent_tracking = getattr(self, "_last_dissent_tracking", None) or {
             "dissents_raised": [],
             "dissents_resolved": [],
-            "resolution_rate": 1.0,
-            "srde_stats": {
-                "context_resolved": 0,
-                "probe_cross_ref_resolved": 0,
-                "pattern_resolved": 0,
-                "needs_human": 0,
-            },
+            "resolution_rate": 0.0,
+            "srde_stats": {"context_resolved": 0, "probe_cross_ref_resolved": 0,
+                           "pattern_resolved": 0, "needs_human": 0},
             "unresolved_critical": [],
         }
         
@@ -668,6 +676,8 @@ class MeeseeksLoopRunner:
         # ======================================================================
         # PHASE 2: SELF-RESOLVE DISSENTS (SRDE)
         # ======================================================================
+        resolved_ids: List[str] = []
+        confirmed_ids: List[str] = []
         if council_dissents:
             logger.info(f"   🔧 Phase 2: Self-resolving {len(council_dissents)} dissents...")
             
@@ -707,11 +717,44 @@ class MeeseeksLoopRunner:
                     logger.info(f"         Why: {why[:100]}")
                     continue
                 
-                # Check if already answered by a previous probe
+                # Check if already answered by a previous probe.
+                #
+                # is_answered_by_probe() tests link_strength - how RELATED the
+                # probe is to the dissent - and never what the probe actually
+                # established. A check_value probe that merely found a literal
+                # string present was closing dissents at full credit here,
+                # bypassing SRDE and the evidence grading in CodeContextResolver
+                # entirely, because the bridge is consulted first.
                 if self.semantic_bridge.is_answered_by_probe(dissent_id):
                     answer = self.semantic_bridge.get_answer_for_dissent(dissent_id)
-                    logger.info(f"      ✓ {dissent_id}: Already answered by probe")
-                    dissents_resolved += 1
+                    probe_id = answer[0] if answer else "?"
+                    # SemanticBridge stores result.result - the probe's PAYLOAD,
+                    # a dict or a bare string - not the ProbeResult. Grading it
+                    # directly raises AttributeError. _probe_results is the loop's
+                    # own record of what it actually executed.
+                    probe_result = self._probe_results.get(probe_id)
+                    if probe_result is None:
+                        # Not a probe this loop ran (a hypothesis verdict, or a
+                        # probe from an earlier loop). Nothing executed that we
+                        # can vouch for, so it never counts as strong.
+                        strength = "weak"
+                    elif getattr(self, "code_resolver", None):
+                        strength = self.code_resolver.evidence_strength(probe_result)
+                    else:
+                        strength = "weak"
+                    if strength == "strong":
+                        dissents_resolved += 1
+                        resolved_ids.append(dissent_id)
+                        logger.info(f"      ✓ {dissent_id}: Settled by probe {probe_id}")
+                    else:
+                        # Real evidence, but a text match cannot fail for any
+                        # plausible identifier, so it does not get to close a
+                        # concern outright. Half credit, same as SRDE PARTIAL.
+                        dissents_resolved += 0.5
+                        logger.info(f"      ◐ {dissent_id}: Probe {probe_id} found supporting "
+                                    f"text but cannot settle this on its own")
+                    if probe_result is not None:
+                        logger.info(f"         Evidence: {str(probe_result.evidence)[:100]}")
                     continue
                 
                 # Try SRDE resolution
@@ -720,6 +763,7 @@ class MeeseeksLoopRunner:
                     
                     if result.status.value in ['resolved', 'RESOLVED']:
                         dissents_resolved += 1
+                        resolved_ids.append(dissent_id)
                         self.confidence = min(1.0, self.confidence + result.confidence_impact)
                         logger.info(f"      ✓ {dissent_id}: RESOLVED via {result.method}")
                         logger.info(f"         Evidence: {result.evidence[:80]}...")
@@ -735,6 +779,7 @@ class MeeseeksLoopRunner:
                         # proving a concern real should move confidence down, not
                         # leave it exactly where a silent "no_resolver" left it.
                         self.confidence = max(0.0, self.confidence + min(0.0, result.confidence_impact))
+                        confirmed_ids.append(dissent_id)
                         logger.info(f"      ⚠ {dissent_id}: CONFIRMED by evidence - needs a person")
                         logger.info(f"         Dissent: {content[:100]}{'...' if len(content) > 100 else ''}")
                         logger.info(f"         Evidence: {result.evidence[:100]}")
@@ -753,6 +798,28 @@ class MeeseeksLoopRunner:
                 finding=f"SRDE resolved {dissents_resolved}/{dissents_total} dissents",
                 source="srde"
             ))
+
+            # What the persisted reasoning log will report. Built from what
+            # happened, not from a constant.
+            try:
+                srde_stats = self.srde.get_stats() if hasattr(self.srde, "get_stats") else {}
+            except Exception:
+                srde_stats = {}
+            self._last_dissent_tracking = {
+                "dissents_raised": [
+                    {"id": d["id"], "content": str(d.get("content", ""))[:500],
+                     "raised_by": str(d.get("source", "council")),
+                     "severity": "medium",
+                     "status": ("fully_resolved" if d["id"] in resolved_ids
+                                else "escalated" if d["id"] in confirmed_ids
+                                else "unresolved")}
+                    for d in council_dissents
+                ],
+                "dissents_resolved": sorted(resolved_ids),
+                "resolution_rate": (dissents_resolved / dissents_total) if dissents_total else 0.0,
+                "srde_stats": srde_stats,
+                "unresolved_critical": sorted(confirmed_ids),
+            }
             
             reasoning_chain.append(ReasoningStep(
                 thought=f"Self-resolved {dissents_resolved}/{dissents_total} council dissents",
@@ -844,9 +911,11 @@ Generate your 3 hypotheses now:"""
         # settled concerns and confirmed hypotheses raise it, unsettled concerns
         # lower it, and a loop that established nothing moves it nowhere.
         base_boost = 0.0
-        if hypothesis_results:
-            confirmed = sum(1 for r in hypothesis_results if r.result == "CONFIRMED")
-            base_boost += confirmed * 0.03
+        # NOTE: hypothesis verdicts are NOT added here. Each result's
+        # confidence_impact was already applied when the hypothesis was tested
+        # (see _run_loop). Adding +0.03 per CONFIRMED on top paid twice for one
+        # model opinion - and a hypothesis verdict is an opinion: nothing is
+        # executed to produce it.
         if dissents_total > 0:
             resolution_rate = dissents_resolved / dissents_total
             base_boost += resolution_rate * 0.05
@@ -914,7 +983,17 @@ Generate your 3 hypotheses now:"""
         gives SRDE something real to cross-reference. Failures are non-fatal:
         the loop continues unverified rather than dying.
         """
-        self._declined: Dict[str, str] = {}
+        # Reset per loop. These are keyed by probe/dissent id and a stale entry
+        # from an earlier loop silently blocks or mis-answers this one.
+        self._declined: Dict[str, tuple] = {}
+        self._probe_results: Dict[str, Any] = {}
+        if getattr(self, "code_resolver", None) is not None:
+            self.code_resolver.reset()
+        synth_obj = getattr(self.probe_factory, "synthesizer", None) if self.probe_factory else None
+        if synth_obj is not None and hasattr(synth_obj, "invalidate_facts"):
+            # The repo may have changed since the last loop; the model must not
+            # be grounded in a stale snapshot of it.
+            synth_obj.invalidate_facts()
         if not self.probe_factory or not council_dissents:
             return
         selected = council_dissents[: self.max_probes_per_loop]
@@ -960,6 +1039,10 @@ Generate your 3 hypotheses now:"""
             except Exception as exc:
                 logger.warning(f"      probe {probe.name} failed: {exc}")
                 continue
+            self._probe_results[result.probe_id] = result
+            if result.verified and getattr(self, "code_resolver", None) \
+                    and self.code_resolver.evidence_strength(result) == "strong":
+                self._verified_probes += 1
             mark = "verified" if result.verified else (
                 "unverified" if result.confidence_impact == 0.0 else "refuted")
             # SRDE and the resolver take every result, including refutations.
@@ -988,6 +1071,29 @@ Generate your 3 hypotheses now:"""
             logger.info(f"      🔬 {result.probe_id}: {mark} — {result.evidence[:70]}")
 
 
+    def _evidence_ceiling(self) -> float:
+        """Highest confidence reachable on the evidence actually gathered.
+
+        Hypothesis verdicts are a model grading its own earlier guess - nothing
+        is executed to produce one - and they are the largest single input to
+        confidence. Without a ceiling, three compliant CONFIRMEDs carry a run
+        from 0.50 to the execute threshold and it reports TASK COMPLETE having
+        run no probe at all. A session with no strong probe evidence therefore
+        cannot reach "execute": the most it can conclude is that a person
+        should look.
+        """
+        if self._verified_probes > 0:
+            return 1.0
+        return max(0.0, self.monitor_threshold - 0.01)
+
+    def _apply_evidence_ceiling(self, value: float, where: str) -> float:
+        ceiling = self._evidence_ceiling()
+        if value > ceiling:
+            logger.info(f"   ⚖ confidence {value:.0%} capped to {ceiling:.0%} at {where}: "
+                        f"no probe verified anything this session, so nothing here is evidence")
+            return ceiling
+        return value
+
     def _fallback_loop_output(self, loop_num: int, error: str) -> tuple:
         """Fallback output when LLM call fails."""
         observations = [
@@ -998,7 +1104,10 @@ Generate your 3 hypotheses now:"""
         ]
         decision = LoopDecision(
             action="Fallback mode",
-            confidence=max(0.3, self.confidence - 0.05),
+            # No floor. A floor of 0.3 meant that when every provider failed,
+            # a run that had honestly fallen below it was raised back up - the
+            # reasoning being that nothing could be reached.
+            confidence=max(0.0, self.confidence - 0.05),
             rationale=f"LLM error: {error[:100]}"
         )
         hypotheses = [
@@ -1024,15 +1133,12 @@ Generate your 3 hypotheses now:"""
         
         # Check if semantic bridge already has an answer for this hypothesis
         probe_id = f"hypothesis_{hypothesis.id}"
-        if self.semantic_bridge.is_answered_by_probe(hypothesis.id):
-            answer = self.semantic_bridge.get_answer_for_dissent(hypothesis.id)
-            logger.info(f"      ✓ Already answered by semantic bridge")
-            return HypothesisResult(
-                id=hypothesis.id,
-                result="CONFIRMED" if "confirm" in str(answer).lower() else "PARTIAL",
-                evidence=f"Semantic bridge: {answer}",
-                confidence_impact=0.08
-            )
+        # A bridge shortcut used to live here: it read CONFIRMED out of the
+        # substring "confirm" appearing anywhere in str(answer) - which includes
+        # the probe's NAME - and awarded a hardcoded +0.08. It was unreachable
+        # only because hypothesis ids (H1) are never registered as dissents
+        # (d_1_0), so one rename would have made it live. Removed rather than
+        # left as a landmine.
         
         # Build the test prompt directly
         prompt = f"""# HYPOTHESIS TESTING
@@ -1116,19 +1222,30 @@ Test this hypothesis now:"""
             # probe. It is deliberately NOT typed CHECK_INVARIANT, which means
             # "the suite ran and passed" and is treated as strong evidence by
             # CodeContextResolver.
+            # Hypothesis ids are H1/H2/H3 in EVERY loop, so a bare
+            # "hypothesis_H1" key let loop 2 overwrite loop 1's verdict in the
+            # bridge index while loop 1's links survived pointing at the old
+            # payload. Scope the id to the loop.
+            hyp_probe_id = f"hypothesis_L{getattr(self, '_current_loop', 0)}_{hypothesis.id}"
             probe_result = ProbeResult(
                 probe_type=ProbeType.CHECK_VALUE,
-                probe_id=f"hypothesis_{hypothesis.id}",
+                probe_id=hyp_probe_id,
                 target=hypothesis.hypothesis[:100] if hasattr(hypothesis, 'hypothesis') else str(hypothesis)[:100],
                 result=hyp_result.result,
                 verified=(hyp_result.result == "CONFIRMED"),
                 confidence_impact=hyp_result.confidence_impact,
                 evidence=hyp_result.evidence,
             )
-            self.semantic_bridge.register_probe(
-                probe_id=f"hypothesis_{hypothesis.id}",
-                result=probe_result
-            )
+            # Only an affirmative verdict goes on the bridge. REFUTED and
+            # INCONCLUSIVE results were registered here too, and
+            # is_answered_by_probe() grades link strength rather than outcome -
+            # so a hypothesis the model REFUTED could mark a later dissent
+            # answered. Same defect that was removed from _run_probes.
+            if hyp_result.result == "CONFIRMED":
+                self.semantic_bridge.register_probe(
+                    probe_id=hyp_probe_id,
+                    result=probe_result
+                )
             
             return hyp_result
                 
@@ -1150,6 +1267,7 @@ Test this hypothesis now:"""
         - >= spawn_threshold: SPAWNED_HELPER
         - < spawn_threshold: ESCALATE_TO_HUMAN
         """
+        self.confidence = self._apply_evidence_ceiling(self.confidence, "final decision")
         logger.info(f"\n🔵 FINAL DECISION - Confidence: {self.confidence:.0%}")
         
         if self.confidence >= self.monitor_threshold:

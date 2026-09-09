@@ -55,6 +55,27 @@ except ImportError:
 
 DEFAULT_TEST_COMMAND: List[str] = ["venv/bin/pytest", "-q", "--no-header"]
 DEFAULT_SEARCH_PATHS: List[str] = ["src", "tests"]
+def discover_search_paths(root) -> "List[str]":
+    """Directories worth searching in this repo.
+
+    The default was a hardcoded ["src", "tests"]. In a repo that keeps its code
+    anywhere else, every file and symbol lookup came back empty - and an empty
+    lookup is reported as "does not exist", which the resolver escalates as
+    evidence CONTRADICTING the concern. A whole run of confident refutations,
+    all of them false, from a directory name.
+    """
+    from pathlib import Path as _P
+    root = _P(root)
+    known = [d for d in ("src", "tests", "test", "lib", "app", "pkg", "scripts")
+             if (root / d).is_dir()]
+    if known:
+        return known
+    skip = {".git", ".venv", "venv", "node_modules", "__pycache__", "build",
+            "dist", ".mypy_cache", ".pytest_cache", "meeseeks"}
+    found = [d.name for d in root.iterdir()
+             if d.is_dir() and not d.name.startswith(".") and d.name not in skip]
+    return found or ["."]
+
 DEFAULT_TIMEOUT: int = 300
 SOURCE_SUFFIXES = {".py"}
 
@@ -73,7 +94,9 @@ class CodeProbeExecutor(ProbeExecutor):
     ):
         self.repo_root = Path(repo_root).resolve() if repo_root else None
         self.test_command = test_command or list(DEFAULT_TEST_COMMAND)
-        self.search_paths = search_paths or list(DEFAULT_SEARCH_PATHS)
+        self._explicit_paths = list(search_paths) if search_paths else None
+        self._discovered = None
+        self.search_paths = self._explicit_paths or list(DEFAULT_SEARCH_PATHS)
         self.timeout = timeout
 
         self._handlers: Dict[ProbeType, Callable] = {
@@ -208,10 +231,14 @@ class CodeProbeExecutor(ProbeExecutor):
             return self._unverified(probe, f"Could not count {detail}.")
 
         if expected is None:
-            return self._verified(
-                probe, target, {"count": count}, f"Counted {count} {detail}. "
-                f"No expected count was stated, so this is a measurement, not a check.", 0.05,
-            )
+            # A count with nothing to compare against cannot come out wrong, so
+            # it establishes nothing. This used to return verified=True at +0.05
+            # - and `verified` is the flag the bridge, SRDE and the confidence
+            # calculation all key on, so an unfalsifiable measurement was
+            # closing dissents.
+            return self._unverified(
+                probe, f"Counted {count} {detail}, but no expected count was stated. "
+                       f"A measurement with nothing to compare against verifies nothing.")
 
         if expected == 0 and count > 0 and target_type not in ("line", "lines"):
             # An expected count of zero against a live measurement is almost
@@ -219,6 +246,15 @@ class CodeProbeExecutor(ProbeExecutor):
             return self._unverified(
                 probe, f"Measured {count} {detail}, but the expected count was 0 - "
                        f"treating that as unset rather than as a failed assertion.")
+        # expected arrives from LLM JSON and is routinely a string. Comparing
+        # 42 == "42" is False, which turned a correct measurement into a
+        # fabricated refutation.
+        try:
+            expected = int(str(expected).strip())
+        except (TypeError, ValueError):
+            return self._unverified(
+                probe, f"Measured {count} {detail}, but the expected count "
+                       f"{expected!r} is not a number.")
         matched = count == expected
         return ProbeResult(
             probe_type=probe.probe_type, probe_id=probe.name, target=target,
@@ -237,6 +273,15 @@ class CodeProbeExecutor(ProbeExecutor):
             timeout=context.get("timeout", self.timeout),
         )
         tally = self._parse_pytest(proc.stdout + proc.stderr)
+        # pytest exit codes: 2 interrupted, 3 internal error, 4 usage error,
+        # 5 no tests collected. None of those mean the invariant broke - they
+        # mean the check did not run. Reporting them as BROKEN cost -0.15 for a
+        # bad command line.
+        if proc.returncode in (2, 3, 4, 5) and not tally:
+            return self._unverified(
+                probe,
+                f"`{' '.join(cmd)}` exited {proc.returncode} without collecting or running "
+                f"tests, so nothing was checked. {(proc.stderr or proc.stdout)[-160:].strip()}")
         passed = proc.returncode == 0
         summary = ", ".join(f"{n} {k}" for k, n in tally.items()) or "no tally parsed"
         return ProbeResult(
@@ -295,7 +340,13 @@ class CodeProbeExecutor(ProbeExecutor):
         return p
 
     def _paths(self, context: Dict[str, Any]) -> List[str]:
-        return context.get("search_paths") or self.search_paths
+        explicit = context.get("search_paths") or self._explicit_paths
+        if explicit:
+            return explicit
+        root = context.get("repo_root") or self.repo_root
+        if root and self._discovered is None:
+            self._discovered = discover_search_paths(root)
+        return self._discovered or list(DEFAULT_SEARCH_PATHS)
 
     def _safe_path(self, root: Path, candidate: str) -> Optional[Path]:
         """Resolve candidate under root, refusing anything that escapes it."""
@@ -305,7 +356,13 @@ class CodeProbeExecutor(ProbeExecutor):
             p = (root / candidate).resolve()
         except (OSError, RuntimeError):
             return None
-        return p if str(p).startswith(str(root)) else None
+        # startswith() on the string form lets "../repo-evil" pass when root is
+        # ".../repo": the sibling path shares the prefix. Compare path parts.
+        try:
+            p.relative_to(root.resolve())
+        except ValueError:
+            return None
+        return p
 
     def _iter_sources(self, root: Path, context: Dict[str, Any]):
         for rel in self._paths(context):
@@ -369,16 +426,28 @@ class CodeProbeExecutor(ProbeExecutor):
             tally[key] = tally.get(key, 0) + int(n)
         return tally
 
-    @staticmethod
-    def _needle_from_dissent(probe: SynthesizedProbe) -> Optional[str]:
-        """Pull a quoted or code-shaped token out of the originating dissent."""
+    NEEDLE_SHAPE = re.compile(r"^[A-Za-z0-9_./:@#$-]{2,80}$")
+
+    @classmethod
+    def _needle_from_dissent(cls, probe: SynthesizedProbe) -> Optional[str]:
+        """Pull a quoted or code-shaped token out of the originating dissent.
+
+        Every candidate must LOOK like something you could find in source: no
+        whitespace, no sentence punctuation. Without that check the apostrophes
+        in "doesn't ... that's" read as a quoted span and the harness grepped
+        for "t handle SMTP timeouts, that" - found nothing, naturally, and
+        reported that as evidence contradicting the concern.
+        """
         text = probe.from_dissent or probe.description or ""
-        for pattern in (r'["\']([^"\']{2,})["\']', r'`([^`]{2,})`',
+        for pattern in (r'"([^"\n]{2,80})"',
+                        r"'([^'\n]{2,80})'",
+                        r'`([^`\n]{2,80})`',
                         r'\b([a-zA-Z_][a-zA-Z0-9_]{2,}(?:\.[a-zA-Z_][a-zA-Z0-9_]*)+)\b',
                         r'\b([a-z_][a-z0-9_]{3,}_[a-z0-9_]+)\b'):
-            m = re.search(pattern, text)
-            if m:
-                return m.group(1)
+            for m in re.finditer(pattern, text):
+                candidate = m.group(1).strip()
+                if cls.NEEDLE_SHAPE.match(candidate) and not candidate.isdigit():
+                    return candidate
         return None
 
     def _verified(self, probe, target, result, evidence, impact) -> ProbeResult:

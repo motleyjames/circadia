@@ -117,7 +117,8 @@ class LLMProbeSynthesizer:
     ):
         self.repo_root = Path(repo_root).resolve() if repo_root else None
         self.model = model
-        self.search_paths = search_paths or ["src", "tests"]
+        self._explicit_paths = list(search_paths) if search_paths else None
+        self.search_paths = self._explicit_paths or ["src", "tests"]
         self.max_symbols = max_symbols
         self._facts: Optional[str] = None
         self.skipped: List[Dict[str, str]] = []
@@ -195,6 +196,16 @@ class LLMProbeSynthesizer:
         """
         self.skipped.append({"dissent": dissent[:160], "why": str(why)[:200], "kind": kind})
 
+    def invalidate_facts(self) -> None:
+        """Drop the cached repo snapshot.
+
+        _repo_facts() is what stops the model inventing identifiers, and it is
+        computed once. After a loop changes the repository, a stale snapshot
+        makes the model probe for symbols that no longer exist - which the
+        executor reports as a refutation.
+        """
+        self._facts = None
+
     def skipped_report(self) -> str:
         """Concerns the model judged unverifiable. These need a person, not a probe."""
         if not self.skipped:
@@ -214,6 +225,15 @@ class LLMProbeSynthesizer:
         if not self.repo_root or not self.repo_root.is_dir():
             self._facts = "(repository contents unavailable - do not guess identifiers)"
             return self._facts
+
+        if not self._explicit_paths:
+            # Same reason as the executor: grounding the model in an empty tree
+            # makes it invent identifiers, which then come back "does not exist".
+            try:
+                from .meeseeks_code_probe_executor import discover_search_paths
+            except ImportError:
+                from probes.meeseeks_code_probe_executor import discover_search_paths
+            self.search_paths = discover_search_paths(self.repo_root)
 
         modules: List[str] = []
         symbols: List[str] = []

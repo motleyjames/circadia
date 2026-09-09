@@ -249,7 +249,15 @@ def council_vote(
             ))
     
     # Synthesize
-    synthesis = synthesize_opinions(question, opinions, arbiter)
+    try:
+        synthesis = synthesize_opinions(question, opinions, arbiter)
+    except Exception as e:
+        # The arbiter is one un-retried call with no fallback. Letting it raise
+        # discarded three opinions that had already been paid for, and the loop
+        # reported "Council raised 0 dissents" - indistinguishable from a task
+        # nobody objected to.
+        synthesis = ("Arbiter synthesis unavailable ({}). Opinions were gathered but "
+                     "not synthesized.".format(type(e).__name__))
     
     # Calculate agreement level
     if len(opinions) > 1:
