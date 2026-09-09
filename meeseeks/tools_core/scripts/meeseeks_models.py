@@ -127,7 +127,7 @@ def main() -> int:
     working, broken = [], []
     for model in dict.fromkeys(targets):
         try:
-            call_model(model, "Reply with the single word: ok", max_tokens=5)
+            call_model(model, "Reply with the single word: ok", max_tokens=256)
             print(f"  {model:30} OK")
             working.append(model)
         except Exception as exc:

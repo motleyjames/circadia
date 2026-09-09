@@ -137,9 +137,9 @@ def call_anthropic(
             headers=headers,
             json=payload,
         )
-        response.raise_for_status()
+        _raise_with_body(response, "anthropic", model)
         data = response.json()
-        
+
         _record_usage(model, data)
         content = data.get('content', [])
         text_parts = [block['text'] for block in content if block['type'] == 'text']
@@ -192,9 +192,9 @@ def call_google(
 
     with httpx.Client(timeout=300.0) as client:
         response = client.post(url, headers=headers, json=payload)
-        response.raise_for_status()
+        _raise_with_body(response, "google", model)
         data = response.json()
-        
+
         _record_usage(model, data)
         candidates = data.get('candidates', [])
         if candidates:
@@ -253,7 +253,7 @@ def call_openai(
         # than making the caller pick an endpoint per model.
         if response.status_code == 404:
             return _call_openai_responses(client, headers, model, prompt, system, max_tokens)
-        response.raise_for_status()
+        _raise_with_body(response, "openai", model)
         data = response.json()
 
         _record_usage(model, data)
@@ -289,11 +289,12 @@ def _call_openai_responses(client, headers, model, prompt, system, max_tokens) -
     payload: Dict[str, Any] = {"model": model, "input": prompt}
     if system:
         payload["instructions"] = system
-    if max_tokens:
-        payload["max_output_tokens"] = max_tokens
+    # Minimum accepted is 16, and a reasoning model spends output tokens on
+    # reasoning before it emits any text - a 5-token budget is an instant 400.
+    payload["max_output_tokens"] = max(256, int(max_tokens or 0))
     response = client.post("https://api.openai.com/v1/responses",
                            headers=headers, json=payload)
-    response.raise_for_status()
+    _raise_with_body(response, "openai(responses)", model)
     data = response.json()
     _record_usage(model, data)
     return _extract_responses_text(data)
@@ -343,6 +344,25 @@ def usage_summary() -> Dict[str, Any]:
         e["cost"] += c
         total_cost += c
     return {"calls": len(_USAGE), "by_model": per, "total_cost_usd": round(total_cost, 4)}
+
+
+def _raise_with_body(response, provider: str, model: str) -> None:
+    """raise_for_status(), but keep the provider's explanation.
+
+    httpx's default message is the status line and a docs URL. The API almost
+    always says exactly what is wrong in the body - "max_output_tokens must be
+    greater than or equal to 16" - and throwing that away turns a one-line fix
+    into a guessing game.
+    """
+    if response.status_code < 400:
+        return
+    try:
+        body = response.json()
+        detail = body.get("error", {}).get("message") or json.dumps(body)[:400]
+    except Exception:
+        detail = (response.text or "")[:400]
+    raise RuntimeError(
+        f"{provider} {model} -> HTTP {response.status_code}: {detail.strip()}")
 
 
 def call_model(
