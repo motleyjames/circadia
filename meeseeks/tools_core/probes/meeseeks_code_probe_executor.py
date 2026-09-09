@@ -268,6 +268,31 @@ class CodeProbeExecutor(ProbeExecutor):
         """Run the test suite. This is the probe with real teeth."""
         root = self._root(context)
         cmd = context.get("test_command") or self.test_command
+
+        # Preflight. A test command that cannot even collect - a missing venv,
+        # an import that hangs, a wrong path - used to consume the entire probe
+        # timeout and come back as a bare "exceeded Ns", which says nothing
+        # about why. Collection is fast when it works, so cap it hard and
+        # report what actually went wrong.
+        collect = [c for c in cmd if c not in ("-q", "--no-header")] + ["--collect-only", "-q"]
+        try:
+            pre = subprocess.run(collect, cwd=str(root), capture_output=True,
+                                 text=True, timeout=min(45, context.get("timeout", self.timeout)))
+        except subprocess.TimeoutExpired:
+            return self._unverified(
+                probe,
+                f"`{' '.join(cmd)}` could not even COLLECT tests within 45s - something in "
+                f"the import path is hanging (a module doing network or I/O at import time is "
+                f"the usual cause). Nothing was checked.")
+        except (OSError, subprocess.SubprocessError) as exc:
+            return self._unverified(
+                probe, f"`{' '.join(cmd)}` could not be run: {type(exc).__name__}: {exc}")
+        if pre.returncode != 0 and "collected" not in (pre.stdout + pre.stderr):
+            return self._unverified(
+                probe,
+                f"`{' '.join(cmd)}` failed at collection (exit {pre.returncode}), so no test "
+                f"ever ran: {(pre.stderr or pre.stdout)[-200:].strip()}")
+
         proc = subprocess.run(
             cmd, cwd=str(root), capture_output=True, text=True,
             timeout=context.get("timeout", self.timeout),

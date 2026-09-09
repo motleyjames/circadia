@@ -702,6 +702,14 @@ class MeeseeksLoopRunner:
         partial_ids: List[str] = []
         confirmed_ids: List[str] = []
         unexamined_ids: List[str] = []
+        # The schema wants records, not ids: {dissent_id, status, method}.
+        resolution_records: List[Dict[str, Any]] = []
+
+        def _record(did: str, status: str, method: str, tool: str = "") -> None:
+            rec = {"dissent_id": did, "status": status, "method": method}
+            if tool:
+                rec["tool_used"] = tool
+            resolution_records.append(rec)
         if council_dissents:
             logger.info(f"   🔧 Phase 2: Self-resolving {len(council_dissents)} dissents...")
             
@@ -749,7 +757,17 @@ class MeeseeksLoopRunner:
                 # string present was closing dissents at full credit here,
                 # bypassing SRDE and the evidence grading in CodeContextResolver
                 # entirely, because the bridge is consulted first.
-                if self.semantic_bridge.is_answered_by_probe(dissent_id):
+                # ORDER MATTERS. The bridge only knows whether a probe is
+                # RELATED to a dissent; CodeContextResolver knows which probe was
+                # built FOR this dissent and what a hit means for it. Consulting
+                # the bridge first short-circuited every dissent that had its own
+                # probe into a generic weak answer worth half credit - which is
+                # why four probed concerns produced a resolution rate of exactly
+                # 0.5 and moved confidence by exactly nothing. A dissent that was
+                # probed goes to SRDE, which consults the resolver first. The
+                # bridge is the fallback for dissents with no probe of their own.
+                probed_here = dissent_id in getattr(self, "_probed_dissents", set())
+                if not probed_here and self.semantic_bridge.is_answered_by_probe(dissent_id):
                     answer = self.semantic_bridge.get_answer_for_dissent(dissent_id)
                     probe_id = answer[0] if answer else "?"
                     # SemanticBridge stores result.result - the probe's PAYLOAD,
@@ -769,12 +787,17 @@ class MeeseeksLoopRunner:
                     if strength == "strong":
                         dissents_resolved += 1
                         resolved_ids.append(dissent_id)
+                        _record(dissent_id, "resolved", "semantic_bridge", probe_id)
                         logger.info(f"      ✓ {dissent_id}: Settled by probe {probe_id}")
                     else:
                         # Real evidence, but a text match cannot fail for any
                         # plausible identifier, so it does not get to close a
                         # concern outright. Half credit, same as SRDE PARTIAL.
                         dissents_resolved += 0.5
+                        partial_ids.append(dissent_id)
+                        _record(dissent_id, "partially_resolved", str(result.method or "srde"),
+                                str(getattr(result, "tool_used", "") or ""))
+                        _record(dissent_id, "partially_resolved", "semantic_bridge_weak", probe_id)
                         logger.info(f"      ◐ {dissent_id}: Probe {probe_id} found supporting "
                                     f"text but cannot settle this on its own")
                     if probe_result is not None:
@@ -788,6 +811,8 @@ class MeeseeksLoopRunner:
                     if result.status.value in ['resolved', 'RESOLVED']:
                         dissents_resolved += 1
                         resolved_ids.append(dissent_id)
+                        _record(dissent_id, "resolved", str(result.method or "srde"),
+                                str(getattr(result, "tool_used", "") or ""))
                         self.confidence = min(1.0, self.confidence + result.confidence_impact)
                         logger.info(f"      ✓ {dissent_id}: RESOLVED via {result.method}")
                         logger.info(f"         Evidence: {result.evidence[:80]}...")
@@ -805,6 +830,8 @@ class MeeseeksLoopRunner:
                         # leave it exactly where a silent "no_resolver" left it.
                         self.confidence = max(0.0, self.confidence + min(0.0, result.confidence_impact))
                         confirmed_ids.append(dissent_id)
+                        _record(dissent_id, "needs_human", str(result.method or "srde"),
+                                str(getattr(result, "tool_used", "") or ""))
                         # This dissent WAS answered - the answer is bad news.
                         # Its confidence_impact above already carries that. Not
                         # counting it as answered would charge for it twice: once
@@ -857,7 +884,7 @@ class MeeseeksLoopRunner:
                                 else "unresolved")}
                     for d in council_dissents
                 ],
-                "dissents_resolved": sorted(set(resolved_ids) | set(partial_ids) | set(confirmed_ids)),
+                "dissents_resolved": resolution_records,
                 "resolution_rate": (dissents_resolved / examined_total) if examined_total else 0.0,
                 "unexamined": unexamined_ids,
                 "examined_total": examined_total,

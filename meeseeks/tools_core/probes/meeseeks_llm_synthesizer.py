@@ -81,14 +81,24 @@ against a repository to settle it. You do not answer the concern yourself.
                  path to check whether a module has grown too large.
 - check_invariant params: {{}}
                  Answers: does the test suite still pass?
-- compare_before_after params: {{}}
-                 Answers: did the suite regress against a baseline?
+
+## How much each answer is worth
+STRONG evidence - settles a concern outright and moves confidence properly:
+  - check_exists naming a real FUNCTION, CLASS or FILE
+  - count_items WITH an expected_count
+  - check_invariant (runs the suite)
+WEAK evidence - worth half, cannot close a concern on its own:
+  - check_value (a literal string search: it finds something for almost any
+    plausible string, so it rarely proves anything)
+  - count_items with no expected_count (a measurement that cannot come out wrong)
 
 ## Rules
-- Prefer a probe that CAN FAIL. check_invariant and compare_before_after run the
-  test suite and can come back red; count_items with an expected_count can be
-  wrong. check_value almost always finds something for any plausible string, so
-  it proves very little - reach for it last.
+- Reach for STRONG first. Almost every concern about code can be turned into
+  "is this symbol actually defined?" - which is check_exists on a real name from
+  the facts above, and is strong. Ask that instead of searching for a phrase.
+- Prefer a probe that CAN FAIL. If you use count_items, give an expected_count
+  you are willing to be wrong about.
+- Use check_value only when no symbol or count could settle the concern.
 - Pick the ONE probe that would most reduce uncertainty about this concern.
 - Identifiers and literals MUST be things that plausibly exist in this repo.
   Use names from the facts above. Never invent a symbol to check for.
@@ -98,7 +108,7 @@ against a repository to settle it. You do not answer the concern yourself.
 
 ## Output
 Return ONLY this JSON:
-{{"probe_type": "<one of the five, or null>",
+{{"probe_type": "check_exists" | "count_items" | "check_invariant" | "check_value" | null,
   "parameters": {{...}},
   "target": "<what is being checked, in three words>",
   "a_hit_means": "<REQUIRED: 'concern_is_real' if the probe FINDING what it looks
