@@ -125,6 +125,98 @@ def _bounded_impact(result: str, raw) -> float:
     return max(lo, min(hi, value))
 
 
+def write_findings_report(findings, session_id, task, confidence, verified_probes,
+                          output_dir) -> Optional[Path]:
+    """Write findings.md. Shared by the loop and spin CLIs - spin bypasses run(),
+    and duplicating this is how the two drift apart."""
+    if not findings:
+        return None
+    need = [f for f in findings if f["status"] == "needs_human"]
+    open_ = [f for f in findings if f["status"] in ("unresolved", "unprobed")]
+    settled = [f for f in findings if f["status"] in ("resolved", "partially_resolved")]
+
+    L = [f"# Findings - {session_id}", "",
+         f"**Task:** {str(task)[:400]}", "",
+         f"**Confidence:** {confidence:.0%}  ",
+         f"**Evidence:** {verified_probes} probe(s) established something conclusive "
+         f"against the source.", "",
+         f"{len(need)} need a person - {len(settled)} settled by evidence - "
+         f"{len(open_)} open.", ""]
+
+    def block(title, items, note):
+        if not items:
+            return
+        L.extend([f"## {title}", "", f"_{note}_", ""])
+        for f in items:
+            loop = f" - loop {f['loop']}" if f.get("loop") else ""
+            L.append(f"### {f['id']}  ({f['method']}{loop})")
+            L.append(f"> {f['concern'][:400]}")
+            L.append("")
+            if f.get("evidence"):
+                L.append(f["evidence"][:600])
+            if f.get("tool"):
+                L.append(f"\n`probe: {f['tool']}`")
+            L.append("")
+
+    block("Needs a person", need,
+          "Evidence CONFIRMED these. The harness is not guessing - each one cites "
+          "something real in the source.")
+    block("Open", open_,
+          "Nothing settled these. Either no probe could be built, or the evidence was "
+          "inconclusive. They are not findings against your code.")
+    block("Settled by evidence", settled,
+          "Checked against the source and found not to apply.")
+
+    try:
+        out = Path(output_dir) / session_id / "findings.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text("\n".join(L))
+        return out
+    except OSError as exc:
+        logger.warning(f"Could not write findings: {exc}")
+        return None
+
+
+def log_findings_summary(findings) -> None:
+    if not findings:
+        return
+    need = [f for f in findings if f["status"] == "needs_human"]
+    settled = [f for f in findings if f["status"] in ("resolved", "partially_resolved")]
+    open_ = [f for f in findings if f["status"] in ("unresolved", "unprobed")]
+    logger.info("")
+    logger.info(f"   FINDINGS: {len(need)} need a person, {len(settled)} settled by "
+                f"evidence, {len(open_)} open")
+    for f in need:
+        logger.info(f"     ⚠ {f['concern'][:88]}")
+        if f.get("evidence"):
+            logger.info(f"        {f['evidence'][:110]}")
+
+
+def log_cost_summary() -> None:
+    """What the run spent. Silent when no calls were made."""
+    try:
+        try:
+            from ..core.meeseeks_llm_caller import usage_summary
+        except ImportError:
+            from core.meeseeks_llm_caller import usage_summary
+        u = usage_summary()
+        if not u["calls"]:
+            return
+        tok = sum(v["input"] + v["output"] for v in u["by_model"].values())
+        more = " + unpriced models" if u.get("unpriced") else ""
+        logger.info(f"   COST: {u['calls']} model calls, {tok:,} tokens, "
+                    f"about ${u['total_cost_usd']:.3f}{more}")
+        for m, v in sorted(u["by_model"].items(), key=lambda kv: -kv[1]["cost"]):
+            price = f"${v['cost']:.3f}" if v.get("priced", True) else "no price in config"
+            logger.info(f"     {m:26} {v['calls']:>2} calls  {v['input']:>7,} in "
+                        f"{v['output']:>6,} out  {price}")
+        if u.get("unpriced"):
+            logger.info(f"     ^ {', '.join(u['unpriced'])} have no cost block in "
+                        f"00_llm_router_config.json, so their spend is NOT in the total")
+    except Exception:
+        pass
+
+
 def _extract_json(text: str) -> Optional[Dict[str, Any]]:
     """Extract JSON from LLM response, handling markdown code blocks."""
     # Try to find JSON in code blocks first
@@ -1206,9 +1298,6 @@ Generate your 3 hypotheses now:"""
             logger.info(f"      🔬 {result.probe_id}: {mark} — {result.evidence[:70]}")
 
 
-    ORDER = {"needs_human": 0, "unresolved": 1, "unprobed": 2,
-             "partially_resolved": 3, "resolved": 4}
-
     def write_findings(self) -> Optional[Path]:
         """The run's actual deliverable: every concern and what became of it.
 
@@ -1216,85 +1305,13 @@ Generate your 3 hypotheses now:"""
         the evidence, and the file:line it was anchored to, ordered so the
         things needing a person are first.
         """
-        if not self._findings:
-            return None
-        need = [f for f in self._findings if f["status"] == "needs_human"]
-        open_ = [f for f in self._findings if f["status"] in ("unresolved", "unprobed")]
-        settled = [f for f in self._findings if f["status"] in ("resolved", "partially_resolved")]
-
-        L = [f"# Findings - {self.session_id}", "",
-             f"**Task:** {self.prime_directive[:400]}", "",
-             f"**Confidence:** {self.confidence:.0%}  ",
-             f"**Evidence:** {self._verified_probes} probe(s) established something "
-             f"conclusive against the source.", "",
-             f"{len(need)} need a person - {len(settled)} settled by evidence - "
-             f"{len(open_)} open.", ""]
-
-        def block(title, items, note):
-            if not items:
-                return
-            L.extend([f"## {title}", "", f"_{note}_", ""])
-            for f in items:
-                L.append(f"### {f['id']}  ({f['method']})")
-                L.append(f"> {f['concern'][:400]}")
-                L.append("")
-                if f["evidence"]:
-                    L.append(f["evidence"][:600])
-                if f["tool"]:
-                    L.append(f"\n`probe: {f['tool']}`")
-                L.append("")
-
-        block("Needs a person", need,
-              "Evidence CONFIRMED these. The harness is not guessing - each one cites "
-              "something real in the source.")
-        block("Open", open_,
-              "Nothing settled these. Either no probe could be built, or the evidence "
-              "was inconclusive. They are not findings against your code.")
-        block("Settled by evidence", settled,
-              "Checked against the source and found not to apply.")
-
-        try:
-            out = Path(self.output_dir) / self.session_id / "findings.md"
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text("\n".join(L))
-            return out
-        except OSError as exc:
-            logger.warning(f"Could not write findings: {exc}")
-            return None
+        return write_findings_report(
+            self._findings, self.session_id, self.prime_directive,
+            self.confidence, self._verified_probes, self.output_dir)
 
     def _print_findings_summary(self) -> None:
-        if not self._findings:
-            return
-        need = [f for f in self._findings if f["status"] == "needs_human"]
-        settled = [f for f in self._findings if f["status"] in ("resolved", "partially_resolved")]
-        open_ = [f for f in self._findings if f["status"] in ("unresolved", "unprobed")]
-        logger.info("")
-        logger.info(f"   FINDINGS: {len(need)} need a person, {len(settled)} settled by "
-                    f"evidence, {len(open_)} open")
-        for f in need:
-            logger.info(f"     ⚠ {f['concern'][:88]}")
-            if f["evidence"]:
-                logger.info(f"        {f['evidence'][:110]}")
-        try:
-            try:
-                from ..core.meeseeks_llm_caller import usage_summary
-            except ImportError:
-                from core.meeseeks_llm_caller import usage_summary
-            u = usage_summary()
-            if u["calls"]:
-                tok = sum(v["input"] + v["output"] for v in u["by_model"].values())
-                more = " + unpriced models" if u.get("unpriced") else ""
-                logger.info(f"   COST: {u['calls']} model calls, {tok:,} tokens, "
-                            f"about ${u['total_cost_usd']:.3f}{more}")
-                for m, v in sorted(u["by_model"].items(), key=lambda kv: -kv[1]["cost"]):
-                    price = f"${v['cost']:.3f}" if v.get("priced", True) else "no price in config"
-                    logger.info(f"     {m:26} {v['calls']:>2} calls  "
-                                f"{v['input']:>7,} in {v['output']:>6,} out  {price}")
-                if u.get("unpriced"):
-                    logger.info(f"     ^ {', '.join(u['unpriced'])} have no cost block in "
-                                f"00_llm_router_config.json, so their spend is NOT in the total")
-        except Exception:
-            pass
+        log_findings_summary(self._findings)
+        log_cost_summary()
         path = self.write_findings()
         if path:
             logger.info(f"   Full report: {path}")

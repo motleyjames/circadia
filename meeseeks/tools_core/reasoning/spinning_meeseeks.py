@@ -580,7 +580,35 @@ class SpinningMeeseeks:
         # with the session logs in logs/sessions/{session_id}/
         logger.info(f"   📋 Helper spec recorded (will save with session logs)")
     
+    def _report(self) -> None:
+        """Findings and cost, once, at the end of the spin.
+
+        The loop CLI prints these from run(); spin calls _run_loop directly and
+        so produced neither - a spin session left a manifest and reasoning logs
+        and no report at all, which is the one artifact worth reading.
+        """
+        if getattr(self, "_reported", False):
+            return
+        self._reported = True
+        try:
+            try:
+                from .loop_runner import (log_findings_summary, log_cost_summary,
+                                          write_findings_report)
+            except ImportError:
+                from reasoning.loop_runner import (log_findings_summary, log_cost_summary,
+                                                   write_findings_report)
+            log_findings_summary(self._findings)
+            log_cost_summary()
+            path = write_findings_report(
+                self._findings, self.session_id, self.prime_directive,
+                self.confidence, self._verified_probes, self.output_dir)
+            if path:
+                logger.info(f"   Full report: {path}")
+        except Exception as exc:
+            logger.warning(f"Could not write the spin report: {exc}")
+
     def _create_result(self, status: str, message: str) -> SpinResult:
+        self._report()
         """Create the final spin result."""
         # Complete the session
         self.session_manager.complete_session(
