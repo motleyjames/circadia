@@ -63,7 +63,8 @@
           "high_volume_tasks",
           "latency_sensitive"
         ]
-      }
+      },
+      "_pricing": "NOT on the provider's current pricing page as of 2026-09-09 - this figure may be stale or the model deprecated. Verify before trusting a total that includes it."
     },
     "gpt-5.2-chat-latest": {
       "provider": "openai",
@@ -109,7 +110,8 @@
           "deep_reasoning",
           "complex_math"
         ]
-      }
+      },
+      "_pricing": "NOT on the provider's current pricing page as of 2026-09-09 - this figure may be stale or the model deprecated. Verify before trusting a total that includes it."
     },
     "gpt-5.2-pro": {
       "provider": "openai",
@@ -153,7 +155,8 @@
           "routine_tasks",
           "cost_sensitive"
         ]
-      }
+      },
+      "_pricing": "NOT on the provider's current pricing page as of 2026-09-09 - this figure may be stale or the model deprecated. Verify before trusting a total that includes it."
     },
     "gpt-5.3-codex": {
       "provider": "openai",
@@ -178,9 +181,8 @@
       "context_window": 256000,
       "max_output_tokens": 128000,
       "cost": {
-        "input_per_1m": 20.0,
-        "output_per_1m": 80.0,
-        "cached_input_per_1m": 5.0
+        "input_per_1m": 1.75,
+        "output_per_1m": 14.0
       },
       "latency_profile": "variable",
       "judge_eligible": true,
@@ -200,7 +202,8 @@
           "non_code_tasks",
           "simple_snippets"
         ]
-      }
+      },
+      "_pricing": "Verified. Source: developers.openai.com/api/docs/pricing, checked 2026-09-09"
     },
     "o3": {
       "provider": "openai",
@@ -248,7 +251,8 @@
           "conversational",
           "agentic_workflows"
         ]
-      }
+      },
+      "_pricing": "NOT on the provider's current pricing page as of 2026-09-09 - this figure may be stale or the model deprecated. Verify before trusting a total that includes it."
     },
     "o4-mini": {
       "provider": "openai",
@@ -271,9 +275,8 @@
       "context_window": 128000,
       "max_output_tokens": 65000,
       "cost": {
-        "input_per_1m": 1.1,
-        "output_per_1m": 4.4,
-        "reasoning_per_1m": 1.65
+        "input_per_1m": 4.0,
+        "output_per_1m": 16.0
       },
       "latency_profile": "medium",
       "judge_eligible": true,
@@ -293,7 +296,8 @@
           "frontier_quality_needed",
           "creative_tasks"
         ]
-      }
+      },
+      "_pricing": "Verified. Source: developers.openai.com/api/docs/pricing, checked 2026-09-09"
     },
     "gpt-image-1": {
       "provider": "openai",
@@ -350,9 +354,8 @@
       "context_window": 1000000,
       "max_output_tokens": 32000,
       "cost": {
-        "input_per_1m": 15.0,
-        "output_per_1m": 75.0,
-        "cached_input_per_1m": 1.5
+        "input_per_1m": 5.0,
+        "output_per_1m": 25.0
       },
       "latency_profile": "slow",
       "judge_eligible": true,
@@ -372,7 +375,8 @@
           "simple_tasks",
           "high_volume"
         ]
-      }
+      },
+      "_pricing": "Verified. Source: platform.claude.com/docs/en/about-claude/pricing, checked 2026-09-09"
     },
     "claude-sonnet-4-6": {
       "provider": "anthropic",
@@ -397,8 +401,7 @@
       "max_output_tokens": 16000,
       "cost": {
         "input_per_1m": 3.0,
-        "output_per_1m": 15.0,
-        "cached_input_per_1m": 0.3
+        "output_per_1m": 15.0
       },
       "latency_profile": "medium",
       "judge_eligible": true,
@@ -418,7 +421,8 @@
         "avoid_for": [
           "extreme_reasoning"
         ]
-      }
+      },
+      "_pricing": "Verified. Source: platform.claude.com/docs/en/about-claude/pricing, checked 2026-09-09"
     },
     "claude-haiku-4-5-20251001": {
       "provider": "anthropic",
@@ -442,9 +446,8 @@
       "context_window": 200000,
       "max_output_tokens": 8000,
       "cost": {
-        "input_per_1m": 0.8,
-        "output_per_1m": 4.0,
-        "cached_input_per_1m": 0.08
+        "input_per_1m": 1.0,
+        "output_per_1m": 5.0
       },
       "latency_profile": "very_fast",
       "judge_eligible": false,
@@ -462,7 +465,8 @@
           "complex_reasoning",
           "judging"
         ]
-      }
+      },
+      "_pricing": "Verified. Source: platform.claude.com/docs/en/about-claude/pricing, checked 2026-09-09"
     },
     "gemini-3.1-pro-preview": {
       "provider": "google",

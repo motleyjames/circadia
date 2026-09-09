@@ -110,9 +110,27 @@ def parse_verdict(raw: str) -> Optional[Dict[str, Any]]:
     start = text.find("{")
     if start < 0:
         return None
+    # Brace matching MUST ignore braces inside string literals. The whole point
+    # of this parser is to read a verdict whose "quote" field is a line of
+    # source code, and source code is full of braces - a dict literal, an
+    # f-string, a set. Counting them naively means any cited line with an
+    # unbalanced brace never closes the object, and a perfectly good verdict is
+    # thrown away as unparseable.
     depth = 0
+    in_string = False
+    escaped = False
     for i, ch in enumerate(text[start:], start=start):
-        if ch == "{":
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
             depth += 1
         elif ch == "}":
             depth -= 1
