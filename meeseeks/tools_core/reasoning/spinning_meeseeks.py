@@ -419,6 +419,11 @@ class SpinningMeeseeks:
         # how well the loops went.
         runner.confidence = self.confidence
         runner.confidence_calculator.confidence = self.confidence
+        # The calculator seeds its trajectory with 0.5 at construction, and the
+        # arbiter reads trajectory["initial"] to measure how much THIS loop
+        # moved. Left at 0.5 the delta is cumulative from the session start, so
+        # every loop scores as productive and the arbiter can never pivot.
+        runner.confidence_calculator.trajectory = [self.confidence]
         runner._verified_probes = self._verified_probes
         # Spinning mode can exceed the 3-loop mini-cycle; ensure the underlying loop logic
         # continues generating hypotheses instead of treating loops >= 3 as "final".

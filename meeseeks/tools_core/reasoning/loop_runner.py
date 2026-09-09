@@ -1549,6 +1549,18 @@ Test this hypothesis now:"""
                 loops_completed=self.MAX_LOOPS
             )
     
+    def _spawned_dir(self) -> Path:
+        """Where a spawned helper is written.
+
+        Never cwd-relative. create_spawned_tool() defaults to Path("tools_spawned"),
+        which means the helper lands in whatever directory the CLI happened to be
+        launched from - during a test run that is the source tree.
+        """
+        install = self.repo_root / "meeseeks" / "tools_spawned"
+        if install.parent.is_dir():
+            return install
+        return self.repo_root / "tools_spawned"
+
     def _spawn_helper(self) -> Dict[str, Any]:
         """
         Spawn a helper tool in tools_spawned/.
@@ -1578,8 +1590,7 @@ Test this hypothesis now:"""
                 when_to_use="When the parent session escalated this task for want of evidence.",
                 examples=hypotheses[:3] or ["No hypotheses were carried forward."],
                 created_by=self.session_id,
-                spawned_dir=self.repo_root / "meeseeks" / "tools_spawned"
-                if (self.repo_root / "meeseeks" / "tools_spawned").exists() else None,
+                spawned_dir=self._spawned_dir(),
             )
             tool_path = str(created)
             logger.info(f"   Helper written to {tool_path}")
