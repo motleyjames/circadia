@@ -69,6 +69,24 @@ except ImportError:
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from core.meeseeks_llm_caller import call_model, call_gemini_pro, get_default_model
+
+
+def _call_reasoning(prompt: str, system: str) -> str:
+    """
+    Hypothesis generation and testing, resilient to one provider being down.
+
+    These were hardcoded to call_gemini_pro(). Gemini's free tier returns 503
+    under load and 429 above 5 requests/minute, and every failure aborted the
+    loop at the fallback confidence. Try the Google model, then Anthropic.
+    """
+    last = None
+    for role in ("google_top", "anthropic_balanced", "anthropic_top"):
+        try:
+            return call_model(get_default_model(role), prompt, system)
+        except Exception as exc:
+            last = exc
+            logger.warning(f"      {role} unavailable ({type(exc).__name__}), trying next")
+    raise last if last else RuntimeError("no reasoning provider available")
 from council.meeseeks_council import council_vote
 
 logger = logging.getLogger(__name__)
@@ -224,6 +242,11 @@ class MeeseeksLoopRunner:
         spawn_threshold: float = SPAWN_THRESHOLD,
         loop_executor: Optional[Callable] = None,
         context: Optional[str] = None,
+        repo_root: Optional[Path] = None,
+        verify: bool = True,
+        max_probes_per_loop: int = 3,
+        test_command: Optional[List[str]] = None,
+        probe_timeout: int = 120,
     ):
         """
         Initialize a Meeseeks loop runner.
@@ -237,6 +260,16 @@ class MeeseeksLoopRunner:
             spawn_threshold: Confidence threshold for spawning helper (default: 0.50)
             loop_executor: Custom function to execute each loop (for testing/extension)
             context: Optional tools/knowledge context to include in prompts
+            repo_root: Repository to run verification probes against. Defaults to
+                the project containing this meeseeks/ install.
+            verify: Synthesize and execute probes from council dissents. When off,
+                the loop behaves as before: the semantic bridge stays empty and
+                is_answered_by_probe() is always False.
+            max_probes_per_loop: Cost ceiling. Synthesis is one model call each.
+            test_command: Command a CHECK_INVARIANT probe runs. Defaults to the
+                whole suite, which inside a loop can mean minutes per probe -
+                pass a fast subset for anything but a final check.
+            probe_timeout: Seconds before a probe subprocess is killed.
         """
         self.session_id = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
         self.prime_directive = prime_directive
@@ -256,6 +289,37 @@ class MeeseeksLoopRunner:
         # REAL RSI Components (not stubs!)
         self.srde = create_srde()  # Self-Resolving Dissent Engine
         self.semantic_bridge = create_semantic_bridge()  # Probe ↔ Dissent linker
+
+        # Verification. Without this the bridge never receives a probe, so the
+        # is_answered_by_probe() checks below are always False and confidence is
+        # a hardcoded increment rather than evidence.
+        self.verify = verify
+        self.max_probes_per_loop = max_probes_per_loop
+        self.test_command = test_command
+        self.probe_timeout = probe_timeout
+        self.repo_root = Path(repo_root) if repo_root else Path(__file__).resolve().parents[3]
+        self.probe_factory = None
+        if self.verify:
+            try:
+                try:
+                    from ..probes import create_probe_factory, CodeProbeExecutor
+                    from ..probes.meeseeks_llm_synthesizer import LLMProbeSynthesizer
+                except ImportError:
+                    # The CLIs put tools_core/ on sys.path, so `probes` is
+                    # top-level and `..probes` reaches past the root package.
+                    from probes import create_probe_factory, CodeProbeExecutor
+                    from probes.meeseeks_llm_synthesizer import LLMProbeSynthesizer
+                from .meeseeks_code_context_resolver import CodeContextResolver
+                self.probe_factory = create_probe_factory()
+                self.probe_factory.set_executor(CodeProbeExecutor())
+                self.probe_factory.set_synthesizer(
+                    LLMProbeSynthesizer(repo_root=str(self.repo_root)))
+                self.code_resolver = CodeContextResolver()
+                self.srde.set_context_resolver(self.code_resolver)
+                logger.info(f"   🔬 Verification enabled against {self.repo_root}")
+            except Exception as exc:
+                logger.warning(f"Verification unavailable, running unverified: {exc}")
+                self.probe_factory = None
         
         # Custom loop executor (for testing or domain-specific logic)
         self._loop_executor = loop_executor
@@ -584,6 +648,8 @@ class MeeseeksLoopRunner:
         if council_dissents:
             logger.info(f"   🔧 Phase 2: Self-resolving {len(council_dissents)} dissents...")
             
+            self._run_probes(council_dissents, loop_num)
+
             for dissent in council_dissents:
                 dissent_id = dissent['id']
                 content = dissent['content']
@@ -623,6 +689,16 @@ class MeeseeksLoopRunner:
                         self.confidence = min(1.0, self.confidence + result.confidence_impact * 0.5)
                         logger.info(f"      ◐ {dissent_id}: PARTIAL via {result.method}")
                         logger.info(f"         Evidence: {result.evidence[:80]}...")
+                    elif result.status.value in ['needs_human', 'NEEDS_HUMAN']:
+                        # Evidence CONFIRMED the concern. That is the opposite of
+                        # resolved, so it must not count toward dissents_resolved -
+                        # and the probe's negative impact is applied, because
+                        # proving a concern real should move confidence down, not
+                        # leave it exactly where a silent "no_resolver" left it.
+                        self.confidence = max(0.0, self.confidence + min(0.0, result.confidence_impact))
+                        logger.info(f"      ⚠ {dissent_id}: CONFIRMED by evidence - needs a person")
+                        logger.info(f"         Dissent: {content[:100]}{'...' if len(content) > 100 else ''}")
+                        logger.info(f"         Evidence: {result.evidence[:100]}")
                     else:
                         # ACTUALLY SHOW what the dissent was and why it couldn't be resolved!
                         logger.info(f"      ✗ {dissent_id}: UNRESOLVED")
@@ -692,9 +768,9 @@ Return ONLY valid JSON:
 Generate your 3 hypotheses now:"""
         
         try:
-            response = call_gemini_pro(
-                prompt=prompt,
-                system="You are Mr. Meeseeks. Return ONLY valid JSON with exactly 3 hypotheses."
+            response = _call_reasoning(
+                prompt,
+                "You are Mr. Meeseeks. Return ONLY valid JSON with exactly 3 hypotheses."
             )
             logger.info(f"      ✅ LLM response received ({len(response)} chars)")
             
@@ -781,6 +857,84 @@ Generate your 3 hypotheses now:"""
         
         return observations, reasoning_chain, decision, new_hypotheses, self_reflection
     
+    def _run_probes(self, council_dissents: List[Dict[str, Any]], loop_num: int) -> None:
+        """
+        Turn dissents into probes, run them, and put the evidence on the bridge.
+
+        This is what makes is_answered_by_probe() capable of returning True and
+        gives SRDE something real to cross-reference. Failures are non-fatal:
+        the loop continues unverified rather than dying.
+        """
+        if not self.probe_factory or not council_dissents:
+            return
+        selected = council_dissents[: self.max_probes_per_loop]
+        logger.info(f"   🔬 Synthesizing probes for {len(selected)} dissent(s)...")
+        synth = getattr(self.probe_factory, "synthesizer", None)
+        skipped_before = len(getattr(synth, "skipped", None) or [])
+        probes = []
+        for dissent in selected:
+            try:
+                probe = self.probe_factory._synthesize_from_dissent(
+                    dissent['content'], dissent.get('source', 'council'))
+                if probe:
+                    probes.append((dissent['id'], dissent['content'], probe))
+            except Exception as exc:
+                logger.warning(f"      probe synthesis failed: {exc}")
+        if not probes:
+            logger.info("      no dissent yielded a runnable probe this loop")
+            self._report_skipped(synth, skipped_before)
+            return
+
+        ctx = {"repo_root": str(self.repo_root), "timeout": self.probe_timeout}
+        if self.test_command:
+            ctx["test_command"] = self.test_command
+        for dissent_id, dissent_text, probe in probes:
+            try:
+                result = self.probe_factory.executor.execute(probe, ctx)
+            except Exception as exc:
+                logger.warning(f"      probe {probe.name} failed: {exc}")
+                continue
+            mark = "verified" if result.verified else (
+                "unverified" if result.confidence_impact == 0.0 else "refuted")
+            # SRDE and the resolver take every result, including refutations.
+            # The BRIDGE only takes affirmative evidence: is_answered_by_probe()
+            # feeds dissents_resolved, which feeds confidence, so registering a
+            # refutation there would raise confidence for proving a concern real.
+            if not result.verified:
+                if result.confidence_impact != 0.0:
+                    self.srde.register_probe_result(result.probe_id, result)
+                    if getattr(self, "code_resolver", None) is not None:
+                        self.code_resolver.add_probe(result, origin_dissent=dissent_text)
+                    logger.info(f"      🔬 {result.probe_id}: {mark} (not on bridge) — "
+                                f"{result.evidence[:60]}")
+                    continue
+                # SemanticBridge.is_answered_by_probe() only checks link strength,
+                # never whether the probe concluded anything. Registering an
+                # UNVERIFIED probe therefore marks the dissent answered and skips
+                # SRDE entirely - a false resolution. Keep it off the bridge.
+                logger.info(f"      🔬 {result.probe_id}: {mark} (not registered) — "
+                            f"{result.evidence[:60]}")
+                continue
+            self.semantic_bridge.register_probe(result.probe_id, result)
+            self.srde.register_probe_result(result.probe_id, result)
+            if getattr(self, "code_resolver", None) is not None:
+                self.code_resolver.add_probe(result, origin_dissent=dissent_text)
+            logger.info(f"      🔬 {result.probe_id}: {mark} — {result.evidence[:70]}")
+
+        self._report_skipped(synth, skipped_before)
+
+    @staticmethod
+    def _report_skipped(synth, since: int) -> None:
+        """Concerns the synthesizer declined to probe.
+
+        These never reach SRDE and never appear in the resolution counts, so
+        without this they vanish - and a judgement call nothing can check is
+        exactly the kind of finding a person needs to see.
+        """
+        for entry in (getattr(synth, "skipped", None) or [])[since:]:
+            logger.info(f"      ⃠  no probe can settle: {entry['dissent'][:70]} "
+                        f"({entry['why'][:60]})")
+
     def _fallback_loop_output(self, loop_num: int, error: str) -> tuple:
         """Fallback output when LLM call fails."""
         observations = [
@@ -870,9 +1024,9 @@ Confidence impact guidelines:
 Test this hypothesis now:"""
         
         try:
-            response = call_gemini_pro(
-                prompt=prompt,
-                system="You are testing hypotheses for the Meeseeks RSI system. Analyze carefully and return valid JSON with your assessment."
+            response = _call_reasoning(
+                prompt,
+                "You are testing hypotheses for the Meeseeks RSI system. Analyze carefully and return valid JSON with your assessment."
             )
             
             parsed = _extract_json(response)

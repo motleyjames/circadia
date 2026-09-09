@@ -89,6 +89,15 @@ Note: For full orchestration with arbiter (continue/pivot/spawn decisions),
         action="store_true",
         help="Minimal output"
     )
+    parser.add_argument("--no-verify", action="store_true",
+                        help="Skip probe synthesis and execution (cheaper, unverified)")
+    parser.add_argument("--test-command", default=None,
+                        help="Command a CHECK_INVARIANT probe runs, e.g. "
+                             "'venv/bin/pytest tests/test_costs.py -q'. Defaults to "
+                             "the whole suite, which is slow inside a loop.")
+    parser.add_argument("--repo-root", default=None,
+                        help="Repository to run verification probes against")
+
     
     args = parser.parse_args()
     
@@ -136,6 +145,9 @@ Note: For full orchestration with arbiter (continue/pivot/spawn decisions),
     runner = MeeseeksLoopRunner(
         prime_directive=task,
         output_dir=output_dir,
+        repo_root=args.repo_root,
+        verify=not args.no_verify,
+        test_command=args.test_command.split() if args.test_command else None,
     )
     
     # Override max loops if specified

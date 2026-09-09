@@ -210,6 +210,12 @@ class SelfResolvingDissentEngine:
                 logger.info(f"SRDE: Resolved via context resolver: {result.method}")
                 self.resolution_history.append(result)
                 return result
+            if result.status == ResolutionStatus.PARTIALLY_RESOLVED:
+                # Weak but real evidence. Falling through would hand this to a
+                # pattern resolver that claims more than the evidence supports.
+                logger.info(f"SRDE: Partially resolved by evidence: {result.method}")
+                self.resolution_history.append(result)
+                return result
             if result.status == ResolutionStatus.NEEDS_HUMAN:
                 # The resolver did not fail to answer - it answered that the
                 # dissent is CONFIRMED. Falling through here would hand the

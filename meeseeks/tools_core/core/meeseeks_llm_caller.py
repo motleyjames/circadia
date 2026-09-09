@@ -174,10 +174,17 @@ def call_google(
         }
     }
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-    
+    # The key goes in a header, never the URL. As a query parameter it lands in
+    # every httpx log line, traceback and proxy record - verified leaking on
+    # each request. Google's current docs use this header for both key formats.
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    headers = {
+        "x-goog-api-key": api_key,
+        "Content-Type": "application/json",
+    }
+
     with httpx.Client(timeout=300.0) as client:
-        response = client.post(url, json=payload)
+        response = client.post(url, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
         

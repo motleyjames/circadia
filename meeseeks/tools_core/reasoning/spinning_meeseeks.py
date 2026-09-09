@@ -109,6 +109,10 @@ class SpinningMeeseeks:
         max_loops: int = 10,  # SAFETY limit only - productive loops should continue
         loop_executor: Optional[Callable] = None,
         on_spawn: Optional[Callable] = None,
+        repo_root: Optional[Path] = None,
+        verify: bool = True,
+        test_command: Optional[List[str]] = None,
+        probe_timeout: int = 120,
     ):
         """
         Initialize a Spinning Meeseeks.
@@ -127,6 +131,11 @@ class SpinningMeeseeks:
         self.max_loops = min(max_loops, self.ABSOLUTE_MAX_LOOPS)
         self.loop_executor = loop_executor
         self.on_spawn = on_spawn
+        # Passed to every MeeseeksLoopRunner so the spinner verifies too.
+        self.repo_root = repo_root
+        self.verify = verify
+        self.test_command = test_command
+        self.probe_timeout = probe_timeout
         
         # Components
         self.session_manager = SessionManager(self.output_dir)
@@ -381,6 +390,10 @@ class SpinningMeeseeks:
             prime_directive=self.prime_directive,
             output_dir=self.output_dir,
             loop_executor=self.loop_executor,
+            repo_root=self.repo_root,
+            verify=self.verify,
+            test_command=self.test_command,
+            probe_timeout=self.probe_timeout,
         )
         # Spinning mode can exceed the 3-loop mini-cycle; ensure the underlying loop logic
         # continues generating hypotheses instead of treating loops >= 3 as "final".
@@ -537,6 +550,9 @@ def spin_meeseeks(
     prime_directive: str,
     output_dir: Optional[Path] = None,
     max_loops: int = 10,  # SAFETY limit - productive loops will continue
+    repo_root: Optional[Path] = None,
+    verify: bool = True,
+    test_command: Optional[List[str]] = None,
     **kwargs
 ) -> SpinResult:
     """
@@ -555,6 +571,9 @@ def spin_meeseeks(
         prime_directive=prime_directive,
         output_dir=output_dir,
         max_loops=max_loops,
+        repo_root=repo_root,
+        verify=verify,
+        test_command=test_command,
         **kwargs
     )
     return meeseeks.spin()

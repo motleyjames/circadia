@@ -167,16 +167,33 @@ class CodeProbeExecutor(ProbeExecutor):
         target_type = (probe.parameters.get("target_type") or "").lower()
         expected = probe.parameters.get("expected_count")
 
-        if "test" in target_type or "test" in (probe.from_dissent or "").lower():
+        # Only count what was actually asked for. Sniffing the dissent for the
+        # word "test" made a requested line-count return a test count and report
+        # the mismatch as a refutation - a confident answer to a question nobody
+        # asked. If the target is not supported, say so.
+        if target_type in ("test", "tests"):
             count, detail = self._collect_tests(root, context)
             target = "tests"
-        else:
-            needle = self._needle_from_dissent(probe)
+        elif target_type in ("line", "lines"):
+            needle = probe.parameters.get("identifier") or self._needle_from_dissent(probe)
+            path = self._safe_path(root, needle) if needle else None
+            if not path or not path.is_file():
+                return self._unverified(
+                    probe, f"Line count requested for '{needle}', which is not a file in the repo.")
+            count = len(path.read_text(encoding="utf-8", errors="replace").splitlines())
+            detail = f"lines in {path.relative_to(root)}"
+            target = str(path.relative_to(root))
+        elif target_type in ("occurrence", "occurrences", "match", "matches", ""):
+            needle = probe.parameters.get("identifier") or self._needle_from_dissent(probe)
             if not needle:
                 return self._unverified(probe, "Nothing identifiable to count in the dissent.")
             count = len(self._grep(root, context, needle, limit=100000))
             detail = f"occurrences of '{needle}'"
             target = needle
+        else:
+            return self._unverified(
+                probe, f"Cannot count '{target_type}' - this executor counts tests, "
+                       f"lines, or occurrences.")
 
         if count is None:
             return self._unverified(probe, f"Could not count {detail}.")
@@ -187,6 +204,12 @@ class CodeProbeExecutor(ProbeExecutor):
                 f"No expected count was stated, so this is a measurement, not a check.", 0.05,
             )
 
+        if expected == 0 and count > 0 and target_type not in ("line", "lines"):
+            # An expected count of zero against a live measurement is almost
+            # always the model failing to fill the field, not a real assertion.
+            return self._unverified(
+                probe, f"Measured {count} {detail}, but the expected count was 0 - "
+                       f"treating that as unset rather than as a failed assertion.")
         matched = count == expected
         return ProbeResult(
             probe_type=probe.probe_type, probe_id=probe.name, target=target,

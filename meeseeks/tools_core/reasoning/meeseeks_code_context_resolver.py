@@ -82,9 +82,23 @@ class CodeContextResolver(ContextResolver):
         # discarded by the engine and flattened into "no_resolver". That is real
         # information, so it is kept here for the caller to read after the pass.
         self.refutations: List[ResolutionAttempt] = []
+        # A probe answers at most one dissent. Without this the highest-scoring
+        # probe wins every match and one piece of evidence closes several
+        # unrelated concerns, double-counting its confidence.
+        self._spent: set = set()
+        # probe_id -> the dissent text the probe was synthesized FROM.
+        # Keyword scoring alone re-derives a link the caller already knows for
+        # certain, and re-derives it badly: a probe searching for "encryption"
+        # scores zero against the dissent "the database is unencrypted", because
+        # "unencrypted" neither equals nor contains "encryption". The probe then
+        # matches nothing and the dissent it was built to settle comes back
+        # "no_resolver". Provenance is exact; keywords are the fallback.
+        self._origin: Dict[str, str] = {}
 
-    def add_probe(self, result: ProbeResult) -> None:
+    def add_probe(self, result: ProbeResult, origin_dissent: Optional[str] = None) -> None:
         self._probes.append(result)
+        if origin_dissent:
+            self._origin[result.probe_id] = origin_dissent.strip()
 
     def add_probes(self, results: List[ProbeResult]) -> None:
         self._probes.extend(results)
@@ -120,13 +134,25 @@ class CodeContextResolver(ContextResolver):
             )
 
         if probe.verified:
+            self._spent.add(probe.probe_id)
+            strength = self._strength(probe)
+            if strength == "strong":
+                return ResolutionAttempt(
+                    dissent_id=dissent_id, dissent_content=dissent_content,
+                    status=ResolutionStatus.RESOLVED, method="code_probe_evidence",
+                    evidence=f"Probe '{probe.probe_id}' verified against the repository: {probe.evidence}",
+                    confidence_impact=probe.confidence_impact, tool_used=probe.probe_id,
+                )
             return ResolutionAttempt(
                 dissent_id=dissent_id, dissent_content=dissent_content,
-                status=ResolutionStatus.RESOLVED, method="code_probe_evidence",
-                evidence=f"Probe '{probe.probe_id}' verified against the repository: {probe.evidence}",
-                confidence_impact=probe.confidence_impact, tool_used=probe.probe_id,
+                status=ResolutionStatus.PARTIALLY_RESOLVED, method="code_probe_weak",
+                evidence=(f"Probe '{probe.probe_id}' found supporting text but cannot settle "
+                          f"this: {probe.evidence} A literal match is not an answer to a "
+                          f"design question."),
+                confidence_impact=probe.confidence_impact * 0.5, tool_used=probe.probe_id,
             )
 
+        self._spent.add(probe.probe_id)
         refutation = ResolutionAttempt(
             dissent_id=dissent_id, dissent_content=dissent_content,
             status=ResolutionStatus.NEEDS_HUMAN, method="code_probe_evidence",
@@ -139,9 +165,26 @@ class CodeContextResolver(ContextResolver):
 
     # -------------------------------------------------------------- matching
 
-    def _best_match(self, dissent: str) -> Optional[ProbeResult]:
+    STRONG = {ProbeType.CHECK_INVARIANT, ProbeType.COMPARE_BEFORE_AFTER}
+
+    def _strength(self, probe: ProbeResult) -> str:
+        """How much a verdict from this probe is worth."""
+        if probe.probe_type in self.STRONG:
+            return "strong"
+        res = probe.result if isinstance(probe.result, dict) else {}
+        if probe.probe_type is ProbeType.CHECK_EXISTS and res.get("kind") in ("file", "symbol"):
+            return "strong"
+        if probe.probe_type is ProbeType.COUNT_ITEMS and "expected" in res:
+            return "strong"
+        # Text matches, bare counts: real evidence, but it cannot fail for any
+        # plausible identifier, so it does not get to close a concern.
+        return "weak"
+
+    def _best_match(self, dissent: str, exclude_spent: bool = True) -> Optional[ProbeResult]:
         """Highest-scoring probe that plausibly addresses this dissent, or None."""
-        scored = [(self._score(p, dissent), p) for p in self._probes]
+        pool = [p for p in self._probes
+                if not (exclude_spent and p.probe_id in self._spent)]
+        scored = [(self._score(p, dissent), p) for p in pool]
         scored = [(s, p) for s, p in scored if s > 0]
         if not scored:
             return None
@@ -152,6 +195,11 @@ class CodeContextResolver(ContextResolver):
         low = dissent.lower()
         target = (probe.target or "").lower()
         score = 0
+
+        # Provenance beats inference. This probe was built to settle this exact
+        # dissent, so no keyword score should be able to outrank it.
+        if self._is_origin(probe, dissent):
+            return 100
 
         if target and len(target) > 2 and target in low:
             score += 10
@@ -174,6 +222,18 @@ class CodeContextResolver(ContextResolver):
             score += 4
 
         return score
+
+    def _is_origin(self, probe: ProbeResult, dissent: str) -> bool:
+        """Was this probe synthesized from this dissent?"""
+        origin = self._origin.get(probe.probe_id)
+        if not origin:
+            return False
+        a = " ".join(origin.lower().split())
+        b = " ".join(dissent.lower().split())
+        # Synthesizers truncate the dissent they record, so one may be a prefix
+        # of the other. Require a real span, not a shared opening clause.
+        shortest = min(len(a), len(b))
+        return shortest >= 40 and (a.startswith(b[:shortest]) or b.startswith(a[:shortest]))
 
     @staticmethod
     def _tokens(text: str) -> List[str]:

@@ -70,14 +70,25 @@ against a repository to settle it. You do not answer the concern yourself.
                  Answers: is this actually defined in the codebase?
 - check_value    params: {{"expected": "<exact literal string>"}}
                  Answers: does this exact text appear in the source?
-- count_items    params: {{"target_type": "tests"}} or {{"expected_count": <int>}}
-                 Answers: how many tests are collected / how many occurrences?
+- count_items    params: {{"target_type": "tests" | "lines" | "occurrences",
+                           "identifier": "<file path when counting lines, or the
+                                          string to look for when counting
+                                          occurrences; omit for tests>",
+                           "expected_count": <int - OMIT unless you genuinely
+                                              expect one specific number>}}
+                 Answers: how many tests are collected, how many lines a file has,
+                 or how many times something appears. Use "lines" with a real file
+                 path to check whether a module has grown too large.
 - check_invariant params: {{}}
                  Answers: does the test suite still pass?
 - compare_before_after params: {{}}
                  Answers: did the suite regress against a baseline?
 
 ## Rules
+- Prefer a probe that CAN FAIL. check_invariant and compare_before_after run the
+  test suite and can come back red; count_items with an expected_count can be
+  wrong. check_value almost always finds something for any plausible string, so
+  it proves very little - reach for it last.
 - Pick the ONE probe that would most reduce uncertainty about this concern.
 - Identifiers and literals MUST be things that plausibly exist in this repo.
   Use names from the facts above. Never invent a symbol to check for.
@@ -129,21 +140,25 @@ class LLMProbeSynthesizer:
 
         spec = self._parse(raw)
         if not spec:
-            logger.warning("LLM synthesis returned unparseable JSON")
+            logger.warning(f"LLM synthesis returned unparseable JSON: {raw.strip()[:160]!r}")
             return None
 
         kind = spec.get("probe_type")
-        if kind is None:
-            self.skipped.append({
-                "dissent": dissent[:160],
-                "why": spec.get("rationale", "model judged it unverifiable by probe"),
-            })
+        # A model asked for JSON emits the string "null" about as often as a
+        # real null. Both mean the same thing - it judged the concern
+        # unverifiable by probe - so both belong in skipped_report(), where a
+        # person will see them, not in a warning about an unsupported type.
+        if kind is None or str(kind).strip().lower() in ("null", "none", "n/a", ""):
+            self._skip(dissent, spec.get("rationale") or "model judged it unverifiable by probe")
             logger.info("LLM declined to synthesize a probe - concern is not checkable")
             return None
 
-        ptype = SUPPORTED.get(str(kind).lower())
+        ptype = SUPPORTED.get(str(kind).strip().lower())
         if ptype is None:
-            logger.warning(f"LLM proposed unsupported probe type: {kind}")
+            # Also a dissent nothing checked it. Log it as the bug it is, but
+            # still surface the concern rather than dropping it silently.
+            logger.warning(f"LLM proposed unsupported probe type: {kind!r}")
+            self._skip(dissent, f"model proposed probe type {kind!r}, which no executor implements")
             return None
 
         params = spec.get("parameters") or {}
@@ -152,8 +167,13 @@ class LLMProbeSynthesizer:
 
         target = str(spec.get("target", kind))[:40]
         slug = re.sub(r"[^a-z0-9]+", "_", target.lower()).strip("_") or str(kind)
+        # A probe's name is its probe_id, and everything downstream keys on it:
+        # the resolver's spent-set and provenance map, the semantic bridge. Two
+        # dissents about the same subject produce the same slug, and the second
+        # probe would silently take the first one's identity.
+        suffix = f"{abs(hash(dissent.strip())) % 10000:04d}"
         return SynthesizedProbe(
-            name=f"{kind}__{slug}"[:60],
+            name=f"{kind}__{slug}"[:55] + f"_{suffix}",
             probe_type=ptype,
             description=str(spec.get("would_settle", ""))[:300],
             code="",
@@ -161,6 +181,9 @@ class LLMProbeSynthesizer:
             generated_by=f"{generated_by}:{model}",
             from_dissent=dissent[:200],
         )
+
+    def _skip(self, dissent: str, why: str) -> None:
+        self.skipped.append({"dissent": dissent[:160], "why": str(why)[:200]})
 
     def skipped_report(self) -> str:
         """Concerns the model judged unverifiable. These need a person, not a probe."""
@@ -212,13 +235,35 @@ class LLMProbeSynthesizer:
 
     @staticmethod
     def _parse(raw: str) -> Optional[Dict[str, Any]]:
-        start, end = raw.find("{"), raw.rfind("}") + 1
-        if start < 0 or end <= start:
+        """Tolerate markdown fences and trailing prose around the JSON object."""
+        text = re.sub(r"^\s*```(?:json)?|```\s*$", "", raw.strip(), flags=re.M)
+        start = text.find("{")
+        if start < 0:
             return None
-        try:
-            return json.loads(raw[start:end])
-        except json.JSONDecodeError:
-            return None
+        # Walk to the matching close brace rather than the last one in the string,
+        # so trailing commentary containing braces does not break the parse.
+        depth, in_str, esc = 0, False, False
+        for i, ch in enumerate(text[start:], start):
+            if in_str:
+                if esc:
+                    esc = False
+                elif ch == "\\":
+                    esc = True
+                elif ch == '"':
+                    in_str = False
+                continue
+            if ch == '"':
+                in_str = True
+            elif ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        return json.loads(text[start:i + 1])
+                    except json.JSONDecodeError:
+                        return None
+        return None
 
 
 def create_llm_synthesizer(**kwargs) -> LLMProbeSynthesizer:

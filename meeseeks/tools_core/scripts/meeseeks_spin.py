@@ -100,6 +100,15 @@ Confidence Thresholds:
         action="store_true",
         help="Minimal output (just result)"
     )
+    parser.add_argument("--no-verify", action="store_true",
+                        help="Skip probe synthesis and execution (cheaper, unverified)")
+    parser.add_argument("--test-command", default=None,
+                        help="Command a CHECK_INVARIANT probe runs, e.g. "
+                             "'venv/bin/pytest tests/test_costs.py -q'. Defaults to "
+                             "the whole suite, which is slow inside a loop.")
+    parser.add_argument("--repo-root", default=None,
+                        help="Repository to run verification probes against")
+
     
     args = parser.parse_args()
     
@@ -154,6 +163,9 @@ Confidence Thresholds:
         output_dir=output_dir,
         max_loops=args.max_loops,
         session_id=args.session_id,
+        repo_root=args.repo_root,
+        verify=not args.no_verify,
+        test_command=args.test_command.split() if args.test_command else None,
     )
     
     # Print results
