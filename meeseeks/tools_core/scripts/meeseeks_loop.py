@@ -95,6 +95,16 @@ Note: For full orchestration with arbiter (continue/pivot/spawn decisions),
                         help="Command a CHECK_INVARIANT probe runs, e.g. "
                              "'venv/bin/pytest tests/test_costs.py -q'. Defaults to "
                              "the whole suite, which is slow inside a loop.")
+    parser.add_argument("--reader-model", default="anthropic_balanced",
+                        help="Role used by read_code probes to read source and answer "
+                             "a question about it. Its citations are verified against "
+                             "the file, so a stronger model here buys accuracy, not "
+                             "just confidence (default anthropic_balanced)")
+    parser.add_argument("--synth-model", default="anthropic_balanced",
+                        help="Role used to design probes. Probe quality is what "
+                             "earns evidence - a better model picks a sharper probe, "
+                             "scopes it to the right file, and states the direction "
+                             "correctly. Try anthropic_top (default anthropic_balanced)")
     parser.add_argument("--max-probes", type=int, default=3,
                         help="How many dissents get a probe each loop. Concerns "
                              "beyond this are reported as unexamined rather than "
@@ -157,6 +167,8 @@ Note: For full orchestration with arbiter (continue/pivot/spawn decisions),
         test_command=args.test_command.split() if args.test_command else None,
         probe_timeout=args.probe_timeout,
         max_probes_per_loop=args.max_probes,
+        synth_model=args.synth_model,
+        reader_model=args.reader_model,
     )
     
     # Override max loops if specified

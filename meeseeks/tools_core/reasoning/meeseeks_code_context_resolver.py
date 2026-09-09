@@ -167,8 +167,32 @@ class CodeContextResolver(ContextResolver):
             )
 
         self._spent.add(probe.probe_id)
-        polarity = self._polarity.get(probe.probe_id)
         res = probe.result if isinstance(probe.result, dict) else {}
+
+        # A code-reading probe states its own verdict, checked against a real
+        # line in the file. Nothing to infer: no polarity to get backwards, no
+        # miss to misread. This is the strongest evidence this harness has.
+        verdict = res.get("verdict")
+        if verdict in ("concern_is_real", "concern_is_unfounded"):
+            self._spent.add(probe.probe_id)
+            magnitude = abs(probe.confidence_impact)
+            if verdict == "concern_is_real":
+                attempt = ResolutionAttempt(
+                    dissent_id=dissent_id, dissent_content=dissent_content,
+                    status=ResolutionStatus.NEEDS_HUMAN, method="code_reading",
+                    evidence=f"Reading the source CONFIRMS this concern. {probe.evidence}",
+                    confidence_impact=-magnitude, tool_used=probe.probe_id,
+                )
+                self.refutations.append(attempt)
+                return attempt
+            return ResolutionAttempt(
+                dissent_id=dissent_id, dissent_content=dissent_content,
+                status=ResolutionStatus.RESOLVED, method="code_reading",
+                evidence=f"Reading the source settles this. {probe.evidence}",
+                confidence_impact=magnitude, tool_used=probe.probe_id,
+            )
+
+        polarity = self._polarity.get(probe.probe_id)
         magnitude = abs(probe.confidence_impact)
 
         # "hit" must mean THE THING WAS FOUND, not "the probe's assertion held".
@@ -286,6 +310,8 @@ class CodeContextResolver(ContextResolver):
         res = probe.result if isinstance(probe.result, dict) else {}
         # A search scoped to one file that was read in full is as good an answer
         # as finding the thing - it settles the question either way.
+        if res.get("kind") == "code_reading":
+            return "strong"
         if res.get("conclusive"):
             return "strong"
         if probe.probe_type is ProbeType.CHECK_EXISTS and res.get("kind") in ("file", "symbol"):

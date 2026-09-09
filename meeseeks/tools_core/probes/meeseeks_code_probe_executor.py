@@ -105,6 +105,7 @@ class CodeProbeExecutor(ProbeExecutor):
             ProbeType.COUNT_ITEMS:          self._count_items,
             ProbeType.CHECK_INVARIANT:      self._check_invariant,
             ProbeType.COMPARE_BEFORE_AFTER: self._compare_before_after,
+            ProbeType.READ_CODE:            self._read_code,
         }
 
     # ------------------------------------------------------------------ API
@@ -383,6 +384,112 @@ class CodeProbeExecutor(ProbeExecutor):
             confidence_impact=0.15 if passed else -0.15,
             evidence=(f"`{' '.join(cmd)}` exited {proc.returncode} ({summary}). "
                       f"{'Invariant holds.' if passed else 'Invariant BROKEN.'}"),
+        )
+
+    def _read_code(self, probe, context) -> ProbeResult:
+        """Read the real source and have a model settle one question about it.
+
+        The verdict is only accepted if the model quotes a line that actually
+        exists in the file. That check is what separates this from "an LLM said
+        so": what is recorded is a claim anchored to a line you can go read.
+        """
+        try:
+            from .meeseeks_code_reading import (
+                PROMPT, extract_symbol, number_lines, parse_verdict, citation_holds,
+                MAX_SOURCE_CHARS,
+            )
+        except ImportError:
+            from probes.meeseeks_code_reading import (
+                PROMPT, extract_symbol, number_lines, parse_verdict, citation_holds,
+                MAX_SOURCE_CHARS,
+            )
+        try:
+            try:
+                from ..core.meeseeks_llm_caller import call_model, get_default_model
+            except ImportError:
+                from core.meeseeks_llm_caller import call_model, get_default_model
+        except ImportError:
+            return self._unverified(probe, "No model caller available to read code.")
+
+        context, scope = self._scoped(probe, context)
+        root = self._root(context)
+        rel = probe.parameters.get("in_file") or scope
+        if not rel:
+            return self._unverified(
+                probe, "read_code needs in_file: the file whose behaviour is in question.")
+        target = self._safe_path(root, str(rel))
+        if not (target and target.is_file()):
+            return self._unverified(probe, f"in_file {rel!r} is not a file in this repository.")
+
+        try:
+            source = target.read_text(errors="replace")
+        except OSError as exc:
+            return self._unverified(probe, f"Could not read {rel}: {exc}")
+
+        label, first_line = str(rel), 1
+        symbol = probe.parameters.get("symbol")
+        if symbol:
+            found = extract_symbol(source, str(symbol))
+            if found:
+                source, first_line = found
+                label = f"{rel} :: {symbol}"
+            else:
+                logger.info(f"      read_code: no symbol {symbol!r} in {rel}, reading whole file")
+        if len(source) > MAX_SOURCE_CHARS:
+            source = source[:MAX_SOURCE_CHARS]
+            label += " (truncated)"
+
+        question = (probe.parameters.get("question") or probe.from_dissent
+                    or probe.description or "").strip()
+        if len(question) < 10:
+            return self._unverified(probe, "read_code needs a question to answer.")
+
+        role = context.get("reader_model_role") or "anthropic_balanced"
+        try:
+            raw = call_model(
+                get_default_model(role),
+                PROMPT.format(question=question[:1500], label=label,
+                              source=number_lines(source, first_line)),
+                system="You answer questions about source code, strictly from the code shown. Return only JSON.",
+                max_tokens=600, temperature=0.0,
+            )
+        except Exception as exc:
+            return self._unverified(probe, f"Code reading unavailable ({type(exc).__name__}).")
+
+        spec = parse_verdict(raw)
+        if not spec:
+            return self._unverified(probe, f"Reader returned unparseable output: {raw.strip()[:120]!r}")
+
+        verdict = str(spec.get("verdict", "")).strip().lower()
+        quote = spec.get("quote")
+        why = str(spec.get("why", ""))[:240]
+
+        if verdict not in ("concern_is_real", "concern_is_unfounded", "cannot_tell"):
+            return self._unverified(probe, f"Reader returned an unknown verdict {verdict!r}.")
+        if verdict == "cannot_tell":
+            return self._unverified(
+                probe, f"Reader could not settle this from {label}: {why}")
+
+        if not citation_holds(quote, source):
+            # The verdict is discarded, deliberately and loudly. A model that
+            # cannot point at a real line has not established anything.
+            return self._unverified(
+                probe,
+                f"Reader claimed {verdict} but cited text that does not appear in {label}: "
+                f"{str(quote)[:80]!r}. Verdict discarded.")
+
+        line = spec.get("line")
+        where = f"{rel}:{line}" if isinstance(line, int) else str(rel)
+        concern_real = verdict == "concern_is_real"
+        return ProbeResult(
+            probe_type=probe.probe_type, probe_id=probe.name, target=label,
+            result={"verdict": verdict, "quote": str(quote).strip()[:200],
+                    "line": line, "file": str(rel), "conclusive": True,
+                    "kind": "code_reading"},
+            verified=not concern_real,
+            confidence_impact=-0.12 if concern_real else 0.12,
+            evidence=(f"Read {label}. {why} Cited {where}: "
+                      f"`{str(quote).strip()[:100]}`"),
         )
 
     def _compare_before_after(self, probe, context) -> ProbeResult:

@@ -270,6 +270,8 @@ class MeeseeksLoopRunner:
         max_probes_per_loop: int = 3,
         test_command: Optional[List[str]] = None,
         probe_timeout: int = 120,
+        synth_model: Optional[str] = None,
+        reader_model: Optional[str] = None,
     ):
         """
         Initialize a Meeseeks loop runner.
@@ -320,6 +322,13 @@ class MeeseeksLoopRunner:
         self.max_probes_per_loop = max_probes_per_loop
         self.test_command = test_command
         self.probe_timeout = probe_timeout
+        # Which model designs the probes. This is the highest-leverage model
+        # choice in the harness: the council only raises concerns, but the
+        # synthesizer decides what gets CHECKED, which file it is scoped to, and
+        # which direction a result points. A weak probe design produces
+        # inconclusive evidence no matter how good the council was.
+        self.synth_model = synth_model or "anthropic_balanced"
+        self.reader_model = reader_model or "anthropic_balanced"
         self.repo_root = Path(repo_root) if repo_root else Path(__file__).resolve().parents[3]
         self.probe_factory = None
         # probe_id -> ProbeResult for probes THIS loop actually executed.
@@ -331,6 +340,16 @@ class MeeseeksLoopRunner:
         # else in this class is evidence: council opinions, SRDE pattern
         # matches and hypothesis verdicts are all models talking.
         self._verified_probes: int = 0
+        # Every concern this session touched, and what became of it.
+        self._findings: List[Dict[str, Any]] = []
+        try:
+            try:
+                from ..core.meeseeks_llm_caller import reset_usage
+            except ImportError:
+                from core.meeseeks_llm_caller import reset_usage
+            reset_usage()
+        except Exception:
+            pass
         if self.verify:
             try:
                 try:
@@ -345,7 +364,9 @@ class MeeseeksLoopRunner:
                 self.probe_factory = create_probe_factory()
                 self.probe_factory.set_executor(CodeProbeExecutor())
                 self.probe_factory.set_synthesizer(
-                    LLMProbeSynthesizer(repo_root=str(self.repo_root)))
+                    LLMProbeSynthesizer(repo_root=str(self.repo_root),
+                                        model_role=self.synth_model))
+                logger.info(f"   🔬 Probes designed by role: {self.synth_model}")
                 self.code_resolver = CodeContextResolver()
                 self.srde.set_context_resolver(self.code_resolver)
                 logger.info(f"   🔬 Verification enabled against {self.repo_root}")
@@ -427,6 +448,7 @@ class MeeseeksLoopRunner:
                 # Check for early exit on high confidence
                 self.confidence = self._apply_evidence_ceiling(self.confidence, "loop end")
                 if self.confidence >= self.execute_threshold:
+                    self._print_findings_summary()
                     logger.info(f"🔵 TASK COMPLETE! Ooh yeah, CAN DO! *poof*")
                     return self._create_result(
                         status=MeeseeksStatus.TASK_COMPLETE,
@@ -705,11 +727,18 @@ class MeeseeksLoopRunner:
         # The schema wants records, not ids: {dissent_id, status, method}.
         resolution_records: List[Dict[str, Any]] = []
 
-        def _record(did: str, status: str, method: str, tool: str = "") -> None:
+        def _record(did: str, status: str, method: str, tool: str = "",
+                    content: str = "", evidence: str = "") -> None:
             rec = {"dissent_id": did, "status": status, "method": method}
             if tool:
                 rec["tool_used"] = tool
             resolution_records.append(rec)
+            # The findings list is the actual product of a run. The confidence
+            # number is a summary of it, and a summary is not a deliverable.
+            self._findings.append({
+                "id": did, "status": status, "method": method, "tool": tool,
+                "concern": content, "evidence": evidence, "loop": loop_num,
+            })
         if council_dissents:
             logger.info(f"   🔧 Phase 2: Self-resolving {len(council_dissents)} dissents...")
             
@@ -744,6 +773,10 @@ class MeeseeksLoopRunner:
                     label = ("JUDGEMENT CALL - no probe can settle this"
                              if kind == "judgement" else
                              "UNPROBED - this harness has no probe type for it")
+                    self._findings.append({
+                        "id": dissent_id, "status": "unprobed", "method": kind,
+                        "tool": "", "concern": content, "evidence": why, "loop": loop_num,
+                    })
                     logger.info(f"      ⃠ {dissent_id}: {label}")
                     logger.info(f"         Dissent: {content[:100]}{'...' if len(content) > 100 else ''}")
                     logger.info(f"         Why: {why[:100]}")
@@ -787,7 +820,8 @@ class MeeseeksLoopRunner:
                     if strength == "strong":
                         dissents_resolved += 1
                         resolved_ids.append(dissent_id)
-                        _record(dissent_id, "resolved", "semantic_bridge", probe_id)
+                        _record(dissent_id, "resolved", "semantic_bridge", probe_id, content,
+                                str(getattr(probe_result, "evidence", "")))
                         logger.info(f"      ✓ {dissent_id}: Settled by probe {probe_id}")
                     else:
                         # Real evidence, but a text match cannot fail for any
@@ -796,8 +830,10 @@ class MeeseeksLoopRunner:
                         dissents_resolved += 0.5
                         partial_ids.append(dissent_id)
                         _record(dissent_id, "partially_resolved", str(result.method or "srde"),
-                                str(getattr(result, "tool_used", "") or ""))
-                        _record(dissent_id, "partially_resolved", "semantic_bridge_weak", probe_id)
+                                str(getattr(result, "tool_used", "") or ""),
+                                content, str(result.evidence or ""))
+                        _record(dissent_id, "partially_resolved", "semantic_bridge_weak", probe_id,
+                                content, str(getattr(probe_result, "evidence", "")))
                         logger.info(f"      ◐ {dissent_id}: Probe {probe_id} found supporting "
                                     f"text but cannot settle this on its own")
                     if probe_result is not None:
@@ -812,7 +848,8 @@ class MeeseeksLoopRunner:
                         dissents_resolved += 1
                         resolved_ids.append(dissent_id)
                         _record(dissent_id, "resolved", str(result.method or "srde"),
-                                str(getattr(result, "tool_used", "") or ""))
+                                str(getattr(result, "tool_used", "") or ""),
+                                content, str(result.evidence or ""))
                         self.confidence = min(1.0, self.confidence + result.confidence_impact)
                         logger.info(f"      ✓ {dissent_id}: RESOLVED via {result.method}")
                         logger.info(f"         Evidence: {result.evidence[:80]}...")
@@ -831,7 +868,8 @@ class MeeseeksLoopRunner:
                         self.confidence = max(0.0, self.confidence + min(0.0, result.confidence_impact))
                         confirmed_ids.append(dissent_id)
                         _record(dissent_id, "needs_human", str(result.method or "srde"),
-                                str(getattr(result, "tool_used", "") or ""))
+                                str(getattr(result, "tool_used", "") or ""),
+                                content, str(result.evidence or ""))
                         # This dissent WAS answered - the answer is bad news.
                         # Its confidence_impact above already carries that. Not
                         # counting it as answered would charge for it twice: once
@@ -843,6 +881,11 @@ class MeeseeksLoopRunner:
                         logger.info(f"         Evidence: {result.evidence[:100]}")
                     else:
                         # ACTUALLY SHOW what the dissent was and why it couldn't be resolved!
+                        self._findings.append({
+                            "id": dissent_id, "status": "unresolved", "method": "none",
+                            "tool": "", "concern": content,
+                            "evidence": str(result.evidence or ""), "loop": loop_num,
+                        })
                         logger.info(f"      ✗ {dissent_id}: UNRESOLVED")
                         logger.info(f"         Dissent: {content[:100]}{'...' if len(content) > 100 else ''}")
                         logger.info(f"         Reason: {result.evidence[:80] if result.evidence else 'No matching resolution pattern'}")
@@ -1103,7 +1146,8 @@ Generate your 3 hypotheses now:"""
             return
 
         ctx = {"repo_root": str(self.repo_root), "timeout": self.probe_timeout,
-               "prime_directive": self.prime_directive}
+               "prime_directive": self.prime_directive,
+               "reader_model_role": self.reader_model}
         if self.test_command:
             ctx["test_command"] = self.test_command
         elif any(p.probe_type is ProbeType.CHECK_INVARIANT for _, _, p in probes):
@@ -1160,6 +1204,95 @@ Generate your 3 hypotheses now:"""
                     polarity=probe.parameters.get("_polarity"))
             logger.info(f"      🔬 {result.probe_id}: {mark} — {result.evidence[:70]}")
 
+
+    ORDER = {"needs_human": 0, "unresolved": 1, "unprobed": 2,
+             "partially_resolved": 3, "resolved": 4}
+
+    def write_findings(self) -> Optional[Path]:
+        """The run's actual deliverable: every concern and what became of it.
+
+        A percentage cannot be acted on. This can - each concern, the verdict,
+        the evidence, and the file:line it was anchored to, ordered so the
+        things needing a person are first.
+        """
+        if not self._findings:
+            return None
+        need = [f for f in self._findings if f["status"] == "needs_human"]
+        open_ = [f for f in self._findings if f["status"] in ("unresolved", "unprobed")]
+        settled = [f for f in self._findings if f["status"] in ("resolved", "partially_resolved")]
+
+        L = [f"# Findings - {self.session_id}", "",
+             f"**Task:** {self.prime_directive[:400]}", "",
+             f"**Confidence:** {self.confidence:.0%}  ",
+             f"**Evidence:** {self._verified_probes} probe(s) established something "
+             f"conclusive against the source.", "",
+             f"{len(need)} need a person - {len(settled)} settled by evidence - "
+             f"{len(open_)} open.", ""]
+
+        def block(title, items, note):
+            if not items:
+                return
+            L.extend([f"## {title}", "", f"_{note}_", ""])
+            for f in items:
+                L.append(f"### {f['id']}  ({f['method']})")
+                L.append(f"> {f['concern'][:400]}")
+                L.append("")
+                if f["evidence"]:
+                    L.append(f["evidence"][:600])
+                if f["tool"]:
+                    L.append(f"\n`probe: {f['tool']}`")
+                L.append("")
+
+        block("Needs a person", need,
+              "Evidence CONFIRMED these. The harness is not guessing - each one cites "
+              "something real in the source.")
+        block("Open", open_,
+              "Nothing settled these. Either no probe could be built, or the evidence "
+              "was inconclusive. They are not findings against your code.")
+        block("Settled by evidence", settled,
+              "Checked against the source and found not to apply.")
+
+        try:
+            out = Path(self.output_dir) / self.session_id / "findings.md"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text("\n".join(L))
+            return out
+        except OSError as exc:
+            logger.warning(f"Could not write findings: {exc}")
+            return None
+
+    def _print_findings_summary(self) -> None:
+        if not self._findings:
+            return
+        need = [f for f in self._findings if f["status"] == "needs_human"]
+        settled = [f for f in self._findings if f["status"] in ("resolved", "partially_resolved")]
+        open_ = [f for f in self._findings if f["status"] in ("unresolved", "unprobed")]
+        logger.info("")
+        logger.info(f"   FINDINGS: {len(need)} need a person, {len(settled)} settled by "
+                    f"evidence, {len(open_)} open")
+        for f in need:
+            logger.info(f"     ⚠ {f['concern'][:88]}")
+            if f["evidence"]:
+                logger.info(f"        {f['evidence'][:110]}")
+        try:
+            try:
+                from ..core.meeseeks_llm_caller import usage_summary
+            except ImportError:
+                from core.meeseeks_llm_caller import usage_summary
+            u = usage_summary()
+            if u["calls"]:
+                tok = sum(v["input"] + v["output"] for v in u["by_model"].values())
+                logger.info(f"   COST: {u['calls']} model calls, {tok:,} tokens, "
+                            f"about ${u['total_cost_usd']:.3f}")
+                for m, v in sorted(u["by_model"].items(), key=lambda kv: -kv[1]["cost"]):
+                    logger.info(f"     {m:26} {v['calls']:>2} calls  "
+                                f"{v['input']:>7,} in {v['output']:>6,} out  "
+                                f"${v['cost']:.3f}")
+        except Exception:
+            pass
+        path = self.write_findings()
+        if path:
+            logger.info(f"   Full report: {path}")
 
     def _evidence_ceiling(self) -> float:
         """Highest confidence reachable on the evidence actually gathered.
@@ -1358,6 +1491,7 @@ Test this hypothesis now:"""
         - < spawn_threshold: ESCALATE_TO_HUMAN
         """
         self.confidence = self._apply_evidence_ceiling(self.confidence, "final decision")
+        self._print_findings_summary()
         logger.info(f"\n🔵 FINAL DECISION - Confidence: {self.confidence:.0%}")
         
         if self.confidence >= self.monitor_threshold:

@@ -49,6 +49,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 SUPPORTED = {
+    "read_code":            ProbeType.READ_CODE,
     "check_exists":         ProbeType.CHECK_EXISTS,
     "check_value":          ProbeType.CHECK_VALUE,
     "count_items":          ProbeType.COUNT_ITEMS,
@@ -66,6 +67,14 @@ against a repository to settle it. You do not answer the concern yourself.
 {facts}
 
 ## Probe types available
+- read_code      params: {{"in_file": "<path>", "symbol": "<function or class name,
+                            optional>", "question": "<the concern, as one question
+                            about what this code does>"}}
+                 Answers: what does this code ACTUALLY DO? It reads the real
+                 source and must cite a line to justify its answer. This is the
+                 ONLY probe that can settle a concern about BEHAVIOUR - whether
+                 an error path leaks something, whether a retry catches the wrong
+                 exception, whether a check happens before a write.
 - check_exists   params: {{"identifier": "<function, class, or file name>"}}
                  Answers: is this actually defined in the codebase?
 - check_value    params: {{"expected": "<exact literal string>"}}
@@ -84,6 +93,7 @@ against a repository to settle it. You do not answer the concern yourself.
 
 ## How much each answer is worth
 STRONG evidence - settles a concern outright and moves confidence properly:
+  - read_code (reads the source; cites a line; the citation is verified)
   - check_exists naming a real FUNCTION, CLASS or FILE
   - count_items WITH an expected_count
   - check_invariant (runs the suite)
@@ -104,6 +114,10 @@ file in "in_file". Then BOTH answers are evidence, and a concern about the code
 NOT doing something dangerous can finally be settled by showing it is absent.
 
 ## Rules
+- If the concern is about what the code DOES rather than whether some text is
+  present, use read_code. Most real concerns are that shape. "A broad except
+  would catch the auth error and retry it" is a question about behaviour: a text
+  search finds the `except` and learns nothing about what follows it.
 - Reach for STRONG first. Almost every concern about code can be turned into
   "is this symbol actually defined?" - which is check_exists on a real name from
   the facts above, and is strong. Ask that instead of searching for a phrase.
@@ -119,7 +133,7 @@ NOT doing something dangerous can finally be settled by showing it is absent.
 
 ## Output
 Return ONLY this JSON:
-{{"probe_type": "check_exists" | "count_items" | "check_invariant" | "check_value" | null,
+{{"probe_type": "read_code" | "check_exists" | "count_items" | "check_invariant" | "check_value" | null,
   "parameters": {{..., "in_file": "<the file the concern is about, when there is one>"}},
   "target": "<what is being checked, in three words>",
   "a_hit_means": "<REQUIRED: 'concern_is_real' if the probe FINDING what it looks
@@ -143,11 +157,13 @@ class LLMProbeSynthesizer:
         self,
         repo_root: Optional[str] = None,
         model: Optional[str] = None,
+        model_role: str = "anthropic_balanced",
         search_paths: Optional[List[str]] = None,
         max_symbols: int = 120,
     ):
         self.repo_root = Path(repo_root).resolve() if repo_root else None
         self.model = model
+        self.model_role = model_role
         self._explicit_paths = list(search_paths) if search_paths else None
         self.search_paths = self._explicit_paths or ["src", "tests"]
         self.max_symbols = max_symbols
@@ -158,7 +174,7 @@ class LLMProbeSynthesizer:
 
     def synthesize(self, dissent: str, generated_by: str = "llm") -> Optional[SynthesizedProbe]:
         try:
-            model = self.model or get_default_model("anthropic_balanced")
+            model = self.model or get_default_model(self.model_role)
             raw = call_model(
                 model,
                 PROMPT.format(dissent=dissent.strip()[:1200], facts=self._repo_facts()),

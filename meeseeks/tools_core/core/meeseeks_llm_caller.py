@@ -140,6 +140,7 @@ def call_anthropic(
         response.raise_for_status()
         data = response.json()
         
+        _record_usage(model, data)
         content = data.get('content', [])
         text_parts = [block['text'] for block in content if block['type'] == 'text']
         return '\n'.join(text_parts)
@@ -194,6 +195,7 @@ def call_google(
         response.raise_for_status()
         data = response.json()
         
+        _record_usage(model, data)
         candidates = data.get('candidates', [])
         if candidates:
             parts = candidates[0].get('content', {}).get('parts', [])
@@ -247,10 +249,57 @@ def call_openai(
         response.raise_for_status()
         data = response.json()
         
+        _record_usage(model, data)
         choices = data.get('choices', [])
         if choices:
             return choices[0].get('message', {}).get('content', '')
         return ""
+
+
+# ---------------------------------------------------------------- accounting
+#
+# Every provider returns a usage block and this module used to throw all of them
+# away, so a run's cost was unknowable. A tool you spend real money on should be
+# able to tell you what a run cost.
+_USAGE: List[Dict[str, Any]] = []
+
+
+def _record_usage(model: str, data: Dict[str, Any]) -> None:
+    u = data.get("usage") or data.get("usageMetadata") or {}
+    if not isinstance(u, dict):
+        return
+    inp = (u.get("input_tokens") or u.get("prompt_tokens")
+           or u.get("promptTokenCount") or 0)
+    out = (u.get("output_tokens") or u.get("completion_tokens")
+           or u.get("candidatesTokenCount") or 0)
+    if not (inp or out):
+        return
+    _USAGE.append({"model": model, "input": int(inp), "output": int(out)})
+
+
+def reset_usage() -> None:
+    _USAGE.clear()
+
+
+def usage_summary() -> Dict[str, Any]:
+    """Tokens and dollars for everything called since the last reset."""
+    try:
+        models = load_router_config().get("models", {})
+    except Exception:
+        models = {}
+    per: Dict[str, Dict[str, float]] = {}
+    total_cost = 0.0
+    for row in _USAGE:
+        e = per.setdefault(row["model"], {"calls": 0, "input": 0, "output": 0, "cost": 0.0})
+        e["calls"] += 1
+        e["input"] += row["input"]
+        e["output"] += row["output"]
+        cost = models.get(row["model"], {}).get("cost", {}) or {}
+        c = (row["input"] / 1e6) * float(cost.get("input_per_1m", 0) or 0) \
+            + (row["output"] / 1e6) * float(cost.get("output_per_1m", 0) or 0)
+        e["cost"] += c
+        total_cost += c
+    return {"calls": len(_USAGE), "by_model": per, "total_cost_usd": round(total_cost, 4)}
 
 
 def call_model(

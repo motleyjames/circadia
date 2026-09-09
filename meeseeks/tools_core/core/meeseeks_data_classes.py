@@ -57,6 +57,11 @@ class ProbeType(Enum):
     VALIDATE_SCHEMA = "validate_schema"
     COMPARE_BEFORE_AFTER = "compare_before_after"
     CUSTOM_CODE = "custom_code"
+    # Reads the actual source and has a model answer a specific question about
+    # it, with every citation checked back against the file. Lexical probes can
+    # only establish that text is present or absent; this one can say what the
+    # code DOES.
+    READ_CODE = "read_code"
     # Visual probes
     VISUAL_CHECK = "visual_check"
     SCREENSHOT_DIFF = "screenshot_diff"
