@@ -331,19 +331,32 @@ def usage_summary() -> Dict[str, Any]:
         models = load_router_config().get("models", {})
     except Exception:
         models = {}
-    per: Dict[str, Dict[str, float]] = {}
+    per: Dict[str, Dict[str, Any]] = {}
     total_cost = 0.0
+    unpriced = []
     for row in _USAGE:
-        e = per.setdefault(row["model"], {"calls": 0, "input": 0, "output": 0, "cost": 0.0})
+        e = per.setdefault(row["model"],
+                           {"calls": 0, "input": 0, "output": 0, "cost": 0.0, "priced": True})
         e["calls"] += 1
         e["input"] += row["input"]
         e["output"] += row["output"]
-        cost = models.get(row["model"], {}).get("cost", {}) or {}
+        cost = models.get(row["model"], {}).get("cost") or {}
+        # A model with no cost block is UNPRICED, not free. Treating a missing
+        # price as zero reported gemini-flash-latest at $0.000 for every run and
+        # quietly understated the total - the one number you cannot sanity-check
+        # by eye.
+        if not cost.get("input_per_1m") and not cost.get("output_per_1m"):
+            e["priced"] = False
+            if row["model"] not in unpriced:
+                unpriced.append(row["model"])
+            continue
         c = (row["input"] / 1e6) * float(cost.get("input_per_1m", 0) or 0) \
             + (row["output"] / 1e6) * float(cost.get("output_per_1m", 0) or 0)
         e["cost"] += c
         total_cost += c
-    return {"calls": len(_USAGE), "by_model": per, "total_cost_usd": round(total_cost, 4)}
+    return {"calls": len(_USAGE), "by_model": per,
+            "total_cost_usd": round(total_cost, 4),
+            "unpriced": unpriced}
 
 
 def _raise_with_body(response, provider: str, model: str) -> None:

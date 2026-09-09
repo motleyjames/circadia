@@ -155,6 +155,10 @@ class SpinningMeeseeks:
         self.accumulated_learnings: List[str] = []
         self.current_hypotheses: List[Dict[str, Any]] = []
         self.confidence = 0.5
+        # Probes that established something conclusive, across the whole spin.
+        self._verified_probes = 0
+        self._findings: List[Dict[str, Any]] = []
+        self._last_runner = None
         
         logger.info("=" * 60)
         logger.info("🔵 *poof* I'M A SPINNING MR. MEESEEKS, LOOK AT ME!")
@@ -386,7 +390,10 @@ class SpinningMeeseeks:
         """
         # Create a mini loop runner for this iteration
         runner = MeeseeksLoopRunner(
-            session_id=f"{self.session_id}_loop{self.current_loop}",
+            # One session id for the whole spin. Suffixing it per loop scattered
+            # the logs across directories and failed schema validation, which
+            # requires the plain timestamp form.
+            session_id=self.session_id,
             prime_directive=self.prime_directive,
             output_dir=self.output_dir,
             loop_executor=self.loop_executor,
@@ -394,13 +401,19 @@ class SpinningMeeseeks:
             verify=self.verify,
             test_command=self.test_command,
             probe_timeout=self.probe_timeout,
+            context=self._context_text(),
         )
+        # Carry confidence FORWARD. MeeseeksLoopRunner.__init__ hardcodes 0.5,
+        # and spin builds a new runner every iteration - so every loop restarted
+        # from scratch and the per-loop gain (at most ~0.14) could never reach
+        # the 0.85 execute threshold. Spin could not converge, ever, no matter
+        # how well the loops went.
+        runner.confidence = self.confidence
+        runner.confidence_calculator.confidence = self.confidence
+        runner._verified_probes = self._verified_probes
         # Spinning mode can exceed the 3-loop mini-cycle; ensure the underlying loop logic
         # continues generating hypotheses instead of treating loops >= 3 as "final".
         runner.MAX_LOOPS = max(self.max_loops, self.ABSOLUTE_MAX_LOOPS) + 1
-        
-        # Inject context from previous loops
-        context = self._build_loop_context()
         
         # Run the loop (just one iteration, not the full 3-loop cycle)
         loop_result = runner._run_loop(
@@ -411,6 +424,20 @@ class SpinningMeeseeks:
             ],
         )
         
+        # spin calls _run_loop directly, bypassing run(), which is the only
+        # place a reasoning log is written. Without this the session directory
+        # holds a manifest and nothing else, while the CLI reports artifacts.
+        try:
+            runner.session_manager.save_reasoning_log(
+                self.session_id, self.current_loop, loop_result)
+        except Exception as exc:
+            logger.warning(f"Could not save reasoning log for loop "
+                           f"{self.current_loop}: {exc}")
+        # Evidence is cumulative across the whole spin, not per iteration.
+        self._verified_probes = getattr(runner, "_verified_probes", self._verified_probes)
+        self._findings.extend(getattr(runner, "_findings", []))
+        self._last_runner = runner
+
         # Convert to dict
         return self._reasoning_log_to_dict(loop_result)
     
@@ -446,6 +473,27 @@ class SpinningMeeseeks:
             "metadata": log.metadata,
         }
     
+    def _context_text(self) -> str:
+        """What earlier loops learned, as text the loop can actually put in a prompt.
+
+        _build_loop_context() returned a dict that was assigned to a local and
+        never used - the banner said learnings were loaded, and nothing ever
+        reached a model. MeeseeksLoopRunner takes context as a string.
+        """
+        parts = [f"Spin loop {self.current_loop} of at most {self.max_loops}.",
+                 f"Confidence carried in: {self.confidence:.0%}."]
+        if self.accumulated_learnings:
+            parts.append("What earlier loops established:")
+            for item in list(dict.fromkeys(self.accumulated_learnings))[-10:]:
+                parts.append(f"  - {str(item)[:200]}")
+        if self.spawned_helpers:
+            parts.append(f"{len(self.spawned_helpers)} helper(s) already spawned.")
+        if self.tools_context:
+            parts.append(str(self.tools_context)[:2000])
+        if self.knowledge_context:
+            parts.append(str(self.knowledge_context)[:2000])
+        return "\n".join(parts)
+
     def _build_loop_context(self) -> Dict[str, Any]:
         """Build context from accumulated learnings."""
         return {

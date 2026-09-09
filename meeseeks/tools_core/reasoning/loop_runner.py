@@ -954,7 +954,7 @@ You are Mr. Meeseeks generating testable hypotheses for the RSI loop system.
 ## Prime Directive
 {self.prime_directive}
 
-## Current State
+{self._context_block()}## Current State
 - Loop Number: {loop_num}
 - Current Confidence: {self.confidence:.0%}
 - Council Dissents Resolved: {dissents_resolved}/{dissents_total}
@@ -1283,17 +1283,27 @@ Generate your 3 hypotheses now:"""
             u = usage_summary()
             if u["calls"]:
                 tok = sum(v["input"] + v["output"] for v in u["by_model"].values())
+                more = " + unpriced models" if u.get("unpriced") else ""
                 logger.info(f"   COST: {u['calls']} model calls, {tok:,} tokens, "
-                            f"about ${u['total_cost_usd']:.3f}")
+                            f"about ${u['total_cost_usd']:.3f}{more}")
                 for m, v in sorted(u["by_model"].items(), key=lambda kv: -kv[1]["cost"]):
+                    price = f"${v['cost']:.3f}" if v.get("priced", True) else "no price in config"
                     logger.info(f"     {m:26} {v['calls']:>2} calls  "
-                                f"{v['input']:>7,} in {v['output']:>6,} out  "
-                                f"${v['cost']:.3f}")
+                                f"{v['input']:>7,} in {v['output']:>6,} out  {price}")
+                if u.get("unpriced"):
+                    logger.info(f"     ^ {', '.join(u['unpriced'])} have no cost block in "
+                                f"00_llm_router_config.json, so their spend is NOT in the total")
         except Exception:
             pass
         path = self.write_findings()
         if path:
             logger.info(f"   Full report: {path}")
+
+    def _context_block(self) -> str:
+        """Carried-forward context, if any. Empty string when there is none."""
+        if not self.context:
+            return ""
+        return f"## What earlier work established\n{str(self.context)[:4000]}\n\n"
 
     def _evidence_ceiling(self) -> float:
         """Highest confidence reachable on the evidence actually gathered.

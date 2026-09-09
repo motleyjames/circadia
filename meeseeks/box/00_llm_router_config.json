@@ -729,6 +729,69 @@
           "legacy_fallback"
         ]
       }
+    },
+    "gpt-5.4": {
+      "provider": "openai",
+      "api_string": "gpt-5.4",
+      "display_name": "GPT-5.4",
+      "type": "text",
+      "tier": "frontier",
+      "cost": null,
+      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+    },
+    "gpt-5.5": {
+      "provider": "openai",
+      "api_string": "gpt-5.5",
+      "display_name": "GPT-5.5",
+      "type": "text",
+      "tier": "frontier",
+      "cost": null,
+      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+    },
+    "gpt-5.2-codex": {
+      "provider": "openai",
+      "api_string": "gpt-5.2-codex",
+      "display_name": "GPT-5.2 Codex",
+      "type": "text",
+      "tier": "frontier",
+      "cost": null,
+      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+    },
+    "gpt-5.3-chat-latest": {
+      "provider": "openai",
+      "api_string": "gpt-5.3-chat-latest",
+      "display_name": "GPT-5.3 Chat",
+      "type": "text",
+      "tier": "frontier",
+      "cost": null,
+      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+    },
+    "gemini-3.8-flash": {
+      "provider": "google",
+      "api_string": "gemini-3.8-flash",
+      "display_name": "Gemini 3.8 Flash",
+      "type": "text",
+      "tier": "frontier",
+      "cost": null,
+      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+    },
+    "gemini-3.5-flash": {
+      "provider": "google",
+      "api_string": "gemini-3.5-flash",
+      "display_name": "Gemini 3.5 Flash",
+      "type": "text",
+      "tier": "frontier",
+      "cost": null,
+      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
+    },
+    "gemini-pro-latest": {
+      "provider": "google",
+      "api_string": "gemini-pro-latest",
+      "display_name": "Gemini Pro (latest)",
+      "type": "text",
+      "tier": "frontier",
+      "cost": null,
+      "_pricing": "UNPRICED - fill in input_per_1m / output_per_1m from the provider's pricing page before relying on cost totals"
     }
   },
   "judge_hierarchy": {
