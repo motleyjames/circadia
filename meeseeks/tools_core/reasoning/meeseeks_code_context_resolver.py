@@ -94,6 +94,13 @@ class CodeContextResolver(ContextResolver):
         # matches nothing and the dissent it was built to settle comes back
         # "no_resolver". Provenance is exact; keywords are the fallback.
         self._origin: Dict[str, str] = {}
+        # probe_id -> what a HIT means for the dissent: "real" (finding it means
+        # the concern is justified) or "unfounded" (finding it means the concern
+        # does not apply). Without this the direction has to be guessed, and the
+        # old code always guessed that a probe which did not verify meant the
+        # concern stood - so a probe looking for a SAFEGUARD, failing to find it
+        # in the paths it searched, reported working code as a real problem.
+        self._polarity: Dict[str, str] = {}
 
     def reset(self) -> None:
         """Clear per-loop state.
@@ -107,6 +114,7 @@ class CodeContextResolver(ContextResolver):
         self._probes.clear()
         self._spent.clear()
         self._origin.clear()
+        self._polarity.clear()
 
     def evidence_strength(self, probe: ProbeResult) -> str:
         """"strong" or "weak" - how much a verdict from this probe is worth.
@@ -117,10 +125,13 @@ class CodeContextResolver(ContextResolver):
         """
         return self._strength(probe)
 
-    def add_probe(self, result: ProbeResult, origin_dissent: Optional[str] = None) -> None:
+    def add_probe(self, result: ProbeResult, origin_dissent: Optional[str] = None,
+                  polarity: Optional[str] = None) -> None:
         self._probes.append(result)
         if origin_dissent:
             self._origin[result.probe_id] = origin_dissent.strip()
+        if polarity in ("real", "unfounded"):
+            self._polarity[result.probe_id] = polarity
 
     def add_probes(self, results: List[ProbeResult]) -> None:
         self._probes.extend(results)
@@ -155,35 +166,55 @@ class CodeContextResolver(ContextResolver):
                 confidence_impact=0.0, tool_used=probe.probe_id,
             )
 
-        if probe.verified:
-            self._spent.add(probe.probe_id)
-            strength = self._strength(probe)
-            if strength == "strong":
-                return ResolutionAttempt(
-                    dissent_id=dissent_id, dissent_content=dissent_content,
-                    status=ResolutionStatus.RESOLVED, method="code_probe_evidence",
-                    evidence=f"Probe '{probe.probe_id}' verified against the repository: {probe.evidence}",
-                    confidence_impact=probe.confidence_impact, tool_used=probe.probe_id,
-                )
+        self._spent.add(probe.probe_id)
+        polarity = self._polarity.get(probe.probe_id)
+        hit = bool(probe.verified)
+        magnitude = abs(probe.confidence_impact)
+
+        if polarity is None:
+            # We do not know which way to read this result. Report the evidence
+            # and claim no verdict - guessing is how sound code got reported as
+            # a confirmed problem.
             return ResolutionAttempt(
                 dissent_id=dissent_id, dissent_content=dissent_content,
-                status=ResolutionStatus.PARTIALLY_RESOLVED, method="code_probe_weak",
-                evidence=(f"Probe '{probe.probe_id}' found supporting text but cannot settle "
-                          f"this: {probe.evidence} A literal match is not an answer to a "
-                          f"design question."),
-                confidence_impact=probe.confidence_impact * 0.5, tool_used=probe.probe_id,
+                status=ResolutionStatus.PARTIALLY_RESOLVED, method="code_probe_undirected",
+                evidence=(f"Probe '{probe.probe_id}' ran ({'found what it looked for' if hit else 'did not find it'}): "
+                          f"{probe.evidence} The probe did not state whether that supports or "
+                          f"undermines the concern, so no verdict is claimed."),
+                confidence_impact=0.0, tool_used=probe.probe_id,
             )
 
-        self._spent.add(probe.probe_id)
-        refutation = ResolutionAttempt(
+        concern_is_real = (hit and polarity == "real") or (not hit and polarity == "unfounded")
+
+        if concern_is_real:
+            refutation = ResolutionAttempt(
+                dissent_id=dissent_id, dissent_content=dissent_content,
+                status=ResolutionStatus.NEEDS_HUMAN, method="code_probe_evidence",
+                evidence=(f"Probe '{probe.probe_id}' CONFIRMS this concern: {probe.evidence} "
+                          f"The dissent stands and needs a person."),
+                confidence_impact=-magnitude, tool_used=probe.probe_id,
+            )
+            self.refutations.append(refutation)
+            return refutation
+
+        # The evidence says the concern does not apply.
+        strength = self._strength(probe)
+        if strength == "strong":
+            return ResolutionAttempt(
+                dissent_id=dissent_id, dissent_content=dissent_content,
+                status=ResolutionStatus.RESOLVED, method="code_probe_evidence",
+                evidence=(f"Probe '{probe.probe_id}' settles this against the repository: "
+                          f"{probe.evidence}"),
+                confidence_impact=magnitude, tool_used=probe.probe_id,
+            )
+        return ResolutionAttempt(
             dissent_id=dissent_id, dissent_content=dissent_content,
-            status=ResolutionStatus.NEEDS_HUMAN, method="code_probe_evidence",
-            evidence=(f"Probe '{probe.probe_id}' CONTRADICTS this concern's premise: "
-                      f"{probe.evidence} The dissent stands and needs a person."),
-            confidence_impact=probe.confidence_impact, tool_used=probe.probe_id,
+            status=ResolutionStatus.PARTIALLY_RESOLVED, method="code_probe_weak",
+            evidence=(f"Probe '{probe.probe_id}' points away from this concern but cannot "
+                      f"settle it: {probe.evidence} A literal match is not an answer to a "
+                      f"design question."),
+            confidence_impact=magnitude * 0.5, tool_used=probe.probe_id,
         )
-        self.refutations.append(refutation)
-        return refutation
 
     # -------------------------------------------------------------- matching
 

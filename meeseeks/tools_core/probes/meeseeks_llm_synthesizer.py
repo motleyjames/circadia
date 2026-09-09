@@ -101,8 +101,18 @@ Return ONLY this JSON:
 {{"probe_type": "<one of the five, or null>",
   "parameters": {{...}},
   "target": "<what is being checked, in three words>",
+  "a_hit_means": "<REQUIRED: 'concern_is_real' if the probe FINDING what it looks
+                   for means the concern is justified; 'concern_is_unfounded' if
+                   finding it means the concern does not apply>",
   "would_settle": "<what a pass and a fail would each tell us>",
-  "rationale": "<one sentence>"}}"""
+  "rationale": "<one sentence>"}}
+
+Think carefully about a_hit_means - it is the difference between reporting a real
+problem and inventing one. Example: for the concern "retries use a fixed delay
+instead of backing off", a probe that looks for an increasing-delay constant has
+a_hit_means "concern_is_unfounded", because finding it means the code DOES back
+off. A probe that looks for a hardcoded single sleep value has a_hit_means
+"concern_is_real"."""
 
 
 class LLMProbeSynthesizer:
@@ -167,6 +177,22 @@ class LLMProbeSynthesizer:
         params = spec.get("parameters") or {}
         if not isinstance(params, dict):
             params = {}
+
+        # What a positive result MEANS for the concern. Without this the
+        # consumer has to guess, and the old code always guessed the same way -
+        # that a probe which did not verify meant the concern was justified.
+        # For a probe looking for a safeguard, that is exactly backwards, and it
+        # reported sound code as a confirmed problem.
+        polarity = str(spec.get("a_hit_means", "")).strip().lower()
+        if polarity in ("concern_is_real", "real", "supports", "supports_the_concern"):
+            params["_polarity"] = "real"
+        elif polarity in ("concern_is_unfounded", "unfounded", "refutes",
+                          "refutes_the_concern"):
+            params["_polarity"] = "unfounded"
+        else:
+            logger.info(f"probe for {str(spec.get('target', kind))[:40]!r}: model did not "
+                        f"state what a hit means; "
+                        f"its result will be reported without a verdict")
 
         target = str(spec.get("target", kind))[:40]
         slug = re.sub(r"[^a-z0-9]+", "_", target.lower()).strip("_") or str(kind)

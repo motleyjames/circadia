@@ -95,6 +95,10 @@ Note: For full orchestration with arbiter (continue/pivot/spawn decisions),
                         help="Command a CHECK_INVARIANT probe runs, e.g. "
                              "'venv/bin/pytest tests/test_costs.py -q'. Defaults to "
                              "the whole suite, which is slow inside a loop.")
+    parser.add_argument("--max-probes", type=int, default=3,
+                        help="How many dissents get a probe each loop. Concerns "
+                             "beyond this are reported as unexamined rather than "
+                             "counted against the resolution rate (default 3)")
     parser.add_argument("--probe-timeout", type=int, default=120,
                         help="Seconds a single probe's command may run before it "
                              "is killed and reported UNVERIFIED (default 120)")
@@ -152,6 +156,7 @@ Note: For full orchestration with arbiter (continue/pivot/spawn decisions),
         verify=not args.no_verify,
         test_command=args.test_command.split() if args.test_command else None,
         probe_timeout=args.probe_timeout,
+        max_probes_per_loop=args.max_probes,
     )
     
     # Override max loops if specified

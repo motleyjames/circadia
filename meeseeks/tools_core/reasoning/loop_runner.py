@@ -325,6 +325,7 @@ class MeeseeksLoopRunner:
         # probe_id -> ProbeResult for probes THIS loop actually executed.
         self._probe_results: Dict[str, Any] = {}
         self._declined: Dict[str, tuple] = {}
+        self._probed_dissents: set = set()
         self._last_dissent_tracking: Optional[Dict[str, Any]] = None
         # How many probes actually executed and verified this session. Nothing
         # else in this class is evidence: council opinions, SRDE pattern
@@ -698,7 +699,9 @@ class MeeseeksLoopRunner:
         # PHASE 2: SELF-RESOLVE DISSENTS (SRDE)
         # ======================================================================
         resolved_ids: List[str] = []
+        partial_ids: List[str] = []
         confirmed_ids: List[str] = []
+        unexamined_ids: List[str] = []
         if council_dissents:
             logger.info(f"   🔧 Phase 2: Self-resolving {len(council_dissents)} dissents...")
             
@@ -790,6 +793,7 @@ class MeeseeksLoopRunner:
                         logger.info(f"         Evidence: {result.evidence[:80]}...")
                     elif result.status.value in ['partially_resolved', 'PARTIALLY_RESOLVED']:
                         dissents_resolved += 0.5
+                        partial_ids.append(dissent_id)
                         self.confidence = min(1.0, self.confidence + result.confidence_impact * 0.5)
                         logger.info(f"      ◐ {dissent_id}: PARTIAL via {result.method}")
                         logger.info(f"         Evidence: {result.evidence[:80]}...")
@@ -801,6 +805,12 @@ class MeeseeksLoopRunner:
                         # leave it exactly where a silent "no_resolver" left it.
                         self.confidence = max(0.0, self.confidence + min(0.0, result.confidence_impact))
                         confirmed_ids.append(dissent_id)
+                        # This dissent WAS answered - the answer is bad news.
+                        # Its confidence_impact above already carries that. Not
+                        # counting it as answered would charge for it twice: once
+                        # as a negative impact and again as an unresolved concern
+                        # dragging the resolution rate down.
+                        dissents_resolved += 1
                         logger.info(f"      ⚠ {dissent_id}: CONFIRMED by evidence - needs a person")
                         logger.info(f"         Dissent: {content[:100]}{'...' if len(content) > 100 else ''}")
                         logger.info(f"         Evidence: {result.evidence[:100]}")
@@ -826,6 +836,17 @@ class MeeseeksLoopRunner:
                 srde_stats = self.srde.get_stats() if hasattr(self.srde, "get_stats") else {}
             except Exception:
                 srde_stats = {}
+            unexamined_ids = [d["id"] for d in council_dissents
+                              if d["id"] not in getattr(self, "_probed_dissents", set())
+                              and d["id"] not in resolved_ids
+                              and d["id"] not in partial_ids
+                              and d["id"] not in confirmed_ids
+                              and d["id"] not in getattr(self, "_declined", {})]
+            if unexamined_ids:
+                logger.info(f"      … {len(unexamined_ids)} dissent(s) were never examined "
+                            f"(probe budget {self.max_probes_per_loop}); excluded from the "
+                            f"resolution rate rather than scored as failures")
+            examined_total = max(0, dissents_total - len(unexamined_ids))
             self._last_dissent_tracking = {
                 "dissents_raised": [
                     {"id": d["id"], "content": str(d.get("content", ""))[:500],
@@ -836,8 +857,10 @@ class MeeseeksLoopRunner:
                                 else "unresolved")}
                     for d in council_dissents
                 ],
-                "dissents_resolved": sorted(resolved_ids),
-                "resolution_rate": (dissents_resolved / dissents_total) if dissents_total else 0.0,
+                "dissents_resolved": sorted(set(resolved_ids) | set(partial_ids) | set(confirmed_ids)),
+                "resolution_rate": (dissents_resolved / examined_total) if examined_total else 0.0,
+                "unexamined": unexamined_ids,
+                "examined_total": examined_total,
                 "srde_stats": srde_stats,
                 "unresolved_critical": sorted(confirmed_ids),
             }
@@ -937,8 +960,13 @@ Generate your 3 hypotheses now:"""
         # (see _run_loop). Adding +0.03 per CONFIRMED on top paid twice for one
         # model opinion - and a hypothesis verdict is an opinion: nothing is
         # executed to produce it.
-        if dissents_total > 0:
-            resolution_rate = dissents_resolved / dissents_total
+        # Denominator is what was actually EXAMINED. A concern the loop never
+        # got to - because the probe budget ran out - is not evidence that the
+        # loop failed to settle it, and charging for it made the number a
+        # function of how talkative the council was.
+        examined = (self._last_dissent_tracking or {}).get("examined_total", dissents_total)
+        if examined and examined > 0:
+            resolution_rate = min(1.0, dissents_resolved / examined)
             base_boost += resolution_rate * 0.05
             base_boost -= (1.0 - resolution_rate) * 0.05
 
@@ -1008,6 +1036,7 @@ Generate your 3 hypotheses now:"""
         # from an earlier loop silently blocks or mis-answers this one.
         self._declined: Dict[str, tuple] = {}
         self._probe_results: Dict[str, Any] = {}
+        self._probed_dissents: set = set()
         if getattr(self, "code_resolver", None) is not None:
             self.code_resolver.reset()
         synth_obj = getattr(self.probe_factory, "synthesizer", None) if self.probe_factory else None
@@ -1061,6 +1090,7 @@ Generate your 3 hypotheses now:"""
                 logger.warning(f"      probe {probe.name} failed: {exc}")
                 continue
             self._probe_results[result.probe_id] = result
+            self._probed_dissents.add(dissent_id)
             if result.verified and getattr(self, "code_resolver", None) \
                     and self.code_resolver.evidence_strength(result) == "strong":
                 self._verified_probes += 1
@@ -1074,7 +1104,9 @@ Generate your 3 hypotheses now:"""
                 if result.confidence_impact != 0.0:
                     self.srde.register_probe_result(result.probe_id, result)
                     if getattr(self, "code_resolver", None) is not None:
-                        self.code_resolver.add_probe(result, origin_dissent=dissent_text)
+                        self.code_resolver.add_probe(
+                            result, origin_dissent=dissent_text,
+                            polarity=probe.parameters.get("_polarity"))
                     logger.info(f"      🔬 {result.probe_id}: {mark} (not on bridge) — "
                                 f"{result.evidence[:60]}")
                     continue
@@ -1088,7 +1120,9 @@ Generate your 3 hypotheses now:"""
             self.semantic_bridge.register_probe(result.probe_id, result)
             self.srde.register_probe_result(result.probe_id, result)
             if getattr(self, "code_resolver", None) is not None:
-                self.code_resolver.add_probe(result, origin_dissent=dissent_text)
+                self.code_resolver.add_probe(
+                    result, origin_dissent=dissent_text,
+                    polarity=probe.parameters.get("_polarity"))
             logger.info(f"      🔬 {result.probe_id}: {mark} — {result.evidence[:70]}")
 
 
