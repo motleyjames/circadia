@@ -113,6 +113,9 @@ class SpinningMeeseeks:
         verify: bool = True,
         test_command: Optional[List[str]] = None,
         probe_timeout: int = 120,
+        max_probes_per_loop: int = 3,
+        synth_model: Optional[str] = None,
+        reader_model: Optional[str] = None,
     ):
         """
         Initialize a Spinning Meeseeks.
@@ -136,6 +139,9 @@ class SpinningMeeseeks:
         self.verify = verify
         self.test_command = test_command
         self.probe_timeout = probe_timeout
+        self.max_probes_per_loop = max_probes_per_loop
+        self.synth_model = synth_model
+        self.reader_model = reader_model
         
         # Components
         self.session_manager = SessionManager(self.output_dir)
@@ -401,6 +407,9 @@ class SpinningMeeseeks:
             verify=self.verify,
             test_command=self.test_command,
             probe_timeout=self.probe_timeout,
+            max_probes_per_loop=self.max_probes_per_loop,
+            synth_model=self.synth_model,
+            reader_model=self.reader_model,
             context=self._context_text(),
         )
         # Carry confidence FORWARD. MeeseeksLoopRunner.__init__ hardcodes 0.5,

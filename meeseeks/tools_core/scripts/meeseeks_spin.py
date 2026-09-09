@@ -60,10 +60,10 @@ Examples:
   %(prog)s "Debug issue" -v
 
 Confidence Thresholds:
-  >= 85%: TASK COMPLETE! *poof*
-  >= 70%: Execute with monitoring
-  >= 50%: Spawn helper Meeseeks
-  <  50%: EXISTENCE IS PAIN, JERRY! (escalate)
+  >= 85%%: TASK COMPLETE! *poof*
+  >= 70%%: Execute with monitoring
+  >= 50%%: Spawn helper Meeseeks
+  <  50%%: EXISTENCE IS PAIN, JERRY! (escalate)
         """
     )
     
@@ -106,6 +106,17 @@ Confidence Thresholds:
                         help="Command a CHECK_INVARIANT probe runs, e.g. "
                              "'venv/bin/pytest tests/test_costs.py -q'. Defaults to "
                              "the whole suite, which is slow inside a loop.")
+    parser.add_argument("--max-probes", type=int, default=3,
+                        help="How many dissents get a probe each loop. Concerns "
+                             "beyond this are reported as unexamined rather than "
+                             "counted against the resolution rate (default 3)")
+    parser.add_argument("--reader-model", default="anthropic_balanced",
+                        help="Role used by read_code probes to read source and answer "
+                             "a question about it. Its citations are verified against "
+                             "the file (default anthropic_balanced)")
+    parser.add_argument("--synth-model", default="anthropic_balanced",
+                        help="Role used to design probes. Probe quality is what earns "
+                             "evidence (default anthropic_balanced)")
     parser.add_argument("--probe-timeout", type=int, default=120,
                         help="Seconds a single probe's command may run before it "
                              "is killed and reported UNVERIFIED (default 120)")
@@ -170,6 +181,9 @@ Confidence Thresholds:
         verify=not args.no_verify,
         test_command=args.test_command.split() if args.test_command else None,
         probe_timeout=args.probe_timeout,
+        max_probes_per_loop=args.max_probes,
+        synth_model=args.synth_model,
+        reader_model=args.reader_model,
     )
     
     # Print results
