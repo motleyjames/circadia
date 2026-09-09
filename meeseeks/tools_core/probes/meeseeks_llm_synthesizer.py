@@ -92,6 +92,17 @@ WEAK evidence - worth half, cannot close a concern on its own:
     plausible string, so it rarely proves anything)
   - count_items with no expected_count (a measurement that cannot come out wrong)
 
+## Scope your probe to a file - this matters more than the probe type
+Every probe accepts an optional "in_file": "<path from the facts above>".
+A search that finds NOTHING only means something if it was scoped to one file
+that was read in full. Repo-wide, "not found" could just mean the name is
+spelled differently or lives somewhere the search did not look, so it is
+reported as inconclusive and settles nothing.
+
+So: if the concern is about a specific file - and it almost always is - put that
+file in "in_file". Then BOTH answers are evidence, and a concern about the code
+NOT doing something dangerous can finally be settled by showing it is absent.
+
 ## Rules
 - Reach for STRONG first. Almost every concern about code can be turned into
   "is this symbol actually defined?" - which is check_exists on a real name from
@@ -109,7 +120,7 @@ WEAK evidence - worth half, cannot close a concern on its own:
 ## Output
 Return ONLY this JSON:
 {{"probe_type": "check_exists" | "count_items" | "check_invariant" | "check_value" | null,
-  "parameters": {{...}},
+  "parameters": {{..., "in_file": "<the file the concern is about, when there is one>"}},
   "target": "<what is being checked, in three words>",
   "a_hit_means": "<REQUIRED: 'concern_is_real' if the probe FINDING what it looks
                    for means the concern is justified; 'concern_is_unfounded' if

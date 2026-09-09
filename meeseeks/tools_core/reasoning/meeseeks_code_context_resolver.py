@@ -168,8 +168,39 @@ class CodeContextResolver(ContextResolver):
 
         self._spent.add(probe.probe_id)
         polarity = self._polarity.get(probe.probe_id)
-        hit = bool(probe.verified)
+        res = probe.result if isinstance(probe.result, dict) else {}
         magnitude = abs(probe.confidence_impact)
+
+        # "hit" must mean THE THING WAS FOUND, not "the probe's assertion held".
+        # For count_items those differ: a probe expecting 0 occurrences and
+        # measuring 0 is verified, but what it found is ABSENCE. Reading that as
+        # a hit reported "there are no set_debuglevel calls" as confirmation of
+        # a concern about set_debuglevel leaking credentials.
+        if probe.probe_type is ProbeType.COUNT_ITEMS:
+            hit = (res.get("count") or 0) > 0
+        elif probe.probe_type is ProbeType.CHECK_VALUE:
+            hit = (res.get("matches") or 0) > 0
+        else:
+            hit = bool(probe.verified)
+
+        # A search that found nothing is only evidence if the search was
+        # exhaustive over a place we actually read. A repo-wide miss has too
+        # many innocent explanations - a name spelled differently, a symbol
+        # imported from elsewhere, search paths that did not cover the file -
+        # and reading those as confirmed defects is what turned three sound
+        # pieces of code into "needs a person".
+        SEARCH_PROBES = (ProbeType.CHECK_EXISTS, ProbeType.CHECK_VALUE,
+                         ProbeType.COUNT_ITEMS)
+        if (not hit and probe.probe_type in SEARCH_PROBES
+                and not res.get("conclusive")):
+            return ResolutionAttempt(
+                dissent_id=dissent_id, dissent_content=dissent_content,
+                status=ResolutionStatus.PARTIALLY_RESOLVED, method="code_probe_inconclusive",
+                evidence=(f"Probe '{probe.probe_id}' found nothing, but the search was not "
+                          f"scoped to a file it read in full, so absence is not established: "
+                          f"{probe.evidence}"),
+                confidence_impact=0.0, tool_used=probe.probe_id,
+            )
 
         if polarity is None:
             # We do not know which way to read this result. Report the evidence
@@ -231,6 +262,10 @@ class CodeContextResolver(ContextResolver):
         if probe.probe_type in self.STRONG:
             return "strong"
         res = probe.result if isinstance(probe.result, dict) else {}
+        # A search scoped to one file that was read in full is as good an answer
+        # as finding the thing - it settles the question either way.
+        if res.get("conclusive"):
+            return "strong"
         if probe.probe_type is ProbeType.CHECK_EXISTS and res.get("kind") in ("file", "symbol"):
             return "strong"
         if probe.probe_type is ProbeType.COUNT_ITEMS and "expected" in res:

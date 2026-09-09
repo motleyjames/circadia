@@ -135,9 +135,21 @@ class CodeProbeExecutor(ProbeExecutor):
 
     # ------------------------------------------------------------- handlers
 
+    def _scoped(self, probe, context) -> Tuple[Dict[str, Any], Optional[str]]:
+        """Context narrowed to probe.parameters['in_file'], when it names a real file."""
+        in_file = probe.parameters.get("in_file")
+        if not in_file:
+            return context, None
+        root = self._root(context)
+        target = self._safe_path(root, str(in_file))
+        if not (target and target.is_file()):
+            return context, None
+        return {**context, "_in_file": str(in_file)}, str(in_file)
+
     def _check_exists(self, probe, context) -> ProbeResult:
         """Does a named file, symbol, or literal exist in the repo?"""
         root = self._root(context)
+        context, scope = self._scoped(probe, context)
         needle = probe.parameters.get("identifier") or self._needle_from_dissent(probe)
         if not needle:
             return self._unverified(probe, "No identifier could be extracted from the dissent.")
@@ -166,26 +178,50 @@ class CodeProbeExecutor(ProbeExecutor):
                 f"Appears as text at {where}", 0.06,
             )
 
+        if scope:
+            # Conclusive: we read that file and it is not in it.
+            return ProbeResult(
+                probe_type=probe.probe_type, probe_id=probe.name, target=needle,
+                result={"found": False, "conclusive": True, "searched_file": scope},
+                verified=False, confidence_impact=-0.10,
+                evidence=f"'{needle}' does not appear anywhere in {scope}, which was read in full.",
+            )
         return ProbeResult(
             probe_type=probe.probe_type, probe_id=probe.name, target=needle,
-            result={"found": False}, verified=False, confidence_impact=-0.05,
-            evidence=f"'{needle}' does not exist as a file, a symbol, or literal text under "
-                     f"{', '.join(self._paths(context))}.",
+            result={"found": False, "conclusive": False},
+            verified=False, confidence_impact=0.0,
+            evidence=(f"'{needle}' was not found under {', '.join(self._paths(context))}. "
+                      f"That is NOT proof it is absent - the name may be spelled differently "
+                      f"or defined outside those paths. Pass in_file to search one file and "
+                      f"get a conclusive answer."),
         )
 
     def _check_value(self, probe, context) -> ProbeResult:
         """Does an expected literal appear in the source?"""
+        _scope_ctx, _scope = self._scoped(probe, context)
+        context = _scope_ctx
         root = self._root(context)
         expected = probe.parameters.get("expected") or self._needle_from_dissent(probe)
         if not expected:
             return self._unverified(probe, "No expected value could be extracted from the dissent.")
 
         hits = self._grep(root, context, expected, limit=5)
-        if not hits:
+        if not hits and _scope:
             return ProbeResult(
                 probe_type=probe.probe_type, probe_id=probe.name, target=expected,
-                result={"matches": 0}, verified=False, confidence_impact=-0.05,
-                evidence=f"Value '{expected}' appears nowhere in the searched source.",
+                result={"matches": 0, "conclusive": True, "searched_file": _scope},
+                verified=False, confidence_impact=-0.10,
+                evidence=f"'{expected}' appears nowhere in {_scope}, which was read in full.",
+            )
+        if not hits:
+            # A repo-wide miss is not a finding. See _check_exists.
+            return ProbeResult(
+                probe_type=probe.probe_type, probe_id=probe.name, target=expected,
+                result={"matches": 0, "conclusive": False},
+                verified=False, confidence_impact=0.0,
+                evidence=(f"'{expected}' was not found under "
+                          f"{', '.join(self._paths(context))}. A repo-wide miss does not "
+                          f"establish absence; pass in_file to search one file conclusively."),
             )
         lines = "; ".join(f"{p}:{ln} {txt.strip()[:60]}" for p, ln, txt in hits[:3])
         return self._verified(
@@ -195,6 +231,7 @@ class CodeProbeExecutor(ProbeExecutor):
 
     def _count_items(self, probe, context) -> ProbeResult:
         """Count tests or occurrences, and compare against an expected count."""
+        context, _scope = self._scoped(probe, context)
         root = self._root(context)
         target_type = (probe.parameters.get("target_type") or "").lower()
         expected = probe.parameters.get("expected_count")
@@ -390,6 +427,16 @@ class CodeProbeExecutor(ProbeExecutor):
         return p
 
     def _iter_sources(self, root: Path, context: Dict[str, Any]):
+        # A probe may name the file the concern is about. Searching only that
+        # file is what makes a MISS mean something: "not in the whole repo,
+        # somewhere" is unreliable (wrong name, wrong path, imported symbol),
+        # but "not in this file, which I read" is a fact.
+        scoped = context.get("_in_file")
+        if scoped:
+            target = self._safe_path(root, scoped)
+            if target and target.is_file():
+                yield target
+                return
         for rel in self._paths(context):
             base = self._safe_path(root, rel)
             if not base or not base.exists():

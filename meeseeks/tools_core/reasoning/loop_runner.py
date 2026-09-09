@@ -1118,7 +1118,14 @@ Generate your 3 hypotheses now:"""
                 continue
             self._probe_results[result.probe_id] = result
             self._probed_dissents.add(dissent_id)
-            if result.verified and getattr(self, "code_resolver", None) \
+            # Evidence, not just affirmation. A probe that read a file in full
+            # and established the thing is NOT there answered the question just
+            # as definitively as one that found it - and for a concern about
+            # code doing something dangerous, absence IS the answer. Counting
+            # only verified probes left those runs permanently under the
+            # evidence ceiling no matter how much they proved.
+            conclusive = isinstance(result.result, dict) and result.result.get("conclusive")
+            if (result.verified or conclusive) and getattr(self, "code_resolver", None) \
                     and self.code_resolver.evidence_strength(result) == "strong":
                 self._verified_probes += 1
             mark = "verified" if result.verified else (
