@@ -1102,7 +1102,8 @@ Generate your 3 hypotheses now:"""
             logger.info("      no dissent yielded a runnable probe this loop")
             return
 
-        ctx = {"repo_root": str(self.repo_root), "timeout": self.probe_timeout}
+        ctx = {"repo_root": str(self.repo_root), "timeout": self.probe_timeout,
+               "prime_directive": self.prime_directive}
         if self.test_command:
             ctx["test_command"] = self.test_command
         elif any(p.probe_type is ProbeType.CHECK_INVARIANT for _, _, p in probes):

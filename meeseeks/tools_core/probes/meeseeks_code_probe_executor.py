@@ -135,9 +135,23 @@ class CodeProbeExecutor(ProbeExecutor):
 
     # ------------------------------------------------------------- handlers
 
+    FILE_IN_TEXT = re.compile(r"\b([\w./-]+\.(?:py|ts|tsx|js|cjs|json|sql|md))\b")
+
     def _scoped(self, probe, context) -> Tuple[Dict[str, Any], Optional[str]]:
         """Context narrowed to probe.parameters['in_file'], when it names a real file."""
         in_file = probe.parameters.get("in_file")
+        if not in_file:
+            # The model does not always fill in_file, and an unscoped search
+            # settles nothing. When the concern itself names a file that exists,
+            # that IS the scope - use it rather than throwing the probe away.
+            root_guess = self._root(context)
+            for cand in self.FILE_IN_TEXT.findall(
+                    f"{probe.from_dissent or ''} {probe.description or ''} "
+                    f"{context.get('prime_directive', '')}"):
+                target = self._safe_path(root_guess, cand)
+                if target and target.is_file():
+                    in_file = cand
+                    break
         if not in_file:
             return context, None
         root = self._root(context)
@@ -224,6 +238,13 @@ class CodeProbeExecutor(ProbeExecutor):
                           f"establish absence; pass in_file to search one file conclusively."),
             )
         lines = "; ".join(f"{p}:{ln} {txt.strip()[:60]}" for p, ln, txt in hits[:3])
+        if _scope:
+            return ProbeResult(
+                probe_type=probe.probe_type, probe_id=probe.name, target=expected,
+                result={"matches": len(hits), "conclusive": True, "searched_file": _scope},
+                verified=True, confidence_impact=0.10,
+                evidence=f"'{expected}' appears in {_scope} at {lines}.",
+            )
         return self._verified(
             probe, expected, {"matches": len(hits)},
             f"{len(hits)} occurrence(s). {lines}", 0.08,
@@ -267,6 +288,15 @@ class CodeProbeExecutor(ProbeExecutor):
         if count is None:
             return self._unverified(probe, f"Could not count {detail}.")
 
+        if expected is None and _scope and count == 0 and target_type not in ("test", "tests"):
+            # Zero occurrences in a file we read in full IS an answer, even with
+            # no expected count: the thing is not there.
+            return ProbeResult(
+                probe_type=probe.probe_type, probe_id=probe.name, target=target,
+                result={"count": 0, "conclusive": True, "searched_file": _scope},
+                verified=False, confidence_impact=-0.10,
+                evidence=f"No occurrences of {target!r} in {_scope}, which was read in full.",
+            )
         if expected is None:
             # A count with nothing to compare against cannot come out wrong, so
             # it establishes nothing. This used to return verified=True at +0.05

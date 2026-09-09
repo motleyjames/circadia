@@ -217,6 +217,28 @@ class CodeContextResolver(ContextResolver):
 
         concern_is_real = (hit and polarity == "real") or (not hit and polarity == "unfounded")
 
+        # ASYMMETRY, and it is the important rule in this file.
+        #
+        # A MISS may SETTLE a concern but may never CONFIRM one. Not finding a
+        # dangerous construct is reliable good news: if `set_debuglevel` or
+        # `except Exception` were in the file, the search would have matched it.
+        # Not finding a SAFEGUARD is not bad news, because a safeguard can be
+        # written many ways - the last run concluded there was no backoff
+        # because it searched for an exponential expression and this code backs
+        # off with RETRY_BACKOFF = (30, 60) instead. You cannot conclude code is
+        # broken from a string you did not find. Confirming a concern requires a
+        # positive finding, or a suite that actually went red.
+        if concern_is_real and not hit and probe.probe_type is not ProbeType.CHECK_INVARIANT:
+            return ResolutionAttempt(
+                dissent_id=dissent_id, dissent_content=dissent_content,
+                status=ResolutionStatus.PARTIALLY_RESOLVED, method="code_probe_absent_safeguard",
+                evidence=(f"Probe '{probe.probe_id}' did not find what it looked for: "
+                          f"{probe.evidence} That does not establish the concern - the thing "
+                          f"it searched for may simply be written another way. Confirming this "
+                          f"needs a positive finding or a failing test."),
+                confidence_impact=0.0, tool_used=probe.probe_id,
+            )
+
         if concern_is_real:
             refutation = ResolutionAttempt(
                 dissent_id=dissent_id, dissent_content=dissent_content,
