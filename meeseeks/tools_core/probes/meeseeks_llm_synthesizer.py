@@ -149,7 +149,8 @@ class LLMProbeSynthesizer:
         # unverifiable by probe - so both belong in skipped_report(), where a
         # person will see them, not in a warning about an unsupported type.
         if kind is None or str(kind).strip().lower() in ("null", "none", "n/a", ""):
-            self._skip(dissent, spec.get("rationale") or "model judged it unverifiable by probe")
+            self._skip(dissent, spec.get("rationale") or "model judged it unverifiable by probe",
+                       kind="judgement")
             logger.info("LLM declined to synthesize a probe - concern is not checkable")
             return None
 
@@ -158,7 +159,8 @@ class LLMProbeSynthesizer:
             # Also a dissent nothing checked it. Log it as the bug it is, but
             # still surface the concern rather than dropping it silently.
             logger.warning(f"LLM proposed unsupported probe type: {kind!r}")
-            self._skip(dissent, f"model proposed probe type {kind!r}, which no executor implements")
+            self._skip(dissent, f"model proposed probe type {kind!r}, which no executor implements",
+                       kind="harness_gap")
             return None
 
         params = spec.get("parameters") or {}
@@ -182,8 +184,16 @@ class LLMProbeSynthesizer:
             from_dissent=dissent[:200],
         )
 
-    def _skip(self, dissent: str, why: str) -> None:
-        self.skipped.append({"dissent": dissent[:160], "why": str(why)[:200]})
+    def _skip(self, dissent: str, why: str, kind: str = "judgement") -> None:
+        """Record a dissent no probe was built for.
+
+        kind distinguishes the two very different reasons: "judgement" means a
+        model read the concern and said no probe can settle it; "harness_gap"
+        means it wanted a probe type nothing here implements. Reporting the
+        second as the first would hide a gap in this tool behind a claim about
+        the question.
+        """
+        self.skipped.append({"dissent": dissent[:160], "why": str(why)[:200], "kind": kind})
 
     def skipped_report(self) -> str:
         """Concerns the model judged unverifiable. These need a person, not a probe."""

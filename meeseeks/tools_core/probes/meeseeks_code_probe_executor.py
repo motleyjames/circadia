@@ -96,8 +96,17 @@ class CodeProbeExecutor(ProbeExecutor):
             )
         try:
             return handler(probe, context)
-        except subprocess.TimeoutExpired:
-            return self._unverified(probe, f"Command exceeded {self.timeout}s and was killed.")
+        except subprocess.TimeoutExpired as exc:
+            # Report the limit that actually applied, not the executor default.
+            # context["timeout"] overrides self.timeout in every handler, so
+            # naming self.timeout here sends you tuning the wrong number.
+            limit = exc.timeout or context.get("timeout", self.timeout)
+            cmd = exc.cmd if isinstance(exc.cmd, str) else " ".join(map(str, exc.cmd or []))
+            return self._unverified(
+                probe,
+                f"`{cmd}` exceeded {limit}s and was killed. Either the command is "
+                f"slower than the probe budget or it is waiting on something.",
+            )
         except Exception as exc:
             return self._unverified(probe, f"Probe raised {type(exc).__name__}: {exc}")
 
@@ -249,7 +258,8 @@ class CodeProbeExecutor(ProbeExecutor):
                 "taken before the change for this probe to mean anything.",
             )
         root = self._root(context)
-        current = self.snapshot(str(root), context.get("test_command"))
+        current = self.snapshot(str(root), context.get("test_command"),
+                                context.get("timeout"))
         regressed = [k for k in ("failed", "error", "errors")
                      if current.get(k, 0) > baseline.get(k, 0)]
         lost = baseline.get("passed", 0) - current.get("passed", 0)
@@ -266,11 +276,12 @@ class CodeProbeExecutor(ProbeExecutor):
 
     # -------------------------------------------------------------- helpers
 
-    def snapshot(self, repo_root: str, test_command: Optional[List[str]] = None) -> Dict[str, int]:
+    def snapshot(self, repo_root: str, test_command: Optional[List[str]] = None,
+                 timeout: Optional[int] = None) -> Dict[str, int]:
         """Run the suite and return its tally. Use before a change as a baseline."""
         proc = subprocess.run(
             test_command or self.test_command, cwd=repo_root,
-            capture_output=True, text=True, timeout=self.timeout,
+            capture_output=True, text=True, timeout=timeout or self.timeout,
         )
         return self._parse_pytest(proc.stdout + proc.stderr)
 
@@ -340,7 +351,8 @@ class CodeProbeExecutor(ProbeExecutor):
         cmd = [c for c in cmd if c not in ("-q", "--no-header")] + ["--collect-only", "-q"]
         try:
             proc = subprocess.run(cmd, cwd=str(root), capture_output=True,
-                                  text=True, timeout=self.timeout)
+                                  text=True,
+                                  timeout=context.get("timeout", self.timeout))
         except (OSError, subprocess.SubprocessError):
             return None, "collected tests"
         m = re.search(r"(\d+)\s+tests?\s+collected", proc.stdout)

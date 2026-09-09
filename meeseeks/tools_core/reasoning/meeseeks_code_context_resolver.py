@@ -169,6 +169,12 @@ class CodeContextResolver(ContextResolver):
 
     def _strength(self, probe: ProbeResult) -> str:
         """How much a verdict from this probe is worth."""
+        # loop_runner registers hypothesis test results as ProbeResults so the
+        # semantic bridge can cross-reference them. Nothing executed for those -
+        # they are a model's assessment - so they never count as strong evidence
+        # however they are typed.
+        if str(probe.probe_id).startswith("hypothesis_"):
+            return "weak"
         if probe.probe_type in self.STRONG:
             return "strong"
         res = probe.result if isinstance(probe.result, dict) else {}
@@ -230,6 +236,8 @@ class CodeContextResolver(ContextResolver):
             return False
         a = " ".join(origin.lower().split())
         b = " ".join(dissent.lower().split())
+        if a == b:
+            return True
         # Synthesizers truncate the dissent they record, so one may be a prefix
         # of the other. Require a real span, not a shared opening clause.
         shortest = min(len(a), len(b))

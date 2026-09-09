@@ -102,6 +102,29 @@ def _load_prompt(name: str) -> str:
     logger.warning(f"Prompt template not found: {path}")
     return ""
 
+# Documented in the hypothesis-testing prompt; enforced here because nothing
+# stops a model from returning 0.9, or a positive number alongside REFUTED.
+_IMPACT_BOUNDS = {
+    "CONFIRMED":    (0.05, 0.15),
+    "REFUTED":      (-0.10, -0.05),
+    "PARTIAL":      (0.02, 0.08),
+    "INCONCLUSIVE": (-0.02, 0.02),
+}
+
+
+def _bounded_impact(result: str, raw) -> float:
+    """Clamp a model-chosen confidence impact into the range its verdict allows."""
+    lo, hi = _IMPACT_BOUNDS.get(result, (-0.02, 0.02))
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        value = 0.0
+    if value < lo or value > hi:
+        logger.warning(f"      hypothesis impact {value:+.3f} outside {result} range "
+                       f"[{lo:+.2f}, {hi:+.2f}] - clamping")
+    return max(lo, min(hi, value))
+
+
 def _extract_json(text: str) -> Optional[Dict[str, Any]]:
     """Extract JSON from LLM response, handling markdown code blocks."""
     # Try to find JSON in code blocks first
@@ -673,11 +696,15 @@ class MeeseeksLoopRunner:
                 # it and said so. Sending it to SRDE anyway would report the
                 # wrong reason, and hand it to pattern resolvers that assert
                 # ("backups are created automatically") without checking.
-                declined_why = getattr(self, "_declined", {}).get(dissent_id)
-                if declined_why:
-                    logger.info(f"      ⃠ {dissent_id}: JUDGEMENT CALL - no probe can settle this")
+                declined = getattr(self, "_declined", {}).get(dissent_id)
+                if declined:
+                    kind, why = declined
+                    label = ("JUDGEMENT CALL - no probe can settle this"
+                             if kind == "judgement" else
+                             "UNPROBED - this harness has no probe type for it")
+                    logger.info(f"      ⃠ {dissent_id}: {label}")
                     logger.info(f"         Dissent: {content[:100]}{'...' if len(content) > 100 else ''}")
-                    logger.info(f"         Why: {declined_why[:100]}")
+                    logger.info(f"         Why: {why[:100]}")
                     continue
                 
                 # Check if already answered by a previous probe
@@ -806,16 +833,26 @@ Generate your 3 hypotheses now:"""
             confidence_delta=0.08
         ))
         
-        # Calculate confidence
-        base_boost = 0.05
+        # Calculate confidence.
+        #
+        # This was `base_boost = 0.05` plus positive terms only, which meant
+        # every loop ended more confident than it began no matter what it found.
+        # A loop whose council raised four concerns and settled none of them
+        # still gained five points, and a loop that raised nothing at all gained
+        # them for silence - the same "confidence without evidence" that put
+        # unverified probes on the semantic bridge. Confidence is now earned:
+        # settled concerns and confirmed hypotheses raise it, unsettled concerns
+        # lower it, and a loop that established nothing moves it nowhere.
+        base_boost = 0.0
         if hypothesis_results:
             confirmed = sum(1 for r in hypothesis_results if r.result == "CONFIRMED")
             base_boost += confirmed * 0.03
         if dissents_total > 0:
             resolution_rate = dissents_resolved / dissents_total
             base_boost += resolution_rate * 0.05
-        
-        new_confidence = min(0.95, self.confidence + base_boost)
+            base_boost -= (1.0 - resolution_rate) * 0.05
+
+        new_confidence = max(0.0, min(0.95, self.confidence + base_boost))
         
         decision = LoopDecision(
             action=f"Loop {loop_num}: Full RSI cycle - council + SRDE + hypotheses",
@@ -900,7 +937,11 @@ Generate your 3 hypotheses now:"""
             # reported as "no resolution strategy", which is not what happened.
             after = getattr(synth, "skipped", None) or []
             if len(after) > before:
-                self._declined[dissent['id']] = after[-1].get("why", "not checkable by probe")
+                entry = after[-1]
+                self._declined[dissent['id']] = (
+                    entry.get("kind", "judgement"),
+                    entry.get("why", "not checkable by probe"),
+                )
         if not probes:
             logger.info("      no dissent yielded a runnable probe this loop")
             return
@@ -908,6 +949,11 @@ Generate your 3 hypotheses now:"""
         ctx = {"repo_root": str(self.repo_root), "timeout": self.probe_timeout}
         if self.test_command:
             ctx["test_command"] = self.test_command
+        elif any(p.probe_type is ProbeType.CHECK_INVARIANT for _, _, p in probes):
+            logger.warning(
+                f"      no --test-command set: a suite probe will run the WHOLE "
+                f"suite and will be killed at {self.probe_timeout}s. Pass a fast "
+                f"subset unless this is a final check.")
         for dissent_id, dissent_text, probe in probes:
             try:
                 result = self.probe_factory.executor.execute(probe, ctx)
@@ -1046,26 +1092,32 @@ Test this hypothesis now:"""
                     id=hypothesis.id,
                     result=result_str,
                     evidence=parsed.get("evidence", response[:200]),
-                    confidence_impact=float(parsed.get("confidence_impact", 0.05))
+                    confidence_impact=_bounded_impact(
+                        result_str, parsed.get("confidence_impact")),
                 )
             else:
-                # Couldn't parse JSON, try to infer from response
-                result_str = "PARTIAL"
-                if "confirmed" in response.lower() or "true" in response.lower():
-                    result_str = "CONFIRMED"
-                elif "refuted" in response.lower() or "false" in response.lower():
-                    result_str = "REFUTED"
-                
+                # Unparseable output is not a verdict. This used to read
+                # CONFIRMED out of the substring "true" appearing anywhere in
+                # the response - including in "cannot be confirmed" or "it is
+                # not true" - and then award +0.05 for it. That is the same
+                # substring-inference mistake the regex probe synthesizer made
+                # with "diff" inside "different".
+                logger.warning(f"      hypothesis {hypothesis.id}: unparseable response, "
+                               f"recording INCONCLUSIVE")
                 hyp_result = HypothesisResult(
                     id=hypothesis.id,
-                    result=result_str,
-                    evidence=response[:300],
-                    confidence_impact=0.05
+                    result="INCONCLUSIVE",
+                    evidence=f"Model response could not be parsed as a verdict: {response[:200]}",
+                    confidence_impact=0.0,
                 )
             
-            # Register result with semantic bridge for cross-referencing
+            # Register result with semantic bridge for cross-referencing.
+            # NOTE: nothing executed here - this is a model's assessment, not a
+            # probe. It is deliberately NOT typed CHECK_INVARIANT, which means
+            # "the suite ran and passed" and is treated as strong evidence by
+            # CodeContextResolver.
             probe_result = ProbeResult(
-                probe_type=ProbeType.CHECK_INVARIANT,
+                probe_type=ProbeType.CHECK_VALUE,
                 probe_id=f"hypothesis_{hypothesis.id}",
                 target=hypothesis.hypothesis[:100] if hasattr(hypothesis, 'hypothesis') else str(hypothesis)[:100],
                 result=hyp_result.result,

@@ -106,6 +106,9 @@ Confidence Thresholds:
                         help="Command a CHECK_INVARIANT probe runs, e.g. "
                              "'venv/bin/pytest tests/test_costs.py -q'. Defaults to "
                              "the whole suite, which is slow inside a loop.")
+    parser.add_argument("--probe-timeout", type=int, default=120,
+                        help="Seconds a single probe's command may run before it "
+                             "is killed and reported UNVERIFIED (default 120)")
     parser.add_argument("--repo-root", default=None,
                         help="Repository to run verification probes against")
 
@@ -166,6 +169,7 @@ Confidence Thresholds:
         repo_root=args.repo_root,
         verify=not args.no_verify,
         test_command=args.test_command.split() if args.test_command else None,
+        probe_timeout=args.probe_timeout,
     )
     
     # Print results
