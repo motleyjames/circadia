@@ -75,6 +75,25 @@ def extract_symbol(source: str, name: str) -> Optional[Tuple[str, int]]:
     return None
 
 
+def module_header(source: str) -> str:
+    """Imports and module-level constants - everything before the first def/class.
+
+    Extracting a function alone hides the module scope it depends on. Reading
+    only send_email(), a model sees `except TRANSIENT_EXCEPTIONS` and cannot
+    know what is in that tuple, because the tuple is defined eleven lines above
+    the function. It then correctly answers "cannot tell" to every question
+    about which exceptions are caught - a true answer to a question we broke.
+    """
+    lines = source.splitlines()
+    out = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith(("def ", "async def ", "class ", "@")):
+            break
+        out.append(line)
+    return "\n".join(out)
+
+
 def number_lines(source: str, first_line: int = 1) -> str:
     out = []
     for i, line in enumerate(source.splitlines(), start=first_line):

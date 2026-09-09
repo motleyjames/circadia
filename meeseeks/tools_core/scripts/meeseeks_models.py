@@ -131,8 +131,11 @@ def main() -> int:
             print(f"  {model:30} OK")
             working.append(model)
         except Exception as exc:
-            msg = str(exc).replace("\n", " ")[:80]
-            print(f"  {model:30} FAILS  {type(exc).__name__}: {msg}")
+            # Providers name the exact quota or parameter at fault; truncating
+            # to 80 characters cut off the only part worth reading.
+            msg = " ".join(str(exc).split())[:300]
+            print(f"  {model:30} FAILS")
+            print(f"  {'':30} {msg}")
             broken.append(model)
 
     print(f"\n{len(working)} reachable, {len(broken)} not.")

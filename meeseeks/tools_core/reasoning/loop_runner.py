@@ -365,7 +365,8 @@ class MeeseeksLoopRunner:
                 self.probe_factory.set_executor(CodeProbeExecutor())
                 self.probe_factory.set_synthesizer(
                     LLMProbeSynthesizer(repo_root=str(self.repo_root),
-                                        model_role=self.synth_model))
+                                        model_role=self.synth_model,
+                                        task=self.prime_directive))
                 logger.info(f"   🔬 Probes designed by role: {self.synth_model}")
                 self.code_resolver = CodeContextResolver()
                 self.srde.set_context_resolver(self.code_resolver)

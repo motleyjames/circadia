@@ -60,6 +60,9 @@ SUPPORTED = {
 PROMPT = """You turn a code-review concern into ONE probe that a program can run
 against a repository to settle it. You do not answer the concern yourself.
 
+## The file under review
+{under_review}
+
 ## The concern
 {dissent}
 
@@ -158,12 +161,14 @@ class LLMProbeSynthesizer:
         repo_root: Optional[str] = None,
         model: Optional[str] = None,
         model_role: str = "anthropic_balanced",
+        task: str = "",
         search_paths: Optional[List[str]] = None,
         max_symbols: int = 120,
     ):
         self.repo_root = Path(repo_root).resolve() if repo_root else None
         self.model = model
         self.model_role = model_role
+        self.task = task or ""
         self._explicit_paths = list(search_paths) if search_paths else None
         self.search_paths = self._explicit_paths or ["src", "tests"]
         self.max_symbols = max_symbols
@@ -177,7 +182,8 @@ class LLMProbeSynthesizer:
             model = self.model or get_default_model(self.model_role)
             raw = call_model(
                 model,
-                PROMPT.format(dissent=dissent.strip()[:1200], facts=self._repo_facts()),
+                PROMPT.format(dissent=dissent.strip()[:1200], facts=self._repo_facts(),
+                              under_review=self._under_review()),
                 system="You design verification probes. Return only valid JSON.",
                 max_tokens=700,
                 temperature=0.0,
@@ -258,6 +264,29 @@ class LLMProbeSynthesizer:
         the question.
         """
         self.skipped.append({"dissent": dissent[:160], "why": str(why)[:200], "kind": kind})
+
+    _TASK_FILE = re.compile(r"\b([\w./-]+\.(?:py|ts|tsx|js|cjs|json|sql|md))\b")
+
+    def _under_review(self) -> str:
+        """Which file the TASK is about.
+
+        Without this the model picks a file from the repo facts that merely
+        sounds related - one run probed src/news.py for a concern about retry
+        logic in src/delivery.py, read the wrong file, and correctly answered
+        that it could not tell.
+        """
+        files = []
+        for cand in self._TASK_FILE.findall(self.task):
+            if self.repo_root and (self.repo_root / cand).is_file() and cand not in files:
+                files.append(cand)
+        if not files:
+            return ("The task does not name a file. Choose the one the concern is "
+                    "actually about, from the facts below.")
+        listed = ", ".join(files[:4])
+        return (f"The task is about: {listed}\n"
+                f"Probe THAT file. Use a different one only if the concern is "
+                f"explicitly about somewhere else - a probe pointed at the wrong "
+                f"file settles nothing and wastes the budget.")
 
     def invalidate_facts(self) -> None:
         """Drop the cached repo snapshot.

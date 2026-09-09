@@ -395,13 +395,13 @@ class CodeProbeExecutor(ProbeExecutor):
         """
         try:
             from .meeseeks_code_reading import (
-                PROMPT, extract_symbol, number_lines, parse_verdict, citation_holds,
-                MAX_SOURCE_CHARS,
+                PROMPT, extract_symbol, module_header, number_lines, parse_verdict,
+                citation_holds, MAX_SOURCE_CHARS,
             )
         except ImportError:
             from probes.meeseeks_code_reading import (
-                PROMPT, extract_symbol, number_lines, parse_verdict, citation_holds,
-                MAX_SOURCE_CHARS,
+                PROMPT, extract_symbol, module_header, number_lines, parse_verdict,
+                citation_holds, MAX_SOURCE_CHARS,
             )
         try:
             try:
@@ -428,16 +428,36 @@ class CodeProbeExecutor(ProbeExecutor):
 
         label, first_line = str(rel), 1
         symbol = probe.parameters.get("symbol")
-        if symbol:
+        if symbol and len(source) > MAX_SOURCE_CHARS:
+            # Only narrow when the file genuinely will not fit. Narrowing a file
+            # that fits costs the reader the module scope - the constants and
+            # imports the function depends on - and it answers "cannot tell" to
+            # anything that turns on them.
             found = extract_symbol(source, str(symbol))
             if found:
-                source, first_line = found
-                label = f"{rel} :: {symbol}"
+                body, first_line = found
+                header = module_header(source)
+                if header.strip():
+                    source = (f"{header}\n\n# ... module continues; showing {symbol} ...\n\n"
+                              f"{body}")
+                    first_line = 1
+                    label = f"{rel} :: module scope + {symbol}"
+                else:
+                    source, label = body, f"{rel} :: {symbol}"
             else:
                 logger.info(f"      read_code: no symbol {symbol!r} in {rel}, reading whole file")
+        elif symbol:
+            label = f"{rel} (whole file, focus on {symbol})"
         if len(source) > MAX_SOURCE_CHARS:
             source = source[:MAX_SOURCE_CHARS]
             label += " (truncated)"
+
+        task = str(context.get("prime_directive", ""))
+        if task and str(rel) not in task:
+            named = self.FILE_IN_TEXT.findall(task)
+            if named:
+                logger.info(f"      read_code: reading {rel}, but the task names "
+                            f"{named[0]} - check this probe if it comes back unsettled")
 
         question = (probe.parameters.get("question") or probe.from_dissent
                     or probe.description or "").strip()
