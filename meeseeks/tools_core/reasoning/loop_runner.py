@@ -667,6 +667,18 @@ class MeeseeksLoopRunner:
                 
                 # Register with semantic bridge
                 self.semantic_bridge.register_dissent(dissent_id, dissent_point)
+
+                # A concern the synthesizer declined is not an unsolved puzzle -
+                # it is a judgement call, and we know that because a model read
+                # it and said so. Sending it to SRDE anyway would report the
+                # wrong reason, and hand it to pattern resolvers that assert
+                # ("backups are created automatically") without checking.
+                declined_why = getattr(self, "_declined", {}).get(dissent_id)
+                if declined_why:
+                    logger.info(f"      ⃠ {dissent_id}: JUDGEMENT CALL - no probe can settle this")
+                    logger.info(f"         Dissent: {content[:100]}{'...' if len(content) > 100 else ''}")
+                    logger.info(f"         Why: {declined_why[:100]}")
+                    continue
                 
                 # Check if already answered by a previous probe
                 if self.semantic_bridge.is_answered_by_probe(dissent_id):
@@ -865,14 +877,15 @@ Generate your 3 hypotheses now:"""
         gives SRDE something real to cross-reference. Failures are non-fatal:
         the loop continues unverified rather than dying.
         """
+        self._declined: Dict[str, str] = {}
         if not self.probe_factory or not council_dissents:
             return
         selected = council_dissents[: self.max_probes_per_loop]
         logger.info(f"   🔬 Synthesizing probes for {len(selected)} dissent(s)...")
         synth = getattr(self.probe_factory, "synthesizer", None)
-        skipped_before = len(getattr(synth, "skipped", None) or [])
         probes = []
         for dissent in selected:
+            before = len(getattr(synth, "skipped", None) or [])
             try:
                 probe = self.probe_factory._synthesize_from_dissent(
                     dissent['content'], dissent.get('source', 'council'))
@@ -880,9 +893,16 @@ Generate your 3 hypotheses now:"""
                     probes.append((dissent['id'], dissent['content'], probe))
             except Exception as exc:
                 logger.warning(f"      probe synthesis failed: {exc}")
+                continue
+            # The synthesizer knows WHY it produced nothing - the concern is a
+            # judgement call, or it asked for a probe type nothing implements.
+            # Without carrying that reason out, the dissent reaches SRDE and is
+            # reported as "no resolution strategy", which is not what happened.
+            after = getattr(synth, "skipped", None) or []
+            if len(after) > before:
+                self._declined[dissent['id']] = after[-1].get("why", "not checkable by probe")
         if not probes:
             logger.info("      no dissent yielded a runnable probe this loop")
-            self._report_skipped(synth, skipped_before)
             return
 
         ctx = {"repo_root": str(self.repo_root), "timeout": self.probe_timeout}
@@ -921,19 +941,6 @@ Generate your 3 hypotheses now:"""
                 self.code_resolver.add_probe(result, origin_dissent=dissent_text)
             logger.info(f"      🔬 {result.probe_id}: {mark} — {result.evidence[:70]}")
 
-        self._report_skipped(synth, skipped_before)
-
-    @staticmethod
-    def _report_skipped(synth, since: int) -> None:
-        """Concerns the synthesizer declined to probe.
-
-        These never reach SRDE and never appear in the resolution counts, so
-        without this they vanish - and a judgement call nothing can check is
-        exactly the kind of finding a person needs to see.
-        """
-        for entry in (getattr(synth, "skipped", None) or [])[since:]:
-            logger.info(f"      ⃠  no probe can settle: {entry['dissent'][:70]} "
-                        f"({entry['why'][:60]})")
 
     def _fallback_loop_output(self, loop_num: int, error: str) -> tuple:
         """Fallback output when LLM call fails."""
