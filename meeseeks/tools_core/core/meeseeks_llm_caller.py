@@ -246,14 +246,57 @@ def call_openai(
             headers=headers,
             json=payload,
         )
+        # OpenAI serves its newer models (the codex line, and several GPT-5.x
+        # variants) ONLY on /v1/responses. Asking for one on chat/completions
+        # returns 404, which is indistinguishable from "no such model" unless
+        # you list the account - the model is really there. Fall through rather
+        # than making the caller pick an endpoint per model.
+        if response.status_code == 404:
+            return _call_openai_responses(client, headers, model, prompt, system, max_tokens)
         response.raise_for_status()
         data = response.json()
-        
+
         _record_usage(model, data)
         choices = data.get('choices', [])
         if choices:
             return choices[0].get('message', {}).get('content', '')
         return ""
+
+
+def _extract_responses_text(data: Dict[str, Any]) -> str:
+    """Pull the assistant text out of a /v1/responses body."""
+    direct = data.get("output_text")
+    if isinstance(direct, str) and direct.strip():
+        return direct
+    parts: List[str] = []
+    for item in data.get("output", []) or []:
+        if not isinstance(item, dict):
+            continue
+        for block in item.get("content", []) or []:
+            if isinstance(block, dict) and block.get("type") in ("output_text", "text"):
+                text = block.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+    return "\n".join(parts)
+
+
+def _call_openai_responses(client, headers, model, prompt, system, max_tokens) -> str:
+    """The Responses API. Same contract as call_openai: text in, text out.
+
+    Note there is no temperature here on purpose - the reasoning models reject
+    any value other than the default, and this path exists mainly for them.
+    """
+    payload: Dict[str, Any] = {"model": model, "input": prompt}
+    if system:
+        payload["instructions"] = system
+    if max_tokens:
+        payload["max_output_tokens"] = max_tokens
+    response = client.post("https://api.openai.com/v1/responses",
+                           headers=headers, json=payload)
+    response.raise_for_status()
+    data = response.json()
+    _record_usage(model, data)
+    return _extract_responses_text(data)
 
 
 # ---------------------------------------------------------------- accounting

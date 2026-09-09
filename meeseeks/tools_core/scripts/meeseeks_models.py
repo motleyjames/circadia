@@ -26,13 +26,85 @@ KEY_FOR = {"anthropic": "ANTHROPIC_API_KEY", "google": "GOOGLE_API_KEY", "openai
 LOOP_ROLES = ["anthropic_top", "anthropic_balanced", "google_top", "openai_top"]
 
 
+def discover(env, cfg) -> int:
+    """What can these keys actually reach, according to the providers themselves?
+
+    A 404 from a chat endpoint is ambiguous: the model may not exist, or it may
+    exist and simply not be served there. Listing the account's real models
+    tells the two apart, which is the difference between renaming a seat and
+    changing an endpoint.
+    """
+    import httpx
+
+    configured = set(cfg.get("models", {}))
+
+    key = env.get("OPENAI_API_KEY")
+    print("OPENAI")
+    if not key:
+        print("  OPENAI_API_KEY not set")
+    else:
+        try:
+            r = httpx.get("https://api.openai.com/v1/models",
+                          headers={"Authorization": f"Bearer {key}"}, timeout=60.0)
+            if r.status_code == 401:
+                print("  401 - the key itself is rejected. Regenerate it.")
+            else:
+                r.raise_for_status()
+                ids = sorted(m["id"] for m in r.json().get("data", []))
+                chat = [i for i in ids if i.startswith(("gpt-", "o1", "o3", "o4", "chatgpt"))
+                        and not any(x in i for x in ("audio", "realtime", "image", "tts",
+                                                     "whisper", "embedding", "moderation"))]
+                print(f"  {len(ids)} models on this key; {len(chat)} usable for text:")
+                for i in chat:
+                    mark = "  <- in your router config" if i in configured else ""
+                    print(f"    {i}{mark}")
+                stale = [m for m, v in cfg.get("models", {}).items()
+                         if v.get("provider") == "openai" and m not in ids]
+                if stale:
+                    print(f"  CONFIGURED BUT NOT ON THIS ACCOUNT: {', '.join(stale)}")
+        except Exception as exc:
+            print(f"  could not list: {type(exc).__name__}: {str(exc)[:120]}")
+
+    gkey = env.get("GOOGLE_API_KEY") or env.get("GEMINI_API_KEY")
+    print("\nGOOGLE")
+    if not gkey:
+        print("  GOOGLE_API_KEY not set")
+    else:
+        try:
+            r = httpx.get("https://generativelanguage.googleapis.com/v1beta/models",
+                          headers={"x-goog-api-key": gkey}, timeout=60.0)
+            if r.status_code == 429:
+                print("  429 on ListModels - the key is valid but the project is rate limited.")
+                print("  That is the free tier (5 requests/minute). Billing is not active yet")
+                print("  on the project this key belongs to.")
+            else:
+                r.raise_for_status()
+                names = [m["name"].split("/")[-1] for m in r.json().get("models", [])
+                         if "generateContent" in m.get("supportedGenerationMethods", [])]
+                print(f"  {len(names)} models support generateContent. Flash/Pro entries:")
+                for nme in sorted(n2 for n2 in names if "flash" in n2 or "pro" in n2):
+                    mark = "  <- in your router config" if nme in configured else ""
+                    print(f"    {nme}{mark}")
+                print("  ListModels succeeded, so the key is valid. If generateContent still")
+                print("  429s, it is a quota limit on the project, not the key.")
+        except Exception as exc:
+            print(f"  could not list: {type(exc).__name__}: {str(exc)[:120]}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Check which models this install can reach")
     ap.add_argument("--all", action="store_true", help="Test every model in the router config")
+    ap.add_argument("--discover", action="store_true",
+                    help="Ask each provider what models this key can actually use. "
+                         "Model names in the router config go stale; this shows the truth.")
     args = ap.parse_args()
 
     env = load_env()
     cfg = load_router_config()
+
+    if args.discover:
+        return discover(env, cfg)
 
     print("KEYS")
     for provider, var in KEY_FOR.items():
