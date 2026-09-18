@@ -184,4 +184,37 @@ describe("buildStudyPack", () => {
     const result = validateStudyPack(sneaky);
     expect(result.ok).toBe(false);
   });
+
+  it("does not send episode fields, and flags a rationale that leaked into a pack", () => {
+    const state = hostileState();
+    state.episode = {
+      id: "ep-secret-fold-01",
+      rev: 1,
+      clinicianId: "clin-ada-west-01",
+      state: "treatment",
+      enrolledAt: "2026-09-01T12:00:00.000Z",
+      baselineNights: 14,
+      windows: [
+        {
+          id: "win-1",
+          prescribedInBed: "00:30",
+          prescribedOutOfBed: "07:00",
+          setBy: "clin-ada-west-01",
+          setAt: "2026-09-16T15:00:00.000Z",
+          rationale: "Titrate fifteen minutes after the Wednesday commute.",
+        },
+      ],
+    };
+    const pack = buildStudyPack(state);
+    const blob = JSON.stringify(pack);
+    expect(blob).not.toMatch(/ep-secret-fold-01/);
+    expect(blob).not.toMatch(/clin-ada-west-01/);
+    expect(blob).not.toMatch(/Titrate fifteen/);
+    expect(blob).not.toMatch(/prescribedInBed/);
+    expect(blob).not.toMatch(/"episode"/);
+    expect(anonymityViolations(pack, state)).toEqual([]);
+
+    const sneaky = { ...pack, rationale: "Titrate fifteen minutes after the Wednesday commute." };
+    expect(anonymityViolations(sneaky, state)).toContain("clinician-notes");
+  });
 });

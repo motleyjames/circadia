@@ -1,3 +1,5 @@
+import type { Episode } from "@/lib/episode";
+
 export type Sex = "female" | "male" | "other" | "unspecified";
 
 export type ActivityLevel = "sedentary" | "light" | "moderate" | "high";
@@ -159,6 +161,11 @@ export type CircadiaState = {
   researchNotes: string;
   demoWeek: boolean;
   study: StudyState;
+  /**
+   * Clinical course of care. Null is solo mode — every diary today.
+   * Never synthesised from nights or from study.consented.
+   */
+  episode: Episode | null;
 };
 
 export type AgeBand = "13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55-64" | "65+";

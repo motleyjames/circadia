@@ -69,7 +69,7 @@ function isClock(value: unknown): value is string {
  * 23:00" and wrong for every other pair in a night's geometry — you can get out of
  * bed the same minute you wake.
  */
-function forwardMinutes(from: string, to: string): number {
+export function forwardMinutes(from: string, to: string): number {
   return clockToMinutes(from) === clockToMinutes(to) ? 0 : overnightDuration(from, to);
 }
 

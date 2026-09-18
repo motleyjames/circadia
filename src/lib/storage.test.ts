@@ -231,4 +231,44 @@ describe("hydrateState", () => {
     expect(state.reports[0]?.rating).toBe(5);
     expect(state.reports[0]?.wokeAt).toBe("08:00");
   });
+
+  it("hydrates a well-formed episode and drops a malformed one rather than repairing it", () => {
+    const ok = hydrateState({
+      episode: {
+        id: "ep-1",
+        rev: 2,
+        clinicianId: "clin-1",
+        state: "baseline",
+        enrolledAt: "2026-09-01T12:00:00.000Z",
+        baselineNights: 14,
+        windows: [
+          {
+            id: "w1",
+            prescribedInBed: "00:30",
+            prescribedOutOfBed: "07:00",
+            setBy: "clin-1",
+            setAt: "2026-09-16T15:00:00.000Z",
+          },
+        ],
+      },
+    });
+    expect(ok.episode?.id).toBe("ep-1");
+    expect(ok.episode?.rev).toBe(2);
+    expect(ok.episode?.windows[0]?.prescribedInBed).toBe("00:30");
+
+    expect(hydrateState({ episode: { id: "ep-1", clinicianId: "clin-1" } }).episode).toBeNull();
+    expect(
+      hydrateState({
+        episode: {
+          id: "ep-1",
+          rev: 0,
+          clinicianId: "clin-1",
+          state: "treatment",
+          enrolledAt: "2026-09-01T12:00:00.000Z",
+          windows: [{ id: "w1", prescribedInBed: "not-a-clock", prescribedOutOfBed: "07:00", setBy: "clin-1", setAt: "2026-09-16T15:00:00.000Z" }],
+        },
+      }).episode,
+    ).toBeNull();
+    expect(hydrateState({ episode: null }).episode).toBeNull();
+  });
 });
