@@ -1,0 +1,29 @@
+[
+  {
+    "id": "fold-drops-incoming-episode",
+    "why": "mergeDiaryStates returns local.episode instead of the folded result, so an episode that exists only on the incoming device is silently dropped on a Mac/phone fold — the 0.9.0 '...local' regression that the fold was written to close.",
+    "file": "src/lib/diary-fold.ts",
+    "find": "    episode: folded.episode,\n",
+    "replace": "    episode: local.episode,\n",
+    "testFile": "src/lib/diary-fold.test.ts",
+    "testName": "takes an incoming episode when this diary has none"
+  },
+  {
+    "id": "window-built-outside-factory",
+    "why": "Invariant 1 is enforced textually: episode.test.ts walks every non-test .ts/.tsx under src/ (sourceFiles(\"src\")) and requires /prescribedInBed\\s*:/ to match episode.ts alone. src/lib/storage.ts is inside that scan scope and already assembles a TreatmentWindow literal in coerceTreatmentWindow, staying off the scan only because it uses property shorthand. Making that key explicit is the realistic drift — a second construction site for a treatment window appears in a diary-hydration module — and it typechecks identically, so no other test changes behaviour.",
+    "file": "src/lib/storage.ts",
+    "find": "    id: w.id,\n    prescribedInBed,\n    prescribedOutOfBed,\n",
+    "replace": "    id: w.id,\n    prescribedInBed: prescribedInBed,\n    prescribedOutOfBed,\n",
+    "testFile": "src/lib/episode.test.ts",
+    "testName": "prescribedInBed: is an object-literal key in exactly one non-test file, episode.ts"
+  },
+  {
+    "id": "adherence-falls-back-to-fellAsleepAt",
+    "why": "windowAdherence substitutes report.fellAsleepAt when report.inBedAt is absent rather than returning null. Sleep onset is not time in bed, so adherence would be scored against a clock the patient never reported being in bed at, inflating or inventing a window breach.",
+    "file": "src/lib/episode.ts",
+    "find": "  if (adherenceUnavailableReason(report, window) !== null) return null;\n  const actualInBed = report.inBedAt!;\n",
+    "replace": "  if (!window) return null;\n  if (!isClock(report.outOfBedAt)) return null;\n  const actualInBed = report.inBedAt ?? report.fellAsleepAt;\n",
+    "testFile": "src/lib/episode.test.ts",
+    "testName": "names missing clocks separately from no window, and never falls back to sleep onset"
+  }
+]
