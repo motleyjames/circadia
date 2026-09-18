@@ -47,7 +47,7 @@ from .confidence import (
     MONITOR_THRESHOLD,
     SPAWN_THRESHOLD,
 )
-from .session import SessionManager
+from .session import SessionManager, DEFAULT_SESSION_DIR
 
 # Import REAL RSI components
 from .meeseeks_srde import SelfResolvingDissentEngine, create_srde
@@ -390,7 +390,7 @@ class MeeseeksLoopRunner:
         """
         self.session_id = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
         self.prime_directive = prime_directive
-        self.output_dir = output_dir or Path("logs/sessions")
+        self.output_dir = output_dir or DEFAULT_SESSION_DIR
         self.context = context or ""  # Tools + Knowledge context
         
         # Thresholds
@@ -1673,7 +1673,7 @@ if __name__ == "__main__":
     
     result = run_meeseeks(
         prime_directive="Test the Meeseeks loop runner",
-        output_dir=Path("logs/sessions")
+        output_dir=DEFAULT_SESSION_DIR
     )
     
     print(f"\n{'='*60}")

@@ -204,6 +204,14 @@ def call_google(
         return ""
 
 
+# OpenAI serves these models ONLY on /v1/responses. An explicit set, not a
+# substring of the model name — matching "gpt-5" would send chat models to
+# the wrong API. The 404 fallback below still covers unnamed variants.
+OPENAI_RESPONSES_ONLY_MODELS = frozenset({
+    "gpt-5.3-codex",
+})
+
+
 def call_openai(
     model: str,
     prompt: str,
@@ -241,6 +249,8 @@ def call_openai(
         payload["max_tokens"] = max_tokens
     
     with httpx.Client(timeout=300.0) as client:
+        if model in OPENAI_RESPONSES_ONLY_MODELS:
+            return _call_openai_responses(client, headers, model, prompt, system, max_tokens)
         response = client.post(
             "https://api.openai.com/v1/chat/completions",
             headers=headers,

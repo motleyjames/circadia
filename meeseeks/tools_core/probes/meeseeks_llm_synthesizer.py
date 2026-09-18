@@ -310,6 +310,13 @@ class LLMProbeSynthesizer:
 
     # -------------------------------------------------------------- grounding
 
+    # Circadia inventoried 1 .py from a src/ of hundreds of .ts files; the
+    # council then reasoned at 91% from that one file. A 2-file toy repo is
+    # 2/2 and must not trip. Require a large tree (20+ files on disk) whose
+    # matched share is under 10% — 1/200 fires, 2/2 does not, 5/5 does not.
+    STARVE_MIN_FILES = 20
+    STARVE_MAX_MATCH_RATIO = 0.10
+
     def _repo_facts(self) -> str:
         """Real symbol and file names, so the model cannot invent things to check."""
         if self._facts is not None:
@@ -318,26 +325,32 @@ class LLMProbeSynthesizer:
             self._facts = "(repository contents unavailable - do not guess identifiers)"
             return self._facts
 
+        try:
+            from .meeseeks_code_probe_executor import discover_search_paths, SOURCE_SUFFIXES
+        except ImportError:
+            from probes.meeseeks_code_probe_executor import discover_search_paths, SOURCE_SUFFIXES
+
         if not self._explicit_paths:
             # Same reason as the executor: grounding the model in an empty tree
             # makes it invent identifiers, which then come back "does not exist".
-            try:
-                from .meeseeks_code_probe_executor import discover_search_paths
-            except ImportError:
-                from probes.meeseeks_code_probe_executor import discover_search_paths
             self.search_paths = discover_search_paths(self.repo_root)
 
         modules: List[str] = []
         symbols: List[str] = []
+        files_on_disk = 0
         for rel in self.search_paths:
             base = self.repo_root / rel
             if not base.is_dir():
                 continue
-            for f in sorted(base.rglob("*.py")):
-                if "__pycache__" in f.parts:
+            for f in sorted(base.rglob("*")):
+                if not f.is_file() or "__pycache__" in f.parts:
+                    continue
+                if f.suffix:
+                    files_on_disk += 1
+                if f.suffix not in SOURCE_SUFFIXES:
                     continue
                 modules.append(str(f.relative_to(self.repo_root)))
-                if len(symbols) >= self.max_symbols:
+                if len(symbols) >= self.max_symbols or f.suffix != ".py":
                     continue
                 try:
                     tree = ast.parse(f.read_text(encoding="utf-8", errors="replace"))
@@ -347,6 +360,26 @@ class LLMProbeSynthesizer:
                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                         if not node.name.startswith("_"):
                             symbols.append(node.name)
+
+        for name in ("package.json", "tsconfig.json"):
+            p = self.repo_root / name
+            if p.is_file() and name not in modules:
+                modules.append(name)
+
+        # A starved inventory and a small repo look the same from inside the
+        # council. Refuse to hand over a near-empty module list when the tree
+        # is plainly not near-empty.
+        if (files_on_disk >= self.STARVE_MIN_FILES
+                and len(modules) < files_on_disk * self.STARVE_MAX_MATCH_RATIO):
+            self._facts = (
+                f"INVENTORY STARVED: repo_root={self.repo_root} "
+                f"searched_directories={list(self.search_paths)} "
+                f"suffixes_applied={sorted(SOURCE_SUFFIXES)} "
+                f"matched_modules={len(modules)} files_on_disk={files_on_disk}. "
+                f"The matched set is too small for this tree; do not treat it "
+                f"as the repository."
+            )
+            return self._facts
 
         self._facts = (
             f"Modules ({len(modules)}):\n  " + "\n  ".join(modules[:60])

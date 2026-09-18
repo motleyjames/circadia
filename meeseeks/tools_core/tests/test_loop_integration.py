@@ -194,3 +194,16 @@ class TestSpinConvergence:
         text = spin._context_text()
         assert "75%" in text
         assert "retry bound" in text
+
+
+class TestLogLocation:
+    def test_default_output_dir_is_under_meeseeks_logs_not_cwd(self):
+        from pathlib import Path
+        from reasoning.loop_runner import MeeseeksLoopRunner
+        from reasoning.session import DEFAULT_SESSION_DIR, SessionManager
+        r = MeeseeksLoopRunner(prime_directive="x", output_dir=None, verify=False)
+        got = Path(r.output_dir)
+        assert got == DEFAULT_SESSION_DIR
+        assert got.parts[-3:] == ("meeseeks", "logs", "sessions")
+        assert got != Path("logs/sessions")
+        assert SessionManager().base_dir == DEFAULT_SESSION_DIR

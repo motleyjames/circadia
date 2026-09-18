@@ -106,3 +106,52 @@ class TestProbeSynthesis:
         from probes.meeseeks_llm_synthesizer import LLMProbeSynthesizer
         s = LLMProbeSynthesizer(repo_root=str(repo), task="make the agent better")
         assert "does not name a file" in s._under_review()
+
+
+class TestRepoFacts:
+    """The inventory the council is shown must look like the tree, or say it failed."""
+
+    def test_a_typescript_tree_is_not_one_python_script(self, tmp_path):
+        (tmp_path / "src").mkdir()
+        (tmp_path / "scripts").mkdir()
+        (tmp_path / "src" / "app.ts").write_text("export const x = 1\n")
+        (tmp_path / "tsconfig.json").write_text("{}\n")
+        (tmp_path / "scripts" / "render-voice.py").write_text("def main():\n    pass\n")
+        from probes.meeseeks_llm_synthesizer import LLMProbeSynthesizer
+        facts = LLMProbeSynthesizer(repo_root=str(tmp_path))._repo_facts()
+        assert "app.ts" in facts
+        assert "tsconfig.json" in facts
+        assert "Modules (1):" not in facts
+        assert "scripts/render-voice.py" in facts
+
+    def test_starvation_guard_fires_on_a_ts_tree_filtered_to_python(self, tmp_path, monkeypatch):
+        """Circadia: hundreds of .ts files, suffixes still {'.py'} → refuse the 1-module view.
+
+        Suffixes now include .ts, so this pins the FILTER, not today's list: a
+        Python-only suffix set against a TypeScript tree must not silently
+        look like a one-file repo.
+        """
+        import probes.meeseeks_code_probe_executor as exe
+        monkeypatch.setattr(exe, "SOURCE_SUFFIXES", {".py"})
+        src = tmp_path / "src"
+        src.mkdir()
+        for i in range(30):
+            (src / f"mod_{i}.ts").write_text(f"export const n{i} = {i}\n")
+        from probes.meeseeks_llm_synthesizer import LLMProbeSynthesizer
+        facts = LLMProbeSynthesizer(repo_root=str(tmp_path))._repo_facts()
+        assert "INVENTORY STARVED" in facts
+        assert ".py" in facts
+        assert "suffixes_applied" in facts
+        assert "files_on_disk=30" in facts
+        assert "matched_modules=0" in facts
+
+    def test_starvation_guard_does_not_fire_on_a_two_file_repo(self, tmp_path):
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "a.py").write_text("def a():\n    return 1\n")
+        (src / "b.py").write_text("def b():\n    return 2\n")
+        from probes.meeseeks_llm_synthesizer import LLMProbeSynthesizer
+        facts = LLMProbeSynthesizer(repo_root=str(tmp_path))._repo_facts()
+        assert "INVENTORY STARVED" not in facts
+        assert "a.py" in facts
+        assert "b.py" in facts
