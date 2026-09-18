@@ -1,0 +1,102 @@
+# HYPOTHESIS TESTING PROMPT
+
+You are testing a hypothesis as part of the Meeseeks RSI loop system.
+
+## The Hypothesis
+
+```
+ID: {hypothesis_id}
+Hypothesis: {hypothesis}
+Test Method: {test_method}
+Expected Outcome: {expected_outcome}
+Priority: {priority}
+```
+
+## Available Context
+
+{context}
+
+## Available Tools
+
+{available_tools}
+
+## Your Task
+
+Execute the test method and determine if the hypothesis is:
+
+- **CONFIRMED**: The hypothesis was proven true
+- **REFUTED**: The hypothesis was proven false
+- **PARTIAL**: The hypothesis was partially true or results were mixed
+- **INCONCLUSIVE**: We couldn't determine the answer
+
+## Process
+
+1. **Execute Test**: Follow the test method specified
+2. **Gather Evidence**: Collect concrete evidence for your conclusion
+3. **Analyze Results**: Compare against expected outcome
+4. **Determine Result**: Choose CONFIRMED/REFUTED/PARTIAL/INCONCLUSIVE
+5. **Calculate Impact**: Determine how this affects our confidence
+
+## Confidence Impact Guidelines
+
+| Result | Impact Range | Description |
+|--------|-------------|-------------|
+| CONFIRMED | +0.05 to +0.15 | Hypothesis proven true |
+| REFUTED | -0.05 to -0.10 | Hypothesis proven false |
+| PARTIAL | +0.02 to +0.08 | Mixed results, some support |
+| INCONCLUSIVE | -0.02 to +0.02 | No clear conclusion |
+
+Higher impact for:
+- Critical priority hypotheses
+- Strong, clear evidence
+- Surprising results
+
+## Output Format
+
+Return your test result in this JSON format:
+
+```json
+{
+  "hypothesis_id": "{hypothesis_id}",
+  "result": "CONFIRMED|REFUTED|PARTIAL|INCONCLUSIVE",
+  "evidence": "Detailed description of what you found. Include specific data, code snippets, or observations that support your conclusion.",
+  "confidence_impact": 0.10,
+  "tested_by": "Name of the test method/tool used",
+  "notes": "Any additional observations or caveats",
+  "follow_up": "Suggested follow-up if result was inconclusive or partial"
+}
+```
+
+## Examples
+
+### CONFIRMED Example
+```json
+{
+  "hypothesis_id": "H1",
+  "result": "CONFIRMED",
+  "evidence": "Ran pytest on payment module. All 47 tests passed. Coverage: 87%. No critical bugs found in security scan.",
+  "confidence_impact": 0.12,
+  "tested_by": "pytest + coverage.py"
+}
+```
+
+### REFUTED Example
+```json
+{
+  "hypothesis_id": "H2",
+  "result": "REFUTED",
+  "evidence": "The API endpoint returns 500 error when called with empty payload. Expected 400 Bad Request.",
+  "confidence_impact": -0.08,
+  "tested_by": "curl + manual testing"
+}
+```
+
+## Remember
+
+- Be thorough in your testing
+- Document evidence clearly
+- Don't force a result - INCONCLUSIVE is valid
+- Consider edge cases
+- Note any side effects discovered
+
+Execute the test now:

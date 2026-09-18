@@ -84,3 +84,13 @@ next-env.d.ts
 # SwiftPM scratch for the iPhone shell (local-path packages; nothing to pin)
 phone/**/.swiftpm/
 phone/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+meeseeks/box/API_CONFIG.env
+
+# Meeseeks harness — run artifacts and caches are ephemeral
+meeseeks/logs/
+meeseeks/tools_spawned/
+meeseeks/**/__pycache__/
+meeseeks/.venv/
+
+# Meeseeks harness (cont.) - run artifacts and caches
+meeseeks/box/meeseeks_registry/

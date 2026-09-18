@@ -1,0 +1,218 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meeseeks.arcanelabs.io/schemas/hypothesis.schema.json",
+  "title": "MeeseeksHypothesis",
+  "description": "A testable hypothesis for the RSI loop system. Hypotheses drive the reasoning process - they're what we test to build confidence.",
+  "type": "object",
+  "required": ["id", "hypothesis", "test_method", "expected_outcome"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^H[0-9]+$",
+      "description": "Hypothesis ID (e.g., H1, H2, H3)"
+    },
+    "hypothesis": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 500,
+      "description": "The hypothesis statement - what we believe might be true"
+    },
+    "test_method": {
+      "type": "string",
+      "minLength": 10,
+      "description": "How to test this hypothesis - specific actions/probes to run"
+    },
+    "expected_outcome": {
+      "type": "string",
+      "minLength": 5,
+      "description": "What we expect to see if the hypothesis is true"
+    },
+    "null_outcome": {
+      "type": "string",
+      "description": "What we'd see if the hypothesis is FALSE (helps design better tests)"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low"],
+      "default": "medium",
+      "description": "Priority for testing this hypothesis"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "architecture",
+        "implementation",
+        "integration",
+        "performance",
+        "correctness",
+        "safety",
+        "alternative_approach",
+        "edge_case",
+        "dependency"
+      ],
+      "description": "Category of hypothesis"
+    },
+    "probe_type": {
+      "type": "string",
+      "enum": [
+        "check_exists",
+        "check_value",
+        "check_type",
+        "check_invariant",
+        "count_items",
+        "compute_value",
+        "validate_schema",
+        "compare_before_after",
+        "visual_check",
+        "custom_code",
+        "council_vote",
+        "manual"
+      ],
+      "description": "Type of probe best suited to test this"
+    },
+    "confidence_if_confirmed": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 0.5,
+      "description": "Expected confidence boost if confirmed"
+    },
+    "confidence_if_refuted": {
+      "type": "number",
+      "minimum": -0.5,
+      "maximum": 0,
+      "description": "Expected confidence impact if refuted"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { 
+        "type": "string",
+        "pattern": "^H[0-9]+$"
+      },
+      "description": "Other hypothesis IDs this depends on"
+    },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^H[0-9]+$"
+      },
+      "description": "Hypothesis IDs that this blocks (can't test until this resolves)"
+    },
+    "tools_required": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Tools needed to test this hypothesis"
+    },
+    "knowledge_required": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Knowledge/skills needed to test this"
+    },
+    "estimated_time_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Estimated time to test this hypothesis"
+    },
+    "risk_if_untested": {
+      "type": "string",
+      "enum": ["blocker", "high", "medium", "low"],
+      "description": "Risk level if we proceed without testing this"
+    },
+    "dissent_source": {
+      "type": "string",
+      "description": "Dissent ID that prompted this hypothesis (if any)"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created_in_loop": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Which loop created this hypothesis"
+    },
+    "test_result": {
+      "type": "object",
+      "description": "Result after testing (filled in when tested)",
+      "properties": {
+        "tested_in_loop": {
+          "type": "integer"
+        },
+        "result": {
+          "type": "string",
+          "enum": ["CONFIRMED", "REFUTED", "PARTIAL", "INCONCLUSIVE"]
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "actual_outcome": {
+          "type": "string"
+        },
+        "probe_used": {
+          "type": "string"
+        },
+        "confidence_impact": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "dissents_generated": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "New dissents raised from testing this"
+        },
+        "follow_up_hypotheses": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^H[0-9]+$"},
+          "description": "New hypotheses generated from this result"
+        },
+        "tested_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "id": "H1",
+      "hypothesis": "Adding tests to module Y will reveal hidden bugs that could affect feature X",
+      "test_method": "Run new tests against module Y and check for failures",
+      "expected_outcome": "0-2 failures maximum, indicating module is stable",
+      "null_outcome": "3+ failures would indicate hidden instability",
+      "priority": "high",
+      "category": "correctness",
+      "probe_type": "custom_code",
+      "confidence_if_confirmed": 0.15,
+      "confidence_if_refuted": -0.20,
+      "risk_if_untested": "high"
+    },
+    {
+      "id": "H2",
+      "hypothesis": "The API contract of module Y matches what feature X expects",
+      "test_method": "Generate TypeScript types from Y's API and compare to X's imports",
+      "expected_outcome": "Types should match with no conflicts",
+      "null_outcome": "Type mismatches would indicate integration risk",
+      "priority": "critical",
+      "category": "integration",
+      "probe_type": "validate_schema",
+      "confidence_if_confirmed": 0.20,
+      "confidence_if_refuted": -0.30,
+      "dependencies": ["H1"],
+      "risk_if_untested": "blocker"
+    },
+    {
+      "id": "H3",
+      "hypothesis": "There exists a simpler implementation path that bypasses module Y entirely",
+      "test_method": "Council vote on alternative architectures with pros/cons analysis",
+      "expected_outcome": "At least one viable alternative identified",
+      "null_outcome": "No alternatives - must use module Y",
+      "priority": "medium",
+      "category": "alternative_approach",
+      "probe_type": "council_vote",
+      "confidence_if_confirmed": 0.10,
+      "confidence_if_refuted": 0.05,
+      "risk_if_untested": "low"
+    }
+  ]
+}

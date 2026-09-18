@@ -1,0 +1,38 @@
+---
+description: No change ships without a Meeseeks harness review — findings.md answered before commit
+alwaysApply: true
+---
+
+# Harness Gate — No Exceptions
+
+Every change to this repo passes through the Meeseeks harness before it is committed.
+This holds whether or not the session was brain-loaded.
+
+## The Gate
+
+After the suite is green and before the commit:
+
+1. Run the harness against the change.
+   - `./meeseeks/tools_core/scripts/meeseeks_loop.py` for an ordinary change
+   - `./meeseeks/tools_core/scripts/meeseeks_spin.py` for anything structural
+   (James runs it and reports the output. You write the invocation and read the result.)
+2. Read `meeseeks/logs/sessions/<session_id>/findings.md`.
+3. Every CONFIRMED finding is fixed, or declined in writing in that version's design doc
+   with the reason it was declined.
+
+## Hard Rules
+
+- **The confidence percentage is not the gate.** The findings are. A 95% run with an
+  unanswered CONFIRMED finding does not pass; a 60% run with a clean findings list does.
+- A finding is never closed by rewording it. Close it with a code change or a written
+  decline.
+- If the harness cannot run (dead council seat, missing key), the gate is **not** waived —
+  say so and stop. Check with `./meeseeks/tools_core/scripts/meeseeks_models.py`.
+  A silent council member looks exactly like one who agreed.
+- Skip the gate only when James says to skip it, in this session, in so many words.
+
+## Why
+
+The harness exists to catch what a single reader misses — it found the SMTP 4xx retry bug
+in `src/delivery.py` that the full suite passed over. A review step that runs only when
+someone remembers it is not a review step.

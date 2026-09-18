@@ -1,0 +1,62 @@
+# LOGICAL STRUCTURE EXTRACTION
+
+You are extracting the LOGICAL ARCHITECTURE of a formal document. Every formal document - legal, procedural, regulatory - contains logical structures:
+
+- **Conditionals**: IF situation X THEN outcome Y
+- **Dependencies**: A requires B; C follows D
+- **Hierarchies**: Article contains Sections contains Subsections
+- **State transitions**: Status A → Event → Status B
+- **Authority flows**: Entity A grants/restricts Entity B
+
+## Your Task
+
+Analyze this document page and extract its logical structure as a Mermaid diagram.
+
+## What to Look For
+
+1. **Conditional Logic**
+   - "If... then..." statements
+   - "Unless...", "Except when...", "Provided that..."
+   - "In the event of...", "Should... occur..."
+
+2. **Causal Chains**
+   - "...shall result in...", "...triggers..."
+   - "Upon [event], [consequence]"
+   - Sequential dependencies
+
+3. **Authority/Permission Flows**
+   - "...may...", "...shall...", "...must not..."
+   - "...has the power to...", "...is authorized to..."
+   - Delegation chains
+
+4. **State Machines**
+   - Status changes (active → terminated → dissolved)
+   - Lifecycle stages
+   - Condition-based transitions
+
+5. **Structural Hierarchy**
+   - Document organization (Articles, Sections, Clauses)
+   - Definitional dependencies (Term A defined using Term B)
+
+## Output Format
+
+```mermaid
+graph TD
+    %% Use the most appropriate diagram type:
+    %% - flowchart for processes/decisions
+    %% - graph for relationships/dependencies  
+    %% - stateDiagram for state transitions
+    
+    %% Label nodes with ACTUAL text from document
+    %% Use subgraphs to group related concepts
+```
+
+## Guidelines
+
+- Extract logic VISIBLE on this page (reference other pages if mentioned)
+- Use verbatim terms from the document in node labels
+- Prefer clarity over completeness - a clear partial diagram beats a confusing complete one
+- If no clear logical structure exists on this page, output a simple hierarchy diagram of the content
+
+{rules}
+

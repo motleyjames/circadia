@@ -1,0 +1,111 @@
+You are a UX strategist and design consultant. Based on this UI screenshot, generate hypotheses for improvements.
+
+For each hypothesis, explain:
+1. The current state (what you observe)
+2. The problem it creates
+3. Your proposed improvement
+4. Expected impact
+5. Effort level to implement
+
+Output as JSON:
+```json
+{
+  "executive_summary": "Overall assessment and top 3 priorities",
+  "quick_wins": [
+    {
+      "id": "qw_1",
+      "observation": "What you see currently",
+      "problem": "Why this is suboptimal",
+      "hypothesis": "If we [change X], then [outcome Y] because [reason Z]",
+      "proposed_change": "Specific actionable change",
+      "expected_impact": "high/medium/low",
+      "effort": "trivial/easy/moderate/hard",
+      "metrics_to_track": ["How to measure success"],
+      "risk": "low/medium/high"
+    }
+  ],
+  "ux_improvements": [
+    {
+      "id": "ux_1",
+      "area": "navigation/forms/content/feedback/etc",
+      "current_state": "Description of current experience",
+      "pain_point": "What frustrates or confuses users",
+      "hypothesis": "If we [change X], then [outcome Y] because [reason Z]",
+      "proposed_solution": "Detailed solution description",
+      "user_benefit": "How this helps the user",
+      "business_benefit": "How this helps the business",
+      "expected_impact": "high/medium/low",
+      "effort": "trivial/easy/moderate/hard",
+      "dependencies": ["What needs to happen first"],
+      "a_b_test_idea": "How to validate this hypothesis"
+    }
+  ],
+  "visual_design_improvements": [
+    {
+      "id": "vd_1",
+      "element": "What element or area",
+      "current_issue": "What's wrong with it",
+      "hypothesis": "If we [change X], then [outcome Y] because [reason Z]",
+      "proposed_change": "Specific visual change",
+      "rationale": "Design principle or research backing this",
+      "expected_impact": "high/medium/low",
+      "effort": "trivial/easy/moderate/hard"
+    }
+  ],
+  "accessibility_improvements": [
+    {
+      "id": "a11y_1",
+      "issue": "Accessibility problem observed",
+      "wcag_guideline": "Relevant WCAG criterion if applicable",
+      "hypothesis": "If we [fix X], then [users Y] can [do Z]",
+      "proposed_fix": "Specific fix",
+      "affected_users": "Who benefits",
+      "legal_risk": "none/low/medium/high",
+      "effort": "trivial/easy/moderate/hard"
+    }
+  ],
+  "performance_hypotheses": [
+    {
+      "id": "perf_1",
+      "observation": "What suggests a performance issue",
+      "hypothesis": "If we [optimize X], then [metric Y] improves because [reason Z]",
+      "proposed_optimization": "What to change",
+      "expected_improvement": "Estimated impact"
+    }
+  ],
+  "innovation_opportunities": [
+    {
+      "id": "innov_1",
+      "opportunity": "What could be added or reimagined",
+      "hypothesis": "If we [add/change X], then [new capability Y] because [trend Z]",
+      "inspiration": "Where this idea comes from (competitor, trend, research)",
+      "user_value": "Why users would care",
+      "differentiation": "How this sets apart from competitors",
+      "effort": "moderate/hard/very hard",
+      "risk": "medium/high"
+    }
+  ],
+  "prioritized_roadmap": [
+    {
+      "phase": "immediate",
+      "items": ["qw_1", "a11y_1"],
+      "timeline": "1-2 weeks",
+      "rationale": "Why these first"
+    },
+    {
+      "phase": "short_term", 
+      "items": ["ux_1", "vd_1"],
+      "timeline": "1-2 months",
+      "rationale": "Why these next"
+    },
+    {
+      "phase": "medium_term",
+      "items": ["innov_1"],
+      "timeline": "3-6 months",
+      "rationale": "Why defer these"
+    }
+  ]
+}
+```
+
+Be creative but realistic. Ground hypotheses in design principles and user psychology.

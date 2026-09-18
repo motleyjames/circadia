@@ -1,0 +1,427 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meeseeks.arcanelabs.io/schemas/session_manifest.schema.json",
+  "title": "MeeseeksSessionManifest",
+  "description": "Complete manifest for a Meeseeks RSI session. Tracks the FULL lifecycle including loops, dissents, probes, arbiter decisions, and learnings.",
+  "type": "object",
+  "required": [
+    "session_id",
+    "meeseeks_guid",
+    "prime_directive",
+    "status",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "Unique session identifier (format: YYYYMMDD_HHMMSS)",
+      "pattern": "^[0-9]{8}_[0-9]{6}$"
+    },
+    "meeseeks_guid": {
+      "type": "string",
+      "description": "GUID of the Meeseeks running this session"
+    },
+    "prime_directive": {
+      "type": "string",
+      "description": "The task this Meeseeks was spawned to complete",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "initializing",
+        "running",
+        "checkpoint",
+        "completed",
+        "spawned",
+        "escalated",
+        "failed",
+        "terminated"
+      ],
+      "description": "Current session status"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completed_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "loops_completed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of RSI loops completed (no upper limit)"
+    },
+    "checkpoints_passed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of arbiter checkpoints (every 3 loops)"
+    },
+    "final_confidence": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "final_outcome": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": [
+            "TASK_COMPLETE",
+            "EXECUTE_WITH_MONITORING",
+            "SPAWNED_HELPER",
+            "ESCALATE_TO_HUMAN",
+            "PIVOT_STRATEGY",
+            "FAILED",
+            "TERMINATED"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable outcome message"
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Paths to generated artifacts"
+        },
+        "execution_summary": {
+          "type": "string",
+          "description": "What was actually done"
+        }
+      }
+    },
+    "confidence_trajectory": {
+      "type": "object",
+      "description": "Full confidence history across ALL loops",
+      "properties": {
+        "initial": {"type": "number"},
+        "final": {"type": "number"},
+        "by_loop": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "loop": {"type": "integer"},
+              "start": {"type": "number"},
+              "end": {"type": "number"},
+              "delta": {"type": "number"}
+            }
+          }
+        },
+        "trend": {
+          "type": "string",
+          "enum": ["increasing", "decreasing", "stable", "volatile"]
+        }
+      }
+    },
+    "dissent_summary": {
+      "type": "object",
+      "description": "Summary of all dissent tracking across the session",
+      "properties": {
+        "total_raised": {"type": "integer"},
+        "total_resolved": {"type": "integer"},
+        "resolution_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "by_severity": {
+          "type": "object",
+          "properties": {
+            "critical": {"type": "integer"},
+            "high": {"type": "integer"},
+            "medium": {"type": "integer"},
+            "low": {"type": "integer"},
+            "info": {"type": "integer"}
+          }
+        },
+        "by_resolution_method": {
+          "type": "object",
+          "properties": {
+            "context_resolver": {"type": "integer"},
+            "probe_cross_ref": {"type": "integer"},
+            "pattern_resolver": {"type": "integer"},
+            "sandbox": {"type": "integer"},
+            "manual": {"type": "integer"},
+            "unresolved": {"type": "integer"}
+          }
+        },
+        "persistent_dissents": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Dissent IDs that persisted across multiple loops"
+        },
+        "unresolved_critical": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Critical dissents that were never resolved"
+        }
+      }
+    },
+    "probe_summary": {
+      "type": "object",
+      "description": "Summary of all probes executed",
+      "properties": {
+        "total_executed": {"type": "integer"},
+        "total_synthesized": {"type": "integer"},
+        "verification_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "by_type": {
+          "type": "object",
+          "additionalProperties": {"type": "integer"}
+        },
+        "dissents_resolved_by_probes": {"type": "integer"}
+      }
+    },
+    "hypothesis_summary": {
+      "type": "object",
+      "description": "Summary of hypothesis testing",
+      "properties": {
+        "total_generated": {"type": "integer"},
+        "total_tested": {"type": "integer"},
+        "confirmed": {"type": "integer"},
+        "refuted": {"type": "integer"},
+        "partial": {"type": "integer"},
+        "inconclusive": {"type": "integer"},
+        "confirmation_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "council_summary": {
+      "type": "object",
+      "description": "Summary of council consultations",
+      "properties": {
+        "total_deliberations": {"type": "integer"},
+        "models_used": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "total_dissents_from_council": {"type": "integer"},
+        "average_consensus_confidence": {"type": "number"}
+      }
+    },
+    "arbiter_decisions": {
+      "type": "array",
+      "description": "All arbiter checkpoint decisions",
+      "items": {
+        "type": "object",
+        "properties": {
+          "checkpoint": {"type": "integer"},
+          "after_loop": {"type": "integer"},
+          "decision": {
+            "type": "string",
+            "enum": ["CONTINUE", "PIVOT", "CONVERGE", "SPAWN", "ESCALATE", "TERMINATE"]
+          },
+          "reasoning": {"type": "string"},
+          "confidence_at_decision": {"type": "number"},
+          "learned_patterns": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        }
+      }
+    },
+    "mental_model_evolution": {
+      "type": "object",
+      "description": "How the mental model evolved during the session",
+      "properties": {
+        "initial_entities": {"type": "integer"},
+        "final_entities": {"type": "integer"},
+        "relationships_discovered": {"type": "integer"},
+        "key_insights": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "learnings_extracted": {
+      "type": "object",
+      "description": "Learnings to transfer to Meeseeks identity",
+      "properties": {
+        "hints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "context": {"type": "string"},
+              "hint": {"type": "string"},
+              "importance": {"type": "string"}
+            }
+          }
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "pattern": {"type": "string"},
+              "domain": {"type": "string"},
+              "confidence": {"type": "number"}
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "warning": {"type": "string"},
+              "context": {"type": "string"},
+              "severity": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "spawned_from": {
+      "type": ["string", "null"],
+      "description": "Session ID of parent Meeseeks (if this was spawned)"
+    },
+    "spawned_children": {
+      "type": "array",
+      "description": "Meeseeks/tools spawned by this session",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["meeseeks", "tool"]
+          },
+          "id": {"type": "string"},
+          "path": {"type": "string"},
+          "reason": {"type": "string"},
+          "prime_directive": {"type": "string"},
+          "spawned_at_loop": {"type": "integer"},
+          "status": {"type": "string"}
+        }
+      }
+    },
+    "knowledge_used": {
+      "type": "array",
+      "description": "Knowledge/skills pulled during session",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string"},
+          "domains": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "pulled_at_loop": {"type": "integer"},
+          "usefulness_rating": {
+            "type": "string",
+            "enum": ["critical", "helpful", "marginal", "not_used"]
+          }
+        }
+      }
+    },
+    "tools_used": {
+      "type": "array",
+      "description": "Tools invoked during session",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tool_name": {"type": "string"},
+          "invocation_count": {"type": "integer"},
+          "success_rate": {"type": "number"}
+        }
+      }
+    },
+    "config": {
+      "type": "object",
+      "description": "Configuration used for this session",
+      "properties": {
+        "max_loops": {
+          "type": "integer",
+          "description": "SAFETY limit (not target)"
+        },
+        "execute_threshold": {
+          "type": "number",
+          "default": 0.85
+        },
+        "monitor_threshold": {
+          "type": "number",
+          "default": 0.70
+        },
+        "spawn_threshold": {
+          "type": "number",
+          "default": 0.50
+        },
+        "models_config": {
+          "type": "object",
+          "properties": {
+            "primary": {"type": "string"},
+            "council": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "srde_enabled": {"type": "boolean"},
+        "probe_factory_enabled": {"type": "boolean"},
+        "semantic_bridge_enabled": {"type": "boolean"}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Detailed session metrics",
+      "properties": {
+        "total_duration_seconds": {"type": "number"},
+        "duration_by_phase": {
+          "type": "object",
+          "properties": {
+            "observe": {"type": "number"},
+            "hypothesize": {"type": "number"},
+            "test": {"type": "number"},
+            "reason": {"type": "number"},
+            "decide": {"type": "number"}
+          }
+        },
+        "total_model_calls": {"type": "integer"},
+        "model_calls_by_provider": {
+          "type": "object",
+          "additionalProperties": {"type": "integer"}
+        },
+        "total_tokens_used": {"type": "integer"},
+        "tokens_by_model": {
+          "type": "object",
+          "additionalProperties": {"type": "integer"}
+        },
+        "estimated_cost_usd": {"type": "number"}
+      }
+    },
+    "reasoning_log_paths": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Paths to reasoning log files for each loop"
+    },
+    "semantic_trace_paths": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Paths to semantic trace files"
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "User-defined tags"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form notes about this session"
+    }
+  }
+}

@@ -1,0 +1,32 @@
+You are analyzing a UI screenshot. Extract ALL visible text and understand the page.
+
+Provide a structured analysis:
+
+## Page Overview
+- What type of page is this? (login, dashboard, form, list, etc.)
+- What is the primary purpose?
+- What application/website does this appear to be?
+
+## Visible Text
+Extract ALL text visible in the screenshot, organized by section:
+- Headers/Titles
+- Navigation items
+- Button labels
+- Form labels and placeholders
+- Content text
+- Footer text
+- Error messages (if any)
+- Tooltips/hints (if any)
+
+## Visual Layout
+- Describe the general layout (sidebar, header, main content, etc.)
+- Note any prominent visual elements (logos, images, icons)
+- Identify the visual hierarchy
+
+## State Indicators
+- Is there a logged-in user shown?
+- Are there any loading states?
+- Are there error or success messages?
+- What appears to be selected/active?
+
+Be thorough and accurate. Only report what you actually see.

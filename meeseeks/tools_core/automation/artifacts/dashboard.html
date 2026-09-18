@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: #0a0a0a; 
+            color: #e0e0e0;
+            padding: 2rem;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: #00ff88; margin-bottom: 2rem; }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); 
+            gap: 2rem; 
+        }
+        .chart-container { 
+            background: #1a1a1a; 
+            padding: 1.5rem; 
+            border-radius: 12px; 
+            border: 1px solid #333;
+        }
+        .chart-container h3 { 
+            color: #00d4ff; 
+            margin-bottom: 1rem; 
+            font-size: 1.1rem;
+        }
+        canvas { max-height: 300px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Testing Dashboard</h1>
+        
+        <div class="grid">
+            <div class="chart-container">
+                <h3>Test Status Distribution</h3>
+                <canvas id="statusChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Tests Per Run</h3>
+                <canvas id="testsPerRunChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Coverage Trend</h3>
+                <canvas id="coverageChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Cost Per Run</h3>
+                <canvas id="costChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        Chart.defaults.color = '#888';
+        Chart.defaults.borderColor = '#333';
+        
+        // Test Status Distribution (Doughnut)
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Passing', 'Failing', 'Pending'],
+                datasets: [{
+                    data: [0, 0, 0],
+                    backgroundColor: ['#00ff88', '#ff4444', '#ffaa00'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { color: '#888' }
+                    }
+                }
+            }
+        });
+
+        // Tests Per Run (Bar)
+        new Chart(document.getElementById('testsPerRunChart'), {
+            type: 'bar',
+            data: {
+                labels: ["Run 1","Run 2","Run 3"],
+                datasets: [{
+                    label: 'Tests Generated',
+                    data: [0,0,0],
+                    backgroundColor: '#00d4ff',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: '#333' }
+                    },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Coverage Trend (Line)
+        new Chart(document.getElementById('coverageChart'), {
+            type: 'line',
+            data: {
+                labels: ["Run 1","Run 2","Run 3"],
+                datasets: [{
+                    label: 'Coverage %',
+                    data: [100,100,50],
+                    borderColor: '#00ff88',
+                    backgroundColor: '#00ff8820',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#333' }
+                    },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // Cost Per Run (Bar)
+        new Chart(document.getElementById('costChart'), {
+            type: 'bar',
+            data: {
+                labels: ["Run 1","Run 2","Run 3"],
+                datasets: [{
+                    label: 'Cost ($)',
+                    data: [0,0,0],
+                    backgroundColor: '#ffaa00',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: '#333' }
+                    },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

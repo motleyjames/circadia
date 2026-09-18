@@ -1,0 +1,66 @@
+{
+  "generated_at": "2026-01-17T11:12:20.218458",
+  "core_tools": [
+    {
+      "name": "LLM Caller",
+      "description": "Call various LLM models (Claude, Gemini, GPT) with unified interface",
+      "path": "tools_core/core/llm_caller.py",
+      "category": "core"
+    },
+    {
+      "name": "Semantic Tracer",
+      "description": "Create structured markdown traces of reasoning and decisions",
+      "path": "tools_core/core/tracer.py",
+      "category": "core"
+    },
+    {
+      "name": "Council Vote",
+      "description": "Multi-model deliberation for important decisions",
+      "path": "tools_core/council/council.py",
+      "category": "core"
+    },
+    {
+      "name": "Code Reviewer",
+      "description": "AI-powered code review using Claude",
+      "path": "tools_core/probes/code_reviewer.py",
+      "category": "core"
+    },
+    {
+      "name": "RSI Loop Runner",
+      "description": "Execute the 3-loop recursive self-intelligence cycle",
+      "path": "tools_core/reasoning/loop_runner.py",
+      "category": "core"
+    },
+    {
+      "name": "Spinning Meeseeks",
+      "description": "Full RSI orchestrator with arbiter and continuous learning",
+      "path": "tools_core/reasoning/spinning_meeseeks.py",
+      "category": "core"
+    },
+    {
+      "name": "Loop Arbiter",
+      "description": "Meta-orchestrator that decides whether to continue, pivot, or converge",
+      "path": "tools_core/reasoning/loop_arbiter.py",
+      "category": "core"
+    },
+    {
+      "name": "Meeseeks Identity",
+      "description": "Manage Meeseeks identity, knowledge, and cross-learning",
+      "path": "tools_core/reasoning/meeseeks_identity.py",
+      "category": "core"
+    },
+    {
+      "name": "Meeseeks Spawner",
+      "description": "Spawn a Meeseeks into another repository",
+      "path": "tools_core/spawner/meeseeks_spawner.py",
+      "category": "core"
+    },
+    {
+      "name": "Mermaid Diagram Generator",
+      "description": "Generate high-resolution PNG diagrams from Mermaid code",
+      "path": "tools_core/scripts/generate_mermaid.py",
+      "category": "core"
+    }
+  ],
+  "spawned_tools": []
+}

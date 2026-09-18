@@ -1,0 +1,651 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meeseeks.arcanelabs.io/schemas/reasoning_log.schema.json",
+  "title": "MeeseeksReasoningLog",
+  "description": "Complete reasoning log for a single RSI loop. Captures the FULL RSI engine: hypotheses, dissents, probes, SRDE resolutions, council votes, and self-reflection.",
+  "type": "object",
+  "required": [
+    "session_id",
+    "loop_number",
+    "timestamp",
+    "input",
+    "observations",
+    "reasoning_chain",
+    "decision",
+    "hypotheses_for_next_loop",
+    "confidence_trajectory",
+    "dissent_tracking",
+    "self_reflection"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "description": "Unique session identifier (format: YYYYMMDD_HHMMSS)",
+      "pattern": "^[0-9]{8}_[0-9]{6}$"
+    },
+    "loop_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Current loop number (no upper limit - loops continue until done)"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when this loop completed"
+    },
+    "input": {
+      "type": "object",
+      "description": "Input context for this loop",
+      "required": ["prime_directive"],
+      "properties": {
+        "prime_directive": {
+          "type": "string",
+          "description": "The task we're trying to complete"
+        },
+        "prior_hypotheses_tested": {
+          "type": "array",
+          "description": "Results of testing hypotheses from previous loop",
+          "items": {
+            "$ref": "#/definitions/HypothesisTestResult"
+          }
+        },
+        "prior_loop_confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence at end of previous loop"
+        },
+        "inherited_dissents": {
+          "type": "array",
+          "description": "Unresolved dissents from previous loops",
+          "items": {
+            "$ref": "#/definitions/DissentPoint"
+          }
+        },
+        "mental_model_state": {
+          "type": "object",
+          "description": "State of the mental model entering this loop"
+        },
+        "tools_context": {
+          "type": "string",
+          "description": "Available tools prompt"
+        },
+        "knowledge_context": {
+          "type": "string",
+          "description": "Relevant knowledge/skills loaded"
+        }
+      }
+    },
+    "observations": {
+      "type": "array",
+      "description": "What we observed/learned in this loop",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/Observation"
+      }
+    },
+    "reasoning_chain": {
+      "type": "array",
+      "description": "Chain of thought reasoning",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/ReasoningStep"
+      }
+    },
+    "decision": {
+      "type": "object",
+      "description": "The decision/action taken in this loop",
+      "required": ["action", "confidence", "rationale"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "What action was taken"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence in this decision (0-1)"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this action was chosen"
+        },
+        "tools_used": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Tools invoked during this loop"
+        },
+        "council_consulted": {
+          "type": "boolean",
+          "description": "Whether the LLM council was consulted"
+        },
+        "mental_model_queries": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Questions answered by the mental model"
+        }
+      }
+    },
+    "hypotheses_for_next_loop": {
+      "type": "array",
+      "description": "GOLDEN RULE: Every loop (except converging ones) MUST produce exactly 3 hypotheses",
+      "minItems": 0,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/definitions/Hypothesis"
+      }
+    },
+    "confidence_trajectory": {
+      "type": "object",
+      "description": "Full confidence tracking with explanations",
+      "required": ["initial", "final", "updates"],
+      "properties": {
+        "initial": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "final": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "updates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ConfidenceUpdate"
+          }
+        }
+      }
+    },
+    "dissent_tracking": {
+      "type": "object",
+      "description": "Full dissent tracking - THE KEY TO HIGH RESOLUTION RATES",
+      "required": ["dissents_raised", "dissents_resolved", "resolution_rate"],
+      "properties": {
+        "dissents_raised": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DissentPoint"
+          }
+        },
+        "dissents_resolved": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ResolutionAttempt"
+          }
+        },
+        "resolution_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Percentage of dissents resolved"
+        },
+        "srde_stats": {
+          "type": "object",
+          "description": "Self-Resolving Dissent Engine statistics",
+          "properties": {
+            "context_resolved": {"type": "integer"},
+            "probe_cross_ref_resolved": {"type": "integer"},
+            "pattern_resolved": {"type": "integer"},
+            "needs_human": {"type": "integer"}
+          }
+        },
+        "unresolved_critical": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "IDs of critical dissents still unresolved"
+        }
+      }
+    },
+    "probe_results": {
+      "type": "array",
+      "description": "Probes executed in this loop",
+      "items": {
+        "$ref": "#/definitions/ProbeResult"
+      }
+    },
+    "council_deliberation": {
+      "type": "object",
+      "description": "Council deliberation results (if consulted)",
+      "$ref": "#/definitions/CouncilDeliberation"
+    },
+    "semantic_bridge_state": {
+      "type": "object",
+      "description": "State of the semantic bridge (probes ↔ dissents)",
+      "properties": {
+        "total_links": {"type": "integer"},
+        "coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Percentage of dissents answered by probes"
+        },
+        "unanswered_dissents": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "self_reflection": {
+      "$ref": "#/definitions/SelfReflection"
+    },
+    "escalate_to_human": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this loop requires human intervention"
+    },
+    "spawn_tool": {
+      "type": ["object", "null"],
+      "description": "If spawning a helper tool, details here",
+      "properties": {
+        "reason": {"type": "string"},
+        "tool_spec": {"type": "object"},
+        "expected_capability": {"type": "string"}
+      }
+    },
+    "arbiter_judgment": {
+      "type": "object",
+      "description": "Arbiter's analysis at checkpoint (every 3 loops)",
+      "properties": {
+        "decision": {
+          "type": "string",
+          "enum": ["CONTINUE", "PIVOT", "CONVERGE", "SPAWN", "ESCALATE", "TERMINATE"]
+        },
+        "reasoning": {"type": "string"},
+        "next_focus": {"type": "string"},
+        "confidence_in_decision": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "learned_patterns": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "duration_seconds": {"type": "number"},
+        "model_calls": {"type": "integer"},
+        "tokens_used": {"type": "integer"},
+        "semantic_traces": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "IDs of semantic traces from this loop"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Hypothesis": {
+      "type": "object",
+      "description": "A testable hypothesis for the next loop",
+      "required": ["id", "hypothesis", "test_method", "expected_outcome"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^H[0-9]+$",
+          "description": "Hypothesis ID (H1, H2, H3)"
+        },
+        "hypothesis": {
+          "type": "string",
+          "minLength": 10,
+          "description": "The hypothesis statement"
+        },
+        "test_method": {
+          "type": "string",
+          "description": "How to test this hypothesis"
+        },
+        "expected_outcome": {
+          "type": "string",
+          "description": "What we expect if hypothesis is true"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "medium"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["architecture", "implementation", "integration", "performance", "correctness", "alternative_approach"]
+        },
+        "probe_type_needed": {
+          "type": "string",
+          "description": "What type of probe should test this"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^H[0-9]+$"}
+        }
+      }
+    },
+    "HypothesisTestResult": {
+      "type": "object",
+      "description": "Result of testing a hypothesis",
+      "required": ["id", "result", "confidence_impact"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^H[0-9]+$"
+        },
+        "result": {
+          "type": "string",
+          "enum": ["CONFIRMED", "REFUTED", "PARTIAL", "INCONCLUSIVE"]
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "confidence_impact": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "probe_used": {
+          "type": "string"
+        },
+        "dissents_generated": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "Observation": {
+      "type": "object",
+      "required": ["type", "finding"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "codebase_scan",
+            "probe_result",
+            "council_vote",
+            "tool_output",
+            "error",
+            "user_input",
+            "semantic_trace",
+            "mental_model_insight",
+            "dissent_resolution",
+            "pattern_detected",
+            "llm_analysis",
+            "hypothesis_test",
+            "srde_resolution"
+          ]
+        },
+        "finding": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "confidence_impact": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "ReasoningStep": {
+      "type": "object",
+      "required": ["thought", "implication"],
+      "properties": {
+        "thought": {
+          "type": "string"
+        },
+        "implication": {
+          "type": "string"
+        },
+        "confidence_delta": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "relates_to_dissent": {
+          "type": "string"
+        }
+      }
+    },
+    "ConfidenceUpdate": {
+      "type": "object",
+      "required": ["source", "signal_type", "delta", "evidence"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "What caused this update"
+        },
+        "signal_type": {
+          "type": "string",
+          "enum": ["positive", "negative", "neutral"]
+        },
+        "delta": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "DissentPoint": {
+      "type": "object",
+      "description": "A concern raised that must be resolved",
+      "required": ["id", "content", "raised_by", "severity", "status"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "raised_by": {
+          "type": "string"
+        },
+        "raised_loop": {
+          "type": "integer"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "info"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["unresolved", "partially_resolved", "fully_resolved", "escalated"]
+        },
+        "persistence_count": {
+          "type": "integer",
+          "description": "How many loops this has persisted"
+        },
+        "resolution_notes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "related_probes": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "ResolutionAttempt": {
+      "type": "object",
+      "description": "Result of SRDE attempting to resolve a dissent",
+      "required": ["dissent_id", "status", "method"],
+      "properties": {
+        "dissent_id": {
+          "type": "string"
+        },
+        "dissent_content": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["resolved", "partially_resolved", "cannot_resolve", "needs_sandbox", "needs_human"]
+        },
+        "method": {
+          "type": "string",
+          "description": "How it was resolved (context_resolver, probe_cross_ref, pattern, etc.)"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "confidence_impact": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "tool_used": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "ProbeResult": {
+      "type": "object",
+      "required": ["probe_id", "probe_type", "target", "verified"],
+      "properties": {
+        "probe_id": {
+          "type": "string"
+        },
+        "probe_type": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "result": {},
+        "verified": {
+          "type": "boolean"
+        },
+        "confidence_impact": {
+          "type": "number"
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "dissents_resolved": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "synthesized_from": {
+          "type": "string",
+          "description": "Dissent that triggered probe synthesis"
+        }
+      }
+    },
+    "CouncilDeliberation": {
+      "type": "object",
+      "description": "Full council deliberation result",
+      "properties": {
+        "votes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "model": {"type": "string"},
+              "provider": {"type": "string"},
+              "decision": {"type": "string"},
+              "reasoning": {"type": "string"},
+              "confidence": {"type": "number"},
+              "dissenting_points": {
+                "type": "array",
+                "items": {"type": "string"}
+              }
+            }
+          }
+        },
+        "consensus": {
+          "type": "string"
+        },
+        "consensus_confidence": {
+          "type": "number"
+        },
+        "key_agreements": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "key_disagreements": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "dissent_count": {
+          "type": "integer"
+        },
+        "probes_synthesized": {
+          "type": "integer",
+          "description": "How many probes were synthesized from dissents"
+        }
+      }
+    },
+    "SelfReflection": {
+      "type": "object",
+      "description": "CRITICAL: LLM's self-reflection for future learning",
+      "properties": {
+        "future_hints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["context", "hint", "importance"],
+            "properties": {
+              "context": {"type": "string"},
+              "hint": {"type": "string"},
+              "importance": {"type": "string", "enum": ["critical", "useful", "minor"]}
+            }
+          }
+        },
+        "incomplete_work": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["what", "where_left_off", "next_step"],
+            "properties": {
+              "what": {"type": "string"},
+              "where_left_off": {"type": "string"},
+              "next_step": {"type": "string"}
+            }
+          }
+        },
+        "patterns_noticed": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "mental_model_updates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entity": {"type": "string"},
+              "update_type": {"type": "string"},
+              "details": {"type": "string"}
+            }
+          }
+        },
+        "raw_notes": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "description": "GOLDEN RULE: Every loop generates 3 hypotheses. The arbiter decides whether to USE them."
+}

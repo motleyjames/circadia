@@ -1,0 +1,49 @@
+You are a UI element detector. Analyze this screenshot and identify ALL interactive elements.
+
+For each element, provide:
+1. Element type (button, link, input, dropdown, checkbox, etc.)
+2. Label/text (what it says or its aria-label)
+3. Approximate location (top-left, center, bottom-right, etc.)
+4. Estimated bounding box as percentage of screen (x%, y%, width%, height%)
+5. Current state (enabled/disabled, checked/unchecked, selected, etc.)
+6. Likely action (what happens when clicked/interacted)
+
+Output as JSON:
+```json
+{
+  "page_url_hint": "inferred URL or page name",
+  "viewport": {
+    "estimated_width": "desktop/tablet/mobile",
+    "has_scroll": true/false
+  },
+  "elements": [
+    {
+      "id": "elem_1",
+      "type": "button",
+      "label": "Submit",
+      "location": "bottom-right",
+      "bbox_pct": {"x": 80, "y": 90, "w": 15, "h": 5},
+      "state": "enabled",
+      "likely_action": "submits the form",
+      "priority": "high"
+    }
+  ],
+  "element_groups": [
+    {
+      "name": "navigation",
+      "elements": ["elem_1", "elem_2"],
+      "purpose": "main site navigation"
+    }
+  ],
+  "forms": [
+    {
+      "name": "login_form",
+      "fields": ["email_input", "password_input"],
+      "submit_button": "elem_5",
+      "validation_visible": false
+    }
+  ]
+}
+```
+
+Be exhaustive - identify every clickable, typeable, or interactive element.

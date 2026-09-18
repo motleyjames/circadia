@@ -1,0 +1,386 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://meeseeks.arcanelabs.io/schemas/semantic_trace.schema.json",
+  "title": "MeeseeksSemanticTrace",
+  "description": "A semantic trace captures THOUGHT-BY-THOUGHT reasoning within a loop. This is NOT a session or reasoning log - it's the granular chain of thought that shows HOW the LLM is thinking.",
+  "type": "object",
+  "required": ["trace_id", "session_id", "loop_number", "phase", "entries"],
+  "properties": {
+    "trace_id": {
+      "type": "string",
+      "description": "Unique trace identifier"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}_[0-9]{6}$",
+      "description": "Parent session ID"
+    },
+    "loop_number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Which loop this trace belongs to"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["observe", "hypothesize", "test", "reason", "decide", "reflect"],
+      "description": "Current phase of the RSI loop"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "entries": {
+      "type": "array",
+      "description": "The actual trace entries - each thought/observation/action",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/TraceEntry"
+      }
+    },
+    "model_calls": {
+      "type": "array",
+      "description": "LLM calls made during this trace",
+      "items": {
+        "$ref": "#/definitions/ModelCall"
+      }
+    },
+    "confidence_at_start": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "confidence_at_end": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "dissents_encountered": {
+      "type": "array",
+      "description": "Dissents raised during this phase",
+      "items": {
+        "$ref": "#/definitions/DissentEncounter"
+      }
+    },
+    "probes_executed": {
+      "type": "array",
+      "description": "Probes run during this phase",
+      "items": {
+        "$ref": "#/definitions/ProbeExecution"
+      }
+    },
+    "self_reflection": {
+      "$ref": "#/definitions/SelfReflection"
+    }
+  },
+  "definitions": {
+    "TraceEntry": {
+      "type": "object",
+      "description": "A single step in the reasoning trace",
+      "required": ["step_number", "type", "content", "timestamp"],
+      "properties": {
+        "step_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "thought",
+            "observation",
+            "inference",
+            "question",
+            "hypothesis",
+            "test_result",
+            "decision",
+            "tool_use",
+            "council_vote",
+            "dissent_raised",
+            "dissent_resolved",
+            "confidence_update",
+            "mental_model_query",
+            "warning",
+            "insight"
+          ],
+          "description": "Type of trace entry"
+        },
+        "content": {
+          "type": "string",
+          "description": "The actual thought/observation/action"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "confidence_impact": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "How this step affected confidence"
+        },
+        "evidence_weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "How strong is the evidence from this step"
+        },
+        "related_hypothesis": {
+          "type": "string",
+          "pattern": "^H[0-9]+$",
+          "description": "Hypothesis this relates to"
+        },
+        "related_dissent": {
+          "type": "string",
+          "description": "Dissent ID this relates to"
+        },
+        "tool_used": {
+          "type": "string",
+          "description": "Tool invoked for this step"
+        },
+        "chain_of_thought": {
+          "type": "array",
+          "description": "Sub-thoughts that led to this entry",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ModelCall": {
+      "type": "object",
+      "description": "An LLM API call",
+      "required": ["model", "provider", "purpose"],
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string",
+          "enum": ["anthropic", "google", "openai", "huggingface"]
+        },
+        "purpose": {
+          "type": "string",
+          "description": "Why this call was made"
+        },
+        "prompt_summary": {
+          "type": "string",
+          "description": "Brief summary of what was asked"
+        },
+        "response_summary": {
+          "type": "string",
+          "description": "Brief summary of response"
+        },
+        "tokens_used": {
+          "type": "integer"
+        },
+        "latency_ms": {
+          "type": "integer"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "DissentEncounter": {
+      "type": "object",
+      "description": "A dissent encountered during reasoning",
+      "required": ["dissent_id", "content", "raised_by", "severity"],
+      "properties": {
+        "dissent_id": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string",
+          "description": "The dissenting point"
+        },
+        "raised_by": {
+          "type": "string",
+          "description": "Model or component that raised it"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "info"]
+        },
+        "resolution_attempted": {
+          "type": "boolean"
+        },
+        "resolution_method": {
+          "type": "string",
+          "enum": ["context_resolver", "srde_pattern", "probe_cross_ref", "sandbox", "manual", "unresolved"]
+        },
+        "resolution_evidence": {
+          "type": "string"
+        },
+        "resolved": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ProbeExecution": {
+      "type": "object",
+      "description": "A probe that was executed",
+      "required": ["probe_id", "probe_type", "target", "verified"],
+      "properties": {
+        "probe_id": {
+          "type": "string"
+        },
+        "probe_type": {
+          "type": "string",
+          "enum": [
+            "check_exists",
+            "check_value",
+            "check_type",
+            "check_invariant",
+            "count_items",
+            "compute_value",
+            "validate_schema",
+            "compare_before_after",
+            "visual_check",
+            "screenshot_diff",
+            "custom_code"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "description": "What was probed"
+        },
+        "result": {
+          "description": "The probe result (any type)"
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Did the probe verify the hypothesis?"
+        },
+        "confidence_impact": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "dissents_resolved": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Dissent IDs this probe helped resolve"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "SelfReflection": {
+      "type": "object",
+      "description": "LLM's self-reflection during this trace - CRUCIAL for learning",
+      "properties": {
+        "future_hints": {
+          "type": "array",
+          "description": "Actionable hints for future loops/sessions",
+          "items": {
+            "type": "object",
+            "required": ["context", "hint", "importance"],
+            "properties": {
+              "context": {
+                "type": "string",
+                "description": "When this hint applies (be specific!)"
+              },
+              "hint": {
+                "type": "string",
+                "description": "The actual hint (be actionable!)"
+              },
+              "importance": {
+                "type": "string",
+                "enum": ["critical", "useful", "minor"]
+              }
+            }
+          }
+        },
+        "incomplete_work": {
+          "type": "array",
+          "description": "Breadcrumbs for continuation",
+          "items": {
+            "type": "object",
+            "required": ["what", "where_left_off", "next_step"],
+            "properties": {
+              "what": {"type": "string"},
+              "where_left_off": {"type": "string"},
+              "next_step": {"type": "string"}
+            }
+          }
+        },
+        "patterns_noticed": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Patterns or regularities that might be useful"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Gotchas, pitfalls, things to avoid"
+        },
+        "mental_model_updates": {
+          "type": "array",
+          "description": "Updates to the mental model based on this trace",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entity": {"type": "string"},
+              "update_type": {"type": "string", "enum": ["new", "modified", "relationship"]},
+              "details": {"type": "string"}
+            }
+          }
+        },
+        "raw_notes": {
+          "type": "string",
+          "description": "Free-form notes"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "trace_id": "trace_20260117_143022_loop1_observe",
+      "session_id": "20260117_143022",
+      "loop_number": 1,
+      "phase": "observe",
+      "entries": [
+        {
+          "step_number": 1,
+          "type": "thought",
+          "content": "Starting analysis of the codebase structure",
+          "timestamp": "2026-01-17T14:30:22Z",
+          "confidence_impact": 0.0
+        },
+        {
+          "step_number": 2,
+          "type": "observation",
+          "content": "Found 47 Python files across 8 modules",
+          "timestamp": "2026-01-17T14:30:25Z",
+          "confidence_impact": 0.05,
+          "evidence_weight": 0.8
+        },
+        {
+          "step_number": 3,
+          "type": "inference",
+          "content": "The architecture follows a domain-driven design pattern",
+          "timestamp": "2026-01-17T14:30:28Z",
+          "confidence_impact": 0.08,
+          "chain_of_thought": [
+            "Modules are organized by domain (users, orders, products)",
+            "Each module has its own models and services",
+            "This suggests intentional separation of concerns"
+          ]
+        }
+      ],
+      "confidence_at_start": 0.5,
+      "confidence_at_end": 0.63
+    }
+  ]
+}

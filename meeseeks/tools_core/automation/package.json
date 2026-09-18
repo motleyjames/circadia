@@ -1,0 +1,41 @@
+{
+  "name": "browser-automation",
+  "version": "1.0.0",
+  "description": "Local-first, AI-assisted browser automation system",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/index.ts",
+  "scripts": {
+    "capture:quick": "ts-node quick-test.ts",
+    "capture:full": "ts-node run-full-test.ts",
+    "db:init": "ts-node src/index.ts init-db",
+    "db:test": "ts-node test-db.ts",
+    "analyze": "ts-node src/index.ts analyze",
+    "report": "ts-node src/index.ts report",
+    "dashboard": "ts-node src/index.ts dashboard",
+    "cycle:full": "ts-node src/index.ts full-cycle",
+    "help": "ts-node src/index.ts help",
+    "analyze:screenshot": "python tools/process_screenshot.py",
+    "apply:improvements": "python tools/apply_improvements.py",
+    "render:improvements": "python tools/render_improvements.py",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist artifacts db/testing.db"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.17.0",
+    "@playwright/test": "^1.40.0",
+    "dotenv": "^16.3.0",
+    "playwright": "^1.57.0",
+    "sql.js": "^1.10.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.25",
+    "@types/uuid": "^9.0.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

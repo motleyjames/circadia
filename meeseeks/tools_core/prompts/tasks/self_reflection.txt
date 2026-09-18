@@ -1,0 +1,171 @@
+# SELF-REFLECTION PROMPT
+
+Before completing this loop, take a moment to reflect and leave hints for your future self (or another Meeseeks that continues this work).
+
+## IMPORTANT: This Is Not a Summary
+
+Self-reflection is NOT about wrapping up. It's about:
+- **Capturing insights** that might be lost between loops
+- **Leaving breadcrumbs** for continuation (loops can go indefinitely)
+- **Being verbose** - future loops will thank you for context
+- **Noting tangents** - things you noticed but didn't pursue
+
+The next loop (could be loop 2 or loop 15) needs your full context. Don't compress your thinking prematurely.
+
+## What to Think About
+
+1. **Incomplete Work**: What did you start but not finish? Where exactly did you leave off?
+2. **Patterns Noticed**: Any regularities, structures, or patterns you observed?
+3. **Warnings**: Gotchas, pitfalls, or things that tripped you up?
+4. **Future Hints**: What would help if you (or another Meeseeks) encounter this again?
+5. **Cross-References**: Did you notice something in one place that relates to another?
+
+## Be Verbose and Specific
+
+Generic hints are useless. Be specific:
+
+❌ BAD: "There might be more data somewhere"
+✅ GOOD: "The asset list on page 5 appears cut off at item 47 - page 4 likely has items 1-46"
+
+❌ BAD: "Check the config"
+✅ GOOD: "The DATABASE_URL in .env.example uses postgres:// but SQLAlchemy 2.0 requires postgresql://"
+
+## Few-Shot Examples
+
+### Example 1: Document Processing
+```json
+{
+  "future_hints": [
+    {
+      "context": "When processing trust documents with asset lists",
+      "hint": "Asset lists often span multiple pages. The list on page 5 was cut off at 'Item 47: Goldman Sachs Bond Fund'. Page 4 likely contains items 1-46. Always check the previous page when a list starts mid-item.",
+      "importance": "critical"
+    },
+    {
+      "context": "When extracting beneficiary information",
+      "hint": "Beneficiary percentages are stated as fractions (1/3, 1/4) not decimals. Convert to decimals for calculations but preserve original format for display.",
+      "importance": "useful"
+    }
+  ],
+  "incomplete_work": [
+    {
+      "what": "Cross-referencing Schedule A assets with Schedule B distributions",
+      "where_left_off": "Matched 12 of 18 assets. Remaining 6 use different naming conventions.",
+      "next_step": "Build a fuzzy matching function for asset names (e.g., 'IBM Corp' vs 'International Business Machines')"
+    }
+  ],
+  "patterns_noticed": [
+    "All monetary values use the format '$X,XXX.XX' with commas for thousands",
+    "Date format is inconsistent: some pages use MM/DD/YYYY, others use Month DD, YYYY",
+    "Section headers always appear in bold 14pt font, subsections in bold 12pt"
+  ],
+  "warnings": [
+    "Page 7 has a watermark that OCR sometimes reads as text - filter out 'DRAFT COPY' artifacts",
+    "The PDF has two 'Page 5' labels - one is a cover sheet, the other is content. Use physical page numbers."
+  ],
+  "raw_notes": "The trust document follows a consistent structure: Articles I-V cover administration, VI-X cover distributions, XI-XV cover contingencies. This pattern might help with similar documents. Also noticed the attorney's initials 'JKL' appear in the footer - could use this to identify documents from the same firm."
+}
+```
+
+### Example 2: Codebase Analysis
+```json
+{
+  "future_hints": [
+    {
+      "context": "When working with the auth module",
+      "hint": "The AuthService class in src/auth/service.ts has a hidden dependency on Redis. It's not in the constructor - it lazy-loads via getRedisClient() on line 142. Tests will fail without Redis running.",
+      "importance": "critical"
+    },
+    {
+      "context": "When adding new API endpoints",
+      "hint": "All routes must be registered in two places: src/routes/index.ts AND src/middleware/cors.ts whitelist. Missing the second causes CORS errors in production only.",
+      "importance": "critical"
+    },
+    {
+      "context": "When debugging slow queries",
+      "hint": "The ORM logs queries to logs/sql.log but ONLY when DEBUG_SQL=true is set. Not in .env.example - I discovered it in src/db/config.ts line 78.",
+      "importance": "useful"
+    }
+  ],
+  "incomplete_work": [
+    {
+      "what": "Mapping the data flow from UserController to database",
+      "where_left_off": "Traced: Controller → Service → Repository. Lost the thread at the Repository's use of a custom QueryBuilder.",
+      "next_step": "Read src/db/QueryBuilder.ts to understand how it generates SQL"
+    }
+  ],
+  "patterns_noticed": [
+    "All service classes follow the pattern: constructor takes repositories, methods are async, errors are thrown as HttpException",
+    "Test files mirror source structure: src/foo/bar.ts → tests/foo/bar.test.ts",
+    "Environment variables follow SCREAMING_SNAKE_CASE, config keys follow camelCase"
+  ],
+  "warnings": [
+    "DO NOT run 'npm run db:seed' in production - it doesn't check NODE_ENV and will overwrite data",
+    "The 'user.email' field has a unique constraint but the error message says 'duplicate key' not 'email exists' - confusing for debugging",
+    "Rate limiting is per-IP in development but per-user in production - behavior differs significantly"
+  ],
+  "raw_notes": "The codebase was clearly migrated from JavaScript to TypeScript incrementally. Files in src/legacy/ still use require() and module.exports. The migration guide is in docs/MIGRATION.md but it's outdated (references TypeScript 4.x patterns). Newer code in src/v2/ uses proper ES modules and is better documented."
+}
+```
+
+### Example 3: Integration Task
+```json
+{
+  "future_hints": [
+    {
+      "context": "When integrating with the Stripe API",
+      "hint": "The webhook endpoint MUST return 200 within 5 seconds or Stripe retries. Move heavy processing to a background job. I saw this fail silently for 3 hours before noticing the retry storm in logs.",
+      "importance": "critical"
+    },
+    {
+      "context": "When testing payment flows",
+      "hint": "Use card number 4000000000000002 to simulate declines. The docs say 4000000000000341 but that one triggers 3D Secure which complicates tests.",
+      "importance": "useful"
+    }
+  ],
+  "incomplete_work": [
+    {
+      "what": "Handling subscription upgrade/downgrade edge cases",
+      "where_left_off": "Upgrades work. Downgrades mid-cycle cause proration issues.",
+      "next_step": "Implement proration calculation using Stripe's proration_behavior parameter"
+    }
+  ],
+  "patterns_noticed": [
+    "All Stripe IDs follow pattern: {type}_{random} like 'cus_ABC123', 'sub_XYZ789'",
+    "Webhook events arrive out of order - cannot assume invoice.paid comes before subscription.updated",
+    "Test mode and live mode have separate webhook endpoints in this codebase"
+  ],
+  "warnings": [
+    "NEVER log full Stripe event payloads - they contain PII and card fingerprints",
+    "The idempotency key cache expires after 24h - retrying old requests will process them again",
+    "subscription.deleted fires BEFORE the subscription actually ends if cancel_at_period_end=true"
+  ],
+  "raw_notes": "The current implementation doesn't handle currency conversion. All prices are in USD. If we expand to EU, we'll need to add multi-currency support to the Price model and update the checkout flow. The Stripe docs have a guide: https://stripe.com/docs/currencies. Also, the customer portal URL is hardcoded in three places - should be centralized."
+}
+```
+
+## Output Format
+
+Add this to your reasoning log:
+
+```json
+{
+  "self_reflection": {
+    "future_hints": [...],
+    "incomplete_work": [...],
+    "patterns_noticed": [...],
+    "warnings": [...],
+    "raw_notes": "..."
+  }
+}
+```
+
+## Remember
+
+- **Be specific** - vague hints are useless
+- **Include locations** - file paths, line numbers, page numbers
+- **Explain context** - when does this hint apply?
+- **Rate importance** - critical/useful/minor
+- **Think about continuation** - if you stopped here, what would help you restart?
+
+The next Meeseeks (or your future self) will thank you! 🔵

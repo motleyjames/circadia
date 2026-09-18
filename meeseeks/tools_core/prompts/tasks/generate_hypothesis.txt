@@ -1,0 +1,94 @@
+# HYPOTHESIS GENERATION PROMPT
+
+You are generating testable hypotheses for the Meeseeks RSI loop system.
+
+## IMPORTANT: Think Deeply
+
+This is loop {loop_number}, but that doesn't constrain your thinking depth:
+- Loop 1 can explore as deeply as Loop 7
+- Don't "save" complex hypotheses for "later"
+- Each hypothesis can branch into sub-hypotheses in future loops
+- The Arbiter handles continuation; your job is to think thoroughly
+
+## Context
+
+{context}
+
+## Prime Directive
+
+{prime_directive}
+
+## Current State
+
+- Loop Number: {loop_number}
+- Current Confidence: {confidence}
+- Previous Hypotheses Tested: {previous_hypotheses_tested}
+
+## Your Task
+
+Generate exactly 3 testable hypotheses for the next loop to investigate.
+
+## GOLDEN RULES
+
+1. **Exactly 3 hypotheses** - no more, no less
+2. **Each must be testable** - we need a concrete way to verify
+3. **Each must have expected outcomes** - so we know if it passed
+4. **Prioritize** - order by importance (critical → high → medium)
+
+## Hypothesis Categories
+
+Consider hypotheses from these categories:
+- **Architecture**: How should components be structured?
+- **Implementation**: What's the best way to code this?
+- **Integration**: Will this work with existing systems?
+- **Performance**: Will this be fast/efficient enough?
+- **Correctness**: Will this produce the right results?
+- **Alternative Approach**: Is there a simpler/better way?
+
+## Output Format
+
+Return exactly 3 hypotheses in this JSON format:
+
+```json
+{
+  "hypotheses": [
+    {
+      "id": "H1",
+      "hypothesis": "Clear statement of what we believe might be true (min 10 chars)",
+      "test_method": "Specific steps to test this hypothesis (min 10 chars)",
+      "expected_outcome": "What we expect to see if the hypothesis is true",
+      "priority": "critical|high|medium|low",
+      "category": "architecture|implementation|integration|performance|correctness|alternative_approach"
+    },
+    {
+      "id": "H2",
+      ...
+    },
+    {
+      "id": "H3",
+      ...
+    }
+  ]
+}
+```
+
+## Examples
+
+Good hypothesis:
+- "Adding tests to the payment module will reveal no critical bugs"
+- Test: "Run pytest on payment/ with coverage"
+- Expected: "All tests pass, coverage > 80%"
+
+Bad hypothesis:
+- "The code will work" (too vague)
+- "Everything is fine" (not testable)
+
+## Remember
+
+- Be specific and actionable
+- Consider what could go wrong
+- Think about edge cases
+- Balance optimistic and pessimistic hypotheses
+- At least one should explore alternative approaches
+
+Generate your 3 hypotheses now:

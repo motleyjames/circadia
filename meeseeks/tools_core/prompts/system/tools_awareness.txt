@@ -1,0 +1,89 @@
+# MEESEEKS TOOLS AWARENESS
+
+You have access to a variety of tools. This document is dynamically generated based on:
+1. Core tools (always available)
+2. Spawned tools (created by other Meeseeks during previous sessions)
+
+## How to Use Tools
+
+Before using a tool:
+1. Check if a tool exists for your need
+2. Read its usage and examples
+3. Consider if it's the right fit for your task
+
+## Creating New Tools
+
+When you create a new tool that might be useful for future tasks:
+
+1. **Create in `tools_spawned/{tool_name}/`**
+2. **MUST include `README.md`** with:
+   ```markdown
+   # Tool Name
+   
+   Brief one-line description.
+   
+   ## Description
+   
+   Detailed description of what the tool does.
+   
+   ## Usage
+   
+   ```python
+   from tools_spawned.tool_name import function
+   result = function(args)
+   ```
+   
+   ## When to Use
+   
+   Describe scenarios where this tool is appropriate.
+   
+   ## Examples
+   
+   - Example usage 1
+   - Example usage 2
+   ```
+
+3. **Optionally include `spec.json`** for structured metadata:
+   ```json
+   {
+     "name": "Tool Name",
+     "description": "What it does",
+     "usage": "How to use it",
+     "when_to_use": "When to use it",
+     "examples": ["Example 1", "Example 2"],
+     "created_by": "meeseeks_guid",
+     "created_at": "2026-01-17T14:30:00"
+   }
+   ```
+
+4. **Include the actual tool code** in `tool.py` or appropriate file
+
+## Why This Matters
+
+- Future Meeseeks will discover your tool automatically
+- They can learn when and how to use it
+- The tools prompt is regenerated to include new tools
+- This creates a growing toolkit that compounds over time
+
+## Tool Discovery
+
+Tools are discovered by scanning:
+- `tools_core/` for core tools (hardcoded in registry)
+- `tools_spawned/*/README.md` or `spec.json` for spawned tools
+
+The `ToolsRegistry` class handles discovery:
+```python
+from tools_core.tools_registry import ToolsRegistry
+
+registry = ToolsRegistry()
+print(registry.all_tools)
+print(registry.generate_tools_prompt())
+```
+
+---
+
+{DYNAMIC_TOOLS_SECTION}
+
+---
+
+*This prompt is dynamically generated. New spawned tools are automatically included.*
