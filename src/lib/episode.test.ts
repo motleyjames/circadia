@@ -108,6 +108,9 @@ describe("adherenceUnavailableReason", () => {
     expect(windowAdherence(noClocks, window)).toBeNull();
     const onlyIn = report({ inBedAt: "00:30", outOfBedAt: undefined });
     expect(windowAdherence(onlyIn, window)).toBeNull();
+    const onlyOut = report({ inBedAt: undefined, outOfBedAt: "07:05", fellAsleepAt: "23:30" });
+    expect(adherenceUnavailableReason(onlyOut, window)).toBe("missing-clocks");
+    expect(windowAdherence(onlyOut, window)).toBeNull();
   });
 });
 

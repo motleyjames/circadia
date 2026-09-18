@@ -121,11 +121,9 @@ is the claim that a test is holding the line.
 
 ## Found, not fixed
 
-1. **Invariant 3 has no test.** The missing case is one line. Adding it is a
-   code change to `episode.test.ts` and was out of scope here — this task was
-   the harness, and tuning a mutation or a test until it dies is how a harness
-   starts manufacturing confidence. For James, inside the existing
-   `adherenceUnavailableReason` describe:
+1. **Invariant 3 had no test. Now it does — uncommitted.** Three lines were
+   added inside the existing `it`, so the manifest row still points at the
+   right test name and `scripts/mutations.json` did not change:
 
    ```ts
    const onlyOut = report({ inBedAt: undefined, outOfBedAt: "07:05", fellAsleepAt: "23:30" });
@@ -133,14 +131,30 @@ is the claim that a test is holding the line.
    expect(windowAdherence(onlyOut, window)).toBeNull();
    ```
 
-   Re-run `bash scripts/mutation-check.sh` afterwards. The row should flip to
-   KILLED with no edit to `scripts/mutations.json`.
+   The mutation now dies: `AssertionError: expected { earlyInMinutes: 60, …(2) }
+   to be null` — the fallback scored `fellAsleepAt` 23:30 against a 00:30
+   prescribed in-bed as an hour early. Suite is 588 + 3, unchanged, because the
+   case went into an existing test.
 
-2. **`window-built-outside-factory` relies on `storage.ts` keeping shorthand.**
+   That verdict came from replicating the runner's per-row steps by hand
+   against manifest row 2, not from `scripts/mutation-check.sh`, which refuses
+   to start while `episode.test.ts` is uncommitted (see 2).
+
+2. **The clean-tree guard blocks the workflow the harness exists to serve.**
+   Fix a test, prove the mutant now dies — that is the loop. But the preflight
+   aborts on any dirty tracked file, so the test fix has to be committed before
+   the runner will confirm it, which is committing a test on the strength of an
+   unverified claim. The guard is not wrong: the post-restore assertion is
+   `git diff --quiet`, which needs a clean baseline to mean anything. The fix
+   is to capture a baseline at start — the `git diff` of the files the manifest
+   touches — and assert restoration returns to *that*, rather than to clean.
+   Not changed here; it was a deliberate instruction, not an oversight.
+
+3. **`window-built-outside-factory` relies on `storage.ts` keeping shorthand.**
    Nothing enforces that. A formatter or an eslint `object-shorthand` rule set
    the other way would trip invariant 1 on a file that is doing nothing wrong.
 
-3. **The runner shells out to `npx vitest` twice per row.** Six runs for three
+4. **The runner shells out to `npx vitest` twice per row.** Six runs for three
    mutations, about a minute. Fine at this size. It will not stay fine.
 
 ## Suite
