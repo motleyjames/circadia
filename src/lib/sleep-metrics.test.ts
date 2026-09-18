@@ -3,6 +3,7 @@ import {
   HEALTHY_EFFICIENCY_PCT,
   bestAndWorst,
   efficiencyBand,
+  forwardMinutes,
   midpointOffset,
   midpointSpread,
   nightGeometry,
@@ -12,6 +13,7 @@ import {
   weekGeometry,
 } from "@/lib/sleep-metrics";
 import type { MorningReport } from "@/lib/types";
+import { overnightDuration } from "@/lib/time";
 
 function night(over: Partial<MorningReport> = {}): MorningReport {
   return {
@@ -48,6 +50,12 @@ describe("night geometry", () => {
     expect(g.wasoMinutes).toBe(25);
     expect(g.terminalMinutes).toBe(15);
     expect(g.awakeningCount).toBe(1);
+  });
+
+  it("treats an identical clock pair as zero minutes, while overnightDuration still answers 1440", () => {
+    expect(overnightDuration("07:00", "07:00")).toBe(1440);
+    expect(forwardMinutes("07:00", "07:00")).toBe(0);
+    expect(forwardMinutes("23:45", "00:30")).toBe(45);
   });
 
   it("separates the two nights that used to look identical", () => {

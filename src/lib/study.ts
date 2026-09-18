@@ -225,6 +225,22 @@ export function anonymityViolations(payload: unknown, state: CircadiaState): str
     if (blob.includes(slice)) hits.push("research-notes");
   }
 
+  // Clinician free text is the same class of leak as a dream or a library paste.
+  // Episode ids and clocks must not ride out on a night pack either.
+  if (state.episode) {
+    if (state.episode.id.length >= 8 && blob.includes(state.episode.id.toLowerCase())) {
+      hits.push("episode-id");
+    }
+    if (state.episode.clinicianId.length >= 4 && blob.includes(state.episode.clinicianId.toLowerCase())) {
+      hits.push("clinician");
+    }
+    for (const window of state.episode.windows) {
+      for (const slice of distinctiveSlices(window.rationale ?? "")) {
+        if (blob.includes(slice)) hits.push("clinician-notes");
+      }
+    }
+  }
+
   return [...new Set(hits)];
 }
 

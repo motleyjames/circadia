@@ -34,6 +34,13 @@ import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS, isCivilDate } from "@/lib/schedule";
 import { dedupeReportsByMorningDate } from "@/lib/morning-file";
 import { coerceChat, coerceConsultHistory, parkLiveConsult } from "@/lib/consult-threads";
+import {
+  BASELINE_NIGHTS,
+  EPISODE_STATES,
+  type Episode,
+  type EpisodeState,
+  type TreatmentWindow,
+} from "@/lib/episode";
 import type { CircadiaState, MorningReport, Profile, StudyState, StudyStatus } from "@/lib/types";
 import { isClock, normalizeClock } from "@/lib/windows";
 
@@ -138,6 +145,7 @@ export const emptyState = (): CircadiaState => ({
   researchNotes: "",
   demoWeek: false,
   study: emptyStudy(),
+  episode: null,
 });
 
 export function draftProfile(input: {
@@ -1202,6 +1210,7 @@ export function hydrateState(parsed: unknown): CircadiaState {
     researchNotes: typeof raw.researchNotes === "string" ? raw.researchNotes : "",
     demoWeek: Boolean(raw.demoWeek),
     study: coerceStudy(raw.study),
+    episode: coerceEpisode(raw.episode),
   };
 }
 
@@ -1342,4 +1351,84 @@ function coerceReport(value: unknown): MorningReport | null {
     awakeningCount: coerceAwakeningCount(r.awakeningCount),
     napMinutes: coerceNapMinutes(r.napMinutes),
   };
+}
+
+function isIsoTimestamp(value: unknown): value is string {
+  if (typeof value !== "string" || !value.includes("T") || value.length < 16) return false;
+  return Number.isFinite(Date.parse(value));
+}
+
+function isNonNegativeInt(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+function coerceEpisodeState(value: unknown): EpisodeState | null {
+  return typeof value === "string" && (EPISODE_STATES as readonly string[]).includes(value)
+    ? (value as EpisodeState)
+    : null;
+}
+
+function coerceTreatmentWindow(value: unknown): TreatmentWindow | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const w = value as Partial<TreatmentWindow>;
+  if (typeof w.id !== "string" || w.id.length === 0) return null;
+  if (typeof w.setBy !== "string" || w.setBy.length === 0) return null;
+  if (!isClock(w.prescribedInBed) || !isClock(w.prescribedOutOfBed)) return null;
+  if (!isIsoTimestamp(w.setAt)) return null;
+  if (w.rationale !== undefined && typeof w.rationale !== "string") return null;
+  if (w.supersedes !== undefined && typeof w.supersedes !== "string") return null;
+  const prescribedInBed = normalizeClock(w.prescribedInBed);
+  const prescribedOutOfBed = normalizeClock(w.prescribedOutOfBed);
+  const window: TreatmentWindow = {
+    id: w.id,
+    prescribedInBed,
+    prescribedOutOfBed,
+    setBy: w.setBy,
+    setAt: w.setAt,
+  };
+  if (typeof w.rationale === "string" && w.rationale.trim()) window.rationale = w.rationale.trim();
+  if (typeof w.supersedes === "string" && w.supersedes) window.supersedes = w.supersedes;
+  return window;
+}
+
+/**
+ * A half-valid episode would put a patient in a clinical state nobody authored.
+ * Malformed input becomes solo mode, not a repaired course of care.
+ */
+function coerceEpisode(value: unknown): Episode | null {
+  if (value === null || value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const e = value as Partial<Episode>;
+  if (typeof e.id !== "string" || e.id.length === 0) return null;
+  if (typeof e.clinicianId !== "string" || e.clinicianId.length === 0) return null;
+  if (!isNonNegativeInt(e.rev)) return null;
+  const state = coerceEpisodeState(e.state);
+  if (!state) return null;
+  if (!isIsoTimestamp(e.enrolledAt)) return null;
+  if (!Array.isArray(e.windows)) return null;
+  const windows: TreatmentWindow[] = [];
+  for (const row of e.windows) {
+    const window = coerceTreatmentWindow(row);
+    if (!window) return null;
+    windows.push(window);
+  }
+  if (e.dischargedAt !== undefined && !isIsoTimestamp(e.dischargedAt)) return null;
+  const baselineNights =
+    e.baselineNights === undefined
+      ? BASELINE_NIGHTS
+      : typeof e.baselineNights === "number" && Number.isInteger(e.baselineNights) && e.baselineNights > 0
+        ? e.baselineNights
+        : null;
+  if (baselineNights === null) return null;
+  const episode: Episode = {
+    id: e.id,
+    rev: e.rev,
+    clinicianId: e.clinicianId,
+    state,
+    enrolledAt: e.enrolledAt,
+    baselineNights,
+    windows,
+  };
+  if (e.dischargedAt) episode.dischargedAt = e.dischargedAt;
+  return episode;
 }

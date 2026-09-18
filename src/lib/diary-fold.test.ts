@@ -82,4 +82,32 @@ describe("fold two device diaries", () => {
     expect(merged.study.consented).toBe(true);
     expect(merged.study.participantId).toBe("aaaaaaaa");
   });
+
+  it("takes an incoming episode when this diary has none", () => {
+    const episode = {
+      id: "ep-fold-1",
+      rev: 1,
+      clinicianId: "clin-1",
+      state: "baseline" as const,
+      enrolledAt: "2026-09-01T12:00:00.000Z",
+      baselineNights: 14,
+      windows: [],
+    };
+    const merged = mergeDiaryStates(diary({ episode: null }), diary({ episode }));
+    expect(merged.episode).toEqual(episode);
+  });
+
+  it("keeps the local episode when the incoming diary is still solo", () => {
+    const episode = {
+      id: "ep-fold-1",
+      rev: 1,
+      clinicianId: "clin-1",
+      state: "baseline" as const,
+      enrolledAt: "2026-09-01T12:00:00.000Z",
+      baselineNights: 14,
+      windows: [],
+    };
+    const merged = mergeDiaryStates(diary({ episode }), diary({ episode: null }));
+    expect(merged.episode).toEqual(episode);
+  });
 });
