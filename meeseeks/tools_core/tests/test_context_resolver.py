@@ -92,7 +92,8 @@ class TestCountSemantics:
 class TestEvidenceStrength:
     @pytest.mark.parametrize("ptype,res,want", [
         (ProbeType.CHECK_VALUE, {"matches": 5}, "weak"),
-        (ProbeType.CHECK_EXISTS, {"kind": "file"}, "strong"),
+        (ProbeType.CHECK_EXISTS, {"kind": "file"}, "weak"),
+        (ProbeType.CHECK_EXISTS, {"kind": "symbol"}, "strong"),
         (ProbeType.CHECK_EXISTS, {"kind": "literal"}, "weak"),
         (ProbeType.CHECK_INVARIANT, {"returncode": 0}, "strong"),
         (ProbeType.COUNT_ITEMS, {"expected": 3}, "strong"),
@@ -109,6 +110,28 @@ class TestEvidenceStrength:
         r = CodeContextResolver()
         pr = result(probe_type=ProbeType.CHECK_INVARIANT, probe_id="hypothesis_H1", res={})
         assert r.evidence_strength(pr) == "weak"
+
+
+class TestFileExistenceIsNotEvidence:
+    """Existence of a path is a precondition, never a verdict."""
+
+    FILE_HIT = {"kind": "file", "path": ".gitignore"}
+
+    def test_a_file_existing_does_not_confirm_the_concern(self):
+        _, a = resolve(result(res=self.FILE_HIT), polarity="real")
+        assert a.status is not ResolutionStatus.NEEDS_HUMAN
+
+    def test_a_file_existing_does_not_settle_the_concern(self):
+        _, a = resolve(result(res=self.FILE_HIT), polarity="unfounded")
+        assert a.status is not ResolutionStatus.RESOLVED
+
+    def test_a_symbol_hit_still_confirms(self):
+        _, a = resolve(result(res={"kind": "symbol"}), polarity="real")
+        assert a.status is ResolutionStatus.NEEDS_HUMAN
+
+    def test_a_symbol_hit_still_settles(self):
+        _, a = resolve(result(res={"kind": "symbol"}), polarity="unfounded")
+        assert a.status is ResolutionStatus.RESOLVED
 
 
 class TestProvenanceAndState:

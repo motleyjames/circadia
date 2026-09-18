@@ -36,6 +36,11 @@ except Exception:  # pragma: no cover
 # Schema directory lives in the repository root: box/templates/
 SCHEMA_DIR = Path(__file__).parent.parent.parent / "box" / "templates"
 
+# reasoning/session.py → tools_core → meeseeks/logs/sessions. Must not be the
+# relative Path("logs/sessions"), which follows CWD and writes a root-level
+# logs/ when the CLI is launched from a consumer repo.
+DEFAULT_SESSION_DIR = Path(__file__).resolve().parents[2] / "logs" / "sessions"
+
 
 class SessionManager:
     """
@@ -52,7 +57,7 @@ class SessionManager:
         Args:
             base_dir: Base directory for sessions (default: logs/sessions)
         """
-        self.base_dir = Path(base_dir) if base_dir else Path("logs/sessions")
+        self.base_dir = Path(base_dir) if base_dir else DEFAULT_SESSION_DIR
         self.base_dir.mkdir(parents=True, exist_ok=True)
     
     def create_session(

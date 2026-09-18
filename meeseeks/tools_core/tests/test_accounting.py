@@ -81,6 +81,37 @@ class TestOpenAIResponsesAPI:
     def test_text_extraction(self, body, want):
         assert _extract_responses_text(body) == want
 
+    def test_codex_posts_responses_not_chat_completions(self, monkeypatch):
+        import core.meeseeks_llm_caller as caller
+        posted = []
+
+        class _Resp:
+            status_code = 200
+
+            def json(self):
+                return {"output_text": "ok", "usage": {}}
+
+        class _Client:
+            def __init__(self, *a, **k):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def post(self, url, headers=None, json=None):
+                posted.append(url)
+                return _Resp()
+
+        monkeypatch.setattr(caller.httpx, "Client", _Client)
+        monkeypatch.setattr(caller, "load_env", lambda: {"OPENAI_API_KEY": "sk-test"})
+        text = caller.call_openai("gpt-5.3-codex", "hello")
+        assert text == "ok"
+        assert posted == ["https://api.openai.com/v1/responses"]
+        assert not any("chat/completions" in url for url in posted)
+
 
 class TestErrorReporting:
     """The provider says what is wrong; raise_for_status threw that away."""

@@ -77,7 +77,7 @@ def discover_search_paths(root) -> "List[str]":
     return found or ["."]
 
 DEFAULT_TIMEOUT: int = 300
-SOURCE_SUFFIXES = {".py"}
+SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".cjs", ".mjs", ".json"}
 
 _PYTEST_TALLY = re.compile(r"(\d+)\s+(passed|failed|error|errors|skipped)")
 

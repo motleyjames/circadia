@@ -263,6 +263,22 @@ class CodeContextResolver(ContextResolver):
                 confidence_impact=0.0, tool_used=probe.probe_id,
             )
 
+        # A path existing is a precondition for a concern, never proof of one
+        # and never enough to close one. "File exists: .gitignore" must not
+        # CONFIRM "the patterns may be overly broad", and "File exists:
+        # scripts/render-voice.py" must not SETTLE a concern about a TypeScript
+        # test runner. kind=symbol is different: locating a named function
+        # is a real finding.
+        if hit and res.get("kind") == "file":
+            return ResolutionAttempt(
+                dissent_id=dissent_id, dissent_content=dissent_content,
+                status=ResolutionStatus.PARTIALLY_RESOLVED, method="code_probe_file_existence",
+                evidence=(f"Probe '{probe.probe_id}' found a path: {probe.evidence} "
+                          f"That a file exists is a precondition for a concern, not evidence "
+                          f"for or against it."),
+                confidence_impact=0.0, tool_used=probe.probe_id,
+            )
+
         if concern_is_real:
             refutation = ResolutionAttempt(
                 dissent_id=dissent_id, dissent_content=dissent_content,
@@ -314,7 +330,7 @@ class CodeContextResolver(ContextResolver):
             return "strong"
         if res.get("conclusive"):
             return "strong"
-        if probe.probe_type is ProbeType.CHECK_EXISTS and res.get("kind") in ("file", "symbol"):
+        if probe.probe_type is ProbeType.CHECK_EXISTS and res.get("kind") == "symbol":
             return "strong"
         if probe.probe_type is ProbeType.COUNT_ITEMS and "expected" in res:
             return "strong"
