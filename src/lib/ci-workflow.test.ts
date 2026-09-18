@@ -34,6 +34,20 @@ describe("GitHub CI workflow", () => {
     expect(pkg.scripts["pack:static"]).toBe("node electron/build-ui.cjs");
   });
 
+  it("runs both vitest passes and does not short-circuit on pass 1", () => {
+    const script = pkg.scripts.test;
+    const pass1 = "vitest run --exclude src/lib/static-surface.test.ts";
+    const pass2 = "vitest run src/lib/static-surface.test.ts";
+    const first = script.indexOf(pass1);
+    const second = script.indexOf(pass2, first + pass1.length);
+    expect(first).toBeGreaterThanOrEqual(0);
+    expect(second).toBeGreaterThan(first);
+    const joiner = script.slice(first + pass1.length, second);
+    expect(joiner).not.toContain("&&");
+    expect(joiner).toContain("e1=$?");
+    expect(script).toContain("e2=$?");
+    expect(script).toMatch(/exit "\$e[12]"/);
+  });
   it("does not compile the Dock, Swift, or a macOS app", () => {
     const ci = loadCi();
     expect(ci).not.toContain("macos");

@@ -86,3 +86,5 @@ phone/**/.swiftpm/
 phone/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 
 
+
+/logs/

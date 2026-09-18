@@ -31,7 +31,7 @@
     "reveal:mod": "node electron/install-mac.cjs --operator --reveal",
     "dist": "node electron/build-ui.cjs && electron-builder --mac dir zip --publish never",
     "lint": "eslint",
-    "test": "vitest run --exclude src/lib/static-surface.test.ts && vitest run src/lib/static-surface.test.ts",
+    "test": "vitest run --exclude src/lib/static-surface.test.ts; e1=$?; vitest run src/lib/static-surface.test.ts; e2=$?; if [ \"$e1\" -gt \"$e2\" ]; then exit \"$e1\"; else exit \"$e2\"; fi",
     "typecheck": "tsc --noEmit",
     "typegen": "next typegen",
     "pack:static": "node electron/build-ui.cjs",
