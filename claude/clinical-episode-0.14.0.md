@@ -1,5 +1,15 @@
 # Clinical episode 0.14.0 — Stage 1
 
+```
+BASELINE:   563 tests passing, tsc clean
+AFTER:      587 tests passing, tsc clean
+NEW TESTS:  19 in src/lib/episode.test.ts
+```
+
+Same three environment-only failures as Phase 0 (`data/study-inbox` gitignored;
+generated `phone/ios/App/App/capacitor.config.json` missing). Pass 2 was run by
+hand. `tsc --noEmit` is clean.
+
 The diary can now carry a course of care. It does not show one. Solo mode is still
 every existing file: `episode: null`, same nights, same study switch.
 
