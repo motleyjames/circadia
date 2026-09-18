@@ -1673,7 +1673,7 @@ if __name__ == "__main__":
     
     result = run_meeseeks(
         prime_directive="Test the Meeseeks loop runner",
-        output_dir=Path("logs/sessions")
+        output_dir=DEFAULT_SESSION_DIR
     )
     
     print(f"\n{'='*60}")

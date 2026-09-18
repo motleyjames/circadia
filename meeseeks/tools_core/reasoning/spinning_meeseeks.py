@@ -35,6 +35,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any, Callable
 from dataclasses import dataclass, field
+from .session import DEFAULT_SESSION_DIR
 
 from .loop_runner import MeeseeksLoopRunner, MeeseeksResult, MeeseeksStatus, ReasoningLog
 from .loop_arbiter import LoopArbiter, ArbiterDecision, ArbiterJudgment, create_arbiter
@@ -130,7 +131,7 @@ class SpinningMeeseeks:
         """
         self.prime_directive = prime_directive
         self.session_id = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.output_dir = output_dir or Path("logs/sessions")
+        self.output_dir = output_dir or DEFAULT_SESSION_DIR
         self.max_loops = min(max_loops, self.ABSOLUTE_MAX_LOOPS)
         self.loop_executor = loop_executor
         self.on_spawn = on_spawn
