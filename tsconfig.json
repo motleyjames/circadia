@@ -44,6 +44,7 @@
     ".api-parked",
     ".mod-parked",
     "phone/ios",
-    "phone/node_modules"
+    "phone/node_modules",
+    "meeseeks"
   ]
 }

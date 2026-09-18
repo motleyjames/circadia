@@ -94,3 +94,8 @@ meeseeks/.venv/
 
 # Meeseeks harness (cont.) - run artifacts and caches
 meeseeks/box/meeseeks_registry/
+meeseeks/tools_core/automation/artifacts/
+meeseeks/tools_core/automation/db/
+meeseeks/tools_core/domain/media/generative/output/
+
+/logs/
