@@ -45,6 +45,7 @@
     ".mod-parked",
     "phone/ios",
     "phone/node_modules",
-    "meeseeks"
+    "meeseeks",
+    "worker"
   ]
 }

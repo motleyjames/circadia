@@ -1,0 +1,8 @@
+name = "circadia-sync"
+main = "src/index.ts"
+compatibility_date = "2026-01-15"
+account_id = "cb077dbc86617c476ba282997c96d279"
+
+[[r2_buckets]]
+binding = "VAULTS"
+bucket_name = "circadia-vaults"

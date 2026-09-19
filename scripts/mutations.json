@@ -133,5 +133,95 @@
     "replace": "    if (!locks[key]) locks[key] = value;\n",
     "testFile": "src/lib/vault.test.ts",
     "testName": "keeps a disk recovery wrap when local already has the same lock"
+  },
+  {
+    "id": "sync-put-skips-auth-hash",
+    "why": "A PUT with a wrong bearer is accepted, so anyone who can guess a 64-hex id overwrites the blob. They still cannot read it, but they can destroy it.",
+    "file": "worker/src/index.ts",
+    "find": "  if (!hashesEqual(storedHash, presentedHash)) return empty(403);\n\n  const match = request.headers.get(\"if-match\");\n",
+    "replace": "  void storedHash;\n  void presentedHash;\n\n  const match = request.headers.get(\"if-match\");\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "rejects a PUT with a wrong auth key and leaves the stored blob unchanged"
+  },
+  {
+    "id": "sync-put-skips-etag-match",
+    "why": "An update writes without etagMatches, so a stale device overwrites the current blob. The concurrency token exists only as a header we ignore.",
+    "file": "worker/src/index.ts",
+    "find": "    onlyIf: { etagMatches: unquoteEtag(match) },\n",
+    "replace": "    onlyIf: { etagDoesNotMatch: \"never\" },\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "rejects a PUT with a stale etag and changes nothing"
+  },
+  {
+    "id": "sync-register-unconditional",
+    "why": "Registration is a bare put. Two devices racing both succeed; the second overwrites the first binding and one auth key is wrong forever.",
+    "file": "worker/src/index.ts",
+    "find": "    onlyIf: { etagDoesNotMatch: \"*\" },\n",
+    "replace": "    onlyIf: undefined,\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "lets exactly one of two concurrent registrations for the same unseen id succeed"
+  },
+  {
+    "id": "sync-stores-raw-auth-key",
+    "why": "The presented bearer is stored next to the hash. A bucket breach then yields a token that overwrites any vault.",
+    "file": "worker/src/index.ts",
+    "find": "    customMetadata: { [HASH_META]: presentedHash },\n  });\n  if (created) return withEtag(201, created);\n",
+    "replace": "    customMetadata: { [HASH_META]: presentedHash, k: request.headers.get(\"authorization\") ?? \"\" },\n  });\n  if (created) return withEtag(201, created);\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "stores only the auth key hash, never the raw key"
+  },
+  {
+    "id": "sync-unknown-get-leaks",
+    "why": "GET for a missing account returns 200 and a body, so a probe learns the id is unused and the Worker has started inventing content.",
+    "file": "worker/src/index.ts",
+    "find": "  if (!meta) return empty(404);\n",
+    "replace": "  if (!meta) return new Response(\"no such account\", { status: 200 });\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "returns 404 with no detail for an unknown account"
+  },
+  {
+    "id": "sync-id-uuid-leftover",
+    "why": "The path accepts a UUID again, so lookupId (64 hex) is 400 and the two object kinds no longer share one alphabet.",
+    "file": "worker/src/index.ts",
+    "find": "export const ACCOUNT_ID = /^[0-9a-f]{64}$/;\n",
+    "replace": "export const ACCOUNT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "rejects a malformed accountId before any R2 access"
+  },
+  {
+    "id": "sync-id-unanchored",
+    "why": "A malformed accountId reaches R2. The 0.8.23 study-server traversal was this class of bug.",
+    "file": "worker/src/index.ts",
+    "find": "  if (!ACCOUNT_ID.test(rest)) return \"malformed\";\n  return rest;\n",
+    "replace": "  return rest;\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "rejects a malformed accountId before any R2 access"
+  },
+  {
+    "id": "sync-parses-body",
+    "why": "PUT JSON-parses the body, so the Worker learns what a diary is and a non-JSON blob is rejected.",
+    "file": "worker/src/index.ts",
+    "find": "  const body = await request.arrayBuffer();\n  if (body.byteLength > MAX_BYTES) return empty(413);\n",
+    "replace": "  const body = await request.arrayBuffer();\n  JSON.parse(new TextDecoder().decode(body));\n  if (body.byteLength > MAX_BYTES) return empty(413);\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "never decrypts, parses, or inspects the body"
+  },
+  {
+    "id": "sync-imports-app-src",
+    "why": "The Worker imports the diary app, so app dependencies and vault types leak into the edge runtime.",
+    "file": "worker/src/index.ts",
+    "find": "import type { Env, R2Object } from \"./r2\";\n",
+    "replace": "import type { Env, R2Object } from \"./r2\";\nimport type { PasswordLock } from \"../../src/lib/password\";\nvoid (null as unknown as PasswordLock);\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "imports nothing from src/"
+  },
+  {
+    "id": "sync-kind-by-size",
+    "why": "A size floor treats a small account-record blob as invalid and a diary blob as valid. The Worker has learned that two kinds of object exist.",
+    "file": "worker/src/index.ts",
+    "find": "  if (body.byteLength > MAX_BYTES) return empty(413);\n",
+    "replace": "  if (body.byteLength > MAX_BYTES) return empty(413);\n  if (body.byteLength < 1024) return empty(400);\n",
+    "testFile": "worker/src/index.test.ts",
+    "testName": "stores two objects at different ids without a type, size heuristic, or kind branch"
   }
 ]
