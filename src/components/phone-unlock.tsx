@@ -18,9 +18,11 @@ function packedContact(): string {
 }
 
 export function PhoneUnlock() {
-  const { logIn } = useCircadia();
+  const { logIn, recoverWithCode } = useCircadia();
   const [contact, setContact] = useState(packedContact);
   const [password, setPassword] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [recover, setRecover] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,7 +40,8 @@ export function PhoneUnlock() {
           if (busy) return;
           setError(null);
           setBusy(true);
-          void logIn(contact, password)
+          const run = recover ? recoverWithCode(contact, recoveryCode) : logIn(contact, password);
+          void run
             .then((result) => {
               if (!result.ok) setError(result.error);
             })
@@ -64,18 +67,42 @@ export function PhoneUnlock() {
           />
         </label>
 
-        <SecretField
-          label="Password"
-          value={password}
-          onChange={setPassword}
-          autoComplete="current-password"
-          autoFocus={Boolean(contact)}
-          className="mt-4"
-        />
+        {recover ? (
+          <SecretField
+            label="Recovery code"
+            value={recoveryCode}
+            onChange={setRecoveryCode}
+            autoComplete="off"
+            autoFocus
+            className="mt-4"
+          />
+        ) : (
+          <SecretField
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            autoComplete="current-password"
+            autoFocus={Boolean(contact)}
+            className="mt-4"
+          />
+        )}
 
         <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">
-          The password is checked on this device. Circadia cannot email a reset.
+          {recover
+            ? "The recovery code is checked on this device. Circadia cannot email another."
+            : "The password is checked on this device. Circadia cannot email a reset."}
         </p>
+
+        <button
+          type="button"
+          className="mt-3 text-left text-[13px] text-zinc-400 hover:text-zinc-200"
+          onClick={() => {
+            setRecover((on) => !on);
+            setError(null);
+          }}
+        >
+          {recover ? "Use password" : "I have a recovery code"}
+        </button>
 
         {error ? <p className="mt-4 text-[13px] text-amber-200/90">{error}</p> : null}
 
@@ -85,7 +112,7 @@ export function PhoneUnlock() {
             disabled={busy}
             className="h-14 w-full rounded-full btn-primary text-[17px] font-semibold disabled:opacity-50"
           >
-            {busy ? "Logging in…" : "Log in"}
+            {busy ? (recover ? "Opening…" : "Logging in…") : recover ? "Open with recovery code" : "Log in"}
           </button>
         </div>
       </form>

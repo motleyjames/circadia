@@ -45,6 +45,106 @@ describe("disk vault", () => {
     expect(parsed).not.toHaveProperty("master");
     expect(parsed).not.toHaveProperty("unlock");
   });
+
+  it("keeps a disk recovery wrap when local already has the same lock", () => {
+    const wrap = { salt: "YQ==", iterations: 600000, iv: "Yg==", ct: "Yw==" };
+    const recovery = { salt: "ZA==", iterations: 600000, iv: "ZQ==", ct: "Zg==" };
+    const local = parseDiskVault({
+      files: { "email:ada@example.com": { enc: true, v: 1, iv: "YQ==", ct: "Yg==" } },
+      locks: {
+        "email:ada@example.com": {
+          algo: "pbkdf2-sha256",
+          iterations: 600000,
+          salt: wrap.salt,
+          kdf: 3,
+          wrap,
+        },
+      },
+    });
+    const disk = parseDiskVault({
+      files: { "email:ada@example.com": { enc: true, v: 1, iv: "YQ==", ct: "Yg==" } },
+      locks: {
+        "email:ada@example.com": {
+          algo: "pbkdf2-sha256",
+          iterations: 600000,
+          salt: wrap.salt,
+          kdf: 3,
+          wrap,
+          recovery,
+        },
+      },
+    });
+    const merged = mergeDiskVault(local, disk);
+    expect(merged.locks["email:ada@example.com"]?.wrap).toEqual(wrap);
+    expect(merged.locks["email:ada@example.com"]?.recovery).toEqual(recovery);
+  });
+
+  it("keeps a local recovery wrap when disk already has the same lock", () => {
+    const wrap = { salt: "YQ==", iterations: 600000, iv: "Yg==", ct: "Yw==" };
+    const recovery = { salt: "ZA==", iterations: 600000, iv: "ZQ==", ct: "Zg==" };
+    const local = parseDiskVault({
+      files: { "email:ada@example.com": { enc: true, v: 1, iv: "YQ==", ct: "Yg==" } },
+      locks: {
+        "email:ada@example.com": {
+          algo: "pbkdf2-sha256",
+          iterations: 600000,
+          salt: wrap.salt,
+          kdf: 3,
+          wrap,
+          recovery,
+        },
+      },
+    });
+    const disk = parseDiskVault({
+      files: { "email:ada@example.com": { enc: true, v: 1, iv: "YQ==", ct: "Yg==" } },
+      locks: {
+        "email:ada@example.com": {
+          algo: "pbkdf2-sha256",
+          iterations: 600000,
+          salt: wrap.salt,
+          kdf: 3,
+          wrap,
+        },
+      },
+    });
+    const merged = mergeDiskVault(local, disk);
+    expect(merged.locks["email:ada@example.com"]?.wrap).toEqual(wrap);
+    expect(merged.locks["email:ada@example.com"]?.recovery).toEqual(recovery);
+  });
+
+  it("does not transplant a recovery wrap onto a different password wrap", () => {
+    const wrapLocal = { salt: "YQ==", iterations: 600000, iv: "Yg==", ct: "Yw==" };
+    const wrapDisk = { salt: "ZA==", iterations: 600000, iv: "ZQ==", ct: "Zg==" };
+    const recovery = { salt: "aA==", iterations: 600000, iv: "aQ==", ct: "ag==" };
+    const local = parseDiskVault({
+      files: { "email:ada@example.com": { enc: true, v: 1, iv: "YQ==", ct: "Yg==" } },
+      locks: {
+        "email:ada@example.com": {
+          algo: "pbkdf2-sha256",
+          iterations: 600000,
+          salt: wrapLocal.salt,
+          kdf: 3,
+          wrap: wrapLocal,
+        },
+      },
+    });
+    const disk = parseDiskVault({
+      files: { "email:ada@example.com": { enc: true, v: 1, iv: "YQ==", ct: "Yg==" } },
+      locks: {
+        "email:ada@example.com": {
+          algo: "pbkdf2-sha256",
+          iterations: 600000,
+          salt: wrapDisk.salt,
+          kdf: 3,
+          wrap: wrapDisk,
+          recovery,
+        },
+      },
+    });
+    const merged = mergeDiskVault(local, disk);
+    expect(merged.locks["email:ada@example.com"]?.wrap).toEqual(wrapLocal);
+    expect(merged.locks["email:ada@example.com"]?.recovery).toBeUndefined();
+  });
 });
 
 describe("isLocalRequest", () => {

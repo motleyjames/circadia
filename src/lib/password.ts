@@ -24,6 +24,10 @@ export const PBKDF2_ITERATIONS_V3 = 600_000;
 
 export const CRYPTO_UNAVAILABLE = "WEB_CRYPTO_UNAVAILABLE";
 
+/** Crockford base32, no I/L/O/U. Recovery codes are 25 of these, grouped 5×5. */
+export const CROCKFORD_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+export const RECOVERY_CODE_CHARS = 25;
+
 /** HKDF labels. Two keys from one password so the server never sees the other. */
 const WRAP_INFO = "circadia/wrap/v1";
 const AUTH_INFO = "circadia/auth/v1";
@@ -64,6 +68,13 @@ export type PasswordLock = {
    * a key, and a password is only a way to reach it.
    */
   wrap?: KeyWrap;
+  /**
+   * The same data key, wrapped a second time under a recovery code.
+   *
+   * Independent of `wrap`. Generating this does not re-key the vault and does not
+   * change `kdf`. A client that has never heard of this field still opens `wrap`.
+   */
+  recovery?: KeyWrap;
 };
 
 export type VaultEnvelope = {
@@ -259,17 +270,103 @@ export async function newPasswordLock(password: string): Promise<{ lock: Passwor
  * This is what a password change is now: about thirty bytes re-encrypted, instead
  * of every night in the diary. It drops the legacy fields on purpose — changing a
  * password is exactly the moment the old one must stop opening the vault, and a
- * kept verifier would leave it working forever.
+ * kept verifier would leave it working forever. A recovery wrap is a second door
+ * to the same room, so it is copied across when `previous` is passed — the
+ * password change must not lock that door. Omitting `previous` is what a client
+ * older than this release still does; that reconstruct drops `recovery`. Do not
+ * "fix" the two-argument form. Release two is both Mac and phone calling with
+ * `previous`.
  */
-export async function rewrapLock(password: string, dataKey: Uint8Array): Promise<PasswordLock> {
+export async function rewrapLock(
+  password: string,
+  dataKey: Uint8Array,
+  previous?: PasswordLock | null,
+): Promise<PasswordLock> {
   const wrap = await wrapDataKey(password, dataKey);
-  return {
+  const lock: PasswordLock = {
     algo: "pbkdf2-sha256",
     iterations: PBKDF2_ITERATIONS_V3,
     salt: wrap.salt,
     kdf: 3,
     wrap,
   };
+  if (previous?.recovery) lock.recovery = previous.recovery;
+  return lock;
+}
+
+function encodeCrockford(bytes: Uint8Array): string {
+  let bits = 0;
+  let acc = 0;
+  let out = "";
+  for (const b of bytes) {
+    acc = (acc << 8) | b;
+    bits += 8;
+    while (bits >= 5) {
+      bits -= 5;
+      out += CROCKFORD_ALPHABET[(acc >>> bits) & 31]!;
+    }
+  }
+  if (bits > 0) out += CROCKFORD_ALPHABET[(acc << (5 - bits)) & 31]!;
+  return out;
+}
+
+export function normalizeRecoveryCode(input: string): string {
+  const stripped = input.toUpperCase().replace(/[\s\-_]/g, "");
+  let out = "";
+  for (const raw of stripped) {
+    let c = raw;
+    if (c === "I" || c === "L") c = "1";
+    else if (c === "O") c = "0";
+    else if (c === "U") c = "V";
+    if (!CROCKFORD_ALPHABET.includes(c)) return "";
+    out += c;
+  }
+  return out;
+}
+
+export function formatRecoveryCode(normalized: string): string {
+  const chars = normalizeRecoveryCode(normalized);
+  const parts: string[] = [];
+  for (let i = 0; i < chars.length; i += 5) parts.push(chars.slice(i, i + 5));
+  return parts.join("-");
+}
+
+export function generateRecoveryCode(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return formatRecoveryCode(encodeCrockford(bytes).slice(0, RECOVERY_CODE_CHARS));
+}
+
+/**
+ * Wrap the existing data key under a recovery code. Proves the wrap re-opens
+ * in memory before returning; a lock that cannot open is not a lock to persist.
+ *
+ * Does not touch `wrap` or `kdf`. Confirmation is the code re-entered, not a checkbox.
+ */
+export async function attachRecoveryWrap(
+  lock: PasswordLock,
+  dataKey: Uint8Array,
+  code: string,
+  confirm: string,
+): Promise<PasswordLock | null> {
+  const secret = normalizeRecoveryCode(code);
+  const confirmed = normalizeRecoveryCode(confirm);
+  if (secret.length !== RECOVERY_CODE_CHARS || secret !== confirmed) return null;
+  const recoveryWrap = await wrapDataKey(secret, dataKey);
+  const recoveryProof = await unwrapDataKey(secret, recoveryWrap);
+  if (!recoveryProof || !timingSafeEqual(recoveryProof, dataKey)) {
+    recoveryProof?.fill(0);
+    return null;
+  }
+  recoveryProof.fill(0);
+  return { ...lock, recovery: recoveryWrap };
+}
+
+/** Second door. Does not migrate, does not mint, does not touch `wrap`. */
+export async function unlockWithRecovery(code: string, lock: PasswordLock): Promise<Uint8Array | null> {
+  if (!lock.recovery) return null;
+  const normalized = normalizeRecoveryCode(code);
+  if (normalized.length !== RECOVERY_CODE_CHARS) return null;
+  return unwrapDataKey(normalized, lock.recovery);
 }
 
 /**

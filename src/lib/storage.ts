@@ -15,6 +15,8 @@ import {
   rewrapLock,
   passwordIssue,
   unlockMaster,
+  attachRecoveryWrap,
+  unlockWithRecovery,
   type PasswordLock,
 } from "@/lib/password";
 import { SESSION_HEADER } from "@/lib/session-token-shared";
@@ -70,6 +72,7 @@ export const FOLDED_PACK_KEY = "circadia:folded-pack";
 export const FOLDED_INBOX_KEY = "circadia:folded-inbox";
 
 let openLogin: string | null = null;
+let openedWithRecovery = false;
 const plainByLogin = new Map<string, CircadiaState>();
 const writeGen = new Map<string, number>();
 let persistChain: Promise<void> = Promise.resolve();
@@ -128,6 +131,7 @@ export async function flushVaultWrites(): Promise<void> {
 /** Tests share this module. Wipe in-memory masters so one case cannot unlock the next. */
 export function resetVaultMemoryForTests(): void {
   openLogin = null;
+  openedWithRecovery = false;
   plainByLogin.clear();
   writeGen.clear();
   persistChain = Promise.resolve();
@@ -997,6 +1001,7 @@ export async function openFile(
 ): Promise<{ ok: true; login: string; state: CircadiaState } | { ok: false; error: string }> {
   if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.contact };
   migrateToVault();
+  openedWithRecovery = false;
   const candidates = loginKeyCandidates(contact);
   if (!candidates.length) return { ok: false, error: AUTH_ERRORS.contact };
   const local = await unlockLocalDiary(candidates, password);
@@ -1067,6 +1072,7 @@ async function unlockLocalDiary(
 export async function closeFile(): Promise<void> {
   const login = openLogin;
   openLogin = null;
+  openedWithRecovery = false;
   await flushVaultWrites();
   if (login) {
     dropMaster(login);
@@ -1174,7 +1180,7 @@ export async function changePassword(
       const unlocked = await unlockMaster(currentPassword, lock);
       if (!unlocked) return { ok: false, error: "Current password is wrong." };
       master = unlocked.master;
-      nextLock = await rewrapLock(nextPassword, master);
+      nextLock = await rewrapLock(nextPassword, master, lock);
     } else {
       const minted = await newPasswordLock(nextPassword);
       master = minted.master;
@@ -1190,6 +1196,165 @@ export async function changePassword(
   } catch (err) {
     return authCaught(err);
   }
+}
+
+export function sessionHasRecoveryWrap(): boolean {
+  const login = getSessionLogin();
+  if (!login) return false;
+  return Boolean(readLocks()[login]?.recovery);
+}
+
+export function sessionOpenedWithRecovery(): boolean {
+  return openedWithRecovery && getSessionLogin() !== null;
+}
+
+/**
+ * Attach a recovery wrap to the open diary. The wrap is proven to open in
+ * memory before it is written; a mismatch never reaches disk.
+ */
+export async function enableRecovery(
+  code: string,
+  confirm: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.credentials };
+  const login = getSessionLogin();
+  if (!login) return { ok: false, error: AUTH_ERRORS.missing };
+  const lock = readLocks()[login];
+  const master = getMaster(login);
+  if (!lock || !master) return { ok: false, error: AUTH_ERRORS.missing };
+  const next = await attachRecoveryWrap(lock, master, code, confirm);
+  if (!next) return { ok: false, error: "Those codes do not match." };
+  setLock(login, next);
+  schedulePersistDisk();
+  return { ok: true };
+}
+
+export async function recoverFile(
+  contact: string,
+  code: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | { ok: false; error: string }> {
+  if (typeof window === "undefined") return { ok: false, error: AUTH_ERRORS.contact };
+  migrateToVault();
+  openedWithRecovery = false;
+  const candidates = loginKeyCandidates(contact);
+  if (!candidates.length) return { ok: false, error: AUTH_ERRORS.contact };
+  const local = await unlockLocalDiaryWithRecovery(candidates, code);
+  if (local.ok) {
+    try {
+      await absorbPeerNights();
+    } catch {
+      /* leftover nights stay; a failed fold must not sign out */
+    }
+    const live = loadState();
+    if (!diaryHasNights(live)) {
+      const packedHit = await openPackedDiaryIfPresentWithRecovery(contact, code);
+      if (packedHit) return packedHit;
+    }
+    return { ok: true, login: local.login, state: loadState() };
+  }
+  const packedHit = await openPackedDiaryIfPresentWithRecovery(contact, code);
+  if (packedHit) return packedHit;
+  return local;
+}
+
+async function unlockLocalDiaryWithRecovery(
+  candidates: string[],
+  code: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | { ok: false; error: string }> {
+  const files = readRawVault();
+  const login = candidates.find((key) => files[key]) ?? null;
+  if (!login) {
+    if (hasOrphanLocalFile()) return { ok: false, error: AUTH_ERRORS.orphan };
+    if (Object.keys(files).length === 0) return { ok: false, error: AUTH_ERRORS.emptyDevice };
+    return { ok: false, error: AUTH_ERRORS.missing };
+  }
+  const lock = readLocks()[login];
+  try {
+    if (!lock) return { ok: false, error: AUTH_ERRORS.recovery };
+    const master = await unlockWithRecovery(code, lock);
+    if (!master) return { ok: false, error: AUTH_ERRORS.recovery };
+    holdMaster(login, master);
+    const held = getMaster(login);
+    if (!held) return { ok: false, error: AUTH_ERRORS.crypto };
+    const state = await readDiary(login, held);
+    plainByLogin.set(login, state);
+    rememberOpen(login);
+    openedWithRecovery = true;
+    const gen = bumpGen(login);
+    await persistEncrypted(login, cloneState(state), gen);
+    await persistUnlockNow(login);
+    schedulePersistDisk();
+    return { ok: true, login, state };
+  } catch (err) {
+    openedWithRecovery = false;
+    dropMaster(login);
+    if (openLogin === login) openLogin = null;
+    plainByLogin.delete(login);
+    if (err instanceof Error && err.message === "Not a Circadia file.") {
+      return { ok: false, error: AUTH_ERRORS.recovery };
+    }
+    const caught = authCaught(err);
+    return caught.error === AUTH_ERRORS.credentials ? { ok: false, error: AUTH_ERRORS.recovery } : caught;
+  }
+}
+
+async function decryptPackedLoginWithRecovery(
+  packed: DiskVault,
+  login: string,
+  code: string,
+): Promise<{ master: Uint8Array; state: CircadiaState } | null> {
+  const file = packed.files[login];
+  if (!file) return null;
+  const lock = packed.locks[login];
+  if (!lock) return null;
+  try {
+    const master = await unlockWithRecovery(code, lock);
+    if (!master) return null;
+    const state = isVaultEnvelope(file)
+      ? hydrateState(await decryptPayload(file, master))
+      : hydrateState(file);
+    return { master, state };
+  } catch {
+    return null;
+  }
+}
+
+async function adoptPackedDiaryWithRecovery(
+  packed: DiskVault,
+  login: string,
+  code: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | null> {
+  const unlocked = await decryptPackedLoginWithRecovery(packed, login, code);
+  if (!unlocked) return null;
+  const installed = await installLockedVault(packed);
+  if (!installed.ok) {
+    unlocked.master.fill(0);
+    return null;
+  }
+  holdMaster(login, unlocked.master);
+  unlocked.master.fill(0);
+  plainByLogin.set(login, unlocked.state);
+  rememberOpen(login);
+  openedWithRecovery = true;
+  const gen = bumpGen(login);
+  await persistEncrypted(login, cloneState(unlocked.state), gen);
+  await persistUnlockNow(login);
+  schedulePersistDisk();
+  return { ok: true, login, state: unlocked.state };
+}
+
+async function openPackedDiaryIfPresentWithRecovery(
+  contact: string,
+  code: string,
+): Promise<{ ok: true; login: string; state: CircadiaState } | null> {
+  const packed = await fetchPackedDiary();
+  if (!packed) return null;
+  const candidates = loginKeyCandidates(contact);
+  const hinted = candidates.find((key) => packed.files[key]) ?? null;
+  if (hinted) return adoptPackedDiaryWithRecovery(packed, hinted, code);
+  const keys = Object.keys(packed.files).filter((key) => key !== LOCAL_FILE_KEY);
+  if (keys.length === 1) return adoptPackedDiaryWithRecovery(packed, keys[0]!, code);
+  return null;
 }
 
 /** Null drafts are omitted so a diary with none serialises as it did before. */

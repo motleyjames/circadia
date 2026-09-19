@@ -13,6 +13,7 @@ import {
   changePassword,
   closeFile,
   createFile,
+  enableRecovery,
   eraseCurrentFile,
   flushVaultWrites,
   getSessionLogin,
@@ -22,11 +23,15 @@ import {
   loadState,
   migrateToVault,
   openFile,
+  recoverFile,
   resetVaultMemoryForTests,
   saveState,
+  sessionHasRecoveryWrap,
+  sessionOpenedWithRecovery,
   setVaultPauseForTests,
   snapshotDisk,
 } from "./storage";
+import { generateRecoveryCode } from "./password";
 import { parseLockedDiary, serializeLockedDiary } from "./diary-pack";
 
 const PASS = "correct-horse";
@@ -595,6 +600,53 @@ describe("local file vault", () => {
     expect(rotated.hash).toBeUndefined();
     if (!opened.ok) return;
     expect(opened.state.researchNotes).toBe("after rotate");
+  });
+
+  it("opens the diary with a recovery code without re-keying, and keeps that wrap across a password change", async () => {
+    const created = await createFile({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      contact: "ada@example.com",
+      ...creds,
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    created.state.researchNotes = "keep after recovery";
+    saveState(created.state);
+    const code = generateRecoveryCode();
+    expect(await enableRecovery(code, "not-the-code")).toEqual({
+      ok: false,
+      error: "Those codes do not match.",
+    });
+    expect(sessionHasRecoveryWrap()).toBe(false);
+    expect(JSON.stringify(localStorage.getItem(LOCKS_KEY))).not.toContain(code.replace(/-/g, ""));
+    expect(await enableRecovery(code, code)).toEqual({ ok: true });
+    expect(sessionHasRecoveryWrap()).toBe(true);
+    expect(JSON.stringify(localStorage.getItem(LOCKS_KEY))).not.toContain(code);
+    expect(JSON.stringify(localStorage.getItem(LOCKS_KEY))).not.toContain(code.replace(/-/g, ""));
+    await closeFile();
+    expect(sessionOpenedWithRecovery()).toBe(false);
+    expect(await recoverFile("ada@example.com", "WWWWW-WWWWW-WWWWW-WWWWW-WWWWW")).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.recovery,
+    });
+    const recovered = await recoverFile("ada@example.com", code);
+    expect(recovered.ok).toBe(true);
+    if (!recovered.ok) return;
+    expect(recovered.state.researchNotes).toBe("keep after recovery");
+    expect(sessionOpenedWithRecovery()).toBe(true);
+    expect(await changePassword(PASS, NEXT_PASS, NEXT_PASS)).toEqual({ ok: true });
+    await closeFile();
+    expect(await openFile("ada@example.com", PASS)).toEqual({
+      ok: false,
+      error: AUTH_ERRORS.credentials,
+    });
+    const afterRotate = await recoverFile("ada@example.com", code);
+    expect(afterRotate.ok).toBe(true);
+    if (!afterRotate.ok) return;
+    expect(afterRotate.state.researchNotes).toBe("keep after recovery");
+    await closeFile();
+    expect(await openFile("ada@example.com", NEXT_PASS)).toMatchObject({ ok: true });
   });
 
   it("does not treat last-login as an unlocked session", () => {

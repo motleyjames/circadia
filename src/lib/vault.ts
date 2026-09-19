@@ -1,4 +1,4 @@
-import type { PasswordLock } from "@/lib/password";
+import type { KeyWrap, PasswordLock } from "@/lib/password";
 
 export const VAULT_DISK_VERSION = 1;
 
@@ -49,6 +49,10 @@ function fileRev(value: unknown): number {
  * so editing a rating from 3 to 4 produces an exact tie, and `>=` handed that tie to
  * the stale disk copy. Withdrawing a morning made the new blob *smaller* and lost
  * outright. Both silently reverted the user's edit on the next launch.
+ *
+ * Locks merge field-wise when the data key is the same, so a stale local copy
+ * cannot delete a recovery wrap that disk already has. Different wraps stay
+ * local — that is a password change, not a field to union.
  */
 export function mergeDiskVault(local: DiskVault, disk: DiskVault): DiskVault {
   const files: Record<string, unknown> = { ...local.files };
@@ -68,12 +72,51 @@ export function mergeDiskVault(local: DiskVault, disk: DiskVault): DiskVault {
   }
   const locks: Record<string, PasswordLock> = { ...local.locks };
   for (const [key, value] of Object.entries(disk.locks)) {
-    if (!locks[key]) locks[key] = value;
+    const here = locks[key];
+    locks[key] = here ? mergePasswordLock(here, value) : value;
   }
   const session =
     (local.session && files[local.session] ? local.session : null) ??
     (disk.session && files[disk.session] ? disk.session : null);
   return { v: VAULT_DISK_VERSION, files, locks, session };
+}
+
+function wrapEqual(a: KeyWrap | undefined, b: KeyWrap | undefined): boolean {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  return a.salt === b.salt && a.iterations === b.iterations && a.iv === b.iv && a.ct === b.ct;
+}
+
+/**
+ * Same data key, not merely the same login. Wrap equality is sufficient. A
+ * migrated lock still carries the legacy salt/hash, so those matching means the
+ * wrap was adopted around that same derived key. Different wraps are a password
+ * change (or a re-key) and must not receive the other copy's recovery.
+ */
+function sameDataKey(local: PasswordLock, disk: PasswordLock): boolean {
+  if (local.wrap && disk.wrap) return wrapEqual(local.wrap, disk.wrap);
+  if (local.salt && disk.salt && local.hash && disk.hash) {
+    return (
+      local.algo === disk.algo &&
+      local.salt === disk.salt &&
+      local.hash === disk.hash &&
+      Number(local.iterations) === Number(disk.iterations)
+    );
+  }
+  return false;
+}
+
+/**
+ * Field-wise, not presence-only. A stale local lock without `recovery` used to
+ * win outright and then get written back, which deleted the second door.
+ */
+function mergePasswordLock(local: PasswordLock, disk: PasswordLock): PasswordLock {
+  if (!sameDataKey(local, disk)) return local;
+  const merged: PasswordLock = { ...disk, ...local };
+  const recovery = local.recovery ?? disk.recovery;
+  if (recovery) merged.recovery = recovery;
+  else delete merged.recovery;
+  return merged;
 }
 
 export function isLocalRequest(request: Request): boolean {

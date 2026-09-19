@@ -1,17 +1,24 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  CROCKFORD_ALPHABET,
   PASSWORD_MIN,
   PBKDF2_ITERATIONS,
   PBKDF2_ITERATIONS_V3,
+  RECOVERY_CODE_CHARS,
+  attachRecoveryWrap,
   authKeyFor,
   bytesToBase64,
   decryptPayload,
   encryptPayload,
+  generateRecoveryCode,
   hashPassword,
   newPasswordLock,
+  normalizeRecoveryCode,
   passwordIssue,
   rewrapLock,
   unlockMaster,
+  unlockWithRecovery,
   verifyPassword,
   type PasswordLock,
 } from "./password";
@@ -238,5 +245,137 @@ describe("the auth key, for the server that does not exist yet", () => {
   it("has nothing to offer a lock that has not migrated", async () => {
     const { lock } = await legacyLock(PW, 2);
     expect(await authKeyFor(PW, lock)).toBeNull();
+  });
+});
+
+/** What a client that has never heard of recovery sees: the lock with that field removed. */
+function asClientWithoutRecovery(lock: PasswordLock): PasswordLock {
+  const rest = { ...lock };
+  delete rest.recovery;
+  return rest;
+}
+
+describe("recovery codes wrap the same data key", () => {
+  it("the recovery wrap yields the same data key as the password wrap", async () => {
+    const { lock, master } = await newPasswordLock(PW);
+    const before = await encryptPayload({ reports: ["a night"] }, master);
+    const code = generateRecoveryCode();
+    const withRecovery = (await attachRecoveryWrap(lock, master, code, code))!;
+    expect(withRecovery.recovery!.iterations).toBe(PBKDF2_ITERATIONS_V3);
+    expect(withRecovery.recovery!.iterations).toBe(lock.wrap!.iterations);
+    const fromRecovery = (await unlockWithRecovery(code, withRecovery))!;
+    expect(fromRecovery).toEqual(master);
+    expect(await decryptPayload(before, fromRecovery)).toEqual({ reports: ["a night"] });
+  });
+
+  it("never writes the recovery code to disk, the vault, a log, or an error", async () => {
+    const { lock, master } = await newPasswordLock(PW);
+    const code = generateRecoveryCode();
+    const withRecovery = (await attachRecoveryWrap(lock, master, code, code))!;
+    const onDisk = JSON.stringify(withRecovery);
+    const secret = normalizeRecoveryCode(code);
+    expect(onDisk).not.toContain(code);
+    expect(onDisk).not.toContain(secret);
+    expect(await unlockWithRecovery(code, withRecovery)).toEqual(master);
+    const failed = await unlockWithRecovery("WWWWW-WWWWW-WWWWW-WWWWW-WWWWW", withRecovery);
+    expect(failed).toBeNull();
+    const src = readFileSync(new URL("./password.ts", import.meta.url), "utf8");
+    expect(src).not.toMatch(/recovery:\s*(secret|code|confirm)/);
+    expect(src).not.toMatch(/Error\([^)]*(secret|code)/);
+  });
+
+  it("a lock with recovery still opens with the password", async () => {
+    const { lock, master } = await newPasswordLock(PW);
+    const code = generateRecoveryCode();
+    const withRecovery = (await attachRecoveryWrap(lock, master, code, code))!;
+    expect(withRecovery.kdf).toBe(lock.kdf);
+    const opened = (await unlockMaster(PW, withRecovery))!;
+    expect(opened.master).toEqual(master);
+    expect(opened.migratedLock).toBeNull();
+  });
+
+  it("a client unaware of recovery still opens the lock", async () => {
+    const { lock, master } = await newPasswordLock(PW);
+    const code = generateRecoveryCode();
+    const withRecovery = (await attachRecoveryWrap(lock, master, code, code))!;
+    const unaware = (await unlockMaster(PW, asClientWithoutRecovery(withRecovery)))!;
+    expect(unaware.master).toEqual(master);
+  });
+
+  it("proves the recovery wrap opens before returning a lock to persist", async () => {
+    const src = readFileSync(new URL("./password.ts", import.meta.url), "utf8");
+    const start = src.indexOf("export async function attachRecoveryWrap");
+    const end = src.indexOf("export async function unlockWithRecovery");
+    const fn = src.slice(start, end);
+    expect(fn).toContain("const recoveryWrap = await wrapDataKey(secret, dataKey)");
+    expect(fn).toContain("const recoveryProof = await unwrapDataKey(secret, recoveryWrap)");
+    expect(fn).toContain("timingSafeEqual(recoveryProof, dataKey)");
+    expect(fn.indexOf("unwrapDataKey(secret, recoveryWrap)")).toBeGreaterThan(-1);
+    expect(fn.indexOf("unwrapDataKey(secret, recoveryWrap)")).toBeLessThan(fn.indexOf("return { ...lock, recovery: recoveryWrap }"));
+    const { lock, master } = await newPasswordLock(PW);
+    const code = generateRecoveryCode();
+    const withRecovery = (await attachRecoveryWrap(lock, master, code, code))!;
+    expect(await unlockWithRecovery(code, withRecovery)).toEqual(master);
+  });
+
+  it("a wrong recovery code fails cleanly", async () => {
+    const { lock, master } = await newPasswordLock(PW);
+    const code = generateRecoveryCode();
+    const withRecovery = (await attachRecoveryWrap(lock, master, code, code))!;
+    const before = JSON.stringify(withRecovery);
+    expect(await unlockWithRecovery("WWWWW-WWWWW-WWWWW-WWWWW-WWWWW", withRecovery)).toBeNull();
+    expect(await unlockWithRecovery("not-a-recovery-code", withRecovery)).toBeNull();
+    expect(JSON.stringify(withRecovery)).toBe(before);
+    expect((await unlockMaster(PW, withRecovery))!.master).toEqual(master);
+    expect(await unlockWithRecovery(code, withRecovery)).toEqual(master);
+  });
+
+  it("generating a recovery code does not re-key the vault or modify wrap", async () => {
+    const { lock, master } = await newPasswordLock(PW);
+    const wrapBefore = { ...lock.wrap! };
+    const code = generateRecoveryCode();
+    const withRecovery = (await attachRecoveryWrap(lock, master, code, code))!;
+    expect(withRecovery.wrap).toEqual(wrapBefore);
+    expect(withRecovery.kdf).toBe(lock.kdf);
+    expect(withRecovery.salt).toBe(lock.salt);
+    expect(withRecovery.iterations).toBe(lock.iterations);
+    expect(withRecovery.hash).toBe(lock.hash);
+    expect(withRecovery.algo).toBe(lock.algo);
+    const rotated = await rewrapLock("second-password-here", master, withRecovery);
+    expect(rotated.recovery).toEqual(withRecovery.recovery);
+    expect(rotated.wrap).not.toEqual(wrapBefore);
+    expect(await unlockWithRecovery(code, rotated)).toEqual(master);
+    expect(await unlockMaster(PW, rotated)).toBeNull();
+  });
+
+  it("rewrapLock without previous drops recovery — that is the old client, still on the phone", async () => {
+    // Document, do not change the two-argument call. Circadia on a phone that has
+    // not updated still rebuilds the lock from known fields only. JSON round-trip
+    // of the parsed object keeps `recovery`; this reconstruct does not. Release
+    // two is both surfaces carrying previous through changePassword.
+    const { lock, master } = await newPasswordLock(PW);
+    const code = generateRecoveryCode();
+    const withRecovery = (await attachRecoveryWrap(lock, master, code, code))!;
+    expect(withRecovery.recovery).toBeTruthy();
+    const oldClient = await rewrapLock("second-password-here", master);
+    expect(oldClient.recovery).toBeUndefined();
+    expect(JSON.stringify(oldClient)).not.toContain("recovery");
+    expect(await unlockWithRecovery(code, oldClient)).toBeNull();
+    expect((await unlockMaster("second-password-here", oldClient))!.master).toEqual(master);
+  });
+
+  it("generates the recovery code from crypto.getRandomValues, never Math.random", () => {
+    const src = readFileSync(new URL("./password.ts", import.meta.url), "utf8");
+    const start = src.indexOf("export function generateRecoveryCode");
+    const end = src.indexOf("export async function attachRecoveryWrap");
+    const fn = src.slice(start, end);
+    expect(fn).toContain("crypto.getRandomValues");
+    expect(fn).not.toContain("Math.random");
+    const a = generateRecoveryCode();
+    const b = generateRecoveryCode();
+    expect(a).not.toBe(b);
+    expect(normalizeRecoveryCode(a)).toHaveLength(RECOVERY_CODE_CHARS);
+    expect(a).toMatch(new RegExp(`^[${CROCKFORD_ALPHABET}]{5}(-[${CROCKFORD_ALPHABET}]{5}){4}$`));
+    expect(a).not.toMatch(/[ILOU]/);
   });
 });
