@@ -36,3 +36,18 @@ After the suite is green and before the commit:
 The harness exists to catch what a single reader misses — it found the SMTP 4xx retry bug
 in `src/delivery.py` that the full suite passed over. A review step that runs only when
 someone remembers it is not a review step.
+
+## Who runs the gate
+
+The coding agent does not commit, merge, push, or open pull requests. It leaves
+completed work uncommitted in the working tree and reports what it changed.
+
+The harness gate is run by James, locally, before the work ships. An agent that
+cannot reach ~/projects/meeseeks-venv and ~/.meeseeks/API_CONFIG.env must say so
+and stop rather than treating the gate as waived — but it may still complete and
+report the work, because it is not the thing that ships it.
+
+## Findings are an artifact
+
+meeseeks/logs/ is gitignored, so findings.md is not preserved. After any gate run,
+copy the report to claude/findings-<version>.md and commit it with the change.
