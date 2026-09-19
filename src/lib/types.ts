@@ -88,6 +88,11 @@ export type MorningReport = {
   windDownHelped: WindDownHelp;
   dream?: DreamReport;
   createdAt: string;
+  /**
+   * The user chose a past date. Stored, never derived from createdAt vs morningDate —
+   * filing at 00:30 for last night is late by civil date but not by intent.
+   */
+  filedLate?: boolean;
 
   /**
    * Consensus Sleep Diary fields (Carney et al., Sleep 2012). All optional: nights
@@ -166,6 +171,53 @@ export type CircadiaState = {
    * Never synthesised from nights or from study.consented.
    */
   episode: Episode | null;
+  /** In-flight morning interview. Not a report. Null when nothing is mid-file. */
+  morningDraft: MorningDraft | null;
+  /** In-flight sleep intake (onboarding). Not a report. */
+  intakeDraft: IntakeDraft | null;
+};
+
+export type MorningDraft = {
+  morningDate: string;
+  step: number;
+  wokeAt?: string;
+  inBedAt?: string;
+  lightsOutSame?: boolean;
+  triedToSleepAt?: string;
+  getUpDelay?: number;
+  awakeningCount?: AwakeningCount;
+  napMinutes?: NapMinutes;
+  rating?: SleepRating;
+  drank?: boolean;
+  drinkCount?: number;
+  spins?: boolean;
+  screenOffMinutes?: ScreenOffMinutes;
+  sleepLatencyMinutes?: LatencyBucket;
+  wokeInNight?: boolean;
+  nightWakingMinutes?: NightWakingDuration;
+  usedSupplement?: boolean;
+  supplementKind?: SupplementKind;
+  supplementNote?: string;
+  windDownHelped?: WindDownHelp;
+  includeDream?: boolean;
+  dreamText?: string;
+  wantMeaning?: boolean;
+};
+
+export type IntakeProblem = "falling" | "staying" | "both";
+export type IntakePhase = "earlier" | "neither" | "later";
+
+export type IntakeDraft = {
+  step: number;
+  age?: string;
+  feet?: string;
+  inches?: string;
+  pounds?: string;
+  problem?: IntakeProblem;
+  phase?: IntakePhase;
+  wakeTime?: string;
+  stimulant?: string;
+  scheduledDays?: ScheduledDays;
 };
 
 export type AgeBand = "13-17" | "18-24" | "25-34" | "35-44" | "45-54" | "55-64" | "65+";

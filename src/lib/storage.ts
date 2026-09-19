@@ -30,7 +30,8 @@ import {
 import { fetchPackedDiary, resetPackedDiaryCacheForTests } from "@/lib/packed-diary";
 import { emptyDiskVault, mergeDiskVault, parseDiskVault, VAULT_DISK_VERSION, type DiskVault } from "@/lib/vault";
 import { mergeDiaryStates, morningsAdded } from "@/lib/diary-fold";
-import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG } from "@/lib/time";
+import { retainMorningDraft } from "@/lib/backfill";
+import { DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG, todayIsoDate } from "@/lib/time";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS, isCivilDate } from "@/lib/schedule";
 import { dedupeReportsByMorningDate } from "@/lib/morning-file";
 import { coerceChat, coerceConsultHistory, parkLiveConsult } from "@/lib/consult-threads";
@@ -41,7 +42,17 @@ import {
   type EpisodeState,
   type TreatmentWindow,
 } from "@/lib/episode";
-import type { CircadiaState, MorningReport, Profile, StudyState, StudyStatus } from "@/lib/types";
+import type {
+  CircadiaState,
+  IntakeDraft,
+  IntakePhase,
+  IntakeProblem,
+  MorningDraft,
+  MorningReport,
+  Profile,
+  StudyState,
+  StudyStatus,
+} from "@/lib/types";
 import { isClock, normalizeClock } from "@/lib/windows";
 
 /** Legacy single-file blob. Migrated once into the vault. */
@@ -146,6 +157,8 @@ export const emptyState = (): CircadiaState => ({
   demoWeek: false,
   study: emptyStudy(),
   episode: null,
+  morningDraft: null,
+  intakeDraft: null,
 });
 
 export function draftProfile(input: {
@@ -862,7 +875,7 @@ async function persistEncrypted(login: string, state: CircadiaState, gen: number
   if (writeGen.get(login) !== gen) return;
   const master = getMaster(login);
   if (!master) return;
-  const envelope = await encryptPayload(state, master, gen);
+  const envelope = await encryptPayload(persistableState(state), master, gen);
   if (writeGen.get(login) !== gen) return;
   const files = readRawVault();
   files[login] = envelope;
@@ -1179,8 +1192,19 @@ export async function changePassword(
   }
 }
 
+/** Null drafts are omitted so a diary with none serialises as it did before. */
+export function persistableState(state: CircadiaState): Record<string, unknown> {
+  const { morningDraft, intakeDraft, ...rest } = state;
+  const kept = retainMorningDraft(morningDraft, todayIsoDate(), state.reports, state.episode);
+  return {
+    ...rest,
+    ...(kept ? { morningDraft: kept } : {}),
+    ...(intakeDraft ? { intakeDraft } : {}),
+  };
+}
+
 export function exportState(state: CircadiaState): string {
-  return JSON.stringify(state, null, 2);
+  return JSON.stringify(persistableState(state), null, 2);
 }
 
 export function importStateJson(raw: string): CircadiaState {
@@ -1197,12 +1221,14 @@ export function hydrateState(parsed: unknown): CircadiaState {
     consultHistory: coerceConsultHistory(raw.consultHistory),
     activeConsultId: typeof raw.activeConsultId === "string" ? raw.activeConsultId : null,
   });
+  const reports = dedupeReportsByMorningDate(
+    Array.isArray(raw.reports) ? raw.reports.map(coerceReport).filter((r): r is MorningReport => r !== null) : [],
+  );
+  const episode = coerceEpisode(raw.episode);
   return {
     ...emptyState(),
     profile: coerceProfile(raw.profile),
-    reports: dedupeReportsByMorningDate(
-      Array.isArray(raw.reports) ? raw.reports.map(coerceReport).filter((r): r is MorningReport => r !== null) : [],
-    ),
+    reports,
     sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
     chat: parked.chat,
     activeConsultId: parked.activeConsultId,
@@ -1210,7 +1236,9 @@ export function hydrateState(parsed: unknown): CircadiaState {
     researchNotes: typeof raw.researchNotes === "string" ? raw.researchNotes : "",
     demoWeek: Boolean(raw.demoWeek),
     study: coerceStudy(raw.study),
-    episode: coerceEpisode(raw.episode),
+    episode,
+    morningDraft: retainMorningDraft(coerceMorningDraft(raw.morningDraft), todayIsoDate(), reports, episode),
+    intakeDraft: coerceIntakeDraft(raw.intakeDraft),
   };
 }
 
@@ -1318,7 +1346,7 @@ function coerceReport(value: unknown): MorningReport | null {
   }
   const rating = r.rating;
   if (rating !== 1 && rating !== 2 && rating !== 3 && rating !== 4 && rating !== 5) return null;
-  return {
+  const report: MorningReport = {
     id: typeof r.id === "string" ? r.id : r.morningDate,
     morningDate: r.morningDate,
     wokeAt: normalizeClock(r.wokeAt),
@@ -1351,6 +1379,196 @@ function coerceReport(value: unknown): MorningReport | null {
     awakeningCount: coerceAwakeningCount(r.awakeningCount),
     napMinutes: coerceNapMinutes(r.napMinutes),
   };
+  if (r.filedLate === true) report.filedLate = true;
+  return report;
+}
+
+function coerceMorningDraft(value: unknown): MorningDraft | null {
+  if (value === null || value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const d = value as Record<string, unknown>;
+  if ("id" in d || "createdAt" in d) return null;
+  if (typeof d.morningDate !== "string" || !isCivilDate(d.morningDate)) return null;
+  if (typeof d.step !== "number" || !Number.isInteger(d.step) || d.step < 0) return null;
+  const draft: MorningDraft = { morningDate: d.morningDate, step: d.step };
+  if (d.wokeAt !== undefined) {
+    if (!isClock(d.wokeAt)) return null;
+    draft.wokeAt = normalizeClock(d.wokeAt);
+  }
+  if (d.inBedAt !== undefined) {
+    if (!isClock(d.inBedAt)) return null;
+    draft.inBedAt = normalizeClock(d.inBedAt);
+  }
+  if (d.triedToSleepAt !== undefined) {
+    if (!isClock(d.triedToSleepAt)) return null;
+    draft.triedToSleepAt = normalizeClock(d.triedToSleepAt);
+  }
+  if (d.lightsOutSame !== undefined) {
+    if (typeof d.lightsOutSame !== "boolean") return null;
+    draft.lightsOutSame = d.lightsOutSame;
+  }
+  if (d.getUpDelay !== undefined) {
+    if (typeof d.getUpDelay !== "number" || !Number.isInteger(d.getUpDelay) || d.getUpDelay < 0) return null;
+    draft.getUpDelay = d.getUpDelay;
+  }
+  if (d.awakeningCount !== undefined) {
+    const count = coerceAwakeningCount(d.awakeningCount);
+    if (count === undefined) return null;
+    draft.awakeningCount = count;
+  }
+  if (d.napMinutes !== undefined) {
+    const nap = coerceNapMinutes(d.napMinutes);
+    if (nap === undefined) return null;
+    draft.napMinutes = nap;
+  }
+  if (d.rating !== undefined) {
+    if (d.rating !== 1 && d.rating !== 2 && d.rating !== 3 && d.rating !== 4 && d.rating !== 5) return null;
+    draft.rating = d.rating;
+  }
+  if (d.drank !== undefined) {
+    if (typeof d.drank !== "boolean") return null;
+    draft.drank = d.drank;
+  }
+  if (d.drinkCount !== undefined) {
+    if (typeof d.drinkCount !== "number") return null;
+    draft.drinkCount = d.drinkCount;
+  }
+  if (d.spins !== undefined) {
+    if (typeof d.spins !== "boolean") return null;
+    draft.spins = d.spins;
+  }
+  if (d.screenOffMinutes !== undefined) {
+    if (
+      d.screenOffMinutes !== 0 &&
+      d.screenOffMinutes !== 15 &&
+      d.screenOffMinutes !== 30 &&
+      d.screenOffMinutes !== 45 &&
+      d.screenOffMinutes !== 60
+    ) {
+      return null;
+    }
+    draft.screenOffMinutes = d.screenOffMinutes;
+  }
+  if (d.sleepLatencyMinutes !== undefined) {
+    if (
+      d.sleepLatencyMinutes !== 5 &&
+      d.sleepLatencyMinutes !== 15 &&
+      d.sleepLatencyMinutes !== 30 &&
+      d.sleepLatencyMinutes !== 50 &&
+      d.sleepLatencyMinutes !== 75
+    ) {
+      return null;
+    }
+    draft.sleepLatencyMinutes = d.sleepLatencyMinutes;
+  }
+  if (d.wokeInNight !== undefined) {
+    if (typeof d.wokeInNight !== "boolean") return null;
+    draft.wokeInNight = d.wokeInNight;
+  }
+  if (d.nightWakingMinutes !== undefined) {
+    if (
+      d.nightWakingMinutes !== 0 &&
+      d.nightWakingMinutes !== 10 &&
+      d.nightWakingMinutes !== 25 &&
+      d.nightWakingMinutes !== 45 &&
+      d.nightWakingMinutes !== 70
+    ) {
+      return null;
+    }
+    draft.nightWakingMinutes = d.nightWakingMinutes;
+  }
+  if (d.usedSupplement !== undefined) {
+    if (typeof d.usedSupplement !== "boolean") return null;
+    draft.usedSupplement = d.usedSupplement;
+  }
+  if (d.supplementKind !== undefined) {
+    const kind = coerceSupplementKind(d.supplementKind);
+    if (!kind) return null;
+    draft.supplementKind = kind;
+  }
+  if (d.supplementNote !== undefined) {
+    if (typeof d.supplementNote !== "string") return null;
+    draft.supplementNote = d.supplementNote;
+  }
+  if (d.windDownHelped !== undefined) {
+    if (
+      d.windDownHelped !== "yes" &&
+      d.windDownHelped !== "a_bit" &&
+      d.windDownHelped !== "no" &&
+      d.windDownHelped !== "did_not_use"
+    ) {
+      return null;
+    }
+    draft.windDownHelped = d.windDownHelped;
+  }
+  if (d.includeDream !== undefined) {
+    if (typeof d.includeDream !== "boolean") return null;
+    draft.includeDream = d.includeDream;
+  }
+  if (d.dreamText !== undefined) {
+    if (typeof d.dreamText !== "string") return null;
+    draft.dreamText = d.dreamText;
+  }
+  if (d.wantMeaning !== undefined) {
+    if (typeof d.wantMeaning !== "boolean") return null;
+    draft.wantMeaning = d.wantMeaning;
+  }
+  return draft;
+}
+
+function coerceIntakeDraft(value: unknown): IntakeDraft | null {
+  if (value === null || value === undefined) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const d = value as Record<string, unknown>;
+  if ("id" in d || "createdAt" in d) return null;
+  if (typeof d.step !== "number" || !Number.isInteger(d.step) || d.step < 0) return null;
+  const draft: IntakeDraft = { step: d.step };
+  if (d.age !== undefined) {
+    if (typeof d.age !== "string") return null;
+    draft.age = d.age;
+  }
+  if (d.feet !== undefined) {
+    if (typeof d.feet !== "string") return null;
+    draft.feet = d.feet;
+  }
+  if (d.inches !== undefined) {
+    if (typeof d.inches !== "string") return null;
+    draft.inches = d.inches;
+  }
+  if (d.pounds !== undefined) {
+    if (typeof d.pounds !== "string") return null;
+    draft.pounds = d.pounds;
+  }
+  if (d.problem !== undefined) {
+    if (d.problem !== "falling" && d.problem !== "staying" && d.problem !== "both") return null;
+    draft.problem = d.problem as IntakeProblem;
+  }
+  if (d.phase !== undefined) {
+    if (d.phase !== "earlier" && d.phase !== "neither" && d.phase !== "later") return null;
+    draft.phase = d.phase as IntakePhase;
+  }
+  if (d.wakeTime !== undefined) {
+    if (!isClock(d.wakeTime)) return null;
+    draft.wakeTime = normalizeClock(d.wakeTime);
+  }
+  if (d.stimulant !== undefined) {
+    if (typeof d.stimulant !== "string") return null;
+    draft.stimulant = d.stimulant;
+  }
+  if (d.scheduledDays !== undefined) {
+    if (!Array.isArray(d.scheduledDays) || d.scheduledDays.length !== 7) return null;
+    if (!d.scheduledDays.every((flag) => typeof flag === "boolean")) return null;
+    draft.scheduledDays = [
+      d.scheduledDays[0],
+      d.scheduledDays[1],
+      d.scheduledDays[2],
+      d.scheduledDays[3],
+      d.scheduledDays[4],
+      d.scheduledDays[5],
+      d.scheduledDays[6],
+    ];
+  }
+  return draft;
 }
 
 function isIsoTimestamp(value: unknown): value is string {

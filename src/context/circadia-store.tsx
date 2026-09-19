@@ -43,13 +43,14 @@ import {
 import { isPhoneNative } from "@/lib/phone-native";
 import { assertSendable, buildStudyPack } from "@/lib/study";
 import { postInbox, STUDY_HELD_ERROR } from "@/lib/study-client";
+import { applyBackfill, retainMorningDraft } from "@/lib/backfill";
 import {
   reportForMorning,
   upsertMorningReport,
   withdrawMorningReport,
 } from "@/lib/morning-file";
-import type { CircadiaState, MorningReport, Profile, WindDownSession } from "@/lib/types";
-import { formatClock, newId, screenOffClock } from "@/lib/time";
+import type { CircadiaState, IntakeDraft, MorningDraft, MorningReport, Profile, WindDownSession } from "@/lib/types";
+import { formatClock, newId, screenOffClock, todayIsoDate } from "@/lib/time";
 import type { DiskVault } from "@/lib/vault";
 
 export type AuthResult = { ok: true } | { ok: false; error: string };
@@ -264,6 +265,8 @@ type CircadiaContextValue = {
   changePassword: (current: string, next: string, confirm: string) => Promise<AuthResult>;
   saveProfile: (profile: Profile) => void;
   addReport: (report: Omit<MorningReport, "id" | "createdAt">) => void;
+  saveMorningDraft: (draft: MorningDraft | null) => void;
+  saveIntakeDraft: (draft: IntakeDraft | null) => void;
   withdrawMorning: (morningDate: string) => void;
   addSession: (session: Omit<WindDownSession, "id">) => void;
   sendChat: (text: string) => void;
@@ -297,6 +300,8 @@ const NOOP_VALUE: CircadiaContextValue = {
   changePassword: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
   saveProfile: noop,
   addReport: noop,
+  saveMorningDraft: noop,
+  saveIntakeDraft: noop,
   withdrawMorning: noop,
   addSession: noop,
   sendChat: noop,
@@ -458,22 +463,47 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     let shouldSend = false;
     patch((prev) => {
       shouldSend = Boolean(prev.study.consented && !prev.demoWeek);
+      const today = todayIsoDate();
       const existing = reportForMorning(prev.reports, report.morningDate);
       const full: MorningReport = {
         ...report,
         id: existing?.id ?? newId(),
         createdAt: new Date().toISOString(),
       };
+      if (full.morningDate < today || full.filedLate) {
+        const reports = applyBackfill(prev.reports, full, today, prev.episode);
+        if (reports === prev.reports) {
+          shouldSend = false;
+          return prev;
+        }
+        return { ...prev, demoWeek: false, reports, morningDraft: null };
+      }
       return {
         ...prev,
         demoWeek: false,
         reports: upsertMorningReport(prev.reports, full),
+        morningDraft: null,
       };
     });
     if (shouldSend) {
       if (!snapshot().study.rosterSentAt) void transmitRoster();
       void transmitStudy();
     }
+  }, []);
+
+  const saveMorningDraft = useCallback((draft: MorningDraft | null) => {
+    patch((prev) => {
+      const kept = retainMorningDraft(draft, todayIsoDate(), prev.reports, prev.episode);
+      if (JSON.stringify(prev.morningDraft) === JSON.stringify(kept)) return prev;
+      return { ...prev, morningDraft: kept };
+    });
+  }, []);
+
+  const saveIntakeDraft = useCallback((draft: IntakeDraft | null) => {
+    patch((prev) => {
+      if (JSON.stringify(prev.intakeDraft) === JSON.stringify(draft)) return prev;
+      return { ...prev, intakeDraft: draft };
+    });
   }, []);
 
   const withdrawMorning = useCallback((morningDate: string) => {
@@ -680,6 +710,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       changePassword,
       saveProfile,
       addReport,
+      saveMorningDraft,
+      saveIntakeDraft,
       withdrawMorning,
       addSession,
       sendChat,
@@ -707,6 +739,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       changePassword,
       saveProfile,
       addReport,
+      saveMorningDraft,
+      saveIntakeDraft,
       withdrawMorning,
       addSession,
       sendChat,

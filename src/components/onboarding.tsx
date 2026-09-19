@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -18,13 +18,13 @@ import {
 import { ScheduledDaysPicker } from "@/components/scheduled-days-picker";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS } from "@/lib/schedule";
 import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
-import type { Profile, Struggle } from "@/lib/types";
+import type { IntakeDraft, IntakePhase, IntakeProblem, Profile, Struggle } from "@/lib/types";
 import { normalizeClock } from "@/lib/windows";
 import { useCircadia } from "@/context/circadia-store";
 import { hapticSelect } from "@/lib/haptics";
 
-type Phase = "earlier" | "neither" | "later";
-type Problem = "falling" | "staying" | "both";
+type Phase = IntakePhase;
+type Problem = IntakeProblem;
 
 const PHASE_WAKE: Record<Phase, string> = {
   earlier: "06:30",
@@ -78,24 +78,29 @@ const INTAKE = [
 ] as const;
 
 export function Onboarding() {
-  const { saveProfile, state } = useCircadia();
+  const { saveProfile, saveIntakeDraft, state } = useCircadia();
   const existing = state.profile;
-  const [step, setStep] = useState(0);
-  const [age, setAge] = useState(existing?.age ? String(existing.age) : "19");
-  const [feet, setFeet] = useState("5");
-  const [inches, setInches] = useState("10");
-  const [pounds, setPounds] = useState("145");
-  const [problem, setProblem] = useState<Problem>("falling");
-  const [phase, setPhase] = useState<Phase>("neither");
-  const [wakeTime, setWakeTime] = useState(PHASE_WAKE.neither);
-  const [stimulant, setStimulant] = useState("");
+  const stored = state.intakeDraft;
+  const closed = useRef(false);
+  const [step, setStep] = useState(stored?.step ?? 0);
+  const [age, setAge] = useState(stored?.age ?? (existing?.age ? String(existing.age) : "19"));
+  const [feet, setFeet] = useState(stored?.feet ?? "5");
+  const [inches, setInches] = useState(stored?.inches ?? "10");
+  const [pounds, setPounds] = useState(stored?.pounds ?? "145");
+  const [problem, setProblem] = useState<Problem>(stored?.problem ?? "falling");
+  const [phase, setPhase] = useState<Phase>(stored?.phase ?? "neither");
+  const [wakeTime, setWakeTime] = useState(stored?.wakeTime ?? PHASE_WAKE.neither);
+  const [stimulant, setStimulant] = useState(stored?.stimulant ?? "");
   const [scheduledDays, setScheduledDays] = useState(() =>
-    existing?.scheduledDays
-      ? coerceScheduledDays(existing.scheduledDays)
-      : copyScheduledDays(DEFAULT_SCHEDULED_DAYS),
+    stored?.scheduledDays
+      ? coerceScheduledDays(stored.scheduledDays)
+      : existing?.scheduledDays
+        ? coerceScheduledDays(existing.scheduledDays)
+        : copyScheduledDays(DEFAULT_SCHEDULED_DAYS),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pickingUp = Boolean(stored && stored.step > 0);
 
   const ageNum = Math.min(90, Math.max(13, Number(age) || 19));
   const duration = targetDurationMinutes(ageNum);
@@ -123,7 +128,15 @@ export function Onboarding() {
     return kg >= 30 ? kg : DEFAULT_WEIGHT_KG;
   }
 
+  useEffect(() => {
+    if (closed.current) return;
+    const draft: IntakeDraft = { step, age, feet, inches, pounds, problem, phase, wakeTime, stimulant, scheduledDays };
+    saveIntakeDraft(draft);
+  }, [age, feet, inches, phase, pounds, problem, saveIntakeDraft, scheduledDays, step, stimulant, wakeTime]);
+
   async function finish() {
+    closed.current = true;
+    saveIntakeDraft(null);
     setBusy(true);
     setError(null);
     // No permission prompt here. iOS asks once, and asked on the install screen most
@@ -180,6 +193,9 @@ export function Onboarding() {
         <p className="text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">
           {INTAKE[step].title}
         </p>
+        {pickingUp ? (
+          <p className="mt-3 text-[13px] leading-relaxed text-sky-200/90">Picking up where you left off.</p>
+        ) : null}
 
         {step === 0 && (
           <section className="mt-5">
@@ -335,6 +351,32 @@ export function Onboarding() {
             className="h-14 min-w-24 rounded-full border border-white/12 px-6 text-[17px] font-medium text-zinc-200"
           >
             Back
+          </button>
+        ) : null}
+        {pickingUp ? (
+          <button
+            type="button"
+            onClick={() => {
+              void hapticSelect();
+              saveIntakeDraft(null);
+              setStep(0);
+              setAge(existing?.age ? String(existing.age) : "19");
+              setFeet("5");
+              setInches("10");
+              setPounds("145");
+              setProblem("falling");
+              setPhase("neither");
+              setWakeTime(PHASE_WAKE.neither);
+              setStimulant("");
+              setScheduledDays(
+                existing?.scheduledDays
+                  ? coerceScheduledDays(existing.scheduledDays)
+                  : copyScheduledDays(DEFAULT_SCHEDULED_DAYS),
+              );
+            }}
+            className="h-14 min-w-24 rounded-full px-4 text-[15px] font-medium text-zinc-400"
+          >
+            Discard draft
           </button>
         ) : null}
         {step < 5 ? (
