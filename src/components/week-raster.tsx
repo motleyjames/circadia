@@ -8,6 +8,7 @@ import {
   type ScoredNight,
 } from "@/lib/sleep-metrics";
 import { clockToMinutes, formatClock, formatDuration, minutesToClock } from "@/lib/time";
+import { isFiledLate } from "@/lib/backfill";
 import type { Profile } from "@/lib/types";
 
 /**
@@ -208,8 +209,9 @@ export function WeekRaster({
           const dim = openIndex !== null && openIndex !== i;
           return (
             <g key={row.night.report.id} opacity={dim ? 0.38 : 1}>
-              <text x={0} y={y + BAR_H / 2 + 4} fill="#a1a1aa" fontSize="11.5">
+              <text x={0} y={y + BAR_H / 2 + 4} fill={isFiledLate(row.night.report) ? "#fde68a" : "#a1a1aa"} fontSize="11.5">
                 {row.label}
+                {isFiledLate(row.night.report) ? "*" : ""}
               </text>
               <rect
                 x={x(row.bedStart)}
@@ -236,7 +238,7 @@ export function WeekRaster({
                 fill="transparent"
                 tabIndex={0}
                 role="button"
-                aria-label={`${row.label}: in bed ${formatClock(row.night.report.inBedAt!, units)}, asleep ${formatDuration(row.night.geometry.totalSleepMinutes)}, efficiency ${Math.round(row.night.geometry.efficiencyPct)} percent`}
+                aria-label={`${row.label}${isFiledLate(row.night.report) ? " filed late" : ""}: in bed ${formatClock(row.night.report.inBedAt!, units)}, asleep ${formatDuration(row.night.geometry.totalSleepMinutes)}, efficiency ${Math.round(row.night.geometry.efficiencyPct)} percent`}
                 aria-describedby={`${uid}-detail`}
                 className="cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300"
                 onMouseEnter={() => setOpenIndex(i)}
@@ -268,6 +270,11 @@ export function WeekRaster({
             />
             In bed, awake
           </span>
+          {nights.some((night) => isFiledLate(night.report)) ? (
+            <span className="inline-flex items-center gap-2 text-amber-200/90">
+              * filed late, from memory
+            </span>
+          ) : null}
         </div>
         <p
           id={`${uid}-detail`}
@@ -437,6 +444,7 @@ export function NightTable({
               <tr key={night.report.id} className="border-t border-white/6 text-zinc-300">
                 <th scope="row" className={`${cell} text-left font-normal text-zinc-100`}>
                   {weekdayLabel(night.report.morningDate)}
+                  {isFiledLate(night.report) ? " · late" : ""}
                 </th>
                 <td className={`${cell} text-zinc-100`}>
                   {Math.round(night.geometry.efficiencyPct)}%

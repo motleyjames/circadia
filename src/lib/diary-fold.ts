@@ -1,6 +1,8 @@
+import { retainMorningDraft } from "@/lib/backfill";
 import { upsertConsult } from "@/lib/consult-threads";
 import type { Episode } from "@/lib/episode";
 import { dedupeReportsByMorningDate } from "@/lib/morning-file";
+import { todayIsoDate } from "@/lib/time";
 import type { CircadiaState, WindDownSession } from "@/lib/types";
 
 export type EpisodeFoldConflict = {
@@ -58,6 +60,7 @@ export function mergeDiaryStates(local: CircadiaState, incoming: CircadiaState):
     researchNotes: incomingNotes.length > localNotes.length ? incoming.researchNotes : local.researchNotes,
     demoWeek: local.demoWeek && incoming.demoWeek,
     episode: folded.episode,
+    morningDraft: retainMorningDraft(local.morningDraft, todayIsoDate(), reports, folded.episode),
   };
 }
 

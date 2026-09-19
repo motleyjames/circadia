@@ -25,5 +25,32 @@
     "replace": "  if (!window) return null;\n  if (!isClock(report.outOfBedAt)) return null;\n  const actualInBed = report.inBedAt ?? report.fellAsleepAt;\n",
     "testFile": "src/lib/episode.test.ts",
     "testName": "names missing clocks separately from no window, and never falls back to sleep onset"
+  },
+  {
+    "id": "backfill-drops-filedLate",
+    "why": "applyBackfill copies incoming.filedLate instead of storing true. A past-date write can then land without the marker, so the raster treats recall as a same-day diary row.",
+    "file": "src/lib/backfill.ts",
+    "find": "  return upsertMorningReport(reports, { ...incoming, filedLate: true });\n",
+    "replace": "  return upsertMorningReport(reports, { ...incoming, filedLate: incoming.filedLate });\n",
+    "testFile": "src/lib/backfill.test.ts",
+    "testName": "stores filedLate even when the incoming row omitted or denied it"
+  },
+  {
+    "id": "backfillable-includes-today",
+    "why": "The offer list starts at today instead of yesterday, so back-fill can present the current morning as a late night.",
+    "file": "src/lib/backfill.ts",
+    "find": "  for (let i = 1; i <= BACKFILL_NIGHTS; i += 1) {\n    const date = shiftIsoDate(today, -i);\n    if (!date) continue;\n    if (date >= today) continue;\n",
+    "replace": "  for (let i = 0; i <= BACKFILL_NIGHTS; i += 1) {\n    const date = shiftIsoDate(today, -i);\n    if (!date) continue;\n    if (date > today) continue;\n",
+    "testFile": "src/lib/backfill.test.ts",
+    "testName": "never returns today, never a date with an existing report, and never a date outside the window"
+  },
+  {
+    "id": "backfill-overwrites-existing",
+    "why": "applyBackfill drops the exist-check, so a late filing replaces a completed night with recall. The grid then shows a filled row that is not what it claims to be.",
+    "file": "src/lib/backfill.ts",
+    "find": "  if (reportForMorning(reports, incoming.morningDate)) return reports;\n",
+    "replace": "  if (false && reportForMorning(reports, incoming.morningDate)) return reports;\n",
+    "testFile": "src/lib/backfill.test.ts",
+    "testName": "refuses a date that already has a page, even if the caller asks"
   }
 ]

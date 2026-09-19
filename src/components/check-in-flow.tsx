@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DiaryLink } from "@/components/diary-tab-link";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup, YesNo } from "@/components/bubbles";
@@ -8,9 +8,11 @@ import { MorningFile } from "@/components/morning-file";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { backfillableDates } from "@/lib/backfill";
 import type {
   AwakeningCount,
   LatencyBucket,
+  MorningDraft,
   MorningReport,
   NapMinutes,
   NightWakingDuration,
@@ -33,30 +35,49 @@ const BED_TIMES = ["21:00", "21:30", "22:00", "22:30", "23:00", "23:30", "00:00"
 const GET_UP_DELAYS = [0, 10, 20, 45, 90] as const;
 
 export function CheckInFlow() {
-  const { state, withdrawMorning } = useCircadia();
+  const { state, withdrawMorning, saveMorningDraft } = useCircadia();
   // Captured once. This was `todayIsoDate()` evaluated on every render, so an
   // interview begun before midnight and finished after it was written to the next
   // day — mis-attributing the night and permanently blocking the real morning.
   const [today] = useState(() => todayIsoDate());
   const existing = reportForMorning(state.reports, today);
+  const missed = backfillableDates(today, state.reports, state.episode);
   const [revising, setRevising] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [filingDate, setFilingDate] = useState<string | null>(null);
+  const [interviewKey, setInterviewKey] = useState(0);
+  const late = Boolean(filingDate);
+  const interviewDate = filingDate ?? today;
 
   return (
     <>
-      {existing && !revising ? (
-        <MorningFile
-          report={existing}
-          units={state.profile?.units ?? "imperial"}
-          demoWeek={state.demoWeek}
-          onCorrect={() => setRevising(true)}
-          onWithdraw={() => setWithdrawOpen(true)}
-        />
+      {existing && !revising && !late ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <MorningFile
+            report={existing}
+            units={state.profile?.units ?? "imperial"}
+            demoWeek={state.demoWeek}
+            onCorrect={() => setRevising(true)}
+            onWithdraw={() => setWithdrawOpen(true)}
+          />
+          <div className="px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <MissedMornings dates={missed} onPick={setFilingDate} />
+          </div>
+        </div>
       ) : (
         <MorningInterview
-          key={existing ? `revise-${existing.id}` : "fresh"}
-          existing={existing}
-          onCancel={existing ? () => setRevising(false) : undefined}
+          key={late ? `late-${interviewDate}-${interviewKey}` : existing ? `revise-${existing.id}` : `fresh-${interviewKey}`}
+          morningDate={interviewDate}
+          filedLate={late}
+          existing={late ? null : existing}
+          missedDates={late ? [] : missed}
+          onPickMissed={setFilingDate}
+          onDiscardDraft={() => {
+            saveMorningDraft(null);
+            setFilingDate(null);
+            setInterviewKey((n) => n + 1);
+          }}
+          onCancel={late ? () => setFilingDate(null) : existing ? () => setRevising(false) : undefined}
         />
       )}
       <ConfirmDialog
@@ -73,15 +94,27 @@ export function CheckInFlow() {
 }
 
 function MorningInterview({
+  morningDate,
+  filedLate,
   existing,
+  missedDates,
+  onPickMissed,
+  onDiscardDraft,
   onCancel,
 }: {
+  morningDate: string;
+  filedLate: boolean;
   existing: MorningReport | null;
+  missedDates: string[];
+  onPickMissed: (date: string) => void;
+  onDiscardDraft: () => void;
   onCancel?: () => void;
 }) {
-  const { state, addReport } = useCircadia();
-  const today = todayIsoDate();
+  const { state, addReport, saveMorningDraft } = useCircadia();
+  const today = morningDate;
   const priorNight = shiftIsoDate(today, -1);
+  const stored = state.morningDraft?.morningDate === morningDate ? state.morningDraft : null;
+  const closed = useRef(false);
   const usedWindDown = state.sessions.some(
     (s) => s.startedAt.slice(0, 10) === priorNight || s.startedAt.slice(0, 10) === today,
   );
@@ -89,44 +122,118 @@ function MorningInterview({
   // Bedtime barely moves for most people, so last night's answer is offered as the
   // default rather than asked cold. Confirm-or-correct is the whole tap budget.
   const lastNight = useMemo(
-    () => [...state.reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate)).at(-1),
-    [state.reports],
+    () => (filedLate ? undefined : [...state.reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate)).at(-1)),
+    [filedLate, state.reports],
   );
 
-  const [step, setStep] = useState(0);
-  const [wokeAt, setWokeAt] = useState(existing?.wokeAt ?? clockFromDate(new Date()));
+  const [step, setStep] = useState(stored?.step ?? 0);
+  const [wokeAt, setWokeAt] = useState(existing?.wokeAt ?? stored?.wokeAt ?? clockFromDate(new Date()));
   // Consensus Sleep Diary geometry. `fellAsleepAt` is no longer asked — nobody can
   // report the clock time they fell asleep, and asking teaches clock-watching. It
   // is derived from lights-out plus latency at save time.
-  const [inBedAt, setInBedAt] = useState(existing?.inBedAt ?? lastNight?.inBedAt ?? state.profile?.targetSleep ?? "23:00");
+  const [inBedAt, setInBedAt] = useState(
+    existing?.inBedAt ?? stored?.inBedAt ?? lastNight?.inBedAt ?? state.profile?.targetSleep ?? "23:00",
+  );
   const [lightsOutSame, setLightsOutSame] = useState(
-    existing ? (existing.triedToSleepAt ?? existing.inBedAt) === existing.inBedAt : true,
+    existing
+      ? (existing.triedToSleepAt ?? existing.inBedAt) === existing.inBedAt
+      : stored?.lightsOutSame ?? true,
   );
-  const [triedToSleepAt, setTriedToSleepAt] = useState(existing?.triedToSleepAt ?? existing?.inBedAt ?? state.profile?.targetSleep ?? "23:00");
+  const [triedToSleepAt, setTriedToSleepAt] = useState(
+    existing?.triedToSleepAt ?? existing?.inBedAt ?? stored?.triedToSleepAt ?? state.profile?.targetSleep ?? "23:00",
+  );
   const [getUpDelay, setGetUpDelay] = useState<number | undefined>(
-    existing?.outOfBedAt ? overnightDuration(existing.wokeAt, existing.outOfBedAt) : undefined,
+    existing?.outOfBedAt ? overnightDuration(existing.wokeAt, existing.outOfBedAt) : stored?.getUpDelay,
   );
-  const [awakeningCount, setAwakeningCount] = useState<AwakeningCount | undefined>(existing?.awakeningCount);
-  const [napMinutes, setNapMinutes] = useState<NapMinutes | undefined>(existing?.napMinutes);
-  const [rating, setRating] = useState<SleepRating | undefined>(existing?.rating);
-  const [drank, setDrank] = useState<boolean | undefined>(existing?.drank);
-  const [drinkCount, setDrinkCount] = useState<number | undefined>(existing?.drinkCount);
-  const [spins, setSpins] = useState<boolean | undefined>(existing?.spins);
-  const [screenOffMinutes, setScreenOffMinutes] = useState<ScreenOffMinutes | undefined>(existing?.screenOffMinutes);
-  const [sleepLatencyMinutes, setSleepLatencyMinutes] = useState<LatencyBucket | undefined>(existing?.sleepLatencyMinutes);
-  const [wokeInNight, setWokeInNight] = useState<boolean | undefined>(existing?.wokeInNight);
-  const [nightWakingMinutes, setNightWakingMinutes] = useState<NightWakingDuration>(existing?.nightWakingMinutes ?? 25);
-  const [usedSupplement, setUsedSupplement] = useState<boolean | undefined>(existing?.usedSupplement);
-  const [supplementKind, setSupplementKind] = useState<SupplementKind | undefined>(existing?.supplementKind);
-  const [supplementNote, setSupplementNote] = useState(existing?.supplementNote ?? "");
+  const [awakeningCount, setAwakeningCount] = useState<AwakeningCount | undefined>(
+    existing?.awakeningCount ?? stored?.awakeningCount,
+  );
+  const [napMinutes, setNapMinutes] = useState<NapMinutes | undefined>(existing?.napMinutes ?? stored?.napMinutes);
+  const [rating, setRating] = useState<SleepRating | undefined>(existing?.rating ?? stored?.rating);
+  const [drank, setDrank] = useState<boolean | undefined>(existing?.drank ?? stored?.drank);
+  const [drinkCount, setDrinkCount] = useState<number | undefined>(existing?.drinkCount ?? stored?.drinkCount);
+  const [spins, setSpins] = useState<boolean | undefined>(existing?.spins ?? stored?.spins);
+  const [screenOffMinutes, setScreenOffMinutes] = useState<ScreenOffMinutes | undefined>(
+    existing?.screenOffMinutes ?? stored?.screenOffMinutes,
+  );
+  const [sleepLatencyMinutes, setSleepLatencyMinutes] = useState<LatencyBucket | undefined>(
+    existing?.sleepLatencyMinutes ?? stored?.sleepLatencyMinutes,
+  );
+  const [wokeInNight, setWokeInNight] = useState<boolean | undefined>(existing?.wokeInNight ?? stored?.wokeInNight);
+  const [nightWakingMinutes, setNightWakingMinutes] = useState<NightWakingDuration>(
+    existing?.nightWakingMinutes ?? stored?.nightWakingMinutes ?? 25,
+  );
+  const [usedSupplement, setUsedSupplement] = useState<boolean | undefined>(
+    existing?.usedSupplement ?? stored?.usedSupplement,
+  );
+  const [supplementKind, setSupplementKind] = useState<SupplementKind | undefined>(
+    existing?.supplementKind ?? stored?.supplementKind,
+  );
+  const [supplementNote, setSupplementNote] = useState(existing?.supplementNote ?? stored?.supplementNote ?? "");
   const [windDownHelped, setWindDownHelped] = useState<WindDownHelp | undefined>(
-    existing?.windDownHelped ?? (usedWindDown ? undefined : "did_not_use"),
+    existing?.windDownHelped ?? stored?.windDownHelped ?? (usedWindDown ? undefined : "did_not_use"),
   );
-  const [includeDream, setIncludeDream] = useState(Boolean(existing?.dream));
-  const [dreamText, setDreamText] = useState(existing?.dream?.text ?? "");
-  const [wantMeaning, setWantMeaning] = useState(existing?.dream?.wantMeaning ?? false);
+  const [includeDream, setIncludeDream] = useState(Boolean(existing?.dream) || Boolean(stored?.includeDream));
+  const [dreamText, setDreamText] = useState(existing?.dream?.text ?? stored?.dreamText ?? "");
+  const [wantMeaning, setWantMeaning] = useState(existing?.dream?.wantMeaning ?? stored?.wantMeaning ?? false);
+  const pickingUp = Boolean(stored && (stored.step > 0 || stored.rating !== undefined || stored.inBedAt));
 
   const units = state.profile?.units ?? "imperial";
+
+  useEffect(() => {
+    if (closed.current || existing) return;
+    const draft: MorningDraft = { morningDate, step };
+    if (wokeAt) draft.wokeAt = wokeAt;
+    if (inBedAt) draft.inBedAt = inBedAt;
+    draft.lightsOutSame = lightsOutSame;
+    if (triedToSleepAt) draft.triedToSleepAt = triedToSleepAt;
+    if (getUpDelay !== undefined) draft.getUpDelay = getUpDelay;
+    if (awakeningCount !== undefined) draft.awakeningCount = awakeningCount;
+    if (napMinutes !== undefined) draft.napMinutes = napMinutes;
+    if (rating !== undefined) draft.rating = rating;
+    if (drank !== undefined) draft.drank = drank;
+    if (drinkCount !== undefined) draft.drinkCount = drinkCount;
+    if (spins !== undefined) draft.spins = spins;
+    if (screenOffMinutes !== undefined) draft.screenOffMinutes = screenOffMinutes;
+    if (sleepLatencyMinutes !== undefined) draft.sleepLatencyMinutes = sleepLatencyMinutes;
+    if (wokeInNight !== undefined) draft.wokeInNight = wokeInNight;
+    draft.nightWakingMinutes = nightWakingMinutes;
+    if (usedSupplement !== undefined) draft.usedSupplement = usedSupplement;
+    if (supplementKind) draft.supplementKind = supplementKind;
+    if (supplementNote) draft.supplementNote = supplementNote;
+    if (windDownHelped) draft.windDownHelped = windDownHelped;
+    draft.includeDream = includeDream;
+    if (dreamText) draft.dreamText = dreamText;
+    draft.wantMeaning = wantMeaning;
+    saveMorningDraft(draft);
+  }, [
+    awakeningCount,
+    drank,
+    dreamText,
+    drinkCount,
+    existing,
+    getUpDelay,
+    inBedAt,
+    includeDream,
+    lightsOutSame,
+    morningDate,
+    napMinutes,
+    nightWakingMinutes,
+    rating,
+    saveMorningDraft,
+    screenOffMinutes,
+    sleepLatencyMinutes,
+    spins,
+    step,
+    supplementKind,
+    supplementNote,
+    triedToSleepAt,
+    usedSupplement,
+    wantMeaning,
+    windDownHelped,
+    wokeAt,
+    wokeInNight,
+  ]);
 
   const steps = useMemo(() => {
     // In the order the night happened — recall is markedly better that way than
@@ -207,6 +314,7 @@ function MorningInterview({
       setSaveError("This morning is already filed. Open it from Notes to change an answer.");
       return;
     }
+    closed.current = true;
     setSaveError(null);
     const lightsOut = lightsOutSame ? inBedAt : triedToSleepAt;
     const payload: Omit<MorningReport, "id" | "createdAt"> = {
@@ -247,16 +355,26 @@ function MorningInterview({
   return (
     <div className="phone-page-y flex min-h-0 flex-1 flex-col px-5 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">
-        {existing ? "Correcting this morning" : "Morning interview"}
+        {existing ? "Correcting this morning" : filedLate ? "Missed morning" : "Morning interview"}
       </p>
       <h1 className="font-heading mt-1 text-2xl text-zinc-50">
-        {existing ? "Same date. New answers." : "About forty seconds. Rough answers are fine — close beats exact."}
+        {existing
+          ? "Same date. New answers."
+          : filedLate
+            ? "From memory. Marked as late so the grid can tell."
+            : "About forty seconds. Rough answers are fine — close beats exact."}
       </h1>
       <p className="mt-1 text-xs text-zinc-500">
         {existing
           ? `${formatMorningDate(today)} · same page, new answers.`
-          : `${formatMorningDate(today)} · one page.`}
+          : filedLate
+            ? `${formatMorningDate(today)} · filed late.`
+            : `${formatMorningDate(today)} · one page.`}
       </p>
+      {pickingUp ? (
+        <p className="mt-3 text-[13px] leading-relaxed text-sky-200/90">Picking up where you left off.</p>
+      ) : null}
+      {!existing && !filedLate ? <MissedMornings dates={missedDates} onPick={onPickMissed} /> : null}
       {!existing && state.reports.length === 0 ? (
         <p className="mt-3 max-w-[44ch] text-[12px] leading-relaxed text-zinc-500">
           Already filed on the other Circadia?{" "}
@@ -615,7 +733,7 @@ function MorningInterview({
         <button
           type="button"
           className="rounded-full px-4 py-2 text-[17px] text-sky-300 disabled:opacity-30"
-          disabled={step === 0 && !onCancel}
+          disabled={step === 0 && !onCancel && !pickingUp}
           onClick={() => {
             void hapticSelect();
             if (step === 0 && onCancel) {
@@ -627,6 +745,19 @@ function MorningInterview({
         >
           {step === 0 && onCancel ? "Cancel" : "Back"}
         </button>
+        {pickingUp && !existing ? (
+          <button
+            type="button"
+            className="rounded-full px-4 py-2 text-[15px] text-zinc-400"
+            onClick={() => {
+              void hapticSelect();
+              closed.current = true;
+              onDiscardDraft();
+            }}
+          >
+            Discard draft
+          </button>
+        ) : null}
         {step < steps.length - 1 ? (
           <button
             type="button"
@@ -654,6 +785,30 @@ function MorningInterview({
           {saveError}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function MissedMornings({ dates, onPick }: { dates: string[]; onPick: (date: string) => void }) {
+  if (dates.length === 0) return null;
+  return (
+    <div className="mt-4">
+      <p className="text-[12px] text-zinc-500">Missed a morning? File it from memory. It will be marked late.</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {dates.map((date) => (
+          <button
+            key={date}
+            type="button"
+            className="rounded-full border border-white/12 px-3 py-1.5 text-[13px] text-zinc-200"
+            onClick={() => {
+              void hapticSelect();
+              onPick(date);
+            }}
+          >
+            {formatMorningDate(date)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
