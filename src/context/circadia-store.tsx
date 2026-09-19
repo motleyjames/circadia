@@ -30,6 +30,7 @@ import {
   closeFile,
   createFile,
   emptyState,
+  enableRecovery as enableRecoveryOnFile,
   eraseCurrentFile,
   foldLockedVaultIntoSession,
   absorbPeerNights,
@@ -37,6 +38,7 @@ import {
   importStateJson,
   loadState,
   openFile,
+  recoverFile,
   saveState,
   bootVaultFromDisk,
 } from "@/lib/storage";
@@ -263,6 +265,8 @@ type CircadiaContextValue = {
   logOut: () => void;
   attachLogin: (contact: string, password: string, confirm: string) => Promise<AuthResult>;
   changePassword: (current: string, next: string, confirm: string) => Promise<AuthResult>;
+  saveRecoveryCode: (code: string, confirm: string) => Promise<AuthResult>;
+  recoverWithCode: (contact: string, code: string) => Promise<AuthResult>;
   saveProfile: (profile: Profile) => void;
   addReport: (report: Omit<MorningReport, "id" | "createdAt">) => void;
   saveMorningDraft: (draft: MorningDraft | null) => void;
@@ -298,6 +302,8 @@ const NOOP_VALUE: CircadiaContextValue = {
   logOut: noop,
   attachLogin: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
   changePassword: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
+  saveRecoveryCode: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
+  recoverWithCode: async () => ({ ok: false as const, error: AUTH_ERRORS.noop }),
   saveProfile: noop,
   addReport: noop,
   saveMorningDraft: noop,
@@ -643,6 +649,23 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const saveRecoveryCode = useCallback(async (code: string, confirm: string): Promise<AuthResult> => {
+    return enableRecoveryOnFile(code, confirm);
+  }, []);
+
+  const recoverWithCode = useCallback(async (contact: string, code: string): Promise<AuthResult> => {
+    try {
+      const result = await recoverFile(contact, code);
+      if (!result.ok) return result;
+      sessionMemory = result.login;
+      memory = result.state;
+      emit();
+      return { ok: true };
+    } catch {
+      return { ok: false, error: AUTH_ERRORS.recovery };
+    }
+  }, []);
+
   const resetAll = useCallback(() => {
     eraseCurrentFile();
     sessionMemory = null;
@@ -708,6 +731,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       logOut,
       attachLogin,
       changePassword,
+      saveRecoveryCode,
+      recoverWithCode,
       saveProfile,
       addReport,
       saveMorningDraft,
@@ -737,6 +762,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       logOut,
       attachLogin,
       changePassword,
+      saveRecoveryCode,
+      recoverWithCode,
       saveProfile,
       addReport,
       saveMorningDraft,

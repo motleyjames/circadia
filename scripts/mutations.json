@@ -52,5 +52,86 @@
     "replace": "  if (false && reportForMorning(reports, incoming.morningDate)) return reports;\n",
     "testFile": "src/lib/backfill.test.ts",
     "testName": "refuses a date that already has a page, even if the caller asks"
+  },
+  {
+    "id": "recovery-wraps-a-new-key",
+    "why": "attachRecoveryWrap encrypts a fresh random key instead of the live data key. The recovery door then opens a different room than the password, so a diary sealed before the recovery code existed cannot be read after recovery.",
+    "file": "src/lib/password.ts",
+    "find": "  const recoveryWrap = await wrapDataKey(secret, dataKey);\n",
+    "replace": "  const recoveryWrap = await wrapDataKey(secret, crypto.getRandomValues(new Uint8Array(32)));\n",
+    "testFile": "src/lib/password.test.ts",
+    "testName": "the recovery wrap yields the same data key as the password wrap"
+  },
+  {
+    "id": "recovery-code-written-to-lock",
+    "why": "The normalized recovery secret is stored on the lock next to the wrap. Anyone who can read localStorage then has the second door in plaintext.",
+    "file": "src/lib/password.ts",
+    "find": "  return { ...lock, recovery: recoveryWrap };\n",
+    "replace": "  return { ...lock, recovery: recoveryWrap, hint: secret };\n",
+    "testFile": "src/lib/password.test.ts",
+    "testName": "never writes the recovery code to disk, the vault, a log, or an error"
+  },
+  {
+    "id": "recovery-drops-password-wrap",
+    "why": "Adding a recovery wrap deletes wrap. The password then cannot open a kdf-3 lock, so installing recovery locks the user out of the door they already know.",
+    "file": "src/lib/password.ts",
+    "find": "  return { ...lock, recovery: recoveryWrap };\n",
+    "replace": "  return { ...lock, wrap: undefined, recovery: recoveryWrap };\n",
+    "testFile": "src/lib/password.test.ts",
+    "testName": "a lock with recovery still opens with the password"
+  },
+  {
+    "id": "recovery-breaks-unaware-client",
+    "why": "Adding recovery strips wrap and leaves kdf 3. A client that has never heard of recovery — the phone that has not updated yet — then treats the correct password as wrong.",
+    "file": "src/lib/password.ts",
+    "find": "  return { ...lock, recovery: recoveryWrap };\n",
+    "replace": "  return { ...lock, wrap: undefined, kdf: 3, recovery: recoveryWrap };\n",
+    "testFile": "src/lib/password.test.ts",
+    "testName": "a client unaware of recovery still opens the lock"
+  },
+  {
+    "id": "recovery-skips-unwrap-proof",
+    "why": "The recovery wrap is returned without proving it re-opens. An unopenable wrap would still be persisted, and the user would be told they are safe.",
+    "file": "src/lib/password.ts",
+    "find": "  const recoveryProof = await unwrapDataKey(secret, recoveryWrap);\n  if (!recoveryProof || !timingSafeEqual(recoveryProof, dataKey)) {\n    recoveryProof?.fill(0);\n    return null;\n  }\n  recoveryProof.fill(0);\n",
+    "replace": "  void dataKey;\n",
+    "testFile": "src/lib/password.test.ts",
+    "testName": "proves the recovery wrap opens before returning a lock to persist"
+  },
+  {
+    "id": "recovery-wrong-code-drops-wrap",
+    "why": "A wrong recovery code deletes the recovery wrap. One typo then destroys the second door, and a later attempt with the right code has nothing to open.",
+    "file": "src/lib/password.ts",
+    "find": "  return unwrapDataKey(normalized, lock.recovery);\n",
+    "replace": "  const opened = await unwrapDataKey(normalized, lock.recovery);\n  if (!opened) delete lock.recovery;\n  return opened;\n",
+    "testFile": "src/lib/password.test.ts",
+    "testName": "a wrong recovery code fails cleanly"
+  },
+  {
+    "id": "recovery-rewrites-password-wrap",
+    "why": "Generating a recovery code also rewrites wrap. The password door then no longer matches what is on disk, which is a silent re-key of the wrapping layer.",
+    "file": "src/lib/password.ts",
+    "find": "  return { ...lock, recovery: recoveryWrap };\n",
+    "replace": "  return { ...lock, wrap: lock.wrap ? { ...lock.wrap, iv: recoveryWrap.iv } : lock.wrap, recovery: recoveryWrap };\n",
+    "testFile": "src/lib/password.test.ts",
+    "testName": "generating a recovery code does not re-key the vault or modify wrap"
+  },
+  {
+    "id": "recovery-uses-math-random",
+    "why": "The recovery code is drawn from Math.random instead of crypto.getRandomValues, so it is not a cryptographic secret.",
+    "file": "src/lib/password.ts",
+    "find": "  const bytes = crypto.getRandomValues(new Uint8Array(16));\n",
+    "replace": "  const bytes = Uint8Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));\n",
+    "testFile": "src/lib/password.test.ts",
+    "testName": "generates the recovery code from crypto.getRandomValues, never Math.random"
+  },
+  {
+    "id": "lock-merge-presence-only",
+    "why": "mergeDiskVault keeps the local lock wholesale whenever one already exists, so a stale copy without recovery overwrites a disk copy that has it and the second door is gone after boot.",
+    "file": "src/lib/vault.ts",
+    "find": "    const here = locks[key];\n    locks[key] = here ? mergePasswordLock(here, value) : value;\n",
+    "replace": "    if (!locks[key]) locks[key] = value;\n",
+    "testFile": "src/lib/vault.test.ts",
+    "testName": "keeps a disk recovery wrap when local already has the same lock"
   }
 ]

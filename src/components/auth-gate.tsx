@@ -15,7 +15,7 @@ import { APP_VERSION } from "@/lib/version";
 import { hapticSelect } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
-type Mode = "signup" | "login";
+type Mode = "signup" | "login" | "recover";
 
 function useClientLive() {
   return useSyncExternalStore(
@@ -56,7 +56,7 @@ export function AuthGate() {
 }
 
 function DesktopAuthGate() {
-  const { signUp, logIn } = useCircadia();
+  const { signUp, logIn, recoverWithCode } = useCircadia();
   const identities = listDiaryLogins();
   const named = identities.filter((row) => !row.orphan);
   const orphan = identities.some((row) => row.orphan);
@@ -66,6 +66,7 @@ function DesktopAuthGate() {
   const [contact, setContact] = useState(() => defaultContactField(identities));
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [brought, setBrought] = useState(false);
@@ -90,6 +91,11 @@ function DesktopAuthGate() {
           setError(result.error);
           if (result.error.includes("Log in instead")) setMode("login");
         }
+        return;
+      }
+      if (mode === "recover") {
+        const result = await recoverWithCode(contact, recoveryCode);
+        if (!result.ok) setError(result.error);
         return;
       }
       const result = await logIn(contact, password);
@@ -146,7 +152,7 @@ function DesktopAuthGate() {
             Sign up
           </ModeTab>
           <ModeTab
-            active={mode === "login"}
+            active={mode === "login" || mode === "recover"}
             onClick={() => {
               setMode("login");
               setError(null);
@@ -209,14 +215,25 @@ function DesktopAuthGate() {
             />
           </label>
 
-          <SecretField
-            label="Password"
-            value={password}
-            onChange={setPassword}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            autoFocus={brought && mode === "login"}
-            className="mt-4"
-          />
+          {mode === "recover" ? (
+            <SecretField
+              label="Recovery code"
+              value={recoveryCode}
+              onChange={setRecoveryCode}
+              autoComplete="off"
+              autoFocus
+              className="mt-4"
+            />
+          ) : (
+            <SecretField
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              autoFocus={brought && mode === "login"}
+              className="mt-4"
+            />
+          )}
 
           {mode === "signup" ? (
             <SecretField
@@ -233,8 +250,34 @@ function DesktopAuthGate() {
               ? orphan
                 ? "This does not start you over. It attaches a login to the diary already here."
                 : "At least 8 characters. Circadia will not email or text you."
-              : "Circadia cannot email a reset. If you forget it, the diary on this device stays locked."}
+              : mode === "recover"
+                ? "The recovery code is checked on this device. It is still valid after you use it. Circadia cannot email another."
+                : "Circadia cannot email a reset. If you saved a recovery code, you can use it instead."}
           </p>
+
+          {mode === "login" ? (
+            <button
+              type="button"
+              className="mt-3 text-left text-[13px] text-zinc-400 hover:text-zinc-200"
+              onClick={() => {
+                setMode("recover");
+                setError(null);
+              }}
+            >
+              I have a recovery code
+            </button>
+          ) : mode === "recover" ? (
+            <button
+              type="button"
+              className="mt-3 text-left text-[13px] text-zinc-400 hover:text-zinc-200"
+              onClick={() => {
+                setMode("login");
+                setError(null);
+              }}
+            >
+              Use password
+            </button>
+          ) : null}
 
           {error ? <p className="mt-4 text-[13px] text-amber-200/90">{error}</p> : null}
 
@@ -244,7 +287,17 @@ function DesktopAuthGate() {
               disabled={busy}
               className="h-14 w-full rounded-full btn-primary text-[17px] font-semibold disabled:opacity-50"
             >
-              {busy ? (mode === "signup" ? "Signing up…" : "Logging in…") : mode === "signup" ? "Sign up" : "Log in"}
+              {busy
+                ? mode === "signup"
+                  ? "Signing up…"
+                  : mode === "recover"
+                    ? "Opening…"
+                    : "Logging in…"
+                : mode === "signup"
+                  ? "Sign up"
+                  : mode === "recover"
+                    ? "Open with recovery code"
+                    : "Log in"}
             </button>
           </div>
         </form>

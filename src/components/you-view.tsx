@@ -19,6 +19,8 @@ import {
   type NotificationPermission,
 } from "@/lib/notify-device";
 import { displayName, prettyContactDisplay } from "@/lib/login";
+import { generateRecoveryCode } from "@/lib/password";
+import { sessionHasRecoveryWrap, sessionOpenedWithRecovery } from "@/lib/storage";
 import { compactScheduledDays } from "@/lib/schedule";
 import { hapticSelect } from "@/lib/haptics";
 import {
@@ -46,7 +48,7 @@ const ACTIVITY: { value: ActivityLevel; label: string }[] = [
 ];
 
 export function YouView() {
-  const { state, saveProfile, resetAll, loadSampleWeek, session, logOut, attachLogin, canLogOut, changePassword } =
+  const { state, saveProfile, resetAll, loadSampleWeek, session, logOut, attachLogin, canLogOut, changePassword, saveRecoveryCode } =
     useCircadia();
   const profile = state.profile;
   const imperial = cmToFeetInches(profile?.heightCm ?? 170);
@@ -67,6 +69,10 @@ export function YouView() {
   const [nextConfirm, setNextConfirm] = useState("");
   const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
+  const [recoveryConfirm, setRecoveryConfirm] = useState("");
+  const [recoveryMsg, setRecoveryMsg] = useState<string | null>(null);
+  const [recoverySaved, setRecoverySaved] = useState(() => sessionHasRecoveryWrap());
   const [medDraft, setMedDraft] = useState("");
   const [supDraft, setSupDraft] = useState("");
   const [sampleOpen, setSampleOpen] = useState(false);
@@ -437,6 +443,90 @@ export function YouView() {
                     back. This device still has your diary — the same email or phone, plus the
                     password, opens it.
                   </p>
+
+                  <div className="mt-4 rounded-2xl border border-white/8 bg-black/25 p-4">
+                    <p className="text-[13px] text-zinc-200">Recovery code</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
+                      A second way to open this diary if the password is gone. Circadia cannot email
+                      one. Write it down and keep it off this device.
+                    </p>
+                    {sessionOpenedWithRecovery() ? (
+                      <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
+                        You opened this diary with a recovery code. You can keep this one, or make a
+                        new one here. Making a new one replaces it.
+                      </p>
+                    ) : recoverySaved && !recoveryCode ? (
+                      <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
+                        A recovery code is already saved. Making a new one replaces it; the old one
+                        then stops working.
+                      </p>
+                    ) : null}
+                    {recoveryCode ? (
+                      <>
+                        <p className="mt-3 font-mono text-[15px] tracking-[0.18em] text-zinc-50 select-all">
+                          {recoveryCode}
+                        </p>
+                        <p className="mt-2 text-[12px] leading-relaxed text-zinc-500">
+                          Re-enter it to save. A checkbox is not enough.
+                        </p>
+                        <YouSecret
+                          label="Re-enter the recovery code"
+                          value={recoveryConfirm}
+                          onChange={setRecoveryConfirm}
+                          autoComplete="off"
+                        />
+                        {recoveryMsg ? (
+                          <p className="mt-2 text-[13px] text-amber-200/90">{recoveryMsg}</p>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="mt-4 h-10 w-full rounded-full btn-primary text-[13px] font-medium"
+                          onClick={() => {
+                            void saveRecoveryCode(recoveryCode, recoveryConfirm).then((result) => {
+                              if (!result.ok) {
+                                setRecoveryMsg(result.error);
+                                return;
+                              }
+                              setRecoverySaved(true);
+                              setRecoveryCode(null);
+                              setRecoveryConfirm("");
+                              setRecoveryMsg("Recovery code saved.");
+                            });
+                          }}
+                        >
+                          Save recovery code
+                        </button>
+                        <button
+                          type="button"
+                          className="mt-2 h-10 w-full text-[13px] text-zinc-400 hover:text-zinc-200"
+                          onClick={() => {
+                            setRecoveryCode(null);
+                            setRecoveryConfirm("");
+                            setRecoveryMsg(null);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {recoveryMsg === "Recovery code saved." ? (
+                          <p className="mt-2 text-[12px] text-zinc-400">Recovery code saved.</p>
+                        ) : null}
+                        <button
+                          type="button"
+                          className="mt-4 h-10 w-full rounded-full border border-white/12 text-[13px] font-medium text-zinc-200 hover:bg-white/4"
+                          onClick={() => {
+                            setRecoveryMsg(null);
+                            setRecoveryConfirm("");
+                            setRecoveryCode(generateRecoveryCode());
+                          }}
+                        >
+                          {recoverySaved ? "Replace recovery code" : "Create a recovery code"}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </Panel>
