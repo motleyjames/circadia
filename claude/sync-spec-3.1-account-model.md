@@ -192,6 +192,11 @@ delete. An orphan is harmless but accumulates; a missed delete on a shared devic
 Unchanged from 3.0 except that the account model now precedes the client work:
 
 1. The Worker — one path, one 64-hex alphabet, can ship first and be curl-tested.
+
+   `npm run test:worker` is mis-aimed. `worker/vitest.config.ts` includes
+   `src/**/*.test.ts`, resolved from the repo root, so the script runs the app
+   suite rather than the Worker's. The Worker tests do run inside `npm test`.
+   Do not "fix" the script in the account-model change.
 2. This account model: derivation, the record format, normalization, and its tests.
 3. Account creation and the first sync.
 4. Password change moving the record.
