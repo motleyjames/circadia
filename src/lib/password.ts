@@ -148,7 +148,7 @@ function cryptoUnavailable(): Error {
   return err;
 }
 
-async function derive(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
+export async function derive(password: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
   if (!hasWebCrypto()) throw cryptoUnavailable();
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, [
     "deriveBits",
@@ -161,14 +161,14 @@ async function derive(password: string, salt: Uint8Array, iterations: number): P
   return new Uint8Array(bits);
 }
 
-async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
+export async function sha256(bytes: Uint8Array): Promise<Uint8Array> {
   if (!hasWebCrypto()) throw cryptoUnavailable();
   const digest = await crypto.subtle.digest("SHA-256", asBufferSource(bytes));
   return new Uint8Array(digest);
 }
 
 /** HKDF-SHA256. Splits one stretched password into keys that cannot derive each other. */
-async function hkdf(ikm: Uint8Array, info: string): Promise<Uint8Array> {
+export async function hkdf(ikm: Uint8Array, info: string): Promise<Uint8Array> {
   if (!hasWebCrypto()) throw cryptoUnavailable();
   const key = await crypto.subtle.importKey("raw", asBufferSource(ikm), "HKDF", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(

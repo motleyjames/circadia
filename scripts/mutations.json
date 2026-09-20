@@ -223,5 +223,95 @@
     "replace": "  if (body.byteLength > MAX_BYTES) return empty(413);\n  if (body.byteLength < 1024) return empty(400);\n",
     "testFile": "worker/src/index.test.ts",
     "testName": "stores two objects at different ids without a type, size heuristic, or kind branch"
+  },
+  {
+    "id": "sync-lookup-id-not-stable",
+    "why": "lookupId includes a random byte, so two devices with the same email and password compute different ids and never find the record.",
+    "file": "src/lib/sync-account.ts",
+    "find": "  const lookupSalt = await sha256(utf8(LOOKUP_PREFIX + normalizeEmailForKdf(email)));\n",
+    "replace": "  const lookupSalt = await sha256(utf8(LOOKUP_PREFIX + normalizeEmailForKdf(email) + String(Math.random())));\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "lookupId is reproducible from email and password alone"
+  },
+  {
+    "id": "sync-lookup-id-ignores-email",
+    "why": "lookupSalt ignores the email, so two people with the same password share a lookupId and can fetch each other's account record.",
+    "file": "src/lib/sync-account.ts",
+    "find": "  const lookupSalt = await sha256(utf8(LOOKUP_PREFIX + normalizeEmailForKdf(email)));\n",
+    "replace": "  const lookupSalt = await sha256(utf8(LOOKUP_PREFIX));\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "a different email or password yields a different lookupId"
+  },
+  {
+    "id": "sync-identity-not-random",
+    "why": "accountId, vaultSalt and authKey are zeros. Two mints collide and the identity is guessable.",
+    "file": "src/lib/sync-account.ts",
+    "find": "  return bytesToHex(crypto.getRandomValues(new Uint8Array(32)));\n",
+    "replace": "  return bytesToHex(new Uint8Array(32));\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "accountId, vaultSalt and authKey are random across two mints"
+  },
+  {
+    "id": "sync-email-collapses-tags",
+    "why": "Normalization strips dots and plus-tags. ada.lovelace and ada+sync collapse onto other addresses — the kdf:2 class of lockout.",
+    "file": "src/lib/sync-account.ts",
+    "find": "  return raw.trim().toLowerCase();\n",
+    "replace": "  return raw.trim().toLowerCase().replace(/\\+.*@/, \"@\").replace(/\\./g, \"\");\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "email normalization is frozen at v1"
+  },
+  {
+    "id": "sync-email-stored-in-record",
+    "why": "The plaintext record carries the email. The Worker cannot read it, but a client that decrypts the record then has an identifier the server was never supposed to see stored next to the vault keys.",
+    "file": "src/lib/sync-account.ts",
+    "find": "    authKey: randomHex32(),\n  };\n",
+    "replace": "    authKey: randomHex32(),\n    email: normalizeEmailForKdf(email),\n  } as AccountRecordPlain;\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "the email never appears in the record, lookupId, or stored derivatives"
+  },
+  {
+    "id": "sync-record-skips-recovery",
+    "why": "The account record has no recovery wrap. A user recovering on a blank device opens the local vault and cannot find the synced copy.",
+    "file": "src/lib/sync-account.ts",
+    "find": "    recovery: holder.recovery,\n",
+    "replace": "    recovery: { salt: \"AA==\", iterations: 600000, iv: \"AA==\", ct: \"AA==\" },\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "the record opens under the recovery code as well as under lookupKey"
+  },
+  {
+    "id": "sync-record-skips-open-proof",
+    "why": "A sealed record is returned without proving either door opens. The user is told their diary is synced and the record is unreadable.",
+    "file": "src/lib/sync-account.ts",
+    "find": "  const viaLookup = await openAccountRecord(sealed, lookupKey);\n  const viaRecovery = await openAccountRecordWithRecovery(sealed, recoveryCode);\n  lookupKey.fill(0);\n  if (!viaLookup || !viaRecovery || !plainsEqual(viaLookup, plain) || !plainsEqual(viaRecovery, plain)) {\n    lookupAuth.fill(0);\n    return null;\n  }\n  return { lookupId, lookupAuth, sealed, plain };\n",
+    "replace": "  lookupKey.fill(0);\n  return { lookupId, lookupAuth, sealed, plain };\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "a record is proven to open before it is returned"
+  },
+  {
+    "id": "sync-lookup-id-uuid-shaped",
+    "why": "lookupId is UUID-shaped. That discards 128 bits and the Worker 400s a hop-1 GET.",
+    "file": "src/lib/sync-account.ts",
+    "find": "  const lookupId = bytesToHex(await sha256(idKey));\n",
+    "replace": "  const lookupId = bytesToHex(await sha256(idKey)).slice(0, 32);\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "lookupId matches the Worker alphabet and is not a UUID"
+  },
+  {
+    "id": "sync-lookup-auth-decrypts",
+    "why": "The record is encrypted under lookupAuth. Possessing the hop-1 bearer — which the Worker sees — reads the account record.",
+    "file": "src/lib/sync-account.ts",
+    "find": "  const envelope = await encryptPayload(plain, lookupKey);\n",
+    "replace": "  const envelope = await encryptPayload(plain, lookupAuth);\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "lookupAuth cannot decrypt the record"
+  },
+  {
+    "id": "sync-lookup-same-info",
+    "why": "lookupId and lookupAuth share an HKDF info string, so one is a hash of the other. The URL leaks the bearer.",
+    "file": "src/lib/sync-account.ts",
+    "find": "const LOOKUP_AUTH_INFO = \"circadia/lookup-auth/v1\";\n",
+    "replace": "const LOOKUP_AUTH_INFO = \"circadia/lookup-id/v1\";\n",
+    "testFile": "src/lib/sync-account.test.ts",
+    "testName": "neither lookupId nor lookupAuth can be derived from the other"
   }
 ]
