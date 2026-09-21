@@ -1783,7 +1783,13 @@ function coerceEpisode(value: unknown): Episode | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const e = value as Partial<Episode>;
   if (typeof e.id !== "string" || e.id.length === 0) return null;
-  if (typeof e.clinicianId !== "string" || e.clinicianId.length === 0) return null;
+  const clinicianId =
+    e.clinicianId === null
+      ? null
+      : typeof e.clinicianId === "string" && e.clinicianId.trim()
+        ? e.clinicianId.trim()
+        : undefined;
+  if (clinicianId === undefined) return null;
   if (!isNonNegativeInt(e.rev)) return null;
   const state = coerceEpisodeState(e.state);
   if (!state) return null;
@@ -1806,7 +1812,7 @@ function coerceEpisode(value: unknown): Episode | null {
   const episode: Episode = {
     id: e.id,
     rev: e.rev,
-    clinicianId: e.clinicianId,
+    clinicianId,
     state,
     enrolledAt: e.enrolledAt,
     baselineNights,

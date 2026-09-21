@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   type ModeratorSnapshot,
 } from "@/lib/moderator";
 import { formatDuration } from "@/lib/time";
+import { generateInvite, readInviteBook, type Cohort, type OperatorInvite } from "@/lib/invite";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -152,6 +153,8 @@ export default function ModeratorPage() {
         <Metric label="Packs" value={snapshot?.nightPackCount ?? "—"} />
         <Metric label="Faults" value={snapshot?.faultCount ?? "—"} />
       </div>
+
+      <InviteBook />
 
       <div className="mt-6 flex gap-6 border-b border-white/[0.08]">
         {(
@@ -475,6 +478,81 @@ function onActivate(fn: () => void) {
       }
     },
   };
+}
+
+const INVITE_BOOK_KEY = "circadia-operator-invites";
+
+function InviteBook() {
+  const [invites, setInvites] = useState<OperatorInvite[]>([]);
+  const [name, setName] = useState("");
+  const [cohort, setCohort] = useState<Cohort>("stranger");
+
+  useEffect(() => {
+    try {
+      setInvites(readInviteBook(JSON.parse(localStorage.getItem(INVITE_BOOK_KEY) ?? "[]")));
+    } catch {
+      setInvites([]);
+    }
+  }, []);
+
+  function persist(next: OperatorInvite[]) {
+    setInvites(next);
+    localStorage.setItem(INVITE_BOOK_KEY, JSON.stringify(next));
+  }
+
+  return (
+    <section className="mt-8 rounded-2xl border border-white/[0.08] p-4">
+      <p className="text-[10px] font-medium tracking-[0.22em] text-zinc-500 uppercase">Shakedown book</p>
+      <p className="mt-1 text-[12px] text-zinc-500">Names and cohort stay on this Mac. The pack only carries the code.</p>
+      <form
+        className="mt-4 flex flex-wrap items-end gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          try {
+            persist([generateInvite(name, cohort), ...invites]);
+            setName("");
+          } catch {
+            /* name or cohort rejected */
+          }
+        }}
+      >
+        <label className="text-[12px] text-zinc-500">
+          Name
+          <Input
+            className="mt-1 h-10 w-48 border-white/10 bg-white/4 text-zinc-50"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </label>
+        <label className="text-[12px] text-zinc-500">
+          Cohort
+          <select
+            className="mt-1 h-10 rounded-md border border-white/10 bg-transparent px-2 text-zinc-200"
+            value={cohort}
+            onChange={(event) => setCohort(event.target.value as Cohort)}
+          >
+            <option value="friend">friend</option>
+            <option value="stranger">stranger</option>
+            <option value="lab">lab</option>
+          </select>
+        </label>
+        <button type="submit" className="h-10 cursor-pointer rounded-full btn-primary px-4 text-[13px]">
+          Mint a code
+        </button>
+      </form>
+      {invites.length ? (
+        <ul className="mt-4 space-y-2 text-[12px] text-zinc-400">
+          {invites.map((row) => (
+            <li key={row.participantId}>
+              <span className="text-zinc-200">{row.name}</span>
+              <span className="mx-2 text-zinc-600">{row.cohort}</span>
+              <span className="font-mono text-zinc-300">{row.participantId}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
 }
 
 function Metric({ label, value }: { label: string; value: number | string }) {

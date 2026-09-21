@@ -28,6 +28,11 @@ function isStudyClock(value) {
   return typeof value === "string" && /^([01]?\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function studyNightsElapsedOk(raw) {
+  if (raw.nightsElapsed === undefined) return true;
+  return typeof raw.nightsElapsed === "number" && Number.isInteger(raw.nightsElapsed) && raw.nightsElapsed >= 0 && raw.nightsElapsed <= 4000;
+}
+
 function studyNightGeometryOk(raw) {
   if (!Array.isArray(raw.nights)) return true;
   for (const row of raw.nights) {
@@ -171,6 +176,10 @@ async function handleStudy(req, res, inbox, ingest, ingestToken) {
   }
   if (schema === "circadia-study-v1" && !studyNightGeometryOk(raw)) {
     sendJson(res, 400, { ok: false, error: "Invalid night clocks." });
+    return;
+  }
+  if (schema === "circadia-study-v1" && !studyNightsElapsedOk(raw)) {
+    sendJson(res, 400, { ok: false, error: "Invalid nightsElapsed." });
     return;
   }
   // The participant number is the only caller-supplied part of the filename, so it

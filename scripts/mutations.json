@@ -394,5 +394,95 @@
     "replace": "  void walkStringFields; void ISO_STAMP; void CIVIL_DATE; void skipTop;\n",
     "testFile": "src/lib/study.test.ts",
     "testName": "a date in any string field is rejected"
+  },
+  {
+    "id": "window-allows-null-clinician",
+    "why": "A treatment window can be authored with no clinician. That is the safety property the Stage 1 test was protecting.",
+    "file": "src/lib/episode.ts",
+    "find": "  if (input.setBy === null || typeof input.setBy !== \"string\" || input.setBy.trim() === \"\") {\n    throw new Error(\"A treatment window needs a clinician.\");\n  }\n",
+    "replace": "  if (false) {\n    throw new Error(\"A treatment window needs a clinician.\");\n  }\n",
+    "testFile": "src/lib/episode.test.ts",
+    "testName": "throws when setBy is null or blank, and still opens a window when a clinician is named"
+  },
+  {
+    "id": "solo-episode-reaches-treatment",
+    "why": "A solo episode can enter treatment, so a window can become active without an author.",
+    "file": "src/lib/episode.ts",
+    "find": "  const next = advanceEpisode(episode, reports, intakeComplete);\n  if (episode.clinicianId === null && next === \"treatment\") return \"review\";\n  return next;\n",
+    "replace": "  return advanceEpisode(episode, reports, intakeComplete);\n",
+    "testFile": "src/lib/episode.test.ts",
+    "testName": "returns review instead of treatment for a solo episode, even if a window is attached"
+  },
+  {
+    "id": "episode-requires-clinician-again",
+    "why": "createEpisode rejects null again, so a shakedown tester cannot start an episode.",
+    "file": "src/lib/episode.ts",
+    "find": "  if (input.clinicianId !== null && (typeof input.clinicianId !== \"string\" || input.clinicianId.trim() === \"\")) {\n    throw new Error(\"An episode needs a clinician or an explicit solo enrollment.\");\n  }\n",
+    "replace": "  if (input.clinicianId === null || typeof input.clinicianId !== \"string\" || input.clinicianId.trim() === \"\") {\n    throw new Error(\"An episode needs a clinician.\");\n  }\n",
+    "testFile": "src/lib/episode.test.ts",
+    "testName": "the Stage 1 clinicianId factory requirement is replaced by window and state-machine guards"
+  },
+  {
+    "id": "pack-sends-invite-name",
+    "why": "The tester's name, which James typed on his Mac, rides out on the pack.",
+    "file": "src/lib/study.ts",
+    "find": "  if (state.episode) {\n    pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);\n  }\n",
+    "replace": "  if (state.episode) {\n    pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);\n    (pack as { name?: string }).name = \"Zelda Nightingale\";\n  }\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a name or cohort never enters a pack"
+  },
+  {
+    "id": "pack-drops-nightsElapsed",
+    "why": "An episode pack omits nightsElapsed, so Operator cannot compute completion.",
+    "file": "src/lib/study.ts",
+    "find": "  if (state.episode) {\n    pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);\n  }\n",
+    "replace": "  void nightsElapsedSince; void now;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "enrolledAt never enters a pack; nightsElapsed does, as a non-negative integer"
+  },
+  {
+    "id": "pack-dock-rejects-nightsElapsed",
+    "why": "The Dock refuses a pack that has nightsElapsed, so completion silently disappears on the Mac that collects shakedown nights.",
+    "file": "electron/static-server.cjs",
+    "find": "  if (schema === \"circadia-study-v1\" && !studyNightsElapsedOk(raw)) {\n    sendJson(res, 400, { ok: false, error: \"Invalid nightsElapsed.\" });\n    return;\n  }\n",
+    "replace": "  if (schema === \"circadia-study-v1\" && raw.nightsElapsed !== undefined) {\n    sendJson(res, 400, { ok: false, error: \"Invalid nightsElapsed.\" });\n    return;\n  }\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "both receivers accept a pack with nightsElapsed, and both accept one without it"
+  },
+  {
+    "id": "completion-ignores-elapsed",
+    "why": "Completion ignores nightsElapsed, so a tester who filed nothing scores as done.",
+    "file": "src/lib/episode.ts",
+    "find": "  if (elapsed === 0) return 0;\n  return filed / elapsed;\n",
+    "replace": "  void elapsed;\n  return filed > 0 ? 1 : 1;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "completion is computable from a pack alone"
+  },
+  {
+    "id": "invite-mints-new-participant",
+    "why": "Entering an invite mints a new participantId, so a reinstall splits one tester into two records.",
+    "file": "src/lib/invite.ts",
+    "find": "      asked: true,\n      consented: true,\n      participantId,\n",
+    "replace": "      asked: true,\n      consented: true,\n      participantId: newId(),\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "a tester who reinstalls keeps their join to James's record"
+  },
+  {
+    "id": "pack-elapsed-without-episode",
+    "why": "A pack with no episode still carries nightsElapsed, so solo-today and shakedown cannot be told apart.",
+    "file": "src/lib/study.ts",
+    "find": "  if (state.episode) {\n    pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);\n  }\n",
+    "replace": "  pack.nightsElapsed = state.episode ? nightsElapsedSince(state.episode.enrolledAt, now) : 0;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "no episode means no change"
+  },
+  {
+    "id": "shakedown-join-mints-id",
+    "why": "A first join mints a participantId Operator never issued, so the tester has no name, no cohort, and a reinstall splits them.",
+    "file": "src/context/circadia-store.tsx",
+    "find": "    if (!snapshot().study.participantId) return;\n",
+    "replace": "    void snapshot;\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "no shakedown join produces a participantId Operator did not issue"
   }
 ]

@@ -1,3 +1,4 @@
+import { nightsElapsedSince } from "@/lib/episode";
 import { consultMessages } from "@/lib/consult-threads";
 import { medicationClasses } from "@/lib/metrics";
 import { dedupeReportsByMorningDate } from "@/lib/morning-file";
@@ -60,7 +61,7 @@ export function bmiBand(heightCm: number, weightKg: number): BmiBand {
   return "obesity-2";
 }
 
-export function buildStudyPack(state: CircadiaState): StudyPack {
+export function buildStudyPack(state: CircadiaState, now = new Date()): StudyPack {
   const profile = state.profile;
   const participantId = state.study.participantId;
   if (!profile) throw new Error("No profile.");
@@ -101,7 +102,7 @@ export function buildStudyPack(state: CircadiaState): StudyPack {
     ),
   ].sort();
 
-  return {
+  const pack: StudyPack = {
     schema: STUDY_SCHEMA,
     participantId,
     appVersion: APP_VERSION,
@@ -129,6 +130,10 @@ export function buildStudyPack(state: CircadiaState): StudyPack {
       topics,
     },
   };
+  if (state.episode) {
+    pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);
+  }
+  return pack;
 }
 
 const DISTINCTIVE = 12;
@@ -300,7 +305,11 @@ export function anonymityViolations(payload: unknown, state: CircadiaState): str
     if (state.episode.id.length >= 8 && blob.includes(state.episode.id.toLowerCase())) {
       hits.push("episode-id");
     }
-    if (state.episode.clinicianId.length >= 4 && blob.includes(state.episode.clinicianId.toLowerCase())) {
+    if (
+      state.episode.clinicianId &&
+      state.episode.clinicianId.length >= 4 &&
+      blob.includes(state.episode.clinicianId.toLowerCase())
+    ) {
       hits.push("clinician");
     }
     for (const window of state.episode.windows) {
@@ -330,6 +339,7 @@ const TOP_KEYS = new Set([
   "nights",
   "sessions",
   "chat",
+  "nightsElapsed",
 ]);
 
 const PROFILE_KEYS = new Set([
@@ -405,6 +415,11 @@ export function validateStudyPack(raw: unknown): ValidateResult {
   }
   if (p.surface !== "desktop") return { ok: false, error: "Unknown surface." };
   if (typeof p.demoWeek !== "boolean") return { ok: false, error: "demoWeek must be boolean." };
+  if (p.nightsElapsed !== undefined) {
+    if (typeof p.nightsElapsed !== "number" || !Number.isInteger(p.nightsElapsed) || p.nightsElapsed < 0 || p.nightsElapsed > 4000) {
+      return { ok: false, error: "Invalid nightsElapsed." };
+    }
+  }
 
   if (!p.profile || typeof p.profile !== "object" || Array.isArray(p.profile)) {
     return { ok: false, error: "Missing profile band." };
@@ -547,6 +562,7 @@ export function validateStudyPack(raw: unknown): ValidateResult {
         turns: chat.turns as number,
         topics: chat.topics as string[],
       },
+      ...(typeof p.nightsElapsed === "number" ? { nightsElapsed: p.nightsElapsed } : {}),
     },
   };
 }

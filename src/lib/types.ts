@@ -331,6 +331,8 @@ export type StudyPack = {
     turns: number;
     topics: string[];
   };
+  /** Whole nights since enrollment. Absent when there is no episode. Never a date. */
+  nightsElapsed?: number;
 };
 
 export type NoteConfidence = "high" | "moderate" | "low";
