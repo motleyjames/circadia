@@ -81,7 +81,20 @@ export function forwardMinutes(from: string, to: string): number {
  * getting in, asleep longer than in bed, waking before lights out). Rendering
  * "0% efficiency" for any of those would be worse than rendering nothing.
  */
-export function nightGeometry(report: MorningReport): NightGeometry | null {
+/** The clocks and buckets geometry reads. A study-pack night is enough; a full report is not required. */
+export type NightGeometryInput = Pick<
+  MorningReport,
+  | "inBedAt"
+  | "outOfBedAt"
+  | "wokeAt"
+  | "triedToSleepAt"
+  | "sleepLatencyMinutes"
+  | "wokeInNight"
+  | "nightWakingMinutes"
+  | "awakeningCount"
+>;
+
+export function nightGeometry(report: NightGeometryInput): NightGeometry | null {
   const { inBedAt, outOfBedAt, wokeAt } = report;
   const triedToSleepAt = report.triedToSleepAt ?? inBedAt;
   if (!isClock(inBedAt) || !isClock(outOfBedAt) || !isClock(triedToSleepAt) || !isClock(wokeAt)) {
