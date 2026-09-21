@@ -169,18 +169,56 @@ describe("nextState never advances past review on its own", () => {
   });
 });
 
-describe("an Episode cannot be created without a clinicianId", () => {
-  it("throws on an empty clinicianId and the factory type requires one", () => {
+describe("createTreatmentWindow rejects a null clinicianId", () => {
+  it("throws when setBy is null or blank, and still opens a window when a clinician is named", () => {
+    expect(() =>
+      createTreatmentWindow({ prescribedInBed: "00:30", prescribedOutOfBed: "07:00", setBy: null }),
+    ).toThrow(/clinician/);
+    expect(() =>
+      createTreatmentWindow({ prescribedInBed: "00:30", prescribedOutOfBed: "07:00", setBy: "" }),
+    ).toThrow(/clinician/);
+    const window = createTreatmentWindow({
+      prescribedInBed: "00:30",
+      prescribedOutOfBed: "07:00",
+      setBy: "clin-1",
+    });
+    expect(window.setBy).toBe("clin-1");
+  });
+});
+
+describe("an episode with a null clinicianId never reaches treatment", () => {
+  it("returns review instead of treatment for a solo episode, even if a window is attached", () => {
+    const now = new Date("2026-09-20T12:00:00.000Z");
+    const window = createTreatmentWindow({
+      prescribedInBed: "00:30",
+      prescribedOutOfBed: "07:00",
+      setBy: "clin-1",
+    });
+    const solo: Episode = {
+      ...createEpisode({ clinicianId: null, enrolledAt: "2026-09-01T12:00:00.000Z" }),
+      state: "treatment",
+      windows: [window],
+    };
+    expect(solo.clinicianId).toBeNull();
+    expect(nextState(solo, nightsFrom("2026-09-01", 14), now, true)).toBe("review");
+    expect(nextState({ ...solo, state: "review" }, nightsFrom("2026-09-01", 14), now, true)).toBe("review");
+    expect(nextState({ ...solo, state: "enrolled" }, [], now, true)).toBe("baseline");
+  });
+});
+
+describe("the Stage 1 clinicianId test is replaced", () => {
+  it("the Stage 1 clinicianId factory requirement is replaced by window and state-machine guards", () => {
+    const src = readFileSync("src/lib/episode.ts", "utf8");
+    expect(src).toMatch(/clinicianId: ClinicianId \| null/);
+    expect(src).toMatch(/episode\.clinicianId === null && next === "treatment"/);
+    expect(src).toMatch(/input\.setBy === null/);
+    expect(() => createEpisode({ clinicianId: null })).not.toThrow();
+    expect(createEpisode({ clinicianId: null }).clinicianId).toBeNull();
     expect(() => createEpisode({ clinicianId: "" })).toThrow(/clinician/);
     expect(() => createEpisode({ clinicianId: "   " })).toThrow(/clinician/);
     const opened = createEpisode({ clinicianId: "clin-1" });
     expect(opened.clinicianId).toBe("clin-1");
     expect(opened.state).toBe("enrolled");
-    expect(opened.rev).toBe(0);
-    expect(opened.windows).toEqual([]);
-    const src = readFileSync("src/lib/episode.ts", "utf8");
-    expect(src).toMatch(/export function createEpisode\(input: \{\s*clinicianId: ClinicianId;/);
-    expect(src).not.toMatch(/createEpisode\(input: \{\s*clinicianId\?:/);
   });
 });
 

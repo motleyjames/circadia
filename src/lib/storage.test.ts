@@ -270,5 +270,19 @@ describe("hydrateState", () => {
       }).episode,
     ).toBeNull();
     expect(hydrateState({ episode: null }).episode).toBeNull();
+
+    const solo = hydrateState({
+      episode: {
+        id: "ep-solo",
+        rev: 0,
+        clinicianId: null,
+        state: "enrolled",
+        enrolledAt: "2026-09-01T12:00:00.000Z",
+        baselineNights: 14,
+        windows: [],
+      },
+    });
+    expect(solo.episode?.clinicianId).toBeNull();
+    expect(solo.episode?.state).toBe("enrolled");
   });
 });

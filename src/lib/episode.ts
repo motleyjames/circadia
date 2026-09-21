@@ -1,5 +1,5 @@
 import { forwardMinutes } from "@/lib/sleep-metrics";
-import { newId } from "@/lib/time";
+import { newId, todayIsoDate } from "@/lib/time";
 import type { MorningReport } from "@/lib/types";
 import { isClock, normalizeClock } from "@/lib/windows";
 
@@ -33,7 +33,8 @@ export type Episode = {
   id: string;
   /** Increments on every mutation of this episode. Whole-object fold key. */
   rev: number;
-  clinicianId: ClinicianId;
+  /** Null is a solo shakedown episode. It can never reach treatment. */
+  clinicianId: ClinicianId | null;
   state: EpisodeState;
   enrolledAt: string;
   baselineNights: number;
@@ -56,14 +57,14 @@ export type AdherenceUnavailableReason = "no-window" | "missing-clocks";
 export function createTreatmentWindow(input: {
   prescribedInBed: string;
   prescribedOutOfBed: string;
-  setBy: ClinicianId;
+  setBy: ClinicianId | null;
   rationale?: string;
   supersedes?: WindowId;
 }): TreatmentWindow {
   if (!isClock(input.prescribedInBed) || !isClock(input.prescribedOutOfBed)) {
     throw new Error("A treatment window needs prescribed clocks.");
   }
-  if (typeof input.setBy !== "string" || input.setBy.trim() === "") {
+  if (input.setBy === null || typeof input.setBy !== "string" || input.setBy.trim() === "") {
     throw new Error("A treatment window needs a clinician.");
   }
   const window: TreatmentWindow = {
@@ -82,14 +83,17 @@ export function createTreatmentWindow(input: {
   return window;
 }
 
-/** An episode is a course of care. It cannot exist without the clinician who opened it. */
+/**
+ * Open a course of care. `clinicianId: null` is a solo shakedown episode.
+ * An empty string is not solo — it is a missing author, and it still throws.
+ */
 export function createEpisode(input: {
-  clinicianId: ClinicianId;
+  clinicianId: ClinicianId | null;
   enrolledAt?: string;
   baselineNights?: number;
 }): Episode {
-  if (typeof input.clinicianId !== "string" || input.clinicianId.trim() === "") {
-    throw new Error("An episode needs a clinician.");
+  if (input.clinicianId !== null && (typeof input.clinicianId !== "string" || input.clinicianId.trim() === "")) {
+    throw new Error("An episode needs a clinician or an explicit solo enrollment.");
   }
   const baselineNights =
     typeof input.baselineNights === "number" && Number.isInteger(input.baselineNights) && input.baselineNights > 0
@@ -98,12 +102,32 @@ export function createEpisode(input: {
   return {
     id: newId(),
     rev: 0,
-    clinicianId: input.clinicianId.trim(),
+    clinicianId: input.clinicianId === null ? null : input.clinicianId.trim(),
     state: "enrolled",
     enrolledAt: input.enrolledAt ?? new Date().toISOString(),
     baselineNights,
     windows: [],
   };
+}
+
+/**
+ * Whole civil nights from enrollment to `now`, local calendar, never negative.
+ * The count leaves the device; `enrolledAt` does not.
+ */
+export function nightsElapsedSince(enrolledAt: string, now = new Date()): number {
+  const enrolled = new Date(enrolledAt);
+  if (!Number.isFinite(enrolled.getTime())) return 0;
+  const fromMs = Date.parse(`${todayIsoDate(enrolled)}T00:00:00.000Z`);
+  const toMs = Date.parse(`${todayIsoDate(now)}T00:00:00.000Z`);
+  if (!Number.isFinite(fromMs) || !Number.isFinite(toMs)) return 0;
+  return Math.max(0, Math.round((toMs - fromMs) / 86_400_000));
+}
+
+/** Nights filed over nights elapsed. Zero elapsed is zero, not a divide. */
+export function completionRate(filed: number, elapsed: number): number {
+  if (!Number.isInteger(filed) || filed < 0 || !Number.isInteger(elapsed) || elapsed < 0) return 0;
+  if (elapsed === 0) return 0;
+  return filed / elapsed;
 }
 
 /**
@@ -147,6 +171,16 @@ export function nextState(
   intakeComplete: boolean,
 ): EpisodeState {
   void now;
+  const next = advanceEpisode(episode, reports, intakeComplete);
+  if (episode.clinicianId === null && next === "treatment") return "review";
+  return next;
+}
+
+function advanceEpisode(
+  episode: Episode,
+  reports: MorningReport[],
+  intakeComplete: boolean,
+): EpisodeState {
   if (episode.state === "discharged") return "discharged";
   if (episode.state === "maintenance") return "maintenance";
 

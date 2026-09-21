@@ -7,9 +7,11 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { STUDY_HELD_ERROR } from "@/lib/study-client";
 
 export function StudyPanel() {
-  const { state, joinStudy, leaveStudy, sendStudyNow } = useCircadia();
+  const { state, enrollSolo, leaveStudy, sendStudyNow } = useCircadia();
   const study = state.study;
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   return (
     <section className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 sm:p-6">
@@ -20,16 +22,34 @@ export function StudyPanel() {
             Diary stays on this device
           </h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">
-            Join and nights, roster, and app faults leave on their own. Dreams and chat do not.
+            An invite starts the shakedown. Nights, roster, and app faults then leave on their own.
+            Dreams and chat do not.
           </p>
+          <label className="mt-5 block text-[12px] text-zinc-500">
+            Invite code
+            <input
+              className="mt-1.5 h-11 w-full rounded-full border border-white/15 bg-transparent px-4 text-[15px] text-zinc-100"
+              value={inviteCode}
+              onChange={(event) => {
+                setInviteCode(event.target.value);
+                setInviteError(null);
+              }}
+              autoComplete="off"
+              spellCheck={false}
+            />
+          </label>
           <Button
             type="button"
             variant="outline"
-            className="mt-5 h-11 rounded-full border-white/15 px-4 text-[15px]"
-            onClick={joinStudy}
+            className="mt-3 h-11 rounded-full border-white/15 px-4 text-[15px]"
+            onClick={() => {
+              const ok = enrollSolo(inviteCode);
+              setInviteError(ok ? null : "That is not an invite.");
+            }}
           >
-            Join the study
+            Start the shakedown
           </Button>
+          {inviteError ? <p className="mt-2 text-[12px] text-red-300">{inviteError}</p> : null}
         </>
       ) : (
         <>

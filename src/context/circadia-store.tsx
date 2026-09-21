@@ -43,6 +43,7 @@ import {
   bootVaultFromDisk,
 } from "@/lib/storage";
 import { isPhoneNative } from "@/lib/phone-native";
+import { enrollWithInvite } from "@/lib/invite";
 import { assertSendable, buildStudyPack } from "@/lib/study";
 import { postInbox, STUDY_HELD_ERROR } from "@/lib/study-client";
 import { applyBackfill, retainMorningDraft } from "@/lib/backfill";
@@ -283,6 +284,7 @@ type CircadiaContextValue = {
   loadSampleWeek: () => void;
   resetAll: () => void;
   joinStudy: () => void;
+  enrollSolo: (code: string) => boolean;
   declineStudy: () => void;
   leaveStudy: () => void;
   sendStudyNow: () => Promise<void>;
@@ -320,6 +322,7 @@ const NOOP_VALUE: CircadiaContextValue = {
   loadSampleWeek: noop,
   resetAll: noop,
   joinStudy: noop,
+  enrollSolo: () => false,
   declineStudy: noop,
   leaveStudy: noop,
   sendStudyNow: async () => undefined,
@@ -674,19 +677,33 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const joinStudy = useCallback(() => {
-    patch((prev) => ({
-      ...prev,
-      study: {
-        ...prev.study,
-        asked: true,
-        consented: true,
-        participantId: prev.study.participantId ?? newId(),
-        lastError: null,
-        rosterSentAt: null,
-      },
-    }));
+    // Re-consent only. A first join without an invite would mint an id Operator
+    // never issued. Shakedown episodes start in enrollSolo.
+    if (!snapshot().study.participantId) return;
+    patch((prev) => {
+      if (!prev.study.participantId) return prev;
+      return {
+        ...prev,
+        study: {
+          ...prev.study,
+          asked: true,
+          consented: true,
+          lastError: null,
+          rosterSentAt: null,
+        },
+      };
+    });
     void transmitRoster();
     if (snapshot().reports.length) void transmitStudy();
+  }, []);
+
+  const enrollSolo = useCallback((code: string) => {
+    const next = enrollWithInvite(snapshot(), code);
+    if (!next) return false;
+    patch(() => next);
+    void transmitRoster();
+    if (next.reports.length) void transmitStudy();
+    return true;
   }, []);
 
   const declineStudy = useCallback(() => {
@@ -749,6 +766,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       loadSampleWeek,
       resetAll,
       joinStudy,
+      enrollSolo,
       declineStudy,
       leaveStudy,
       sendStudyNow,
@@ -780,6 +798,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       loadSampleWeek,
       resetAll,
       joinStudy,
+      enrollSolo,
       declineStudy,
       leaveStudy,
       sendStudyNow,

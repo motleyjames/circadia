@@ -1,6 +1,8 @@
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { emptyState } from "./storage";
+import { completionRate, nightsElapsedSince } from "./episode";
+import { enrollWithInvite, generateInvite } from "./invite";
 import { anonymityViolations, buildStudyPack, validateStudyPack } from "./study";
 import { nightGeometry } from "./sleep-metrics";
 import { medicationClasses } from "./metrics";
@@ -385,5 +387,102 @@ describe("study pack night geometry", () => {
       anonymityViolations({ ...pack, chat: { ...pack.chat, topics: [...pack.chat.topics, "note 2025-03-09"] } }, state),
     ).toContain("calendar-date");
     expect(anonymityViolations(pack, state)).toEqual([]);
+  });
+});
+
+describe("solo enrollment packs", () => {
+  it("a name or cohort never enters a pack", () => {
+    const invite = generateInvite("Zelda Nightingale", "lab");
+    const enrolled = enrollWithInvite(hostileState(), invite.participantId, new Date("2026-09-08T12:00:00"));
+    expect(enrolled).toBeTruthy();
+    const pack = buildStudyPack(enrolled!, new Date("2026-09-15T12:00:00"));
+    const blob = JSON.stringify(pack);
+    expect(invite.name).toBe("Zelda Nightingale");
+    expect(invite.cohort).toBe("lab");
+    expect(blob).not.toMatch(/Zelda/i);
+    expect(blob).not.toMatch(/Nightingale/i);
+    expect(blob).not.toMatch(/"lab"/);
+    expect(blob).not.toMatch(/"cohort"/);
+    expect(anonymityViolations(pack, enrolled!)).toEqual([]);
+  });
+
+  it("enrolledAt never enters a pack; nightsElapsed does, as a non-negative integer", () => {
+    const enrolledAt = "2026-09-01T12:00:00.000Z";
+    const state = enrollWithInvite(hostileState(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", new Date(enrolledAt));
+    expect(state?.episode?.enrolledAt).toBe(enrolledAt);
+    const pack = buildStudyPack(state!, new Date("2026-09-08T18:00:00.000Z"));
+    expect(pack.nightsElapsed).toBe(nightsElapsedSince(enrolledAt, new Date("2026-09-08T18:00:00.000Z")));
+    expect(Number.isInteger(pack.nightsElapsed)).toBe(true);
+    expect(pack.nightsElapsed).toBeGreaterThanOrEqual(0);
+    expect(JSON.stringify(pack)).not.toMatch(/2026-09-01T12:00:00/);
+    expect(JSON.stringify(pack)).not.toMatch(/"enrolledAt"/);
+    expect(validateStudyPack(pack).ok).toBe(true);
+  });
+
+  it("both receivers accept a pack with nightsElapsed, and both accept one without it", async () => {
+    const { mkdtempSync, writeFileSync, rmSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    const tmp = mkdtempSync(join(tmpdir(), "circadia-elapsed-"));
+    writeFileSync(join(tmp, "index.html"), "<h1>Circadia</h1>");
+    const inbox = join(tmp, "inbox");
+    const started = await listen({ root: tmp, inbox, port: 0 });
+    try {
+      const withElapsed = buildStudyPack(
+        enrollWithInvite(hostileState(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", new Date("2026-09-01T12:00:00Z"))!,
+        new Date("2026-09-08T12:00:00Z"),
+      );
+      const without = buildStudyPack(hostileState());
+      expect(withElapsed.nightsElapsed).toBeDefined();
+      expect(without.nightsElapsed).toBeUndefined();
+      expect(validateStudyPack(withElapsed).ok).toBe(true);
+      expect(validateStudyPack(without).ok).toBe(true);
+      expect(parseInboxPayload(withElapsed).ok).toBe(true);
+      expect(parseInboxPayload(without).ok).toBe(true);
+      for (const pack of [withElapsed, without]) {
+        const res = await fetch(`${started.url}/api/study`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(pack),
+        });
+        expect(res.status).toBe(200);
+        expect((await res.json()).ok).toBe(true);
+      }
+    } finally {
+      started.server.close();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("completion is computable from a pack alone", () => {
+    const empty = enrollWithInvite(
+      { ...hostileState(), reports: [] },
+      "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      new Date("2026-09-01T12:00:00Z"),
+    )!;
+    const none = buildStudyPack(empty, new Date("2026-09-15T12:00:00Z"));
+    expect(none.nights.length).toBe(0);
+    expect(none.nightsElapsed).toBe(nightsElapsedSince("2026-09-01T12:00:00.000Z", new Date("2026-09-15T12:00:00Z")));
+    expect(completionRate(none.nights.length, none.nightsElapsed!)).toBe(0);
+
+    const filed = buildStudyPack(
+      enrollWithInvite(hostileState(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", new Date("2026-09-01T12:00:00Z"))!,
+      new Date("2026-09-15T12:00:00Z"),
+    );
+    expect(filed.nights.length).toBe(1);
+    expect(completionRate(filed.nights.length, filed.nightsElapsed!)).toBe(1 / filed.nightsElapsed!);
+  });
+
+  it("no episode means no change", () => {
+    const state = hostileState();
+    expect(state.episode).toBeNull();
+    const pack = buildStudyPack(state);
+    expect(pack.nightsElapsed).toBeUndefined();
+    expect(Object.keys(pack).sort()).toEqual(
+      ["appVersion", "chat", "demoWeek", "nights", "participantId", "profile", "schema", "sessions", "surface"].sort(),
+    );
+    const again = buildStudyPack(state);
+    expect(again).toEqual(pack);
+    expect(validateStudyPack(pack).ok).toBe(true);
   });
 });

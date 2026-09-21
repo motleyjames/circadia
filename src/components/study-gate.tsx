@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
 import { hapticLight } from "@/lib/haptics";
 
 export function StudyGate() {
-  const { joinStudy, declineStudy } = useCircadia();
+  const { enrollSolo, declineStudy } = useCircadia();
+  const [inviteCode, setInviteCode] = useState("");
+  const [inviteError, setInviteError] = useState<string | null>(null);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pt-[max(4rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
@@ -17,30 +20,45 @@ export function StudyGate() {
         Nothing leaves this device unless you say yes.
       </h1>
       <p className="mt-5 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        If you join, this device starts a pipeline. You will not press Send. After each morning, a
-        stripped night log leaves on its own. If the app faults, that leaves too.
+        If you join with an invite, this device starts a pipeline. You will not press Send. After
+        each morning, a stripped night log leaves on its own. If the app faults, that leaves too.
       </p>
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        James also gets a roster card once: a random participant number, your sleep window, and
+        James also gets a roster card once: the invite he already issued, your sleep window, and
         whether falling or staying asleep is the problem. Not your name. Not a phone number. Not a
         way to message you. Circadia will not email or text you. It is not a backup of your dreams.
       </p>
       <ul className="mt-8 max-w-[42ch] space-y-2 text-[13px] leading-relaxed text-zinc-500">
         <li>Night packs never carry dream text, chat, or the bottle you typed — only a class.</li>
-        <li>A random participant number stitches nights if you pause. Erase this device starts a new one.</li>
+        <li>The invite is the participant number. Type the same one after a reinstall and nights stay joined.</li>
         <li>Keep everything here and the app is unchanged. Nothing is sent.</li>
       </ul>
       <div className="mt-auto flex flex-col gap-3 pt-10">
+        <label className="text-[12px] text-zinc-500">
+          Invite code
+          <input
+            className="mt-1.5 h-14 w-full rounded-full border border-white/12 bg-transparent px-5 text-[17px] text-zinc-100"
+            value={inviteCode}
+            onChange={(event) => {
+              setInviteCode(event.target.value);
+              setInviteError(null);
+            }}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
         <button
           type="button"
           onClick={() => {
             void hapticLight();
-            joinStudy();
+            const ok = enrollSolo(inviteCode);
+            setInviteError(ok ? null : "That is not an invite.");
           }}
           className="h-14 rounded-full btn-primary text-[17px] font-semibold"
         >
-          Join the study
+          Join with this invite
         </button>
+        {inviteError ? <p className="text-center text-[13px] text-red-300">{inviteError}</p> : null}
         <button
           type="button"
           onClick={() => {
