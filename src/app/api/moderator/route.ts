@@ -3,7 +3,9 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { isOperatorSurface } from "@/lib/surface";
 import { moderatorKeyOk } from "@/lib/mod-key";
+import { parseInboxPayload } from "@/lib/inbox-payload";
 import { summarizeInbox } from "@/lib/moderator";
+import { recordRejectedPack } from "@/lib/operator-store";
 import { studyInboxDir } from "@/lib/study-inbox";
 
 export const runtime = "nodejs";
@@ -34,7 +36,14 @@ export async function GET(request: Request) {
       const raw = await readFile(path.join(dir, name), "utf8");
       files.push({ file: name, payload: JSON.parse(raw) as unknown });
     } catch {
-      // skip unreadable rows
+      recordRejectedPack({ reason: "Unreadable inbox file.", file: name, arrivedAt: name }, dir);
+    }
+  }
+
+  for (const file of files) {
+    const parsed = parseInboxPayload(file.payload);
+    if (!parsed.ok) {
+      recordRejectedPack({ reason: parsed.error, file: file.file, arrivedAt: file.file }, dir);
     }
   }
 

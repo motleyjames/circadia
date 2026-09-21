@@ -111,6 +111,19 @@ export function createEpisode(input: {
 }
 
 /**
+ * Position of a filed morning in the episode, from 0. Null when the morning
+ * is before enrollment. A count, never a date.
+ */
+export function episodeNightOf(enrolledAt: string, morningDate: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(morningDate)) return null;
+  const enrolled = new Date(enrolledAt);
+  if (!Number.isFinite(enrolled.getTime())) return null;
+  const enrolledDay = todayIsoDate(enrolled);
+  if (morningDate < enrolledDay) return null;
+  return nightsElapsedSince(enrolledAt, new Date(`${morningDate}T12:00:00`));
+}
+
+/**
  * Whole civil nights from enrollment to `now`, local calendar, never negative.
  * The count leaves the device; `enrolledAt` does not.
  */

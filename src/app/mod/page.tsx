@@ -154,7 +154,7 @@ export default function ModeratorPage() {
         <Metric label="Faults" value={snapshot?.faultCount ?? "—"} />
       </div>
 
-      <InviteBook />
+      <InviteBook secret={key} />
 
       <div className="mt-6 flex gap-6 border-b border-white/[0.08]">
         {(
@@ -482,22 +482,47 @@ function onActivate(fn: () => void) {
 
 const INVITE_BOOK_KEY = "circadia-operator-invites";
 
-function InviteBook() {
+function InviteBook({ secret }: { secret: string }) {
   const [invites, setInvites] = useState<OperatorInvite[]>([]);
   const [name, setName] = useState("");
   const [cohort, setCohort] = useState<Cohort>("stranger");
 
   useEffect(() => {
-    try {
-      setInvites(readInviteBook(JSON.parse(localStorage.getItem(INVITE_BOOK_KEY) ?? "[]")));
-    } catch {
-      setInvites([]);
-    }
-  }, []);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/moderator/book", { headers: { "x-circadia-mod": secret } });
+        const body = (await res.json()) as { ok?: boolean; invites?: unknown };
+        if (!cancelled && res.ok && body.ok) {
+          const fromDisk = readInviteBook(body.invites);
+          if (fromDisk.length) {
+            setInvites(fromDisk);
+            return;
+          }
+        }
+      } catch {
+        /* fall through to localStorage */
+      }
+      if (cancelled) return;
+      try {
+        setInvites(readInviteBook(JSON.parse(localStorage.getItem(INVITE_BOOK_KEY) ?? "[]")));
+      } catch {
+        setInvites([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [secret]);
 
   function persist(next: OperatorInvite[]) {
     setInvites(next);
     localStorage.setItem(INVITE_BOOK_KEY, JSON.stringify(next));
+    void fetch("/api/moderator/book", {
+      method: "PUT",
+      headers: { "content-type": "application/json", "x-circadia-mod": secret },
+      body: JSON.stringify({ invites: next }),
+    });
   }
 
   return (
@@ -508,12 +533,14 @@ function InviteBook() {
         className="mt-4 flex flex-wrap items-end gap-3"
         onSubmit={(event) => {
           event.preventDefault();
-          try {
-            persist([generateInvite(name, cohort), ...invites]);
-            setName("");
-          } catch {
-            /* name or cohort rejected */
-          }
+          void (async () => {
+            try {
+              persist([await generateInvite(name, cohort), ...invites]);
+              setName("");
+            } catch {
+              /* name or cohort rejected */
+            }
+          })();
         }}
       >
         <label className="text-[12px] text-zinc-500">
@@ -546,7 +573,7 @@ function InviteBook() {
             <li key={row.participantId}>
               <span className="text-zinc-200">{row.name}</span>
               <span className="mx-2 text-zinc-600">{row.cohort}</span>
-              <span className="font-mono text-zinc-300">{row.participantId}</span>
+              <span className="font-mono text-zinc-300">{row.code}</span>
             </li>
           ))}
         </ul>

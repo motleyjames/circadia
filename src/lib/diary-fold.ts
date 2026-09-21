@@ -1,9 +1,10 @@
 import { retainMorningDraft } from "@/lib/backfill";
 import { upsertConsult } from "@/lib/consult-threads";
 import type { Episode } from "@/lib/episode";
+import { isPackSafetyCategory } from "@/lib/invite";
 import { dedupeReportsByMorningDate } from "@/lib/morning-file";
 import { todayIsoDate } from "@/lib/time";
-import type { CircadiaState, WindDownSession } from "@/lib/types";
+import type { CircadiaState, SafetyFlag, WindDownSession } from "@/lib/types";
 
 export type EpisodeFoldConflict = {
   localId: string;
@@ -36,7 +37,8 @@ export function foldEpisode(
 /**
  * Fold two unlocked diaries. Same morning date keeps the later page.
  * Profile, study, and the live consult stay on this device — only nights,
- * wind-downs, filed consults, notes, and an episode (highest rev) come across.
+ * wind-downs, filed consults, notes, allowlisted safety flags, and an episode
+ * (highest rev) come across.
  *
  * An episode-id conflict is returned from foldEpisode, not recorded here.
  * persistFailure() is the 0.9.0 quota/encrypt path and is I/O; this module
@@ -61,7 +63,22 @@ export function mergeDiaryStates(local: CircadiaState, incoming: CircadiaState):
     demoWeek: local.demoWeek && incoming.demoWeek,
     episode: folded.episode,
     morningDraft: retainMorningDraft(local.morningDraft, todayIsoDate(), reports, folded.episode),
+    safetyFlags: mergeSafetyFlags(local.safetyFlags, incoming.safetyFlags),
   };
+}
+
+function mergeSafetyFlags(local: SafetyFlag[] | undefined, incoming: SafetyFlag[] | undefined): SafetyFlag[] {
+  const out: SafetyFlag[] = [];
+  const seen = new Set<string>();
+  for (const flag of [...(local ?? []), ...(incoming ?? [])]) {
+    if (!isPackSafetyCategory(flag.category)) continue;
+    if (!Number.isInteger(flag.episodeNight) || flag.episodeNight < 0) continue;
+    const key = `${flag.category}:${flag.episodeNight}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ category: flag.category, episodeNight: flag.episodeNight });
+  }
+  return out;
 }
 
 export function morningsAdded(local: CircadiaState, merged: CircadiaState): number {

@@ -30,7 +30,7 @@ export function StudyGate() {
       </p>
       <ul className="mt-8 max-w-[42ch] space-y-2 text-[13px] leading-relaxed text-zinc-500">
         <li>Night packs never carry dream text, chat, or the bottle you typed — only a class.</li>
-        <li>The invite is the participant number. Type the same one after a reinstall and nights stay joined.</li>
+        <li>The invite is a short code. Type the same one after a reinstall and nights stay joined.</li>
         <li>Keep everything here and the app is unchanged. Nothing is sent.</li>
       </ul>
       <div className="mt-auto flex flex-col gap-3 pt-10">
@@ -45,14 +45,16 @@ export function StudyGate() {
             }}
             autoComplete="off"
             spellCheck={false}
+            placeholder="XXXX-XXXX"
           />
         </label>
         <button
           type="button"
           onClick={() => {
             void hapticLight();
-            const ok = enrollSolo(inviteCode);
-            setInviteError(ok ? null : "That is not an invite.");
+            void enrollSolo(inviteCode).then((ok) => {
+              setInviteError(ok ? null : "That is not an invite.");
+            });
           }}
           className="h-14 rounded-full btn-primary text-[17px] font-semibold"
         >

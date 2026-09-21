@@ -36,6 +36,7 @@ export function StudyPanel() {
               }}
               autoComplete="off"
               spellCheck={false}
+              placeholder="XXXX-XXXX"
             />
           </label>
           <Button
@@ -43,8 +44,9 @@ export function StudyPanel() {
             variant="outline"
             className="mt-3 h-11 rounded-full border-white/15 px-4 text-[15px]"
             onClick={() => {
-              const ok = enrollSolo(inviteCode);
-              setInviteError(ok ? null : "That is not an invite.");
+              void enrollSolo(inviteCode).then((ok) => {
+                setInviteError(ok ? null : "That is not an invite.");
+              });
             }}
           >
             Start the shakedown

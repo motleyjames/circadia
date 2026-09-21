@@ -52,9 +52,11 @@ import type {
   MorningDraft,
   MorningReport,
   Profile,
+  SafetyFlag,
   StudyState,
   StudyStatus,
 } from "@/lib/types";
+import { isPackSafetyCategory } from "@/lib/invite";
 import { isClock, normalizeClock } from "@/lib/windows";
 
 /** Legacy single-file blob. Migrated once into the vault. */
@@ -163,6 +165,7 @@ export const emptyState = (): CircadiaState => ({
   episode: null,
   morningDraft: null,
   intakeDraft: null,
+  safetyFlags: [],
 });
 
 export function draftProfile(input: {
@@ -1404,6 +1407,7 @@ export function hydrateState(parsed: unknown): CircadiaState {
     episode,
     morningDraft: retainMorningDraft(coerceMorningDraft(raw.morningDraft), todayIsoDate(), reports, episode),
     intakeDraft: coerceIntakeDraft(raw.intakeDraft),
+    safetyFlags: coerceSafetyFlags(raw.safetyFlags),
   };
 }
 
@@ -1679,6 +1683,19 @@ function coerceMorningDraft(value: unknown): MorningDraft | null {
     draft.wantMeaning = d.wantMeaning;
   }
   return draft;
+}
+
+function coerceSafetyFlags(value: unknown): SafetyFlag[] {
+  if (!Array.isArray(value)) return [];
+  const out: SafetyFlag[] = [];
+  for (const row of value) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as { category?: unknown; episodeNight?: unknown };
+    if (!isPackSafetyCategory(r.category)) continue;
+    if (typeof r.episodeNight !== "number" || !Number.isInteger(r.episodeNight) || r.episodeNight < 0) continue;
+    out.push({ category: r.category, episodeNight: r.episodeNight });
+  }
+  return out;
 }
 
 function coerceIntakeDraft(value: unknown): IntakeDraft | null {

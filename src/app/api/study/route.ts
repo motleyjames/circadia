@@ -3,6 +3,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { inboxParticipantId, parseInboxPayload } from "@/lib/inbox-payload";
 import { isOperatorSurface } from "@/lib/surface";
+import { recordRejectedPack } from "@/lib/operator-store";
 import { studyInboxDir } from "@/lib/study-inbox";
 import { isLocalRequest } from "@/lib/vault";
 
@@ -50,11 +51,13 @@ export async function POST(request: Request) {
   try {
     raw = await request.json();
   } catch {
+    recordRejectedPack({ reason: "Invalid JSON." });
     return NextResponse.json({ ok: false, error: "Invalid JSON." }, { status: 400 });
   }
 
   const parsed = parseInboxPayload(raw);
   if (!parsed.ok) {
+    recordRejectedPack({ reason: parsed.error });
     return NextResponse.json({ ok: false, error: parsed.error }, { status: 400 });
   }
 
