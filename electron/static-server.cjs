@@ -23,6 +23,25 @@ const MIME = {
 /** Anchored. The filename for a stored pack is built from this — never from raw input. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Same clock and union rules as `validateStudyPack` for the CSD night fields. */
+function isStudyClock(value) {
+  return typeof value === "string" && /^([01]?\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function studyNightGeometryOk(raw) {
+  if (!Array.isArray(raw.nights)) return true;
+  for (const row of raw.nights) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    if (row.inBedAt !== undefined && !isStudyClock(row.inBedAt)) return false;
+    if (row.triedToSleepAt !== undefined && !isStudyClock(row.triedToSleepAt)) return false;
+    if (row.outOfBedAt !== undefined && !isStudyClock(row.outOfBedAt)) return false;
+    if (row.awakeningCount !== undefined && ![0, 1, 2, 3, 4].includes(row.awakeningCount)) return false;
+    if (row.napMinutes !== undefined && ![0, 20, 45, 90].includes(row.napMinutes)) return false;
+    if (row.filedLate !== undefined && typeof row.filedLate !== "boolean") return false;
+  }
+  return true;
+}
+
 /**
  * On every response. The diary is a local origin any web page can try to reach,
  * so: never sniff a type we did not declare, never let another site frame it,
@@ -148,6 +167,10 @@ async function handleStudy(req, res, inbox, ingest, ingestToken) {
   }
   if (schema === "circadia-study-v1" && ("name" in raw || "dream" in raw || "email" in raw || "phone" in raw)) {
     sendJson(res, 400, { ok: false, error: "Pack contains identity fields." });
+    return;
+  }
+  if (schema === "circadia-study-v1" && !studyNightGeometryOk(raw)) {
+    sendJson(res, 400, { ok: false, error: "Invalid night clocks." });
     return;
   }
   // The participant number is the only caller-supplied part of the filename, so it

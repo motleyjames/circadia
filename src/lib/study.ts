@@ -4,13 +4,16 @@ import { dedupeReportsByMorningDate } from "@/lib/morning-file";
 import { bmiKgM, DEFAULT_HEIGHT_CM, DEFAULT_WEIGHT_KG, overnightDuration } from "@/lib/time";
 import type {
   AgeBand,
+  AwakeningCount,
   BmiBand,
   CircadiaState,
   MedicationClass,
+  NapMinutes,
   StudyNight,
   StudyPack,
 } from "@/lib/types";
 import { APP_VERSION } from "@/lib/version";
+import { isClock as isWallClock, normalizeClock } from "@/lib/windows";
 
 export const STUDY_SCHEMA = "circadia-study-v1" as const;
 
@@ -82,6 +85,12 @@ export function buildStudyPack(state: CircadiaState): StudyPack {
       if (report.drank && typeof report.drinkCount === "number") night.drinkCount = report.drinkCount;
       if (typeof report.spins === "boolean") night.spins = report.spins;
       if (report.usedSupplement && report.supplementKind) night.supplementKind = report.supplementKind;
+      if (isWallClock(report.inBedAt)) night.inBedAt = normalizeClock(report.inBedAt);
+      if (isWallClock(report.triedToSleepAt)) night.triedToSleepAt = normalizeClock(report.triedToSleepAt);
+      if (isWallClock(report.outOfBedAt)) night.outOfBedAt = normalizeClock(report.outOfBedAt);
+      if (isAwakeningCount(report.awakeningCount)) night.awakeningCount = report.awakeningCount;
+      if (isNapMinutes(report.napMinutes)) night.napMinutes = report.napMinutes;
+      if (typeof report.filedLate === "boolean") night.filedLate = report.filedLate;
       return night;
     });
 
@@ -133,6 +142,67 @@ function distinctiveSlices(text: string): string[] {
 }
 
 /** Fail closed: if a pack still contains a local secret, do not send it. */
+const CIVIL_DATE = /\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])/;
+const ISO_STAMP =
+  /\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])t\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:z|[+-]\d{2}:\d{2})?/i;
+
+function schemaAllowsSendStamp(schema: unknown): boolean {
+  return schema === "circadia-roster-v1" || schema === "circadia-roster-v2" || schema === "circadia-fault-v1";
+}
+
+/** Roster and fault are allowed one send stamp (`at`). Study packs have none. */
+function flagDateStrings(
+  payload: unknown,
+  blob: string,
+  reports: ReadonlyArray<{ morningDate: string }>,
+  hits: string[],
+): void {
+  for (const report of reports) {
+    if (report.morningDate.length >= 8 && blob.includes(report.morningDate.toLowerCase())) {
+      hits.push("calendar-date");
+    }
+  }
+  const skipTop =
+    payload &&
+    typeof payload === "object" &&
+    !Array.isArray(payload) &&
+    schemaAllowsSendStamp((payload as { schema?: unknown }).schema)
+      ? new Set(["at"])
+      : undefined;
+  walkStringFields(
+    payload,
+    (text) => {
+      if (ISO_STAMP.test(text)) hits.push("timestamp");
+      if (CIVIL_DATE.test(text)) hits.push("calendar-date");
+    },
+    skipTop,
+  );
+}
+
+function walkStringFields(
+  value: unknown,
+  visit: (text: string) => void,
+  skipTop?: ReadonlySet<string>,
+): void {
+  const walk = (node: unknown, top: boolean): void => {
+    if (typeof node === "string") {
+      visit(node);
+      return;
+    }
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item, false);
+      return;
+    }
+    if (node && typeof node === "object") {
+      for (const [key, child] of Object.entries(node)) {
+        if (top && skipTop?.has(key)) continue;
+        walk(child, false);
+      }
+    }
+  };
+  walk(value, true);
+}
+
 /**
  * Words the pack is designed to contain. A profile entry that happens to equal one
  * of these is not evidence that a name leaked — the class label was always going.
@@ -196,10 +266,9 @@ export function anonymityViolations(payload: unknown, state: CircadiaState): str
     if (s.length >= 4 && !PACK_VOCABULARY.has(s) && blob.includes(s)) hits.push("supplement");
   }
 
+  flagDateStrings(payload, blob, state.reports, hits);
+
   for (const report of state.reports) {
-    if (report.morningDate.length >= 8 && blob.includes(report.morningDate.toLowerCase())) {
-      hits.push("calendar-date");
-    }
     if (report.id.length >= 8 && blob.includes(report.id.toLowerCase())) hits.push("report-id");
     if (report.createdAt && blob.includes(report.createdAt.toLowerCase())) hits.push("timestamp");
     for (const slice of distinctiveSlices(report.dream?.text ?? "")) {
@@ -292,7 +361,24 @@ const NIGHT_KEYS = new Set([
   "supplementKind",
   "windDownHelped",
   "hadDream",
+  "inBedAt",
+  "triedToSleepAt",
+  "outOfBedAt",
+  "awakeningCount",
+  "napMinutes",
+  "filedLate",
 ]);
+
+const AWAKENING_COUNTS = new Set<AwakeningCount>([0, 1, 2, 3, 4]);
+const NAP_MINUTES = new Set<NapMinutes>([0, 20, 45, 90]);
+
+function isAwakeningCount(value: unknown): value is AwakeningCount {
+  return typeof value === "number" && AWAKENING_COUNTS.has(value as AwakeningCount);
+}
+
+function isNapMinutes(value: unknown): value is NapMinutes {
+  return typeof value === "number" && NAP_MINUTES.has(value as NapMinutes);
+}
 
 function isClock(value: unknown): value is string {
   return typeof value === "string" && /^\d{2}:\d{2}$/.test(value);
@@ -381,6 +467,27 @@ export function validateStudyPack(raw: unknown): ValidateResult {
       return { ok: false, error: "Invalid night flags." };
     }
     if (typeof n.hadDream !== "boolean") return { ok: false, error: "Invalid dream flag." };
+    if (n.inBedAt !== undefined) {
+      if (!isWallClock(n.inBedAt)) return { ok: false, error: "Invalid night clocks." };
+      n.inBedAt = normalizeClock(n.inBedAt);
+    }
+    if (n.triedToSleepAt !== undefined) {
+      if (!isWallClock(n.triedToSleepAt)) return { ok: false, error: "Invalid night clocks." };
+      n.triedToSleepAt = normalizeClock(n.triedToSleepAt);
+    }
+    if (n.outOfBedAt !== undefined) {
+      if (!isWallClock(n.outOfBedAt)) return { ok: false, error: "Invalid night clocks." };
+      n.outOfBedAt = normalizeClock(n.outOfBedAt);
+    }
+    if (n.awakeningCount !== undefined && !isAwakeningCount(n.awakeningCount)) {
+      return { ok: false, error: "Invalid awakening count." };
+    }
+    if (n.napMinutes !== undefined && !isNapMinutes(n.napMinutes)) {
+      return { ok: false, error: "Invalid nap minutes." };
+    }
+    if (n.filedLate !== undefined && typeof n.filedLate !== "boolean") {
+      return { ok: false, error: "Invalid filedLate." };
+    }
     nights.push(n as unknown as StudyNight);
   }
 

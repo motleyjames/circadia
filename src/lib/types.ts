@@ -251,6 +251,12 @@ export type StudyNight = {
   supplementKind?: SupplementKind;
   windDownHelped: WindDownHelp;
   hadDream: boolean;
+  inBedAt?: string;
+  triedToSleepAt?: string;
+  outOfBedAt?: string;
+  awakeningCount?: AwakeningCount;
+  napMinutes?: NapMinutes;
+  filedLate?: boolean;
 };
 
 export type RosterEvent = {
