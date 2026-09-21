@@ -673,5 +673,14 @@
     "replace": "    seen.add(key);\n",
     "testFile": "src/lib/diary-fold.test.ts",
     "testName": "deduplicates safetyFlags by category and episodeNight"
+  },
+  {
+    "id": "dock-loses-window-drag",
+    "why": "Removing performDrag leaves both Dock windows undraggable: the title bar stays hidden and CSS app-region does nothing in WKWebView.",
+    "file": "electron/launcher.swift",
+    "find": "    window.performDrag(with: event)\n",
+    "replace": "    _ = event\n",
+    "testFile": "src/lib/dock-window-drag.test.ts",
+    "testName": "both windows configure a drag region, exclude interactive elements, and keep the title bar hidden"
   }
 ]

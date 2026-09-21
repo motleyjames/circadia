@@ -63,6 +63,17 @@ func sessionBridgeScript() -> String {
       }
     },writable:false,enumerable:true,configurable:false});
   })();
+  (function(){
+    document.addEventListener('mousedown',function(e){
+      if(e.button!==0) return;
+      var t=e.target;
+      if(!t||!t.closest) return;
+      if(!t.closest('.native-drag')) return;
+      if(t.closest('a,button,input,textarea,select,summary,label,[role="button"],[role="link"]')) return;
+      var h=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.circadiaDrag;
+      if(h&&typeof h.postMessage==='function') h.postMessage({clicks:e.detail});
+    },true);
+  })();
   """
 }
 
@@ -141,6 +152,29 @@ final class CircadiaSessionStore: NSObject, WKScriptMessageHandlerWithReply {
 }
 
 let circadiaSessionStore = CircadiaSessionStore()
+
+/// Page-initiated window move. CSS `-webkit-app-region` is Chromium-only.
+final class CircadiaDragStore: NSObject, WKScriptMessageHandler {
+  weak var window: NSWindow?
+
+  func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+    guard message.name == "circadiaDrag", let window else { return }
+    let clicks: Int
+    if let body = message.body as? [String: Any], let n = body["clicks"] as? Int {
+      clicks = n
+    } else {
+      clicks = NSApp.currentEvent?.clickCount ?? 1
+    }
+    if clicks >= 2 {
+      window.zoom(nil)
+      return
+    }
+    guard let event = NSApp.currentEvent else { return }
+    window.performDrag(with: event)
+  }
+}
+
+let circadiaDragStore = CircadiaDragStore()
 
 func installPort(_ install: Install?) -> Int {
   install?.port ?? defaultPort
@@ -276,6 +310,9 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
         contentWorld: .page,
         name: "circadiaSession"
       )
+      config.userContentController.add(circadiaDragStore, name: "circadiaDrag")
+    } else {
+      config.userContentController.add(circadiaDragStore, name: "circadiaDrag")
     }
     let js = sessionBridgeScript()
     config.userContentController.addUserScript(
@@ -314,6 +351,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     window.isReleasedWhenClosed = false
     window.delegate = self
     window.center()
+    circadiaDragStore.window = window
 
     web.navigationDelegate = self
     web.setValue(false, forKey: "drawsBackground")
