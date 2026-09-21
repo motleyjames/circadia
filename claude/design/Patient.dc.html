@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Circadia patient review</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..600,0..100,0..1;1,9..144,300..600,0..100,0..1&amp;family=Instrument+Sans:wght@400..600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Instrument Sans',system-ui,sans-serif;background:#F4F5F7;color:#171A26}
+a{color:#4F3FB8}a:hover{color:#3A2C99}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1000px; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Instrument Sans', system-ui, sans-serif; color: #171A26;">
+
+<header style="height: 64px; flex-shrink: 0; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; border-bottom: 1px solid #E3E5EA;">
+<div style="display: flex; align-items: center; gap: 20px;">
+<div style="font-family: 'Fraunces', Georgia, serif; font-size: 23px; font-weight: 500; letter-spacing: -0.02em; font-variation-settings: 'SOFT' 50, 'WONK' 0.4;">Circadia</div>
+<div style="width: 1px; height: 22px; background: #E3E5EA;"></div>
+<div style="font-size: 14px; color: #5A6072;">[CLINIC NAME]</div>
+</div>
+<div style="display: flex; align-items: center; gap: 20px;">
+<div style="font-size: 12px; font-weight: 600; color: #4F3FB8; background: #EEEBFB; padding: 5px 11px; border-radius: 999px;">Sample patients</div>
+<div style="font-size: 14px; font-weight: 500;">[YOUR NAME]</div>
+</div>
+</header>
+
+<main style="flex-grow: 1; box-sizing: border-box; padding: 24px 48px 40px; display: flex; flex-direction: column; gap: 22px;">
+
+<a href="Main.dc.html" style="display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; min-height: 44px; font-size: 14px; font-weight: 500; text-decoration: none;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18 9 12l6-6"></path></svg>
+This week
+</a>
+
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 40px; font-weight: 400; letter-spacing: -0.02em; line-height: 1.05; font-variation-settings: 'SOFT' 50, 'WONK' 0.4;">Tom W.</h1>
+<p style="margin: 0; font-size: 15px; color: #5A6072;">Week 3 of care. First week on a prescribed window. Last synced today at 7:12 am.</p>
+</div>
+<a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid #D5D8E0; border-radius: 8px; background: #FFFFFF; color: #171A26; font-size: 14px; font-weight: 500; text-decoration: none;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"></path></svg>
+Export 14-night diary
+</a>
+</div>
+
+<div style="display: flex; gap: 24px; align-items: flex-start;">
+
+<section aria-labelledby="diary-title" style="width: 940px; flex-shrink: 0; box-sizing: border-box; padding: 24px 28px 28px; background: #FFFFFF; border: 1px solid #E3E5EA; border-radius: 12px; display: flex; flex-direction: column; gap: 18px;">
+
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+<h2 id="diary-title" style="margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; font-variation-settings: 'SOFT' 50, 'WONK' 0.4;">The last 14 nights</h2>
+<div style="display: flex; align-items: center; gap: 18px; font-size: 13px; color: #3B4152;">
+<div style="display: flex; align-items: center; gap: 7px;"><div style="width: 14px; height: 10px; border-radius: 2px; background: #4F3FB8;"></div>Asleep</div>
+<div style="display: flex; align-items: center; gap: 7px;"><div style="width: 14px; height: 10px; border-radius: 2px; background: #DAD4F7;"></div>In bed, awake</div>
+<div style="display: flex; align-items: center; gap: 7px;"><div style="width: 14px; height: 10px; box-sizing: border-box; border-left: 1px dashed #7A6DD1; border-right: 1px dashed #7A6DD1; background: #F1EFFB;"></div>Prescribed window</div>
+</div>
+</div>
+
+<div style="position: relative; display: flex; flex-direction: column;">
+
+<div style="display: flex; align-items: flex-end; gap: 12px; height: 22px;">
+<div style="width: 64px; flex-shrink: 0;"></div>
+<div style="width: 760px; height: 22px; flex-shrink: 0; position: relative;">
+<sc-for list="{{ticks}}" as="t" hint-placeholder-count="8">
+<div style="position: absolute; bottom: 4px; left: {{t.left}}px; font-size: 12px; color: #5A6072; white-space: nowrap;">{{t.label}}</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: absolute; top: 22px; bottom: 0; left: 76px; width: 760px; pointer-events: none;">
+<sc-for list="{{ticks}}" as="t" hint-placeholder-count="8">
+<div style="position: absolute; top: 0; bottom: 0; left: {{t.left}}px; width: 1px; background: #EFF0F4;"></div>
+</sc-for>
+</div>
+
+<div style="font-size: 13px; color: #5A6072; padding: 10px 0 6px 76px; position: relative;">Baseline, no window</div>
+
+<div style="display: flex; flex-direction: column; gap: 5px; position: relative;">
+<sc-for list="{{baseline}}" as="n" hint-placeholder-count="7">
+<div style="display: flex; align-items: center; gap: 12px; height: 22px; position: relative; z-index: 1;">
+<div style="width: 64px; flex-shrink: 0; font-size: 13px; color: #3B4152; font-variant-numeric: tabular-nums;">{{n.d}}</div>
+<div style="width: 760px; height: 18px; flex-shrink: 0; position: relative;">
+<div style="position: absolute; top: 0; height: 18px; left: {{n.bedLeft}}px; width: {{n.bedW}}px; background: #DAD4F7; border-radius: 3px;"></div>
+<sc-for list="{{n.segs}}" as="s" hint-placeholder-count="1">
+<div style="position: absolute; top: 0; height: 18px; left: {{s.left}}px; width: {{s.w}}px; background: #4F3FB8; border-radius: 3px;"></div>
+</sc-for>
+</div>
+<div style="width: 44px; text-align: right; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;">{{n.se}}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display: flex; align-items: center; gap: 12px; padding: 16px 0 10px 76px; position: relative;">
+<div style="font-size: 13px; font-weight: 600; color: #4F3FB8;">Window prescribed Sep 14: 12:30 am to 6:30 am</div>
+<div style="flex-grow: 1; height: 1px; background: #E3E5EA;"></div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 5px; position: relative;">
+<div style="position: absolute; top: -6px; bottom: -6px; left: {{corridorLeft}}px; width: {{corridorW}}px; background: #F1EFFB; border-left: 1px dashed #7A6DD1; border-right: 1px dashed #7A6DD1; z-index: 0;"></div>
+<sc-for list="{{treatment}}" as="n" hint-placeholder-count="7">
+<div style="display: flex; align-items: center; gap: 12px; height: 22px; position: relative; z-index: 1;">
+<div style="width: 64px; flex-shrink: 0; font-size: 13px; color: #3B4152; font-variant-numeric: tabular-nums;">{{n.d}}</div>
+<div style="width: 760px; height: 18px; flex-shrink: 0; position: relative;">
+<div style="position: absolute; top: 0; height: 18px; left: {{n.bedLeft}}px; width: {{n.bedW}}px; background: #DAD4F7; border-radius: 3px;"></div>
+<sc-for list="{{n.segs}}" as="s" hint-placeholder-count="1">
+<div style="position: absolute; top: 0; height: 18px; left: {{s.left}}px; width: {{s.w}}px; background: #4F3FB8; border-radius: 3px;"></div>
+</sc-for>
+</div>
+<div style="width: 44px; text-align: right; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;">{{n.se}}</div>
+<sc-if value="{{n.late}}" hint-placeholder-val="{{false}}">
+<div style="font-size: 12px; color: #5A6072; white-space: nowrap;">filed late</div>
+</sc-if>
+<sc-if value="{{n.outside}}" hint-placeholder-val="{{false}}">
+<div style="font-size: 12px; color: #A15C07; white-space: nowrap;">in bed early</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+</div>
+</section>
+
+<aside aria-labelledby="review-title" style="flex-grow: 1; min-width: 0; box-sizing: border-box; padding: 24px 24px 26px; background: #FFFFFF; border: 1px solid #E3E5EA; border-radius: 12px; display: flex; flex-direction: column; gap: 20px;">
+
+<h2 id="review-title" style="margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 22px; font-weight: 500; letter-spacing: -0.01em; font-variation-settings: 'SOFT' 50, 'WONK' 0.4;">Week 3 review</h2>
+
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 72px 72px; column-gap: 12px; row-gap: 12px; align-items: baseline; font-variant-numeric: tabular-nums;">
+<div></div>
+<div style="font-size: 12px; color: #5A6072; text-align: right;">This week</div>
+<div style="font-size: 12px; color: #5A6072; text-align: right;">Baseline</div>
+<div style="font-size: 14px; color: #3B4152;">Sleep efficiency</div>
+<div style="font-size: 20px; font-weight: 600; text-align: right;">90%</div>
+<div style="font-size: 15px; color: #5A6072; text-align: right;">59%</div>
+<div style="font-size: 14px; color: #3B4152;">Time asleep</div>
+<div style="font-size: 15px; font-weight: 600; text-align: right;">5h 28m</div>
+<div style="font-size: 15px; color: #5A6072; text-align: right;">5h 39m</div>
+<div style="font-size: 14px; color: #3B4152;">Time in bed</div>
+<div style="font-size: 15px; font-weight: 600; text-align: right;">6h 03m</div>
+<div style="font-size: 15px; color: #5A6072; text-align: right;">9h 36m</div>
+<div style="font-size: 14px; color: #3B4152;">PROMIS sleep disturbance</div>
+<div style="font-size: 15px; font-weight: 600; text-align: right;">T 61</div>
+<div style="font-size: 15px; color: #5A6072; text-align: right;">T 66</div>
+</div>
+
+<div style="height: 1px; background: #EDEEF2;"></div>
+
+<div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+<div style="display: flex; justify-content: space-between; gap: 12px;"><div style="color: #3B4152;">Inside the window</div><div style="font-weight: 600;">6 of 7 nights</div></div>
+<div style="display: flex; justify-content: space-between; gap: 12px;"><div style="color: #3B4152;">Mornings filed</div><div style="font-weight: 600;">14 of 14, 1 late</div></div>
+<div style="display: flex; justify-content: space-between; gap: 12px;"><div style="color: #3B4152;">Safety flags</div><div style="font-weight: 600;">None</div></div>
+</div>
+
+<div style="box-sizing: border-box; padding: 20px; background: #F7F6FC; border-radius: 10px; display: flex; flex-direction: column; gap: 14px;">
+
+<sc-if value="{{editing}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 14px;">
+<h3 style="margin: 0; font-size: 16px; font-weight: 600;">Next window</h3>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<label for="win-start" style="font-size: 13px; color: #3B4152;">In bed from</label>
+<input id="win-start" type="time" value="{{start}}" onChange="{{onStart}}" style="height: 44px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFD2DB; border-radius: 8px; background: #FFFFFF; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 15px; color: #171A26;">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<label for="win-end" style="font-size: 13px; color: #3B4152;">Up by</label>
+<input id="win-end" type="time" value="{{end}}" onChange="{{onEnd}}" style="height: 44px; box-sizing: border-box; padding: 0 10px; border: 1px solid #CFD2DB; border-radius: 8px; background: #FFFFFF; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 15px; color: #171A26;">
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<label for="win-note" style="font-size: 13px; color: #3B4152;">Note to Tom, shown with the window</label>
+<textarea id="win-note" rows="3" value="{{note}}" onChange="{{onNote}}" style="box-sizing: border-box; padding: 10px; border: 1px solid #CFD2DB; border-radius: 8px; background: #FFFFFF; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 14px; line-height: 1.45; color: #171A26; resize: none;"></textarea>
+</div>
+<button type="button" onClick="{{setWindow}}" style="height: 46px; border: 0; border-radius: 8px; background: #4F3FB8; color: #FFFFFF; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer;">Set next window</button>
+</div>
+</sc-if>
+
+<sc-if value="{{confirmed}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 10px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4F3FB8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+<div style="font-size: 16px; font-weight: 600;">Window set: {{rangeText}}</div>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 1.5; color: #3B4152;">Tom sees it the next time his diary syncs.</p>
+<button type="button" onClick="{{editWindow}}" style="align-self: flex-start; min-height: 44px; padding: 0; border: 0; background: transparent; color: #4F3FB8; font-family: 'Instrument Sans', system-ui, sans-serif; font-size: 14px; font-weight: 600; cursor: pointer;">Change window</button>
+</div>
+</sc-if>
+
+</div>
+
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #5A6072;">Circadia shows the evidence. The window is yours to set.</p>
+
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { editing: true, start: '00:30', end: '06:30', note: 'The 6:30 wake time matters most. Keep it on weekends too.' };
+  }
+  renderVals() {
+    var self = this;
+    var SCALE = 760 / 900;
+    var px = function (m) { return Math.round(m * SCALE * 10) / 10; };
+    var WINDOW_START = 270;
+    var nights = [
+      { d: 'Mon 7', bed: 150, out: 725, sleep: [[262, 350], [395, 640]] },
+      { d: 'Tue 8', bed: 140, out: 700, sleep: [[280, 610]] },
+      { d: 'Wed 9', bed: 160, out: 740, sleep: [[250, 330], [380, 655]] },
+      { d: 'Thu 10', bed: 155, out: 710, sleep: [[300, 620]] },
+      { d: 'Fri 11', bed: 145, out: 735, sleep: [[245, 360], [410, 630]] },
+      { d: 'Sat 12', bed: 170, out: 760, sleep: [[275, 645]] },
+      { d: 'Sun 13', bed: 165, out: 750, sleep: [[290, 340], [370, 650]] },
+      { d: 'Mon 14', bed: 270, out: 632, sleep: [[300, 612]] },
+      { d: 'Tue 15', bed: 272, out: 630, sleep: [[295, 400], [418, 620]] },
+      { d: 'Wed 16', bed: 268, out: 630, sleep: [[288, 618]] },
+      { d: 'Thu 17', bed: 250, out: 632, sleep: [[290, 615]] },
+      { d: 'Fri 18', bed: 270, out: 630, sleep: [[285, 622]] },
+      { d: 'Sat 19', bed: 271, out: 631, sleep: [[283, 624]], late: true },
+      { d: 'Sun 20', bed: 270, out: 630, sleep: [[280, 625]] }
+    ];
+    var toRow = function (n, windowed) {
+      var tst = n.sleep.reduce(function (a, s) { return a + (s[1] - s[0]); }, 0);
+      var se = Math.round((tst / (n.out - n.bed)) * 100);
+      return {
+        d: n.d,
+        bedLeft: px(n.bed),
+        bedW: px(n.out - n.bed),
+        segs: n.sleep.map(function (s) { return { left: px(s[0]), w: px(s[1] - s[0]) }; }),
+        se: se + '%',
+        late: !!n.late,
+        outside: windowed && n.bed < WINDOW_START - 5
+      };
+    };
+    var ticks = [[0, '8 pm'], [120, '10 pm'], [240, '12 am'], [360, '2 am'], [480, '4 am'], [600, '6 am'], [720, '8 am'], [840, '10 am']]
+      .map(function (t) { return { left: px(t[0]), label: t[1] }; });
+    var fmt = function (t) {
+      var parts = String(t || '00:00').split(':');
+      var h = Number(parts[0]);
+      var m = parts[1] || '00';
+      var ap = h < 12 ? 'am' : 'pm';
+      var hh = h % 12 === 0 ? 12 : h % 12;
+      return hh + ':' + m + ' ' + ap;
+    };
+    return {
+      ticks: ticks,
+      baseline: nights.slice(0, 7).map(function (n) { return toRow(n, false); }),
+      treatment: nights.slice(7).map(function (n) { return toRow(n, true); }),
+      corridorLeft: 76 + px(WINDOW_START),
+      corridorW: px(360),
+      editing: this.state.editing,
+      confirmed: !this.state.editing,
+      start: this.state.start,
+      end: this.state.end,
+      note: this.state.note,
+      rangeText: fmt(this.state.start) + ' to ' + fmt(this.state.end),
+      onStart: function (e) { self.setState({ start: e.target.value }); },
+      onEnd: function (e) { self.setState({ end: e.target.value }); },
+      onNote: function (e) { self.setState({ note: e.target.value }); },
+      setWindow: function () { self.setState({ editing: false }); },
+      editWindow: function () { self.setState({ editing: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
