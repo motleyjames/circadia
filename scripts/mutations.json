@@ -313,5 +313,86 @@
     "replace": "const LOOKUP_AUTH_INFO = \"circadia/lookup-id/v1\";\n",
     "testFile": "src/lib/sync-account.test.ts",
     "testName": "neither lookupId nor lookupAuth can be derived from the other"
+  },
+  {
+    "id": "pack-drops-csd-geometry",
+    "why": "A night with full CSD clocks is packed without them, so the console still cannot draw a diary.",
+    "file": "src/lib/study.ts",
+    "find": "      if (isWallClock(report.inBedAt)) night.inBedAt = normalizeClock(report.inBedAt);\n",
+    "replace": "      void isWallClock; void normalizeClock;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a pack built from a night with full CSD geometry carries all five fields and filedLate"
+  },
+  {
+    "id": "pack-requires-inBedAt",
+    "why": "inBedAt becomes required, so every pre-0.10.0 night — every pack collected so far — fails validation and never arrives.",
+    "file": "src/lib/study.ts",
+    "find": "    if (n.inBedAt !== undefined) {\n      if (!isWallClock(n.inBedAt)) return { ok: false, error: \"Invalid night clocks.\" };\n",
+    "replace": "    if (n.inBedAt === undefined) return { ok: false, error: \"Invalid night clocks.\" };\n    if (n.inBedAt !== undefined) {\n      if (!isWallClock(n.inBedAt)) return { ok: false, error: \"Invalid night clocks.\" };\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a night with none of the new fields still validates"
+  },
+  {
+    "id": "pack-se-drops-inBedAt",
+    "why": "inBedAt is omitted from the pack, so nightGeometry cannot score it and sleep efficiency does not survive the round trip.",
+    "file": "src/lib/study.ts",
+    "find": "      if (isWallClock(report.inBedAt)) night.inBedAt = normalizeClock(report.inBedAt);\n",
+    "replace": "      void report.inBedAt;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "sleep efficiency survives the pack round trip"
+  },
+  {
+    "id": "pack-accepts-date-clock",
+    "why": "A calendar date in inBedAt is stored as a clock. The anonymity scan then has a date in a field it may not attribute, and the geometry is nonsense.",
+    "file": "src/lib/study.ts",
+    "find": "      if (!isWallClock(n.inBedAt)) return { ok: false, error: \"Invalid night clocks.\" };\n",
+    "replace": "      if (typeof n.inBedAt !== \"string\") return { ok: false, error: \"Invalid night clocks.\" };\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a calendar date placed in inBedAt is rejected"
+  },
+  {
+    "id": "pack-accepts-bad-unions",
+    "why": "awakeningCount 5 and napMinutes 30 are stored. The unions exist so a pack cannot invent a night the diary would not file.",
+    "file": "src/lib/study.ts",
+    "find": "    if (n.awakeningCount !== undefined && !isAwakeningCount(n.awakeningCount)) {\n      return { ok: false, error: \"Invalid awakening count.\" };\n    }\n",
+    "replace": "    void isAwakeningCount;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "an out-of-union awakeningCount or napMinutes is rejected"
+  },
+  {
+    "id": "pack-dock-rejects-geometry",
+    "why": "The Dock server refuses a night that has inBedAt, so a pack the Next route accepts is silently dropped on the Mac that actually collects shakedown nights.",
+    "file": "electron/static-server.cjs",
+    "find": "  if (schema === \"circadia-study-v1\" && !studyNightGeometryOk(raw)) {\n    sendJson(res, 400, { ok: false, error: \"Invalid night clocks.\" });\n    return;\n  }\n",
+    "replace": "  if (schema === \"circadia-study-v1\" && Array.isArray(raw.nights) && raw.nights.some((n) => n && n.inBedAt)) {\n    sendJson(res, 400, { ok: false, error: \"Invalid night clocks.\" });\n    return;\n  }\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "both receivers accept a new-format pack, and both accept an old-format pack"
+  },
+  {
+    "id": "pack-sends-dream-text",
+    "why": "Dream text rides out on the pack. Free text is how a name leaves the device.",
+    "file": "src/lib/study.ts",
+    "find": "        hadDream: Boolean(report.dream?.text),\n",
+    "replace": "        hadDream: Boolean(report.dream?.text),\n        dream: report.dream?.text,\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "no free text reaches a pack"
+  },
+  {
+    "id": "pack-scan-drops-dates",
+    "why": "The anonymity scan no longer flags a calendar date in the blob, so a leaked morningDate ships.",
+    "file": "src/lib/study.ts",
+    "find": "  flagDateStrings(payload, blob, state.reports, hits);\n",
+    "replace": "  void flagDateStrings;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "the anonymity scan is not weakened"
+  },
+  {
+    "id": "pack-scan-misses-foreign-date",
+    "why": "The scan only looks for that night's morningDate, so a different calendar date in any other string field ships.",
+    "file": "src/lib/study.ts",
+    "find": "  walkStringFields(\n    payload,\n    (text) => {\n      if (ISO_STAMP.test(text)) hits.push(\"timestamp\");\n      if (CIVIL_DATE.test(text)) hits.push(\"calendar-date\");\n    },\n    skipTop,\n  );\n",
+    "replace": "  void walkStringFields; void ISO_STAMP; void CIVIL_DATE; void skipTop;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a date in any string field is rejected"
   }
 ]
