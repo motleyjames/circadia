@@ -284,7 +284,11 @@ describe("study pack night geometry", () => {
     const fromReport = nightGeometry(report);
     expect(fromReport).toBeTruthy();
     const pack = buildStudyPack(stateWithReport(report));
-    const fromPack = nightGeometry({ ...report, ...pack.nights[0] });
+    const night = pack.nights[0];
+    expect(night).toBeTruthy();
+    if (!night) return;
+    const fromPack = nightGeometry(night);
+    expect(fromPack).toBeTruthy();
     expect(fromPack?.efficiencyPct).toBe(fromReport!.efficiencyPct);
     expect(fromPack?.timeInBedMinutes).toBe(fromReport!.timeInBedMinutes);
     expect(fromPack?.totalSleepMinutes).toBe(fromReport!.totalSleepMinutes);
