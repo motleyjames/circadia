@@ -465,7 +465,7 @@
     "find": "      asked: true,\n      consented: true,\n      participantId,\n",
     "replace": "      asked: true,\n      consented: true,\n      participantId: newId(),\n",
     "testFile": "src/lib/invite.test.ts",
-    "testName": "a tester who reinstalls keeps their join to James's record"
+    "testName": "a reinstall that re-enters the code rejoins the same record"
   },
   {
     "id": "pack-elapsed-without-episode",
@@ -484,5 +484,176 @@
     "replace": "    void snapshot;\n",
     "testFile": "src/lib/invite.test.ts",
     "testName": "no shakedown join produces a participantId Operator did not issue"
+  },
+  {
+    "id": "invite-derive-drifts",
+    "why": "Changing the derive prefix shifts every tester's participantId at once and splits them from the book.",
+    "file": "src/lib/invite.ts",
+    "find": "  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX}${normalized}`));\n",
+    "replace": "  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX}x:${normalized}`));\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "the same code always derives the same participantId"
+  },
+  {
+    "id": "invite-uuid-unversioned",
+    "why": "A derived id that skips the version and variant bits fails the anchored receiver regex, so every new tester is refused.",
+    "file": "src/lib/invite.ts",
+    "find": "  b[6] = (b[6]! & 0x0f) | 0x40;\n  b[8] = (b[8]! & 0x3f) | 0x80;\n",
+    "replace": "  b[6] = (b[6]! & 0x0f) | 0x90;\n  b[8] = (b[8]! & 0x3f) | 0xc0;\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "a derived participantId passes the receiver's validator unchanged"
+  },
+  {
+    "id": "invite-normalize-skips-aliases",
+    "why": "Dropping I/L/O aliases means two typings of one code derive two ids.",
+    "file": "src/lib/invite.ts",
+    "find": "    if (c === \"I\" || c === \"L\") c = \"1\";\n    else if (c === \"O\") c = \"0\";\n    else if (c === \"U\") return null;\n",
+    "replace": "    if (c === \"U\") return null;\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "invite normalization is frozen at v1"
+  },
+  {
+    "id": "invite-accepts-u",
+    "why": "Accepting U the way the recovery code does couples two frozen formats and lets an invalid invite through.",
+    "file": "src/lib/invite.ts",
+    "find": "    else if (c === \"U\") return null;\n",
+    "replace": "    else if (c === \"U\") c = \"V\";\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "a code containing U or a non-alphabet character is rejected"
+  },
+  {
+    "id": "invite-constant-id",
+    "why": "Every code collapsing to one id joins every tester onto one record.",
+    "file": "src/lib/invite.ts",
+    "find": "  return bytesToUuidV4(digest);\n",
+    "replace": "  return \"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee\";\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "two different codes derive different ids"
+  },
+  {
+    "id": "invite-math-random",
+    "why": "Math.random is not a CSPRNG and is the one source the prompt forbids.",
+    "file": "src/lib/invite.ts",
+    "find": "  crypto.getRandomValues(bytes);\n",
+    "replace": "  for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "codes are generated from crypto.getRandomValues, never Math.random"
+  },
+  {
+    "id": "episode-night-is-dense-index",
+    "why": "Using nightIndex as episodeNight hides missed nights: filed 0, 1, 3 become 0, 1, 2.",
+    "file": "src/lib/study.ts",
+    "find": "        if (position !== null) night.episodeNight = position;\n",
+    "replace": "        if (position !== null) night.episodeNight = nightIndex;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "episodeNight places a missed night: filed 0, 1 and 3 leave slot 2 identifiable"
+  },
+  {
+    "id": "episode-night-exceeds-elapsed",
+    "why": "An episodeNight past nightsElapsed cannot be placed on the 14-slot strip.",
+    "file": "src/lib/study.ts",
+    "find": "      if (typeof p.nightsElapsed === \"number\" && n.episodeNight > p.nightsElapsed) {\n        return { ok: false, error: \"Invalid episodeNight.\" };\n      }\n",
+    "replace": "      if (false && typeof p.nightsElapsed === \"number\" && n.episodeNight > p.nightsElapsed) {\n        return { ok: false, error: \"Invalid episodeNight.\" };\n      }\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "episodeNight is never negative and never exceeds nightsElapsed"
+  },
+  {
+    "id": "crisis-flag-travels",
+    "why": "A crisis disclosure that leaves the device implies someone was listening after the fact.",
+    "file": "src/lib/study.ts",
+    "find": "  const safetyFlags = flagsForPack(state, now);\n  if (safetyFlags.length) pack.safetyFlags = safetyFlags;\n",
+    "replace": "  const safetyFlags = flagsForPack(state, now);\n  pack.safetyFlags = [...safetyFlags, { category: \"crisis\" as never, episodeNight: 0 }];\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a crisis disclosure produces no flag, no count and no field of any kind in the pack"
+  },
+  {
+    "id": "mania-flag-travels",
+    "why": "A mania disclosure that leaves the device is the same class of harm as crisis: no clinician is on call.",
+    "file": "src/lib/study.ts",
+    "find": "  if (safetyFlags.length) pack.safetyFlags = safetyFlags;\n",
+    "replace": "  pack.safetyFlags = [...safetyFlags, { category: \"mania\" as never, episodeNight: 0 }];\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a mania disclosure produces nothing in the pack"
+  },
+  {
+    "id": "flag-keeps-tester-words",
+    "why": "Spreading the stored flag onto the pack lets planted words leave the device.",
+    "file": "src/lib/invite.ts",
+    "find": "    out.push({ category: flag.category, episodeNight: flag.episodeNight });\n",
+    "replace": "    out.push({ ...flag, category: flag.category, episodeNight: flag.episodeNight });\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a flag carries a category and an episodeNight only — no text survives"
+  },
+  {
+    "id": "flag-allowlist-grows",
+    "why": "Adding a third category is James's decision; a silent widen sends crisis or mania.",
+    "file": "src/lib/invite.ts",
+    "find": "export const PACK_SAFETY_CATEGORIES = [\"witnessed-apnea\", \"drowsy-driving\"] as const;\n",
+    "replace": "export const PACK_SAFETY_CATEGORIES = [\"witnessed-apnea\", \"drowsy-driving\", \"crisis\"] as const;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "only the two allowlisted categories can ever appear"
+  },
+  {
+    "id": "receivers-reject-new-fields",
+    "why": "Leaving safetyFlags off TOP_KEYS refuses every pack that carries a flag — the fifth-occurrence trap.",
+    "file": "src/lib/study.ts",
+    "find": "  \"nightsElapsed\",\n  \"safetyFlags\",\n",
+    "replace": "  \"nightsElapsed\",\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "both receivers accept a pack with both new fields, and one with neither"
+  },
+  {
+    "id": "invite-book-in-tree",
+    "why": "A book path git would track publishes testers' real names on the next add -A.",
+    "file": "src/lib/operator-store.ts",
+    "find": "  return path.join(operatorStoreDir(inbox), INVITE_BOOK_FILE);\n",
+    "replace": "  return path.join(\"src\", \"lib\", INVITE_BOOK_FILE);\n",
+    "testFile": "src/lib/operator-store.test.ts",
+    "testName": "the invite book is ignored by git"
+  },
+  {
+    "id": "reject-not-recorded",
+    "why": "A rejected pack that writes nothing leaves a tester's night gone without a reason.",
+    "file": "src/lib/operator-store.ts",
+    "find": "  existing.push(next);\n  ensureOperatorDir(inbox);\n  writeFileSync(rejectLogPath(inbox), JSON.stringify(existing, null, 2), { encoding: \"utf8\", mode: 0o600 });\n",
+    "replace": "  ensureOperatorDir(inbox);\n",
+    "testFile": "src/lib/operator-store.test.ts",
+    "testName": "a rejected pack leaves a record carrying the validator's reason and the arrival stamp"
+  },
+  {
+    "id": "reject-log-in-tree",
+    "why": "A reject log git would track is still an identified health artifact if a pack leaked into the reason.",
+    "file": "src/lib/operator-store.ts",
+    "find": "  return path.join(operatorStoreDir(inbox), REJECT_LOG_FILE);\n",
+    "replace": "  return path.join(\"src\", \"lib\", REJECT_LOG_FILE);\n",
+    "testFile": "src/lib/operator-store.test.ts",
+    "testName": "the rejection record is ignored by git"
+  },
+  {
+    "id": "crisis-does-not-suppress-drowsy",
+    "why": "A line that is both crisis and drowsy-driving must not grow a referral flag. Recording the allowlisted kind from the same disclosure implies someone was listening to the crisis.",
+    "file": "src/lib/invite.ts",
+    "find": "  if (isCrisisDisclosure(lower)) return [...flags];\n",
+    "replace": "  if (false && isCrisisDisclosure(lower)) return [...flags];\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a crisis-and-drowsy disclosure produces no safety flag"
+  },
+  {
+    "id": "fold-drops-incoming-flags",
+    "why": "mergeDiaryStates keeps only local.safetyFlags, so a flag that exists only on the incoming device is dropped — the same class of bug as the 0.9.0 incoming-episode loss.",
+    "file": "src/lib/diary-fold.ts",
+    "find": "    safetyFlags: mergeSafetyFlags(local.safetyFlags, incoming.safetyFlags),\n",
+    "replace": "    safetyFlags: local.safetyFlags ?? [],\n",
+    "testFile": "src/lib/diary-fold.test.ts",
+    "testName": "takes incoming safetyFlags when this diary has none"
+  },
+  {
+    "id": "fold-drops-local-flags",
+    "why": "Taking only incoming.safetyFlags drops flags this device already recorded, so a Mac/phone fold can erase a referral.",
+    "file": "src/lib/diary-fold.ts",
+    "find": "    safetyFlags: mergeSafetyFlags(local.safetyFlags, incoming.safetyFlags),\n",
+    "replace": "    safetyFlags: incoming.safetyFlags ?? [],\n",
+    "testFile": "src/lib/diary-fold.test.ts",
+    "testName": "keeps local safetyFlags when the incoming diary has none"
   }
 ]

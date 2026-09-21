@@ -43,7 +43,7 @@ import {
   bootVaultFromDisk,
 } from "@/lib/storage";
 import { isPhoneNative } from "@/lib/phone-native";
-import { enrollWithInvite } from "@/lib/invite";
+import { enrollWithInvite, flagNightAt, recordDisclosureFlags } from "@/lib/invite";
 import { assertSendable, buildStudyPack } from "@/lib/study";
 import { postInbox, STUDY_HELD_ERROR } from "@/lib/study-client";
 import { applyBackfill, retainMorningDraft } from "@/lib/backfill";
@@ -284,7 +284,7 @@ type CircadiaContextValue = {
   loadSampleWeek: () => void;
   resetAll: () => void;
   joinStudy: () => void;
-  enrollSolo: (code: string) => boolean;
+  enrollSolo: (code: string) => Promise<boolean>;
   declineStudy: () => void;
   leaveStudy: () => void;
   sendStudyNow: () => Promise<void>;
@@ -322,7 +322,7 @@ const NOOP_VALUE: CircadiaContextValue = {
   loadSampleWeek: noop,
   resetAll: noop,
   joinStudy: noop,
-  enrollSolo: () => false,
+  enrollSolo: async () => false,
   declineStudy: noop,
   leaveStudy: noop,
   sendStudyNow: async () => undefined,
@@ -544,6 +544,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
         chat: messages,
         activeConsultId: id,
         consultHistory: thread ? upsertConsult(prev.consultHistory, thread) : prev.consultHistory,
+        safetyFlags: recordDisclosureFlags(prev.safetyFlags, trimmed, prev.profile, flagNightAt(prev)),
       };
     });
   }, []);
@@ -697,8 +698,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     if (snapshot().reports.length) void transmitStudy();
   }, []);
 
-  const enrollSolo = useCallback((code: string) => {
-    const next = enrollWithInvite(snapshot(), code);
+  const enrollSolo = useCallback(async (code: string) => {
+    const next = await enrollWithInvite(snapshot(), code);
     if (!next) return false;
     patch(() => next);
     void transmitRoster();

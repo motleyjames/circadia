@@ -1,12 +1,19 @@
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { emptyState } from "./storage";
-import { completionRate, nightsElapsedSince } from "./episode";
-import { enrollWithInvite, generateInvite } from "./invite";
+import { completionRate, createEpisode, nightsElapsedSince } from "./episode";
+import {
+  enrollWithInvite,
+  flagsForPack,
+  generateInvite,
+  recordAllowlistedFlag,
+  recordDisclosureFlags,
+} from "./invite";
+import { allowlistedSafetyKinds, isCrisisDisclosure, safetyKind } from "./safety-triage";
 import { anonymityViolations, buildStudyPack, validateStudyPack } from "./study";
 import { nightGeometry } from "./sleep-metrics";
 import { medicationClasses } from "./metrics";
-import type { CircadiaState, MorningReport, Profile } from "./types";
+import type { CircadiaState, MorningReport, Profile, SafetyFlag } from "./types";
 import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 import { parseInboxPayload } from "./inbox-payload";
 
@@ -261,6 +268,33 @@ function stateWithReport(report: MorningReport): CircadiaState {
   return state;
 }
 
+function quietReport(morningDate: string): MorningReport {
+  return {
+    id: `r-${morningDate}`,
+    morningDate,
+    wokeAt: "07:00",
+    fellAsleepAt: "23:30",
+    rating: 3,
+    drank: false,
+    screenOffMinutes: 30,
+    sleepLatencyMinutes: 30,
+    wokeInNight: false,
+    nightWakingMinutes: 0,
+    usedSupplement: false,
+    windDownHelped: "did_not_use",
+    createdAt: `${morningDate}T12:00:00.000Z`,
+  };
+}
+
+function enrolledOn(enrolledAt: string, reports: MorningReport[] = hostileState().reports): CircadiaState {
+  const base = hostileState();
+  return {
+    ...base,
+    reports,
+    episode: createEpisode({ clinicianId: null, enrolledAt }),
+  };
+}
+
 describe("study pack night geometry", () => {
   it("a pack built from a night with full CSD geometry carries all five fields and filedLate", () => {
     const pack = buildStudyPack(stateWithReport(fullGeometryReport()));
@@ -391,9 +425,9 @@ describe("study pack night geometry", () => {
 });
 
 describe("solo enrollment packs", () => {
-  it("a name or cohort never enters a pack", () => {
-    const invite = generateInvite("Zelda Nightingale", "lab");
-    const enrolled = enrollWithInvite(hostileState(), invite.participantId, new Date("2026-09-08T12:00:00"));
+  it("a name or cohort never enters a pack", async () => {
+    const invite = await generateInvite("Zelda Nightingale", "lab");
+    const enrolled = await enrollWithInvite(hostileState(), invite.code, new Date("2026-09-08T12:00:00"));
     expect(enrolled).toBeTruthy();
     const pack = buildStudyPack(enrolled!, new Date("2026-09-15T12:00:00"));
     const blob = JSON.stringify(pack);
@@ -408,9 +442,9 @@ describe("solo enrollment packs", () => {
 
   it("enrolledAt never enters a pack; nightsElapsed does, as a non-negative integer", () => {
     const enrolledAt = "2026-09-01T12:00:00.000Z";
-    const state = enrollWithInvite(hostileState(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", new Date(enrolledAt));
-    expect(state?.episode?.enrolledAt).toBe(enrolledAt);
-    const pack = buildStudyPack(state!, new Date("2026-09-08T18:00:00.000Z"));
+    const state = enrolledOn(enrolledAt);
+    expect(state.episode?.enrolledAt).toBe(enrolledAt);
+    const pack = buildStudyPack(state, new Date("2026-09-08T18:00:00.000Z"));
     expect(pack.nightsElapsed).toBe(nightsElapsedSince(enrolledAt, new Date("2026-09-08T18:00:00.000Z")));
     expect(Number.isInteger(pack.nightsElapsed)).toBe(true);
     expect(pack.nightsElapsed).toBeGreaterThanOrEqual(0);
@@ -429,7 +463,7 @@ describe("solo enrollment packs", () => {
     const started = await listen({ root: tmp, inbox, port: 0 });
     try {
       const withElapsed = buildStudyPack(
-        enrollWithInvite(hostileState(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", new Date("2026-09-01T12:00:00Z"))!,
+        enrolledOn("2026-09-01T12:00:00.000Z"),
         new Date("2026-09-08T12:00:00Z"),
       );
       const without = buildStudyPack(hostileState());
@@ -455,20 +489,13 @@ describe("solo enrollment packs", () => {
   });
 
   it("completion is computable from a pack alone", () => {
-    const empty = enrollWithInvite(
-      { ...hostileState(), reports: [] },
-      "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
-      new Date("2026-09-01T12:00:00Z"),
-    )!;
+    const empty = enrolledOn("2026-09-01T12:00:00.000Z", []);
     const none = buildStudyPack(empty, new Date("2026-09-15T12:00:00Z"));
     expect(none.nights.length).toBe(0);
     expect(none.nightsElapsed).toBe(nightsElapsedSince("2026-09-01T12:00:00.000Z", new Date("2026-09-15T12:00:00Z")));
     expect(completionRate(none.nights.length, none.nightsElapsed!)).toBe(0);
 
-    const filed = buildStudyPack(
-      enrollWithInvite(hostileState(), "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee", new Date("2026-09-01T12:00:00Z"))!,
-      new Date("2026-09-15T12:00:00Z"),
-    );
+    const filed = buildStudyPack(enrolledOn("2026-09-01T12:00:00.000Z"), new Date("2026-09-15T12:00:00Z"));
     expect(filed.nights.length).toBe(1);
     expect(completionRate(filed.nights.length, filed.nightsElapsed!)).toBe(1 / filed.nightsElapsed!);
   });
@@ -486,3 +513,180 @@ describe("solo enrollment packs", () => {
     expect(validateStudyPack(pack).ok).toBe(true);
   });
 });
+
+describe("episodeNight and safety flags", () => {
+  it("episodeNight places a missed night: filed 0, 1 and 3 leave slot 2 identifiable", () => {
+    const enrolledAt = "2026-09-01T12:00:00.000Z";
+    const state = enrolledOn(enrolledAt, [
+      quietReport("2026-09-01"),
+      quietReport("2026-09-02"),
+      quietReport("2026-09-04"),
+    ]);
+    const pack = buildStudyPack(state, new Date("2026-09-05T18:00:00.000Z"));
+    expect(pack.nights.map((n) => n.nightIndex)).toEqual([0, 1, 2]);
+    expect(pack.nights.map((n) => n.episodeNight)).toEqual([0, 1, 3]);
+    const occupied = new Set(pack.nights.map((n) => n.episodeNight));
+    expect(occupied.has(2)).toBe(false);
+    expect(pack.nightsElapsed).toBeGreaterThanOrEqual(3);
+  });
+
+  it("episodeNight is never negative and never exceeds nightsElapsed", () => {
+    const enrolledAt = "2026-09-01T12:00:00.000Z";
+    const state = enrolledOn(enrolledAt, [quietReport("2026-08-20"), quietReport("2026-09-01"), quietReport("2026-09-04")]);
+    const pack = buildStudyPack(state, new Date("2026-09-04T18:00:00.000Z"));
+    expect(pack.nights[0]?.episodeNight).toBeUndefined();
+    for (const night of pack.nights) {
+      if (night.episodeNight === undefined) continue;
+      expect(night.episodeNight).toBeGreaterThanOrEqual(0);
+      expect(night.episodeNight).toBeLessThanOrEqual(pack.nightsElapsed!);
+    }
+    expect(validateStudyPack({ ...pack, nights: [{ ...pack.nights[1], episodeNight: -1 }] }).ok).toBe(false);
+    expect(validateStudyPack({ ...pack, nights: [{ ...pack.nights[1], episodeNight: pack.nightsElapsed! + 1 }] }).ok).toBe(
+      false,
+    );
+  });
+
+  it("a crisis-and-drowsy disclosure produces no safety flag", () => {
+    const words = "I want to kill myself I keep falling asleep at the wheel";
+    const lower = words.toLowerCase();
+    expect(isCrisisDisclosure(lower)).toBe(true);
+    expect(allowlistedSafetyKinds(lower)).toContain("drowsy-driving");
+    const profile = hostileState().profile;
+    const flags = recordDisclosureFlags([], words, profile, 0);
+    expect(flags).toEqual([]);
+    const state = {
+      ...enrolledOn("2026-09-01T12:00:00.000Z", [quietReport("2026-09-01")]),
+      chat: [{ id: "c1", role: "you" as const, text: words, createdAt: "2026-09-01T08:00:00.000Z" }],
+      safetyFlags: flags,
+    };
+    expect(state.safetyFlags).toEqual([]);
+    const pack = buildStudyPack(state, new Date("2026-09-01T18:00:00.000Z"));
+    expect(pack.safetyFlags).toBeUndefined();
+    expect(JSON.stringify(pack)).not.toMatch(/safetyFlags|drowsy-driving|crisis/i);
+  });
+
+  it("a crisis disclosure produces no flag, no count and no field of any kind in the pack", () => {
+    const words = "I want to kill myself I haven't slept in days";
+    const kind = safetyKind(words.toLowerCase(), hostileState().profile);
+    expect(kind).toBe("crisis");
+    const flags = recordAllowlistedFlag([], kind!, 0);
+    expect(flags).toEqual([]);
+    const state = {
+      ...enrolledOn("2026-09-01T12:00:00.000Z", [quietReport("2026-09-01")]),
+      chat: [{ id: "c1", role: "you" as const, text: words, createdAt: "2026-09-01T08:00:00.000Z" }],
+      safetyFlags: flags,
+    };
+    const pack = buildStudyPack(state, new Date("2026-09-01T18:00:00.000Z"));
+    const blob = JSON.stringify(pack);
+    expect(pack.safetyFlags).toBeUndefined();
+    expect(blob).not.toMatch(/safetyFlags|crisis|suicid|kill myself|lifeline/i);
+    expect(flagsForPack({ ...state, safetyFlags: [{ category: "crisis", episodeNight: 0 }] as unknown as SafetyFlag[] })).toEqual(
+      [],
+    );
+  });
+
+  it("a mania disclosure produces nothing in the pack", () => {
+    const words = "I think I am manic and bipolar this week";
+    const kind = safetyKind(words.toLowerCase(), hostileState().profile);
+    expect(kind).toBe("mania");
+    const flags = recordAllowlistedFlag([], kind!, 1);
+    expect(flags).toEqual([]);
+    const state = {
+      ...enrolledOn("2026-09-01T12:00:00.000Z", [quietReport("2026-09-01")]),
+      chat: [{ id: "c1", role: "you" as const, text: words, createdAt: "2026-09-02T08:00:00.000Z" }],
+      safetyFlags: flags,
+    };
+    const pack = buildStudyPack(state, new Date("2026-09-02T18:00:00.000Z"));
+    const blob = JSON.stringify(pack);
+    expect(pack.safetyFlags).toBeUndefined();
+    expect(blob).not.toMatch(/safetyFlags|mania|manic|bipolar/i);
+  });
+
+  it("a flag carries a category and an episodeNight only — no text survives", () => {
+    const words = "I stop breathing and my wife screamed James bought gummies";
+    const state = {
+      ...enrolledOn("2026-09-01T12:00:00.000Z", [quietReport("2026-09-02")]),
+      safetyFlags: [
+        {
+          category: "witnessed-apnea",
+          episodeNight: 1,
+          text: words,
+          quote: words,
+          note: words,
+        } as unknown as SafetyFlag,
+      ],
+      chat: [{ id: "c1", role: "you" as const, text: words, createdAt: "2026-09-02T08:00:00.000Z" }],
+    };
+    const pack = buildStudyPack(state, new Date("2026-09-02T18:00:00.000Z"));
+    expect(pack.safetyFlags).toEqual([{ category: "witnessed-apnea", episodeNight: 1 }]);
+    expect(Object.keys(pack.safetyFlags![0]!).sort()).toEqual(["category", "episodeNight"]);
+    const blob = JSON.stringify(pack);
+    expect(blob).not.toContain("screamed");
+    expect(blob).not.toContain("stop breathing");
+    expect(blob).not.toContain("James");
+    expect(blob).not.toContain(words);
+    expect(validateStudyPack({ ...pack, safetyFlags: [{ category: "witnessed-apnea", episodeNight: 1, text: words }] }).ok).toBe(
+      false,
+    );
+  });
+
+  it("only the two allowlisted categories can ever appear", () => {
+    const state = enrolledOn("2026-09-01T12:00:00.000Z", [quietReport("2026-09-01")]);
+    expect(recordAllowlistedFlag([], "crisis", 0)).toEqual([]);
+    expect(recordAllowlistedFlag([], "mania", 0)).toEqual([]);
+    expect(recordAllowlistedFlag([], "no-sleep-for-days", 0)).toEqual([]);
+    expect(recordAllowlistedFlag([], "alcohol-dependence", 0)).toEqual([]);
+    expect(recordAllowlistedFlag([], "child-dosing", 0)).toEqual([]);
+    expect(recordAllowlistedFlag([], "minor-dosing", 0)).toEqual([]);
+    expect(recordAllowlistedFlag([], "witnessed-apnea", 0)).toEqual([{ category: "witnessed-apnea", episodeNight: 0 }]);
+    expect(recordAllowlistedFlag([], "drowsy-driving", 1)).toEqual([{ category: "drowsy-driving", episodeNight: 1 }]);
+    const pack = buildStudyPack(
+      { ...state, safetyFlags: recordAllowlistedFlag(recordAllowlistedFlag([], "witnessed-apnea", 0), "drowsy-driving", 0) },
+      new Date("2026-09-01T18:00:00.000Z"),
+    );
+    expect(pack.safetyFlags?.map((f) => f.category).sort()).toEqual(["drowsy-driving", "witnessed-apnea"]);
+    expect(validateStudyPack({ ...pack, safetyFlags: [{ category: "crisis", episodeNight: 0 }] }).ok).toBe(false);
+    expect(validateStudyPack({ ...pack, safetyFlags: [{ category: "mania", episodeNight: 0 }] }).ok).toBe(false);
+  });
+
+  it("both receivers accept a pack with both new fields, and one with neither", async () => {
+    const { mkdtempSync, writeFileSync, rmSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    const tmp = mkdtempSync(join(tmpdir(), "circadia-flags-"));
+    writeFileSync(join(tmp, "index.html"), "<h1>Circadia</h1>");
+    const inbox = join(tmp, "inbox");
+    const started = await listen({ root: tmp, inbox, port: 0 });
+    try {
+      const withBoth = buildStudyPack(
+        {
+          ...enrolledOn("2026-09-01T12:00:00.000Z", [quietReport("2026-09-01"), quietReport("2026-09-03")]),
+          safetyFlags: [{ category: "witnessed-apnea", episodeNight: 0 }],
+        },
+        new Date("2026-09-04T12:00:00Z"),
+      );
+      const without = buildStudyPack(hostileState());
+      expect(withBoth.nights.some((n) => n.episodeNight !== undefined)).toBe(true);
+      expect(withBoth.safetyFlags).toEqual([{ category: "witnessed-apnea", episodeNight: 0 }]);
+      expect(without.nights[0]?.episodeNight).toBeUndefined();
+      expect(without.safetyFlags).toBeUndefined();
+      expect(validateStudyPack(withBoth).ok).toBe(true);
+      expect(validateStudyPack(without).ok).toBe(true);
+      expect(parseInboxPayload(withBoth).ok).toBe(true);
+      expect(parseInboxPayload(without).ok).toBe(true);
+      for (const pack of [withBoth, without]) {
+        const res = await fetch(`${started.url}/api/study`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(pack),
+        });
+        expect(res.status).toBe(200);
+        expect((await res.json()).ok).toBe(true);
+      }
+    } finally {
+      started.server.close();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+

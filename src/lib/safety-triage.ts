@@ -1,5 +1,5 @@
 import { CRISIS_LINE } from "@/lib/safety-copy";
-import type { Profile } from "@/lib/types";
+import type { PackSafetyCategory, Profile } from "@/lib/types";
 
 /**
  * Questions that must be answered before the consult engine gets a turn.
@@ -17,6 +17,16 @@ import type { Profile } from "@/lib/types";
  */
 
 export type TriageReply = { text: string; citations: string[] };
+
+export type SafetyKind =
+  | "crisis"
+  | "drowsy-driving"
+  | "witnessed-apnea"
+  | "mania"
+  | "no-sleep-for-days"
+  | "alcohol-dependence"
+  | "child-dosing"
+  | "minor-dosing";
 
 /** Suicide, self-harm, or "I cannot go on". Insomnia is an independent risk factor. */
 const CRISIS =
@@ -53,54 +63,88 @@ function reply(text: string, citations: string[]): TriageReply {
   return { text, citations };
 }
 
+function dosingSubject(lower: string, profile: Profile | null): "child-dosing" | "minor-dosing" | null {
+  const aboutSupplement = /melatonin|magnesium|gummies|gummy/.test(lower);
+  const aboutOtc =
+    /unisom|benadryl|zzzquil|zzquil|doxylamine|diphenhydramine|nyquil|tylenol pm|advil pm|sleeping pill|sleep aid/.test(
+      lower,
+    );
+  if (!aboutSupplement && !aboutOtc) return null;
+  if (!ASKING_TO_TAKE.test(lower)) return null;
+  if (CHILD_SUBJECT.test(lower)) return "child-dosing";
+  const age = profile?.age;
+  if (typeof age === "number" && age > 0 && age < 18) return "minor-dosing";
+  return null;
+}
+
+/**
+ * Category only. Never attached to a pack. Crisis and mania stay on-device as
+ * a reply; they are not a flag the pack builder can read.
+ */
+export function isCrisisDisclosure(lower: string): boolean {
+  return CRISIS.test(lower);
+}
+
+/** Allowlisted referral kinds only. Crisis is not in this list. */
+export function allowlistedSafetyKinds(lower: string): PackSafetyCategory[] {
+  const out: PackSafetyCategory[] = [];
+  if (DROWSY_DRIVING.test(lower)) out.push("drowsy-driving");
+  if (WITNESSED_APNEA.test(lower)) out.push("witnessed-apnea");
+  return out;
+}
+
+export function safetyKind(lower: string, profile: Profile | null): SafetyKind | null {
+  if (isCrisisDisclosure(lower)) return "crisis";
+  if (DROWSY_DRIVING.test(lower)) return "drowsy-driving";
+  if (WITNESSED_APNEA.test(lower)) return "witnessed-apnea";
+  if (MANIA.test(lower)) return "mania";
+  if (NO_SLEEP_FOR_DAYS.test(lower)) return "no-sleep-for-days";
+  if (ALCOHOL_DEPENDENCE.test(lower)) return "alcohol-dependence";
+  return dosingSubject(lower, profile);
+}
+
 /**
  * Runs before every other route. Returns null when nothing urgent was said.
  * Order matters: the most dangerous reading of an ambiguous line wins.
  */
 export function safetyTriage(lower: string, profile: Profile | null): TriageReply | null {
-  if (CRISIS.test(lower)) {
-    return reply(
-      `That matters more than tonight's sleep, and I am not the right kind of help for it. ${CRISIS_LINE} If you can, tell one person tonight — someone in the room, or someone you can call. Not sleeping makes everything feel more final than it is, and that feeling is a symptom, not the truth. I will still be here for the sleep part whenever you want it.`,
-      [],
-    );
+  switch (safetyKind(lower, profile)) {
+    case "crisis":
+      return reply(
+        `That matters more than tonight's sleep, and I am not the right kind of help for it. ${CRISIS_LINE} If you can, tell one person tonight — someone in the room, or someone you can call. Not sleeping makes everything feel more final than it is, and that feeling is a symptom, not the truth. I will still be here for the sleep part whenever you want it.`,
+        [],
+      );
+    case "drowsy-driving":
+      return reply(
+        "Stop driving. Falling asleep at the wheel is not a sleep-schedule problem I can coach — it is the one symptom where the next hour matters more than the next month. Pull over somewhere safe, and get a ride tonight rather than driving home. Then book a doctor: nodding off during the day, especially while driving, points at something that needs a proper look — an airway problem, a sleep disorder, or a medication. Please do not wait on this one.",
+        ["bmi-osa", "sleep-debt"],
+      );
+    case "witnessed-apnea":
+      return reply(
+        "Someone seeing you stop breathing, or waking up choking or gasping, is the one thing here I will not try to coach. That points at the airway, and none of the sleep tools in this app fix it — they can even hide it for a while. Ask a doctor for a sleep apnea evaluation and say those exact words: stopping breathing, choking, gasping. It is a common thing, it is testable, and it is treatable. Do that before you spend another night on schedule tweaks.",
+        ["bmi-osa"],
+      );
+    case "mania":
+      return reply(
+        "Say this to whoever manages that with you before you change anything about your sleep. Losing sleep can set off an episode, and cutting time in bed — which is the usual next step for stubborn insomnia — is not safe to run on your own when mania is in the picture. If you are sleeping much less than usual and feel fine or wired on it, that is worth a call today, not next week. I will keep to the steady-wake-time part and leave the rest to your clinician.",
+        ["circadian-anchor"],
+      );
+    case "no-sleep-for-days":
+      return reply(
+        "Several days with almost no sleep is past what this app should be handling. Please talk to a doctor — today if you can. Going that long without sleep can be a sign of something that needs treating rather than a schedule to fix, and it also makes driving genuinely dangerous. If you feel unsafe or unlike yourself, that is an urgent call, not a wait-and-see. When you are on the other side of it, come back and we will do the steady part properly.",
+        ["sleep-debt"],
+      );
+    case "alcohol-dependence":
+      return reply(
+        "Drinking that much, most nights, to get to sleep is worth saying out loud to a doctor — not because of the sleep, but because of the drinking. One thing first: if you drink heavily every day, do not stop suddenly on your own. Coming off alcohol abruptly can be medically dangerous, and it is something to do with a doctor's help. So I am not going to run my usual two-dry-nights experiment with you. Alcohol does wreck the second half of the night, and you will likely sleep better without it — but the safe route there goes through a person, not this app.",
+        ["alcohol"],
+      );
+    case "child-dosing":
+    case "minor-dosing":
+      return childOrMinorGate(lower, profile);
+    default:
+      return null;
   }
-
-  if (DROWSY_DRIVING.test(lower)) {
-    return reply(
-      "Stop driving. Falling asleep at the wheel is not a sleep-schedule problem I can coach — it is the one symptom where the next hour matters more than the next month. Pull over somewhere safe, and get a ride tonight rather than driving home. Then book a doctor: nodding off during the day, especially while driving, points at something that needs a proper look — an airway problem, a sleep disorder, or a medication. Please do not wait on this one.",
-      ["bmi-osa", "sleep-debt"],
-    );
-  }
-
-  if (WITNESSED_APNEA.test(lower)) {
-    return reply(
-      "Someone seeing you stop breathing, or waking up choking or gasping, is the one thing here I will not try to coach. That points at the airway, and none of the sleep tools in this app fix it — they can even hide it for a while. Ask a doctor for a sleep apnea evaluation and say those exact words: stopping breathing, choking, gasping. It is a common thing, it is testable, and it is treatable. Do that before you spend another night on schedule tweaks.",
-      ["bmi-osa"],
-    );
-  }
-
-  if (MANIA.test(lower)) {
-    return reply(
-      "Say this to whoever manages that with you before you change anything about your sleep. Losing sleep can set off an episode, and cutting time in bed — which is the usual next step for stubborn insomnia — is not safe to run on your own when mania is in the picture. If you are sleeping much less than usual and feel fine or wired on it, that is worth a call today, not next week. I will keep to the steady-wake-time part and leave the rest to your clinician.",
-      ["circadian-anchor"],
-    );
-  }
-
-  if (NO_SLEEP_FOR_DAYS.test(lower)) {
-    return reply(
-      "Several days with almost no sleep is past what this app should be handling. Please talk to a doctor — today if you can. Going that long without sleep can be a sign of something that needs treating rather than a schedule to fix, and it also makes driving genuinely dangerous. If you feel unsafe or unlike yourself, that is an urgent call, not a wait-and-see. When you are on the other side of it, come back and we will do the steady part properly.",
-      ["sleep-debt"],
-    );
-  }
-
-  if (ALCOHOL_DEPENDENCE.test(lower)) {
-    return reply(
-      "Drinking that much, most nights, to get to sleep is worth saying out loud to a doctor — not because of the sleep, but because of the drinking. One thing first: if you drink heavily every day, do not stop suddenly on your own. Coming off alcohol abruptly can be medically dangerous, and it is something to do with a doctor's help. So I am not going to run my usual two-dry-nights experiment with you. Alcohol does wreck the second half of the night, and you will likely sleep better without it — but the safe route there goes through a person, not this app.",
-      ["alcohol"],
-    );
-  }
-
-  return childOrMinorGate(lower, profile);
 }
 
 /**

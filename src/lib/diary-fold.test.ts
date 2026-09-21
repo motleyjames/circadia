@@ -97,6 +97,18 @@ describe("fold two device diaries", () => {
     expect(merged.episode).toEqual(episode);
   });
 
+  it("takes incoming safetyFlags when this diary has none", () => {
+    const incomingFlags = [{ category: "witnessed-apnea" as const, episodeNight: 2 }];
+    const merged = mergeDiaryStates(diary({ safetyFlags: [] }), diary({ safetyFlags: incomingFlags }));
+    expect(merged.safetyFlags).toEqual(incomingFlags);
+  });
+
+  it("keeps local safetyFlags when the incoming diary has none", () => {
+    const localFlags = [{ category: "drowsy-driving" as const, episodeNight: 1 }];
+    const merged = mergeDiaryStates(diary({ safetyFlags: localFlags }), diary({ safetyFlags: [] }));
+    expect(merged.safetyFlags).toEqual(localFlags);
+  });
+
   it("keeps the local episode when the incoming diary is still solo", () => {
     const episode = {
       id: "ep-fold-1",

@@ -1,4 +1,5 @@
-import { nightsElapsedSince } from "@/lib/episode";
+import { episodeNightOf, nightsElapsedSince } from "@/lib/episode";
+import { flagsForPack, isPackSafetyCategory } from "@/lib/invite";
 import { consultMessages } from "@/lib/consult-threads";
 import { medicationClasses } from "@/lib/metrics";
 import { dedupeReportsByMorningDate } from "@/lib/morning-file";
@@ -10,6 +11,7 @@ import type {
   CircadiaState,
   MedicationClass,
   NapMinutes,
+  SafetyFlag,
   StudyNight,
   StudyPack,
 } from "@/lib/types";
@@ -92,6 +94,10 @@ export function buildStudyPack(state: CircadiaState, now = new Date()): StudyPac
       if (isAwakeningCount(report.awakeningCount)) night.awakeningCount = report.awakeningCount;
       if (isNapMinutes(report.napMinutes)) night.napMinutes = report.napMinutes;
       if (typeof report.filedLate === "boolean") night.filedLate = report.filedLate;
+      if (state.episode) {
+        const position = episodeNightOf(state.episode.enrolledAt, report.morningDate);
+        if (position !== null) night.episodeNight = position;
+      }
       return night;
     });
 
@@ -133,6 +139,8 @@ export function buildStudyPack(state: CircadiaState, now = new Date()): StudyPac
   if (state.episode) {
     pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);
   }
+  const safetyFlags = flagsForPack(state, now);
+  if (safetyFlags.length) pack.safetyFlags = safetyFlags;
   return pack;
 }
 
@@ -340,6 +348,7 @@ const TOP_KEYS = new Set([
   "sessions",
   "chat",
   "nightsElapsed",
+  "safetyFlags",
 ]);
 
 const PROFILE_KEYS = new Set([
@@ -377,6 +386,7 @@ const NIGHT_KEYS = new Set([
   "awakeningCount",
   "napMinutes",
   "filedLate",
+  "episodeNight",
 ]);
 
 const AWAKENING_COUNTS = new Set<AwakeningCount>([0, 1, 2, 3, 4]);
@@ -503,6 +513,14 @@ export function validateStudyPack(raw: unknown): ValidateResult {
     if (n.filedLate !== undefined && typeof n.filedLate !== "boolean") {
       return { ok: false, error: "Invalid filedLate." };
     }
+    if (n.episodeNight !== undefined) {
+      if (typeof n.episodeNight !== "number" || !Number.isInteger(n.episodeNight) || n.episodeNight < 0) {
+        return { ok: false, error: "Invalid episodeNight." };
+      }
+      if (typeof p.nightsElapsed === "number" && n.episodeNight > p.nightsElapsed) {
+        return { ok: false, error: "Invalid episodeNight." };
+      }
+    }
     nights.push(n as unknown as StudyNight);
   }
 
@@ -531,6 +549,28 @@ export function validateStudyPack(raw: unknown): ValidateResult {
   }
   if (!Array.isArray(chat.topics) || chat.topics.some((t) => typeof t !== "string" || t.length > 64)) {
     return { ok: false, error: "Invalid chat topics." };
+  }
+
+  let safetyFlags: SafetyFlag[] | undefined;
+  if (p.safetyFlags !== undefined) {
+    if (!Array.isArray(p.safetyFlags)) return { ok: false, error: "Invalid safetyFlags." };
+    safetyFlags = [];
+    for (const row of p.safetyFlags) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        return { ok: false, error: "Invalid safetyFlags." };
+      }
+      const flagExtra = extraKeys(row, new Set(["category", "episodeNight"]));
+      if (flagExtra.length) return { ok: false, error: `Unknown safety flag field: ${flagExtra[0]}` };
+      const f = row as Record<string, unknown>;
+      if (!isPackSafetyCategory(f.category)) return { ok: false, error: "Invalid safetyFlags." };
+      if (typeof f.episodeNight !== "number" || !Number.isInteger(f.episodeNight) || f.episodeNight < 0) {
+        return { ok: false, error: "Invalid safetyFlags." };
+      }
+      if (typeof p.nightsElapsed === "number" && f.episodeNight > p.nightsElapsed) {
+        return { ok: false, error: "Invalid safetyFlags." };
+      }
+      safetyFlags.push({ category: f.category, episodeNight: f.episodeNight });
+    }
   }
 
   return {
@@ -563,6 +603,7 @@ export function validateStudyPack(raw: unknown): ValidateResult {
         topics: chat.topics as string[],
       },
       ...(typeof p.nightsElapsed === "number" ? { nightsElapsed: p.nightsElapsed } : {}),
+      ...(safetyFlags ? { safetyFlags } : {}),
     },
   };
 }

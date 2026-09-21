@@ -33,6 +33,61 @@ function studyNightsElapsedOk(raw) {
   return typeof raw.nightsElapsed === "number" && Number.isInteger(raw.nightsElapsed) && raw.nightsElapsed >= 0 && raw.nightsElapsed <= 4000;
 }
 
+function studyEpisodeNightOk(raw) {
+  const elapsed = raw.nightsElapsed;
+  if (!Array.isArray(raw.nights)) return true;
+  for (const row of raw.nights) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    if (row.episodeNight === undefined) continue;
+    if (typeof row.episodeNight !== "number" || !Number.isInteger(row.episodeNight) || row.episodeNight < 0) {
+      return false;
+    }
+    if (typeof elapsed === "number" && row.episodeNight > elapsed) return false;
+  }
+  return true;
+}
+
+function studySafetyFlagsOk(raw) {
+  if (raw.safetyFlags === undefined) return true;
+  if (!Array.isArray(raw.safetyFlags)) return false;
+  const allow = new Set(["witnessed-apnea", "drowsy-driving"]);
+  const elapsed = raw.nightsElapsed;
+  for (const flag of raw.safetyFlags) {
+    if (!flag || typeof flag !== "object" || Array.isArray(flag)) return false;
+    for (const key of Object.keys(flag)) {
+      if (key !== "category" && key !== "episodeNight") return false;
+    }
+    if (!allow.has(flag.category)) return false;
+    if (typeof flag.episodeNight !== "number" || !Number.isInteger(flag.episodeNight) || flag.episodeNight < 0) {
+      return false;
+    }
+    if (typeof elapsed === "number" && flag.episodeNight > elapsed) return false;
+  }
+  return true;
+}
+
+function recordRejectedPack(inbox, reason) {
+  try {
+    const dir = path.join(inbox, ".operator");
+    const file = path.join(dir, "rejects.json");
+    fs.mkdirSync(dir, { recursive: true });
+    let existing = [];
+    try {
+      const raw = JSON.parse(fs.readFileSync(file, "utf8"));
+      if (Array.isArray(raw)) existing = raw;
+    } catch {
+      existing = [];
+    }
+    existing.push({
+      reason: String(reason || "Rejected.").slice(0, 500),
+      arrivedAt: new Date().toISOString(),
+    });
+    fs.writeFileSync(file, JSON.stringify(existing, null, 2), { encoding: "utf8", mode: 0o600 });
+  } catch {
+    /* never take the diary down over a reject log */
+  }
+}
+
 function studyNightGeometryOk(raw) {
   if (!Array.isArray(raw.nights)) return true;
   for (const row of raw.nights) {
@@ -156,10 +211,12 @@ async function handleStudy(req, res, inbox, ingest, ingestToken) {
   try {
     raw = JSON.parse(await readBody(req));
   } catch {
+    recordRejectedPack(inbox, "Invalid JSON.");
     sendJson(res, 400, { ok: false, error: "Invalid JSON." });
     return;
   }
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    recordRejectedPack(inbox, "Unknown schema.");
     sendJson(res, 400, { ok: false, error: "Unknown schema." });
     return;
   }
@@ -167,19 +224,33 @@ async function handleStudy(req, res, inbox, ingest, ingestToken) {
   const allowed =
     schema === "circadia-study-v1" || schema === "circadia-roster-v1" || schema === "circadia-fault-v1";
   if (!allowed) {
+    recordRejectedPack(inbox, "Unknown schema.");
     sendJson(res, 400, { ok: false, error: "Unknown schema." });
     return;
   }
   if (schema === "circadia-study-v1" && ("name" in raw || "dream" in raw || "email" in raw || "phone" in raw)) {
+    recordRejectedPack(inbox, "Pack contains identity fields.");
     sendJson(res, 400, { ok: false, error: "Pack contains identity fields." });
     return;
   }
   if (schema === "circadia-study-v1" && !studyNightGeometryOk(raw)) {
+    recordRejectedPack(inbox, "Invalid night clocks.");
     sendJson(res, 400, { ok: false, error: "Invalid night clocks." });
     return;
   }
   if (schema === "circadia-study-v1" && !studyNightsElapsedOk(raw)) {
+    recordRejectedPack(inbox, "Invalid nightsElapsed.");
     sendJson(res, 400, { ok: false, error: "Invalid nightsElapsed." });
+    return;
+  }
+  if (schema === "circadia-study-v1" && !studyEpisodeNightOk(raw)) {
+    recordRejectedPack(inbox, "Invalid episodeNight.");
+    sendJson(res, 400, { ok: false, error: "Invalid episodeNight." });
+    return;
+  }
+  if (schema === "circadia-study-v1" && !studySafetyFlagsOk(raw)) {
+    recordRejectedPack(inbox, "Invalid safetyFlags.");
+    sendJson(res, 400, { ok: false, error: "Invalid safetyFlags." });
     return;
   }
   // The participant number is the only caller-supplied part of the filename, so it

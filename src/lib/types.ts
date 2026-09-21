@@ -175,6 +175,11 @@ export type CircadiaState = {
   morningDraft: MorningDraft | null;
   /** In-flight sleep intake (onboarding). Not a report. */
   intakeDraft: IntakeDraft | null;
+  /**
+   * Allowlisted referral flags only. Crisis and mania are never stored here.
+   * Category and episodeNight — no text.
+   */
+  safetyFlags: SafetyFlag[];
 };
 
 export type MorningDraft = {
@@ -257,6 +262,8 @@ export type StudyNight = {
   awakeningCount?: AwakeningCount;
   napMinutes?: NapMinutes;
   filedLate?: boolean;
+  /** Position since enrollment, from 0. Absent for nights filed before joining. */
+  episodeNight?: number;
 };
 
 export type RosterEvent = {
@@ -333,6 +340,14 @@ export type StudyPack = {
   };
   /** Whole nights since enrollment. Absent when there is no episode. Never a date. */
   nightsElapsed?: number;
+  safetyFlags?: SafetyFlag[];
+};
+
+export type PackSafetyCategory = "witnessed-apnea" | "drowsy-driving";
+
+export type SafetyFlag = {
+  category: PackSafetyCategory;
+  episodeNight: number;
 };
 
 export type NoteConfidence = "high" | "moderate" | "low";
