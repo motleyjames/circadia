@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Circadia weekly queue</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..600,0..100,0..1&amp;family=Instrument+Sans:wght@400..600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Instrument Sans',system-ui,sans-serif;background:#F4F5F7;color:#171A26}
+a{color:#4F3FB8}a:hover{color:#3A2C99}
+</style>
+</helmet>
+<div style="width: 1440px; height: 940px; display: flex; flex-direction: column; background: #F4F5F7; font-family: 'Instrument Sans', system-ui, sans-serif; color: #171A26;">
+
+<header style="height: 64px; flex-shrink: 0; box-sizing: border-box; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; background: #FFFFFF; border-bottom: 1px solid #E3E5EA;">
+<div style="display: flex; align-items: center; gap: 20px;">
+<div style="font-family: 'Fraunces', Georgia, serif; font-size: 23px; font-weight: 500; letter-spacing: -0.02em; font-variation-settings: 'SOFT' 50, 'WONK' 0.4;">Circadia</div>
+<div style="width: 1px; height: 22px; background: #E3E5EA;"></div>
+<div style="font-size: 14px; color: #5A6072;">[CLINIC NAME]</div>
+</div>
+<div style="display: flex; align-items: center; gap: 20px;">
+<div style="font-size: 12px; font-weight: 600; color: #4F3FB8; background: #EEEBFB; padding: 5px 11px; border-radius: 999px;">Sample patients</div>
+<div style="font-size: 14px; color: #5A6072;">Week of Sep 21</div>
+<div style="font-size: 14px; font-weight: 500;">[YOUR NAME]</div>
+</div>
+</header>
+
+<div style="display: flex; flex-grow: 1; min-height: 0;">
+
+<nav aria-label="Primary" style="width: 232px; flex-shrink: 0; box-sizing: border-box; padding: 24px 16px; display: flex; flex-direction: column; gap: 4px; background: #FFFFFF; border-right: 1px solid #E3E5EA;">
+<a href="#" style="display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 12px; border-radius: 8px; background: #EEEBFB; color: #4F3FB8; font-size: 15px; font-weight: 600; text-decoration: none;">
+<span style="display: flex; align-items: center; gap: 10px;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"></path></svg>
+This week
+</span>
+<span style="font-size: 12px; font-weight: 600; background: #4F3FB8; color: #FFFFFF; min-width: 20px; height: 20px; border-radius: 999px; display: flex; align-items: center; justify-content: center; padding: 0 6px; box-sizing: border-box;">5</span>
+</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 8px; color: #3B4152; font-size: 15px; text-decoration: none;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"></circle><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"></path><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20c0-3-1.9-5.2-4.5-5.8"></path></svg>
+All patients
+</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 8px; color: #3B4152; font-size: 15px; text-decoration: none;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3.5 6.5 12 13l8.5-6.5"></path></svg>
+Invite a patient
+</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px; border-radius: 8px; color: #3B4152; font-size: 15px; text-decoration: none;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"></path><path d="M14 3v5h5M9 13h6M9 17h6"></path></svg>
+Diary exports
+</a>
+</nav>
+
+<main style="flex-grow: 1; box-sizing: border-box; padding: 36px 48px 40px; display: flex; flex-direction: column; gap: 26px; min-width: 0;">
+
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 style="margin: 0; font-family: 'Fraunces', Georgia, serif; font-size: 36px; font-weight: 400; letter-spacing: -0.02em; line-height: 1.1; font-variation-settings: 'SOFT' 50, 'WONK' 0.4;">Needs you this week</h1>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5A6072; max-width: 720px;">5 of 6 patients have something for you, sorted by what to look at first. Every figure comes from the patient's own device, as of their last sync.</p>
+</div>
+
+<div style="background: #FFFFFF; border: 1px solid #E3E5EA; border-radius: 12px; overflow: hidden;">
+
+<div style="display: grid; grid-template-columns: 210px 84px 180px 150px minmax(0, 1fr) 128px; gap: 24px; align-items: center; padding: 12px 24px; font-size: 13px; color: #5A6072; border-bottom: 1px solid #E3E5EA;">
+<div>Patient</div>
+<div>Care</div>
+<div>Last 14 nights</div>
+<div>Sleep efficiency</div>
+<div>Why it is here</div>
+<div>Last sync</div>
+</div>
+
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="4">
+<div>
+<div style="display: flex; align-items: baseline; gap: 10px; padding: 12px 24px 8px; background: #FAFAFB; border-bottom: 1px solid #EDEEF2;">
+<div style="font-size: 14px; font-weight: 600; color: {{sec.color}};">{{sec.title}}</div>
+<div style="font-size: 13px; color: #5A6072; font-variant-numeric: tabular-nums;">{{sec.count}}</div>
+</div>
+<sc-for list="{{sec.rows}}" as="row" hint-placeholder-count="2">
+<div style="display: grid; grid-template-columns: 210px 84px 180px 150px minmax(0, 1fr) 128px; gap: 24px; align-items: center; padding: 16px 24px; border-bottom: 1px solid #EDEEF2;">
+<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+<sc-if value="{{row.hasDot}}" hint-placeholder-val="{{false}}">
+<div style="width: 8px; height: 8px; border-radius: 999px; flex-shrink: 0; background: {{row.dotColor}};"></div>
+</sc-if>
+<sc-if value="{{row.linked}}" hint-placeholder-val="{{false}}">
+<a href="Patient.dc.html" style="font-size: 16px; font-weight: 600; color: #4F3FB8;">{{row.name}}</a>
+</sc-if>
+<sc-if value="{{row.unlinked}}" hint-placeholder-val="{{true}}">
+<div style="font-size: 16px; font-weight: 600;">{{row.name}}</div>
+</sc-if>
+</div>
+<div style="font-size: 14px; color: #3B4152;">{{row.week}}</div>
+<div style="display: flex; align-items: flex-end; gap: 3px; height: 30px;" role="img" aria-label="{{row.stripLabel}}">
+<sc-for list="{{row.bars}}" as="bar" hint-placeholder-count="14">
+<div style="width: 10px; height: 30px; box-sizing: border-box; position: relative; overflow: hidden; border-radius: 2px; background: {{bar.bg}}; border: 1px {{bar.border}} {{bar.bc}};">
+<sc-if value="{{bar.has}}" hint-placeholder-val="{{true}}">
+<div style="position: absolute; left: 0; right: 0; bottom: 0; height: {{bar.h}}%; background: #4F3FB8;"></div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; align-items: baseline; gap: 8px;">
+<div style="font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums;">{{row.se}}</div>
+<div style="font-size: 13px; color: #5A6072;">{{row.seNote}}</div>
+</div>
+<div style="font-size: 14px; line-height: 1.45; color: {{row.reasonColor}};">{{row.reason}}</div>
+<div style="font-size: 14px; color: #5A6072;">{{row.synced}}</div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var RED = '#B42318';
+    var AMBER = '#A15C07';
+    var INK = '#171A26';
+    var VIOLET = '#4F3FB8';
+    var strip = function (xs) {
+      return xs.map(function (v) {
+        if (v === null) return { has: false, bg: 'transparent', border: 'dashed', bc: '#B6BAC6', h: 0 };
+        return { has: true, bg: '#E9E6FA', border: 'solid', bc: '#D6D0F3', h: v };
+      });
+    };
+    var row = function (o) {
+      var filed = o.series.filter(function (v) { return v !== null; }).length;
+      return Object.assign({
+        linked: false, unlinked: true, hasDot: false, dotColor: 'transparent', reasonColor: INK
+      }, o, {
+        bars: strip(o.series),
+        stripLabel: filed + ' of 14 nights filed; bar height is sleep efficiency'
+      });
+    };
+    var sections = [
+      { title: 'Safety', count: '1', color: RED, rows: [
+        row({ name: 'Maya R.', week: 'Week 2', series: [62, 58, null, 64, 60, 59, 57, 61, 55, 63, 60, 58, 62, 59],
+          se: '60%', seNote: 'baseline', reason: 'Reported witnessed pauses in breathing on Sep 18',
+          reasonColor: RED, hasDot: true, dotColor: RED, synced: '5 hours ago' })
+      ] },
+      { title: 'Adherence', count: '2', color: AMBER, rows: [
+        row({ name: 'Daniel O.', week: 'Week 4', series: [84, 88, null, null, 86, null, 90, 87, null, null, 85, null, null, null],
+          se: '86%', seNote: 'from 2 nights', reason: '5 of the last 7 mornings not filed',
+          reasonColor: AMBER, hasDot: true, dotColor: AMBER, synced: '6 days ago' }),
+        row({ name: 'Priya S.', week: 'Week 3', series: [60, 62, 58, 65, 61, 59, 63, 78, 80, 74, 79, 77, 81, 76],
+          se: '78%', seNote: 'up from 61%', reason: 'In bed outside the window on 5 of 7 nights',
+          reasonColor: AMBER, hasDot: true, dotColor: AMBER, synced: 'Yesterday' })
+      ] },
+      { title: 'Decision due', count: '2', color: VIOLET, rows: [
+        row({ name: 'Tom W.', week: 'Week 3', series: [58, 59, 61, 58, 57, 63, 56, 86, 86, 91, 85, 94, 95, 96],
+          se: '90%', seNote: 'up from 59%', reason: 'First week on a prescribed window; review is ready',
+          linked: true, unlinked: false, synced: 'Today, 7:12 am' }),
+        row({ name: 'Grace L.', week: 'Week 4', series: [71, 76, 72, 74, 70, 75, 73, 74, 78, 77, 79, 76, 80, 78],
+          se: '77%', seNote: 'up from 73%', reason: 'Weekly review is ready',
+          synced: 'Today, 6:48 am' })
+      ] },
+      { title: 'Holding steady', count: '1', color: INK, rows: [
+        row({ name: 'Ben K.', week: 'Week 6', series: [88, 89, 87, 90, 88, 91, 89, 90, 88, 89, 91, 90, 89, 90],
+          se: '90%', seNote: 'steady', reason: 'No change since the last review',
+          synced: 'Today, 7:30 am' })
+      ] }
+    ];
+    return { sections: sections };
+  }
+}
+</script>
+</body>
+</html>
