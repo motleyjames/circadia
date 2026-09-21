@@ -103,3 +103,32 @@ No resolution strategy could handle this dissent
 Reading the source settles this. Read src/app/api/fold-inbox/route.ts. This code only reads existing files and deletes one (unlink); it never writes any log, reject log, or rejection/disclosure data to disk, so there is no writing to persist or encrypt/redact. Cited src/app/api/fold-inbox/route.ts:79: `await unlink(foldInboxFilePath());`
 
 `probe: read_code__reject_log_write_2212`
+
+---
+
+## Declined, with reasons (James, 2026-09-21)
+
+**Brute-forcing the invite code from a participantId (d_1_0, d_2_1, d_3_0).** True
+at 40 bits, and harmless: the code is not a secret and recovering it grants nothing
+the participantId does not already grant. Declined.
+
+**A suppressedBy annotation leaking crisis (d_1_4).** Covered by crisis-flag-travels,
+which asserts no flag, count or field of any kind reaches the pack. Declined.
+
+**Crisis suppression running after serialization (d_2_0, d_3_3).** The crisis test
+asserts on the built pack, so it spans serialization. Declined.
+
+**Old packs rejected by a tightened validator (d_1_3).** The validator was not
+tightened; receivers-reject-new-fields covers old-format packs. Declined.
+
+**Normalization unverified before hashing (d_3_4).** Pinned by the frozen
+normalization test. Declined.
+
+## Checked
+
+Reject log payload storage and fold flag deduplication — confirmed in a follow-up.
+
+## Mutation finding
+
+pack-dock-rejects-geometry and pack-dock-rejects-nightsElapsed went MANIFEST-STALE
+after the dock's validation was rewritten. Retargeted.

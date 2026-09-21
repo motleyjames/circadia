@@ -363,8 +363,8 @@
     "id": "pack-dock-rejects-geometry",
     "why": "The Dock server refuses a night that has inBedAt, so a pack the Next route accepts is silently dropped on the Mac that actually collects shakedown nights.",
     "file": "electron/static-server.cjs",
-    "find": "  if (schema === \"circadia-study-v1\" && !studyNightGeometryOk(raw)) {\n    sendJson(res, 400, { ok: false, error: \"Invalid night clocks.\" });\n    return;\n  }\n",
-    "replace": "  if (schema === \"circadia-study-v1\" && Array.isArray(raw.nights) && raw.nights.some((n) => n && n.inBedAt)) {\n    sendJson(res, 400, { ok: false, error: \"Invalid night clocks.\" });\n    return;\n  }\n",
+    "find": "  if (schema === \"circadia-study-v1\" && !studyNightGeometryOk(raw)) {\n    recordRejectedPack(inbox, \"Invalid night clocks.\");\n    sendJson(res, 400, { ok: false, error: \"Invalid night clocks.\" });\n    return;\n  }\n",
+    "replace": "  if (schema === \"circadia-study-v1\" && Array.isArray(raw.nights) && raw.nights.some((n) => n && n.inBedAt)) {\n    recordRejectedPack(inbox, \"Invalid night clocks.\");\n    sendJson(res, 400, { ok: false, error: \"Invalid night clocks.\" });\n    return;\n  }\n",
     "testFile": "src/lib/study.test.ts",
     "testName": "both receivers accept a new-format pack, and both accept an old-format pack"
   },
@@ -444,8 +444,8 @@
     "id": "pack-dock-rejects-nightsElapsed",
     "why": "The Dock refuses a pack that has nightsElapsed, so completion silently disappears on the Mac that collects shakedown nights.",
     "file": "electron/static-server.cjs",
-    "find": "  if (schema === \"circadia-study-v1\" && !studyNightsElapsedOk(raw)) {\n    sendJson(res, 400, { ok: false, error: \"Invalid nightsElapsed.\" });\n    return;\n  }\n",
-    "replace": "  if (schema === \"circadia-study-v1\" && raw.nightsElapsed !== undefined) {\n    sendJson(res, 400, { ok: false, error: \"Invalid nightsElapsed.\" });\n    return;\n  }\n",
+    "find": "  if (schema === \"circadia-study-v1\" && !studyNightsElapsedOk(raw)) {\n    recordRejectedPack(inbox, \"Invalid nightsElapsed.\");\n    sendJson(res, 400, { ok: false, error: \"Invalid nightsElapsed.\" });\n    return;\n  }\n",
+    "replace": "  if (schema === \"circadia-study-v1\" && raw.nightsElapsed !== undefined) {\n    recordRejectedPack(inbox, \"Invalid nightsElapsed.\");\n    sendJson(res, 400, { ok: false, error: \"Invalid nightsElapsed.\" });\n    return;\n  }\n",
     "testFile": "src/lib/study.test.ts",
     "testName": "both receivers accept a pack with nightsElapsed, and both accept one without it"
   },
@@ -655,5 +655,23 @@
     "replace": "    safetyFlags: incoming.safetyFlags ?? [],\n",
     "testFile": "src/lib/diary-fold.test.ts",
     "testName": "keeps local safetyFlags when the incoming diary has none"
+  },
+  {
+    "id": "reject-stores-payload",
+    "why": "Spreading the caller's entry onto the reject row writes whatever they passed — a name, a dream, the pack itself — into a file on this Mac.",
+    "file": "src/lib/operator-store.ts",
+    "find": "  const next: RejectedPack = {\n    reason: String(entry.reason || \"Rejected.\").trim().slice(0, 500) || \"Rejected.\",\n    arrivedAt: entry.arrivedAt?.trim() || new Date().toISOString(),\n  };\n",
+    "replace": "  const next: RejectedPack = {\n    ...entry,\n    reason: String(entry.reason || \"Rejected.\").trim().slice(0, 500) || \"Rejected.\",\n    arrivedAt: entry.arrivedAt?.trim() || new Date().toISOString(),\n  };\n",
+    "testFile": "src/lib/operator-store.test.ts",
+    "testName": "a reject record stores only the reason and the arrival stamp"
+  },
+  {
+    "id": "fold-duplicates-flags",
+    "why": "A flag that exists on both devices, or twice on one, appears twice after a fold, so one report looks like two.",
+    "file": "src/lib/diary-fold.ts",
+    "find": "    if (seen.has(key)) continue;\n    seen.add(key);\n",
+    "replace": "    seen.add(key);\n",
+    "testFile": "src/lib/diary-fold.test.ts",
+    "testName": "deduplicates safetyFlags by category and episodeNight"
   }
 ]
