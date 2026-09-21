@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -29,6 +29,38 @@ describe("operator store", () => {
       expect(row.reason).toBe(parsed.error);
       expect(row.arrivedAt).toBe(arrivedAt);
       expect(loadRejectedPacks(inbox)).toEqual([row]);
+    } finally {
+      rmSync(inbox, { recursive: true, force: true });
+    }
+  });
+
+  it("a reject record stores only the reason and the arrival stamp", () => {
+    const inbox = mkdtempSync(path.join(tmpdir(), "circadia-reject-body-"));
+    try {
+      const payload = {
+        schema: "circadia-study-v1",
+        name: "Zelda Nightingale",
+        dream: "Late to an exam, then the hallway flooded.",
+        extra: true,
+      };
+      const parsed = parseInboxPayload(payload);
+      expect(parsed.ok).toBe(false);
+      if (parsed.ok) return;
+      recordRejectedPack(
+        { reason: parsed.error, arrivedAt: "2026-09-21T18:04:00.000Z", ...payload } as { reason: string; arrivedAt: string },
+        inbox,
+      );
+      const disk = JSON.parse(readFileSync(rejectLogPath(inbox), "utf8")) as unknown;
+      const blob = JSON.stringify(disk);
+      expect(blob).not.toContain("Zelda");
+      expect(blob).not.toContain("Nightingale");
+      expect(blob).not.toContain("hallway");
+      expect(blob).not.toContain("dream");
+      expect(blob).not.toContain("circadia-study-v1");
+      expect(Array.isArray(disk)).toBe(true);
+      for (const row of disk as Record<string, unknown>[]) {
+        expect(Object.keys(row).sort()).toEqual(["arrivedAt", "reason"]);
+      }
     } finally {
       rmSync(inbox, { recursive: true, force: true });
     }

@@ -64,6 +64,15 @@ describe("static server", () => {
       body: JSON.stringify({ schema: "circadia-study-v1", name: "James" }),
     });
     expect(blocked.status).toBe(400);
+    const rejectLog = path.join(inbox, ".operator", "rejects.json");
+    expect(fs.existsSync(rejectLog)).toBe(true);
+    const rejectBlob = fs.readFileSync(rejectLog, "utf8");
+    expect(rejectBlob).not.toContain("James");
+    expect(rejectBlob).not.toContain("circadia-study-v1");
+    const rejectRows = JSON.parse(rejectBlob) as { reason: string; arrivedAt: string }[];
+    expect(rejectRows[0]?.reason).toBe("Pack contains identity fields.");
+    expect(rejectRows[0]?.arrivedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(Object.keys(rejectRows[0] ?? {}).sort()).toEqual(["arrivedAt", "reason"]);
 
     const roster = await fetch(`${url}/api/study`, {
       method: "POST",

@@ -109,6 +109,16 @@ describe("fold two device diaries", () => {
     expect(merged.safetyFlags).toEqual(localFlags);
   });
 
+  it("deduplicates safetyFlags by category and episodeNight", () => {
+    const flag = { category: "witnessed-apnea" as const, episodeNight: 2 };
+    const other = { category: "drowsy-driving" as const, episodeNight: 2 };
+    const merged = mergeDiaryStates(
+      diary({ safetyFlags: [flag, flag, other] }),
+      diary({ safetyFlags: [flag] }),
+    );
+    expect(merged.safetyFlags).toEqual([flag, other]);
+  });
+
   it("keeps the local episode when the incoming diary is still solo", () => {
     const episode = {
       id: "ep-fold-1",
