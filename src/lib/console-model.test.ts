@@ -341,36 +341,45 @@ describe("console-model", () => {
     // Older rule merged by episodeNight across every pack. A night whose slot
     // was later corrected then appeared twice. Nights now come from the newest
     // pack only — older packs stay on disk and are never merged in.
-    const older = scoredNight(1, { rating: 1, inBedAt: "00:00", outOfBedAt: "08:00", wokeAt: "07:00" });
-    const newer = scoredNight(0, { rating: 5, inBedAt: "00:00", outOfBedAt: "07:00", wokeAt: "06:30" });
+    // Newest elapsed 5 with slots 0 and 1; older also has slot 3. Slot 3 is
+    // reached, so a merge would draw it. Newest-only leaves it missed.
+    const olderThree = scoredNight(3, { rating: 1, inBedAt: "00:00", outOfBedAt: "08:00", wokeAt: "07:00" });
+    const newerOne = scoredNight(1, { rating: 5, inBedAt: "00:00", outOfBedAt: "07:00", wokeAt: "06:30" });
     const olderSe = nightGeometry({
-      inBedAt: older.inBedAt,
-      outOfBedAt: older.outOfBedAt,
-      wokeAt: older.wokeAt,
-      triedToSleepAt: older.triedToSleepAt,
-      sleepLatencyMinutes: older.sleepLatencyMinutes,
-      wokeInNight: older.wokeInNight,
-      nightWakingMinutes: older.nightWakingMinutes,
+      inBedAt: olderThree.inBedAt,
+      outOfBedAt: olderThree.outOfBedAt,
+      wokeAt: olderThree.wokeAt,
+      triedToSleepAt: olderThree.triedToSleepAt,
+      sleepLatencyMinutes: olderThree.sleepLatencyMinutes,
+      wokeInNight: olderThree.wokeInNight,
+      nightWakingMinutes: olderThree.nightWakingMinutes,
     })!.efficiencyPct;
     const newerSe = nightGeometry({
-      inBedAt: newer.inBedAt,
-      outOfBedAt: newer.outOfBedAt,
-      wokeAt: newer.wokeAt,
-      triedToSleepAt: newer.triedToSleepAt,
-      sleepLatencyMinutes: newer.sleepLatencyMinutes,
-      wokeInNight: newer.wokeInNight,
-      nightWakingMinutes: newer.nightWakingMinutes,
+      inBedAt: newerOne.inBedAt,
+      outOfBedAt: newerOne.outOfBedAt,
+      wokeAt: newerOne.wokeAt,
+      triedToSleepAt: newerOne.triedToSleepAt,
+      sleepLatencyMinutes: newerOne.sleepLatencyMinutes,
+      wokeInNight: newerOne.wokeInNight,
+      nightWakingMinutes: newerOne.nightWakingMinutes,
     })!.efficiencyPct;
     expect(newerSe).not.toBe(olderSe);
     const row = testerOf([
-      arrival(ALEX, "2026-09-20T10-00-00-000Z", { nightsElapsed: 1, nights: [older] }),
-      arrival(ALEX, "2026-09-21T10-00-00-000Z", { nightsElapsed: 1, nights: [newer] }),
+      arrival(ALEX, "2026-09-20T10-00-00-000Z", {
+        nightsElapsed: 5,
+        nights: [scoredNight(0), scoredNight(1), olderThree],
+      }),
+      arrival(ALEX, "2026-09-21T10-00-00-000Z", {
+        nightsElapsed: 5,
+        nights: [scoredNight(0), newerOne],
+      }),
     ]);
-    expect(row.nightsFiled).toBe(1);
-    expect(row.slots[0]?.kind).toBe("bar");
-    expect(row.slots[0]?.efficiencyPct).toBe(newerSe);
-    expect(row.slots[0]?.efficiencyPct).not.toBe(olderSe);
-    expect(row.slots[1]?.kind).not.toBe("bar");
+    expect(row.nightsFiled).toBe(2);
+    expect(row.slots[1]?.kind).toBe("bar");
+    expect(row.slots[1]?.efficiencyPct).toBe(newerSe);
+    expect(row.slots[1]?.efficiencyPct).not.toBe(olderSe);
+    expect(row.slots[3]?.kind).toBe("dashed");
+    expect(row.slots[3]?.kind).not.toBe("bar");
   });
 
   it("James's case: slot 1 in an older pack, slot 0 in the newer, is one bar in slot 0, 1 filed, 100%", () => {

@@ -63,7 +63,11 @@ describe("pack fetch", () => {
       const invite = await generateInvite("Ada West", "friend");
       const keys = await generateOperatorKeyPair();
       const loc = await derivePackLocation(normalizeInviteCodeV2(invite.code)!);
-      const envelope = await sealPayload({ schema: "circadia-study-v1", extra: true }, keys.publicRaw, invite.participantId);
+      const envelope = await sealPayload(
+        { ...packFor(invite.participantId), extra: true },
+        keys.publicRaw,
+        invite.participantId,
+      );
       const result = await fetchBookPacks({
         book: [invite],
         privateKey: keys.privateKey,
@@ -73,7 +77,12 @@ describe("pack fetch", () => {
       expect(result.unreachable).toBe(false);
       expect(result.written).toEqual([]);
       expect(readdirSync(inbox).filter((n) => n.endsWith(".json"))).toEqual([]);
-      expect(result.rejects.some((row) => row.reason.length > 0)).toBe(true);
+      expect(result.rejects).toEqual([
+        expect.objectContaining({
+          reason: "Unknown pack field: extra",
+          file: `fetch:${invite.participantId}`,
+        }),
+      ]);
       expect(loadRejectedPacks(inbox).every((row) => !("schema" in row))).toBe(true);
     } finally {
       rmSync(inbox, { recursive: true, force: true });
