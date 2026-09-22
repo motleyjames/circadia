@@ -178,3 +178,17 @@ Then the Mac polish pass.
 - No key fetched at runtime.
 - No change to what a pack contains.
 - No crisis or mania signal, in any form — unchanged, and re-tested.
+
+## Corrections (2026-09-22)
+
+- **Version bits.** The participant id must set UUID version and variant bits
+  exactly as v1 does. The formula above omitted this; the receiver rejects ids
+  without them.
+- **Normalized input.** Every derivation takes the normalized invite, never the
+  displayed form with dashes, so Operator and the phone reach the same object
+  whatever was typed.
+- **Withdrawal before validation.** A withdrawal is recognised before
+  validateStudyPack runs, and a tester's state follows their newest object; a
+  later pack makes them active again.
+- **Poll deduplication.** Operator writes a fetched pack only when its ETag
+  has changed.
