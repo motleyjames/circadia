@@ -1,4 +1,6 @@
 import { isCohort, isPackSafetyCategory, type Cohort, type OperatorInvite } from "@/lib/invite";
+
+export { dismissOrphan, nameOrphan, restoreOrphan } from "@/lib/invite";
 import { inboxStampKey } from "@/lib/moderator";
 import { nightGeometry } from "@/lib/sleep-metrics";
 import type { PackSafetyCategory, StudyNight, StudyPack } from "@/lib/types";
@@ -31,17 +33,24 @@ export type NightSlot = {
   efficiencyPct: number | null;
 };
 
-export type ConsoleSectionId = "safety" | "not-filing" | "baseline-complete" | "in-baseline";
+export type ConsoleSectionId =
+  | "safety"
+  | "not-filing"
+  | "baseline-complete"
+  | "in-baseline"
+  | "not-enrolled";
 
 export type ConsoleTester = {
   participantId: string;
   name: string | null;
   inBook: boolean;
+  dismissed: boolean;
   cohort: Cohort | null;
   cohortLabel: string;
   section: ConsoleSectionId;
   nightsElapsed: number | null;
   nightsFiled: number;
+  packNightCount: number;
   completion: number | null;
   progressLabel: string;
   filedLabel: string;
@@ -50,8 +59,7 @@ export type ConsoleTester = {
   flags: PackSafetyCategory[];
   reason: string;
   lastSync: string;
-  action: string | null;
-  actionHref: string | null;
+  action: "name" | "export" | null;
 };
 
 export type ConsoleSection = {
@@ -63,9 +71,9 @@ export type ConsoleSection = {
 export type DataHealthItem = {
   kind: "unreadable" | "orphan";
   message: string;
-  actionLabel: string;
-  href: string;
   detail: string | null;
+  participantId: string | null;
+  actions: { id: "name" | "dismiss" | "why"; label: string }[];
 };
 
 export type CompletionLine = {
@@ -79,6 +87,8 @@ export type ConsoleModel = {
   completion: CompletionLine | null;
   sections: ConsoleSection[];
   testers: ConsoleTester[];
+  weekTesters: ConsoleTester[];
+  allTesters: AllTesterRow[];
   health: DataHealthItem[] | null;
   attentionCount: number;
   empty: boolean;
@@ -87,10 +97,21 @@ export type ConsoleModel = {
 export type InviteBookRow = {
   participantId: string;
   name: string;
-  cohort: Cohort;
+  code: string | null;
+  cohort: Cohort | null;
   cohortLabel: string;
   joined: boolean;
   status: string;
+  dismissed: boolean;
+};
+
+export type AllTesterRow = {
+  participantId: string;
+  name: string | null;
+  state: string;
+  nightCount: number;
+  lastSync: string;
+  dismissed: boolean;
 };
 
 const SECTION_TITLE: Record<ConsoleSectionId, string> = {
@@ -98,6 +119,7 @@ const SECTION_TITLE: Record<ConsoleSectionId, string> = {
   "not-filing": "Not filing",
   "baseline-complete": "Baseline complete",
   "in-baseline": "In baseline",
+  "not-enrolled": "Not enrolled",
 };
 
 const COHORT_LABEL: Record<Cohort, string> = {
@@ -155,6 +177,19 @@ export function invitePrivacySentence(name: string): string {
   return `Send this to ${firstNameOf(name)}. ${INVITE_PRIVACY_TAIL}`;
 }
 
+export function inviteSendBody(code: string): string {
+  return `Your Circadia code is ${code}. Enter it when the app asks for one. It is yours alone — please don't share it.`;
+}
+
+export function smsHref(to: string, body: string): string {
+  const number = to.replace(/[^\d+]/g, "");
+  return `sms:${number}?body=${encodeURIComponent(body)}`;
+}
+
+export function mailtoHref(to: string, body: string): string {
+  return `mailto:${to.trim()}?body=${encodeURIComponent(body)}`;
+}
+
 export function cohortLabel(cohort: Cohort | null, inBook: boolean): string {
   if (!inBook || !cohort || !isCohort(cohort)) return "Not in your book";
   return COHORT_LABEL[cohort];
@@ -182,12 +217,14 @@ export function buildInviteBook(
     return {
       participantId: invite.participantId,
       name: invite.name,
+      code: invite.code,
       cohort: invite.cohort,
-      cohortLabel: COHORT_LABEL[invite.cohort],
+      cohortLabel: invite.cohort ? COHORT_LABEL[invite.cohort] : "—",
       joined: joinedAt !== null,
       status: joinedAt
         ? `Joined ${joinedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
         : "Not joined yet",
+      dismissed: invite.dismissed,
     };
   });
 }
@@ -211,33 +248,47 @@ export function buildConsoleModel(input: {
     testers.push(stitchTester(participantId, rows, input.book, input.now));
   }
 
+  const weekTesters = testers.filter((row) => !row.dismissed);
   const buckets: Record<ConsoleSectionId, ConsoleTester[]> = {
     safety: [],
     "not-filing": [],
     "baseline-complete": [],
     "in-baseline": [],
+    "not-enrolled": [],
   };
-  for (const tester of testers) {
+  for (const tester of weekTesters) {
     if (tester.section === "safety") buckets.safety.push(tester);
     else if (tester.section === "not-filing") buckets["not-filing"].push(tester);
     else if (tester.section === "baseline-complete") buckets["baseline-complete"].push(tester);
+    else if (tester.section === "not-enrolled") buckets["not-enrolled"].push(tester);
     else buckets["in-baseline"].push(tester);
   }
 
-  const sections: ConsoleSection[] = (["safety", "not-filing", "in-baseline", "baseline-complete"] as const)
+  const sections: ConsoleSection[] = (
+    ["safety", "not-filing", "in-baseline", "baseline-complete", "not-enrolled"] as const
+  )
     .filter((id) => buckets[id].length)
     .map((id) => ({ id, title: SECTION_TITLE[id], testers: buckets[id] }));
 
-  const health = dataHealth(testers, input.rejects, input.now);
+  const health = dataHealth(weekTesters, input.rejects, input.now);
 
   return {
     weekLabel: weekOfLabel(input.now),
-    completion: completionLine(testers),
+    completion: completionLine(weekTesters),
     sections,
     testers,
+    weekTesters,
+    allTesters: testers.map((row) => ({
+      participantId: row.participantId,
+      name: row.name,
+      state: row.dismissed ? "Dismissed" : SECTION_TITLE[row.section],
+      nightCount: row.section === "not-enrolled" ? row.packNightCount : row.nightsFiled,
+      lastSync: row.lastSync,
+      dismissed: row.dismissed,
+    })),
     health,
     attentionCount: buckets.safety.length + buckets["not-filing"].length,
-    empty: testers.length === 0,
+    empty: weekTesters.length === 0,
   };
 }
 
@@ -251,6 +302,8 @@ function stitchTester(
   const newest = ordered[ordered.length - 1]!;
   const nightsElapsed = Number.isInteger(newest.pack.nightsElapsed) ? newest.pack.nightsElapsed! : null;
   const flags = allowlistedFlags(newest.pack.safetyFlags);
+  const packNights = newest.pack.nights;
+  const packNightCount = packNights.length;
   const merged = mergeNights(ordered);
   const filed = new Map<number, { night: StudyNight; efficiencyPct: number | null }>();
   for (const night of merged) {
@@ -258,46 +311,51 @@ function stitchTester(
     filed.set(night.episodeNight, { night, efficiencyPct: nightEfficiency(night) });
   }
 
-  const nightsFiled = filed.size;
+  const notEnrolled = nightsElapsed === null;
+  const nightsFiled = notEnrolled ? packNightCount : filed.size;
   const completion =
-    nightsElapsed === null || nightsElapsed <= 0 ? null : nightsFiled / nightsElapsed;
+    nightsElapsed === null || nightsElapsed <= 0 ? null : filed.size / nightsElapsed;
   const missedLastTwo = nightsElapsed !== null && lastTwoUnfiled(nightsElapsed, filed);
   const belowThreshold = completion !== null && completion < NOT_FILING_THRESHOLD;
   const notFiling = missedLastTwo || belowThreshold;
   const section = sectionFor(flags, notFiling, nightsElapsed);
 
   const invite = book.find((row) => row.participantId.toLowerCase() === participantId) ?? null;
-  const inBook = invite !== null && CONSOLE_NAME_SOURCE === "invite-book";
-  const name = inBook ? invite.name : null;
-  const cohort = inBook ? invite.cohort : null;
+  const inBook = Boolean(invite?.name) && CONSOLE_NAME_SOURCE === "invite-book";
+  const name = inBook ? invite!.name : null;
+  const cohort = inBook ? invite!.cohort : null;
+  const dismissed = invite?.dismissed === true;
   const arrived = parseInboxStamp(newest.file);
-  const slots = buildSlots(filed, nightsElapsed);
-  const scored = [...filed.values()].map((row) => row.efficiencyPct).filter((n): n is number => n !== null);
+  const slots = notEnrolled ? [] : buildSlots(filed, nightsElapsed);
+  const scored = (notEnrolled ? packNights : [...filed.values()].map((row) => row.night))
+    .map(nightEfficiency)
+    .filter((n): n is number => n !== null);
   const sleepEfficiencyPct = scored.length
     ? Math.round(scored.reduce((sum, n) => sum + n, 0) / scored.length)
     : null;
-  const missed = nightsElapsed !== null ? Math.max(0, nightsElapsed - nightsFiled) : 0;
+  const missed = nightsElapsed !== null ? Math.max(0, nightsElapsed - filed.size) : 0;
   const orphan = !inBook;
 
   return {
     participantId,
     name,
     inBook,
+    dismissed,
     cohort,
     cohortLabel: cohortLabel(cohort, inBook),
     section,
     nightsElapsed,
     nightsFiled,
+    packNightCount,
     completion,
-    progressLabel: progressLabel(nightsElapsed),
-    filedLabel: filedLabel(nightsElapsed, nightsFiled),
+    progressLabel: progressLabel(nightsElapsed, packNightCount),
+    filedLabel: filedLabel(nightsElapsed, nightsFiled, packNightCount),
     sleepEfficiencyPct,
     slots,
     flags,
     reason: reasonFor({ section, flags, missedLastTwo, nightsElapsed, nightsFiled, missed, orphan }),
     lastSync: arrived ? formatLastSync(arrived, now) : "—",
-    action: orphan ? "Add a name" : section === "baseline-complete" ? "Export diary" : null,
-    actionHref: orphan ? "/mod/invite" : section === "baseline-complete" ? "/mod/exports" : null,
+    action: orphan ? "name" : section === "baseline-complete" ? "export" : null,
   };
 }
 
@@ -319,6 +377,7 @@ function sectionFor(
   nightsElapsed: number | null,
 ): ConsoleSectionId {
   if (flags.length > 0) return "safety";
+  if (nightsElapsed === null) return "not-enrolled";
   if (notFiling) return "not-filing";
   if (nightsElapsed !== null && nightsElapsed >= BASELINE_NIGHTS) return "baseline-complete";
   return "in-baseline";
@@ -386,14 +445,18 @@ function nightEfficiency(night: StudyNight): number | null {
   return geometry ? geometry.efficiencyPct : null;
 }
 
-function progressLabel(nightsElapsed: number | null): string {
-  if (nightsElapsed === null) return "—";
+function progressLabel(nightsElapsed: number | null, _packNightCount: number): string {
+  if (nightsElapsed === null) return "Not enrolled";
   if (nightsElapsed >= BASELINE_NIGHTS) return "Complete";
   return `Night ${nightsElapsed} of ${BASELINE_NIGHTS}`;
 }
 
-function filedLabel(nightsElapsed: number | null, nightsFiled: number): string {
-  if (nightsElapsed !== null && nightsElapsed >= BASELINE_NIGHTS) {
+function filedLabel(nightsElapsed: number | null, nightsFiled: number, packNightCount: number): string {
+  if (nightsElapsed === null) {
+    const n = packNightCount;
+    return `${n} ${n === 1 ? "night" : "nights"}, outside any baseline`;
+  }
+  if (nightsElapsed >= BASELINE_NIGHTS) {
     return `${nightsFiled} of ${BASELINE_NIGHTS} filed`;
   }
   return `${nightsFiled} filed`;
@@ -409,6 +472,11 @@ function reasonFor(input: {
   orphan: boolean;
 }): string {
   if (input.section === "safety") return safetyReason(input.flags);
+  if (input.section === "not-enrolled") {
+    return input.orphan
+      ? "Nights are arriving, but this code has no name"
+      : "These nights sit outside a baseline";
+  }
   if (input.orphan && input.section === "in-baseline") {
     return "Nights are arriving, but this code has no name";
   }
@@ -439,7 +507,13 @@ function safetyReason(flags: readonly PackSafetyCategory[]): string {
 }
 
 function completionLine(testers: readonly ConsoleTester[]): CompletionLine | null {
-  const covered = testers.filter((row) => row.inBook && row.nightsElapsed !== null && row.nightsElapsed > 0);
+  const covered = testers.filter(
+    (row) =>
+      row.inBook &&
+      row.nightsElapsed !== null &&
+      row.nightsElapsed > 0 &&
+      row.section !== "not-enrolled",
+  );
   if (!covered.length) return null;
   const percent = ratioPercent(
     covered.reduce((sum, row) => sum + row.nightsFiled, 0),
@@ -475,9 +549,9 @@ function dataHealth(
     items.push({
       kind: "unreadable",
       message: `One pack arriving ${when} couldn't be read. A tester's night may be missing.`,
-      actionLabel: "See why",
-      href: "/mod",
       detail: row.reason,
+      participantId: null,
+      actions: [{ id: "why", label: "See why" }],
     });
   }
   for (const tester of testers) {
@@ -486,9 +560,12 @@ function dataHealth(
     items.push({
       kind: "orphan",
       message: `Code ${code} isn't in your book. Add a name, or check whether a tester mistyped their code.`,
-      actionLabel: "Add a name",
-      href: "/mod/invite",
       detail: null,
+      participantId: tester.participantId,
+      actions: [
+        { id: "name", label: "Add a name" },
+        { id: "dismiss", label: "Dismiss" },
+      ],
     });
   }
   return items.length ? items : null;

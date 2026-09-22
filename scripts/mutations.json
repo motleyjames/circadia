@@ -696,8 +696,8 @@
     "id": "console-safety-loses-precedence",
     "why": "Not-filing before safety hides a flagged tester under adherence, so the one thing that must never be missed is missed.",
     "file": "src/lib/console-model.ts",
-    "find": "  if (flags.length > 0) return \"safety\";\n  if (notFiling) return \"not-filing\";\n",
-    "replace": "  if (notFiling) return \"not-filing\";\n  if (flags.length > 0) return \"safety\";\n",
+    "find": "  if (flags.length > 0) return \"safety\";\n  if (nightsElapsed === null) return \"not-enrolled\";\n  if (notFiling) return \"not-filing\";\n",
+    "replace": "  if (notFiling) return \"not-filing\";\n  if (flags.length > 0) return \"safety\";\n  if (nightsElapsed === null) return \"not-enrolled\";\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "safety outranks everything: a flagged tester who is also not filing appears only under Safety"
   },
@@ -705,8 +705,8 @@
     "id": "console-estimates-missing-elapsed",
     "why": "Guessing completion against a 14-night baseline when nightsElapsed is absent invents a number the pack never sent.",
     "file": "src/lib/console-model.ts",
-    "find": "    nightsElapsed === null || nightsElapsed <= 0 ? null : nightsFiled / nightsElapsed;\n",
-    "replace": "    nightsElapsed === null || nightsElapsed <= 0 ? nightsFiled / BASELINE_NIGHTS : nightsFiled / nightsElapsed;\n",
+    "find": "    nightsElapsed === null || nightsElapsed <= 0 ? null : filed.size / nightsElapsed;\n",
+    "replace": "    nightsElapsed === null || nightsElapsed <= 0 ? filed.size / BASELINE_NIGHTS : filed.size / nightsElapsed;\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "completion is unknown \u2014 never a number \u2014 when nightsElapsed is absent"
   },
@@ -741,8 +741,8 @@
     "id": "console-sentence-includes-orphans",
     "why": "The completion sentence is for named testers with a known count. Including orphans lets a mistyped code move the one number on the screen.",
     "file": "src/lib/console-model.ts",
-    "find": "  const covered = testers.filter((row) => row.inBook && row.nightsElapsed !== null && row.nightsElapsed > 0);\n",
-    "replace": "  const covered = testers.filter((row) => row.nightsElapsed !== null && row.nightsElapsed > 0);\n",
+    "find": "      row.inBook &&\n      row.nightsElapsed !== null &&\n      row.nightsElapsed > 0 &&\n      row.section !== \"not-enrolled\",\n",
+    "replace": "      row.nightsElapsed !== null &&\n      row.nightsElapsed > 0 &&\n      row.section !== \"not-enrolled\",\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "the completion sentence excludes orphans and unknowns, and reports how many testers it covers"
   },
@@ -751,7 +751,7 @@
     "why": "Data health with nothing to say must be absent. Rendering '0 faults' is a pipeline count in different clothes.",
     "file": "src/lib/console-model.ts",
     "find": "  return items.length ? items : null;\n",
-    "replace": "  return items.length ? items : [{ kind: \"unreadable\", message: \"0 faults\", actionLabel: \"\", href: \"/mod\", detail: null }];\n",
+    "replace": "  return items.length ? items : [{ kind: \"unreadable\", message: \"0 faults\", detail: null, participantId: null, actions: [] }];\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "data health is absent when there is nothing to report"
   },
@@ -759,8 +759,8 @@
     "id": "console-name-from-id",
     "why": "A name that did not come from the book is an invented identity. Showing the id as a name makes an orphan look named.",
     "file": "src/lib/console-model.ts",
-    "find": "  const name = inBook ? invite.name : null;\n",
-    "replace": "  const name = inBook ? invite.name : shortTesterId(participantId);\n",
+    "find": "  const name = inBook ? invite!.name : null;\n",
+    "replace": "  const name = inBook ? invite!.name : shortTesterId(participantId);\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "a name appears only when the book supplies it"
   },
@@ -799,5 +799,113 @@
     "replace": "export const CONSOLE_NAME_SOURCE = \"Rosa M.\" as const;\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "no design data ships"
+  },
+  {
+    "id": "console-missing-elapsed-is-baseline",
+    "why": "A tester with no nightsElapsed is not in a baseline. Falling through to In baseline pretends they are enrolled.",
+    "file": "src/lib/console-model.ts",
+    "find": "  if (nightsElapsed === null) return \"not-enrolled\";\n",
+    "replace": "  if (false) return \"not-enrolled\";\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a tester whose newest pack has no nightsElapsed lands in Not enrolled, never In baseline"
+  },
+  {
+    "id": "console-not-enrolled-reads-zero-filed",
+    "why": "Counting only episodeNight makes a pre-invite pack look empty, so the row can say 0 filed next to nights that arrived.",
+    "file": "src/lib/console-model.ts",
+    "find": "    return `${n} ${n === 1 ? \"night\" : \"nights\"}, outside any baseline`;\n",
+    "replace": "    return \"0 filed\";\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a not-enrolled row shows the nights its pack carries — never 0 filed — and no 14-slot strip"
+  },
+  {
+    "id": "console-sentence-includes-not-enrolled",
+    "why": "Completion is for named testers in a baseline. Counting a pack with no episode moves the one number on the screen.",
+    "file": "src/lib/console-model.ts",
+    "find": "      row.inBook &&\n      row.nightsElapsed !== null &&\n      row.nightsElapsed > 0 &&\n      row.section !== \"not-enrolled\",\n",
+    "replace": "      row.inBook,\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a not-enrolled tester never enters the completion sentence"
+  },
+  {
+    "id": "console-elapsed-falls-to-not-enrolled",
+    "why": "A tester who has nightsElapsed is in the protocol. Sending them to Not enrolled hides a live baseline.",
+    "file": "src/lib/console-model.ts",
+    "find": "  if (nightsElapsed !== null && nightsElapsed >= BASELINE_NIGHTS) return \"baseline-complete\";\n  return \"in-baseline\";\n",
+    "replace": "  if (nightsElapsed !== null && nightsElapsed >= BASELINE_NIGHTS) return \"baseline-complete\";\n  return \"not-enrolled\";\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a tester with nightsElapsed still lands in In baseline"
+  },
+  {
+    "id": "console-naming-mints-a-code",
+    "why": "Naming an existing id must not mint a code. The device keeps sending under the id it has.",
+    "file": "src/lib/invite.ts",
+    "find": "  const next: OperatorInvite = {\n    code: existing?.code ?? null,\n    participantId: id,\n    name: trimmed,\n",
+    "replace": "  const next: OperatorInvite = {\n    code: \"A10B-C3D4\",\n    participantId: id,\n    name: trimmed,\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "naming an orphan creates a book entry with no code, and the tester then shows that name"
+  },
+  {
+    "id": "console-naming-mints-an-id",
+    "why": "Naming an orphan must keep the participantId the device already sends. Deriving a new one would orphan the nights again.",
+    "file": "src/lib/invite.ts",
+    "find": "  if (!trimmed) throw new Error(\"A name is required.\");\n",
+    "replace": "  if (!trimmed) throw new Error(\"A name is required.\");\n  void mintInviteCode();\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "naming an orphan never creates a code or a participantId"
+  },
+  {
+    "id": "console-dismiss-stays-in-week",
+    "why": "A dismissed orphan must leave This week and data health. Keeping them in weekTesters is the reminder James asked to stop.",
+    "file": "src/lib/console-model.ts",
+    "find": "  const weekTesters = testers.filter((row) => !row.dismissed);\n",
+    "replace": "  const weekTesters = testers;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a dismissed orphan is absent from data health and This week, and present in All testers"
+  },
+  {
+    "id": "console-name-writes-a-pack",
+    "why": "Names live in the gitignored book. Writing them anywhere else, or posting them to the study inbox, would put a name beside sleep data.",
+    "file": "src/app/mod/page.tsx",
+    "find": "  function persistBook(next: OperatorInvite[]) {\n    setBook(next);\n    void fetch(\"/api/moderator/book\", {\n      method: \"PUT\",\n      headers: { \"content-type\": \"application/json\", \"x-circadia-mod\": key },\n      body: JSON.stringify({ invites: next }),\n    });\n  }\n\n  const nightPeople = useMemo(\n",
+    "replace": "  function persistBook(next: OperatorInvite[]) {\n    setBook(next);\n    void fetch(\"/api/study\", {\n      method: \"PUT\",\n      headers: { \"content-type\": \"application/json\", \"x-circadia-mod\": key },\n      body: JSON.stringify({ invites: next }),\n    });\n  }\n\n  const nightPeople = useMemo(\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "naming and dismissing write only to the gitignored book"
+  },
+  {
+    "id": "console-hides-invite-codes",
+    "why": "The code is not a secret, and James needs it again when a tester reinstalls. Dropping it from the book hides it after the first view.",
+    "file": "src/lib/console-model.ts",
+    "find": "      code: invite.code,\n",
+    "replace": "      code: null,\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "every invite's code is present in the rendered book"
+  },
+  {
+    "id": "console-book-stores-email",
+    "why": "A phone number or email beside a folder of sleep data turns the book into a contact list of people's health records.",
+    "file": "src/lib/invite.ts",
+    "find": "  createdAt: string;\n  dismissed: boolean;\n};\n",
+    "replace": "  createdAt: string;\n  dismissed: boolean;\n  email: string;\n};\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "the book's entry shape has no field for a phone number or an email; no request to the Operator server carries one; nothing written to browser storage contains one"
+  },
+  {
+    "id": "shell-drops-tel-scheme",
+    "why": "An allowlist that forgot tel: silently kills the 988 crisis line on the Mac, and sms/mailto would have nowhere to go.",
+    "file": "electron/launcher.swift",
+    "find": "    let nativeSchemes = [\"sms\", \"mailto\", \"tel\"]\n",
+    "replace": "    let nativeSchemes = [\"sms\", \"mailto\"]\n",
+    "testFile": "src/lib/native-schemes.test.ts",
+    "testName": "the shell opens sms, mailto and tel in the system app and refuses any other non-http scheme"
+  },
+  {
+    "id": "crisis-line-loses-tel",
+    "why": "988 must remain a tel: link. Turning it into https would skip the shell's tel handoff and bury the one link that matters most.",
+    "file": "src/components/crisis-line.tsx",
+    "find": "        href={`tel:${CRISIS_LIFELINE_NUMBER}`}\n",
+    "replace": "        href={`https://988lifeline.org`}\n",
+    "testFile": "src/lib/native-schemes.test.ts",
+    "testName": "the patient app still renders 988 as a tel: link, and tel: is in the shell's allowlist"
   }
 ]

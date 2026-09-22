@@ -16,7 +16,7 @@ const NAV: { id: OperatorNavId; href: string; label: string; icon: ReactNode }[]
   },
   {
     id: "testers",
-    href: "/mod",
+    href: "/mod/testers",
     label: "All testers",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

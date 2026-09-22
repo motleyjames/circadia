@@ -6,12 +6,14 @@ import { OperatorChrome } from "@/components/operator-chrome";
 import { OperatorGate } from "@/components/operator-gate";
 import {
   buildConsoleModel,
+  dismissOrphan,
+  nameOrphan,
   type ConsoleArrival,
   type ConsoleReject,
   type ConsoleTester,
   type NightSlot,
 } from "@/lib/console-model";
-import { readInviteBook, type OperatorInvite } from "@/lib/invite";
+import { isCohort, readInviteBook, type Cohort, type OperatorInvite } from "@/lib/invite";
 import {
   formatInboxReceived,
   groupNightsByParticipant,
@@ -47,7 +49,14 @@ const SECTION_COLOR: Record<string, string> = {
   "not-filing": "text-op-amber",
   "in-baseline": "text-op-ink",
   "baseline-complete": "text-op-violet",
+  "not-enrolled": "text-op-muted",
 };
+
+const COHORTS: { id: Cohort; label: string }[] = [
+  { id: "friend", label: "Friend" },
+  { id: "stranger", label: "Stranger" },
+  { id: "lab", label: "Sleep lab" },
+];
 
 export default function ModeratorPage() {
   const [key, setKey] = useState("");
@@ -56,6 +65,7 @@ export default function ModeratorPage() {
   const [book, setBook] = useState<OperatorInvite[]>([]);
   const [loading, setLoading] = useState(false);
   const [booted, setBooted] = useState(false);
+  const [namingId, setNamingId] = useState<string | null>(null);
 
   const load = useCallback(async (secret: string) => {
     setLoading(true);
@@ -99,6 +109,15 @@ export default function ModeratorPage() {
     setBooted(true);
   }, [load]);
 
+  function persistBook(next: OperatorInvite[]) {
+    setBook(next);
+    void fetch("/api/moderator/book", {
+      method: "PUT",
+      headers: { "content-type": "application/json", "x-circadia-mod": key },
+      body: JSON.stringify({ invites: next }),
+    });
+  }
+
   const nightPeople = useMemo(
     () => (data ? groupNightsByParticipant(data.nights) : []),
     [data],
@@ -135,7 +154,7 @@ export default function ModeratorPage() {
             </p>
           ) : (
             <p className="max-w-[820px] text-[15px] leading-normal text-op-body">
-              Named testers with a known night count will make a completion sentence here.
+              Completion appears here once you have named testers in a baseline.
             </p>
           )}
         </div>
@@ -152,7 +171,7 @@ export default function ModeratorPage() {
             </h2>
             {view.health.map((item, index) => (
               <div
-                key={`${item.kind}-${index}`}
+                key={`${item.kind}-${item.participantId ?? index}`}
                 className="flex items-center gap-3.5 border-t border-op-line-soft px-6 py-3"
               >
                 <div className="h-2 w-2 shrink-0 rounded-full bg-op-amber" aria-hidden />
@@ -162,12 +181,42 @@ export default function ModeratorPage() {
                     <span className="mt-1 block text-[13px] text-op-muted">{item.detail}</span>
                   ) : null}
                 </div>
-                <a
-                  href={item.href}
-                  className="flex min-h-11 items-center text-[14px] font-semibold text-op-violet no-underline hover:text-op-violet-deep"
-                >
-                  {item.actionLabel}
-                </a>
+                <div className="flex shrink-0 items-center gap-3">
+                  {item.actions.map((action) => {
+                    if (action.id === "why") {
+                      return item.detail ? (
+                        <span key={action.id} className="text-[14px] text-op-muted">
+                          {action.label}
+                        </span>
+                      ) : null;
+                    }
+                    if (action.id === "name" && item.participantId) {
+                      return (
+                        <button
+                          key={action.id}
+                          type="button"
+                          onClick={() => setNamingId(item.participantId)}
+                          className="min-h-11 cursor-pointer border-0 bg-transparent text-[14px] font-semibold text-op-violet"
+                        >
+                          {action.label}
+                        </button>
+                      );
+                    }
+                    if (action.id === "dismiss" && item.participantId) {
+                      return (
+                        <button
+                          key={action.id}
+                          type="button"
+                          onClick={() => persistBook(dismissOrphan(book, item.participantId!))}
+                          className="min-h-11 cursor-pointer border-0 bg-transparent text-[14px] font-semibold text-op-violet"
+                        >
+                          {action.label}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
               </div>
             ))}
           </section>
@@ -215,6 +264,13 @@ export default function ModeratorPage() {
                     tester={tester}
                     nightPerson={nightPeople.find((row) => row.participantId === tester.participantId)}
                     person={data?.people.find((row) => row.participantId === tester.participantId)}
+                    naming={namingId === tester.participantId}
+                    onName={() => setNamingId(tester.participantId)}
+                    onCancelName={() => setNamingId(null)}
+                    onSaveName={(name, cohort) => {
+                      persistBook(nameOrphan(book, tester.participantId, name, cohort));
+                      setNamingId(null);
+                    }}
                   />
                 ))}
               </div>
@@ -230,10 +286,18 @@ function TesterRow({
   tester,
   nightPerson,
   person,
+  naming,
+  onName,
+  onCancelName,
+  onSaveName,
 }: {
   tester: ConsoleTester;
   nightPerson?: ModeratorNightPerson;
   person?: ModeratorPerson;
+  naming: boolean;
+  onName: () => void;
+  onCancelName: () => void;
+  onSaveName: (name: string, cohort: Cohort) => void;
 }) {
   const [open, setOpen] = useState(false);
   const histId = `tester-hist-${tester.participantId}`;
@@ -241,7 +305,7 @@ function TesterRow({
   const stripLabel =
     elapsed !== null
       ? `${tester.nightsFiled} of ${elapsed} nights filed so far; bar height is sleep efficiency`
-      : `${tester.nightsFiled} nights filed; bar height is sleep efficiency`;
+      : `${tester.nightsFiled} nights, outside any baseline`;
   return (
     <div className="border-b border-op-line-soft">
       <div
@@ -264,7 +328,7 @@ function TesterRow({
           <div className="text-[15px] tabular-nums text-op-ink">{tester.progressLabel}</div>
           <div className="text-[13px] text-op-muted tabular-nums">{tester.filedLabel}</div>
         </div>
-        <NightStrip slots={tester.slots} label={stripLabel} />
+        {tester.slots.length ? <NightStrip slots={tester.slots} label={stripLabel} /> : <div />}
         <div className="text-[20px] font-semibold tabular-nums text-op-ink">
           {tester.sleepEfficiencyPct !== null ? `${tester.sleepEfficiencyPct}%` : "—"}
         </div>
@@ -281,18 +345,36 @@ function TesterRow({
           >
             {tester.reason}
           </div>
-          {tester.action && tester.actionHref ? (
+          {tester.action === "name" ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onName();
+              }}
+              className="min-h-11 cursor-pointer border-0 bg-transparent text-[14px] font-semibold text-op-violet"
+            >
+              Add a name
+            </button>
+          ) : null}
+          {tester.action === "export" ? (
             <a
-              href={tester.actionHref}
+              href="/mod/exports"
               onClick={(event) => event.stopPropagation()}
               className="text-[14px] font-semibold text-op-violet no-underline hover:text-op-violet-deep"
             >
-              {tester.action}
+              Export diary
             </a>
           ) : null}
         </div>
         <div className="text-[14px] text-op-muted">{tester.lastSync}</div>
       </div>
+      {naming ? (
+        <NameOrphanForm
+          onCancel={onCancelName}
+          onSave={onSaveName}
+        />
+      ) : null}
       {open ? (
         <div id={histId} className="border-t border-op-line-soft bg-[#fafafb] px-6 py-3">
           {nightPerson ? <NightRow person={nightPerson} /> : null}
@@ -300,6 +382,73 @@ function TesterRow({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function NameOrphanForm({
+  onCancel,
+  onSave,
+}: {
+  onCancel: () => void;
+  onSave: (name: string, cohort: Cohort) => void;
+}) {
+  const [name, setName] = useState("");
+  const [cohort, setCohort] = useState<Cohort>("friend");
+  return (
+    <form
+      className="border-t border-op-line-soft bg-[#fafafb] px-6 py-4"
+      onClick={(event) => event.stopPropagation()}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const trimmed = name.trim();
+        if (!trimmed || !isCohort(cohort)) return;
+        onSave(trimmed, cohort);
+      }}
+    >
+      <div className="flex max-w-[28rem] flex-col gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[14px] font-semibold text-op-ink">Their name</span>
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="First name and last initial"
+            className="h-11 rounded-lg border border-op-input bg-op-surface px-3 text-[15px] text-op-ink"
+          />
+        </label>
+        <fieldset className="m-0 flex flex-col gap-1.5 border-0 p-0">
+          <legend className="text-[14px] font-semibold text-op-ink">How you found them</legend>
+          {COHORTS.map((option) => (
+            <label key={option.id} className="flex min-h-11 cursor-pointer items-center gap-2 text-[14px] text-op-ink">
+              <input
+                type="radio"
+                name="orphan-cohort"
+                value={option.id}
+                checked={cohort === option.id}
+                onChange={() => setCohort(option.id)}
+                className="h-4 w-4 accent-op-violet"
+              />
+              {option.label}
+            </label>
+          ))}
+        </fieldset>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            className="h-11 cursor-pointer rounded-lg bg-op-violet px-4 text-[14px] font-semibold text-white"
+          >
+            Save name
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="min-h-11 cursor-pointer border-0 bg-transparent text-[14px] font-semibold text-op-violet"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </form>
   );
 }
 
