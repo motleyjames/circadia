@@ -732,8 +732,8 @@
     "id": "console-draws-preenrollment",
     "why": "A night filed before enrollment has no episodeNight. Drawing it on nightIndex puts a bar in a slot that is not part of the episode.",
     "file": "src/lib/console-model.ts",
-    "find": "      if (night.episodeNight === undefined) continue;\n      if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n",
-    "replace": "      if (night.episodeNight === undefined) {\n        byNight.set(night.nightIndex, { ...night, episodeNight: night.nightIndex });\n        continue;\n      }\n      if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n",
+    "find": "    if (night.episodeNight === undefined) continue;\n    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n",
+    "replace": "    if (night.episodeNight === undefined) {\n      filed.set(night.nightIndex, { night: { ...night, episodeNight: night.nightIndex }, efficiencyPct: nightEfficiency(night) });\n      continue;\n    }\n    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "pre-enrollment nights are never drawn"
   },
@@ -784,10 +784,10 @@
   },
   {
     "id": "console-keeps-older-night",
-    "why": "When two packs file the same episodeNight, the older geometry must not win. Skipping a key that is already set keeps the stale night.",
+    "why": "Merging nights across packs keeps a night whose slot was later corrected. A pack is a complete snapshot; nights come from the newest pack only.",
     "file": "src/lib/console-model.ts",
-    "find": "      byNight.set(night.episodeNight, night);\n",
-    "replace": "      if (!byNight.has(night.episodeNight)) byNight.set(night.episodeNight, night);\n",
+    "find": "  const source = newest.pack.nights;\n",
+    "replace": "  const source = ordered.flatMap((row) => row.pack.nights);\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "a night present in two packs appears once, from the newer"
   },
@@ -1213,5 +1213,68 @@
     "replace": "    if (!put.ok) return { status: \"sent\", etag: study.packEtag ?? \"x\", at: new Date().toISOString(), packHash };\n",
     "testFile": "src/lib/pack-deliver.test.ts",
     "testName": "after a failed send, the next open sends again"
+  },
+  {
+    "id": "console-james-slot-merge",
+    "why": "James filed one night. Merging the old slot-1 pack with the corrected slot-0 pack draws two bars and 200%.",
+    "file": "src/lib/console-model.ts",
+    "find": "  const source = newest.pack.nights;\n",
+    "replace": "  const source = ordered.flatMap((row) => row.pack.nights);\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "James's case: slot 1 in an older pack, slot 0 in the newer, is one bar in slot 0, 1 filed, 100%"
+  },
+  {
+    "id": "console-shrink-any-older",
+    "why": "Comparing the newest pack to any older pack, not the one just before it, makes a shrink notice that can never clear.",
+    "file": "src/lib/console-model.ts",
+    "find": "    const previous = ordered.at(-2);\n    const label = tester.name ?? `Code ${shortTesterId(tester.participantId)}`;\n    if (newest && previous && newest.pack.nights.length < previous.pack.nights.length) {\n",
+    "replace": "    const previous = ordered[0];\n    const label = tester.name ?? `Code ${shortTesterId(tester.participantId)}`;\n    if (newest && previous && newest !== previous && newest.pack.nights.length < previous.pack.nights.length) {\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a newest pack with fewer nights than the one before is used, and data health names it; the next pack that does not shrink clears the notice"
+  },
+  {
+    "id": "console-counts-unreached-slot",
+    "why": "A night in a slot nightsElapsed has not reached must not count as filed.",
+    "file": "src/lib/console-model.ts",
+    "find": "    if (nightsElapsed !== null && night.episodeNight >= nightsElapsed) continue;\n",
+    "replace": "    if (false && nightsElapsed !== null && night.episodeNight >= nightsElapsed) continue;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a night in an unreached slot is not counted and is reported"
+  },
+  {
+    "id": "console-completion-over-100",
+    "why": "Completion can never display above 100%. Removing the cap lets a double-counted night read as 200%.",
+    "file": "src/lib/console-model.ts",
+    "find": "  return Math.min(100, Math.round((100 * filed) / elapsed));\n",
+    "replace": "  return Math.round((100 * filed) / elapsed);\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "completion never exceeds 100%"
+  },
+  {
+    "id": "operator-tab-reloads-page",
+    "why": "A tab switch must not reload the document. Dropping preventDefault sends the browser through a full navigation and a new inbox fetch.",
+    "file": "src/components/operator-chrome.tsx",
+    "find": "    event.preventDefault();\n    router.push(href);\n",
+    "replace": "    router.push(href);\n",
+    "testFile": "src/context/operator-inbox.test.ts",
+    "testName": "a tab switch after the first load makes no data request"
+  },
+  {
+    "id": "operator-poll-hourly",
+    "why": "The Worker fetch must keep running every 3 minutes. Stretching the interval to an hour leaves the inbox stale.",
+    "file": "src/context/operator-inbox.tsx",
+    "find": "    }, 3 * 60 * 1000);\n",
+    "replace": "    }, 3 * 60 * 60 * 1000);\n",
+    "testFile": "src/context/operator-inbox.test.ts",
+    "testName": "polling still runs every 3 minutes"
+  },
+  {
+    "id": "operator-browser-imports-pack-fetch",
+    "why": "The private key and the Worker fetch stay on the server. Importing pack-fetch into a browser module would ship both.",
+    "file": "src/context/operator-inbox.tsx",
+    "find": "import { readOperatorKey, writeOperatorKey } from \"@/lib/operator-session\";\n",
+    "replace": "import { readOperatorKey, writeOperatorKey } from \"@/lib/operator-session\";\nimport { fetchBookPacks } from \"@/lib/pack-fetch\";\n",
+    "testFile": "src/context/operator-inbox.test.ts",
+    "testName": "no browser component imports the private key or the Worker fetch"
   }
 ]

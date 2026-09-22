@@ -70,7 +70,7 @@ export type ConsoleSection = {
 };
 
 export type DataHealthItem = {
-  kind: "unreadable" | "orphan" | "unreachable";
+  kind: "unreadable" | "orphan" | "unreachable" | "shrunk" | "unreached";
   message: string;
   detail: string | null;
   files: string[];
@@ -287,6 +287,7 @@ export function buildConsoleModel(input: {
     liveRejects(input.rejects, input.arrivals),
     input.now,
     input.workerUnreachable === true,
+    input.arrivals,
   );
 
   return {
@@ -322,17 +323,20 @@ function stitchTester(
   const flags = allowlistedFlags(newest.pack.safetyFlags);
   const packNights = newest.pack.nights;
   const packNightCount = packNights.length;
-  const merged = mergeNights(ordered);
+  const source = newest.pack.nights;
   const filed = new Map<number, { night: StudyNight; efficiencyPct: number | null }>();
-  for (const night of merged) {
+  for (const night of source) {
     if (night.episodeNight === undefined) continue;
+    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;
+    if (nightsElapsed !== null && night.episodeNight >= nightsElapsed) continue;
     filed.set(night.episodeNight, { night, efficiencyPct: nightEfficiency(night) });
   }
 
   const notEnrolled = nightsElapsed === null;
   const nightsFiled = notEnrolled ? packNightCount : filed.size;
-  const completion =
+  const rawCompletion =
     nightsElapsed === null || nightsElapsed <= 0 ? null : filed.size / nightsElapsed;
+  const completion = rawCompletion === null ? null : Math.min(1, rawCompletion);
   const missedLastTwo = nightsElapsed !== null && lastTwoUnfiled(nightsElapsed, filed);
   const belowThreshold = completion !== null && completion < NOT_FILING_THRESHOLD;
   const notFiling = missedLastTwo || belowThreshold;
@@ -376,18 +380,6 @@ function stitchTester(
     lastSync: arrived ? formatLastSync(arrived, now) : "—",
     action: orphan ? "name" : section === "baseline-complete" ? "export" : null,
   };
-}
-
-function mergeNights(oldestFirst: ConsoleArrival[]): StudyNight[] {
-  const byNight = new Map<number, StudyNight>();
-  for (const row of oldestFirst) {
-    for (const night of row.pack.nights) {
-      if (night.episodeNight === undefined) continue;
-      if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;
-      byNight.set(night.episodeNight, night);
-    }
-  }
-  return [...byNight.entries()].sort((a, b) => a[0] - b[0]).map(([, night]) => night);
 }
 
 function sectionFor(
@@ -582,6 +574,7 @@ function dataHealth(
   rejects: readonly ConsoleReject[],
   now: Date,
   workerUnreachable = false,
+  arrivals: readonly ConsoleArrival[] = [],
 ): DataHealthItem[] | null {
   const items: DataHealthItem[] = [];
   if (workerUnreachable) {
@@ -631,12 +624,55 @@ function dataHealth(
       ],
     });
   }
+  const byPerson = new Map<string, ConsoleArrival[]>();
+  for (const row of arrivals) {
+    const id = row.pack.participantId.toLowerCase();
+    const list = byPerson.get(id);
+    if (list) list.push(row);
+    else byPerson.set(id, [row]);
+  }
+  for (const tester of testers) {
+    const rows = byPerson.get(tester.participantId.toLowerCase()) ?? [];
+    const ordered = [...rows].sort((a, b) => inboxStampKey(a.file).localeCompare(inboxStampKey(b.file)));
+    const newest = ordered.at(-1);
+    const previous = ordered.at(-2);
+    const label = tester.name ?? `Code ${shortTesterId(tester.participantId)}`;
+    if (newest && previous && newest.pack.nights.length < previous.pack.nights.length) {
+      items.push({
+        kind: "shrunk",
+        message: `${label}'s newest pack has fewer nights than the one before it.`,
+        detail: null,
+        files: [newest.file, previous.file],
+        participantId: tester.participantId,
+        actions: [],
+      });
+    }
+    const elapsed = newest && Number.isInteger(newest.pack.nightsElapsed) ? newest.pack.nightsElapsed! : null;
+    if (newest && elapsed !== null) {
+      const unreached = newest.pack.nights.some(
+        (night) =>
+          night.episodeNight !== undefined &&
+          Number.isInteger(night.episodeNight) &&
+          night.episodeNight >= elapsed,
+      );
+      if (unreached) {
+        items.push({
+          kind: "unreached",
+          message: `${label} has a night in a slot that has not been reached.`,
+          detail: null,
+          files: [newest.file],
+          participantId: tester.participantId,
+          actions: [],
+        });
+      }
+    }
+  }
   return items.length ? items : null;
 }
 
-function ratioPercent(filed: number, elapsed: number): number {
+export function ratioPercent(filed: number, elapsed: number): number {
   if (elapsed <= 0) return 0;
-  return Math.round((100 * filed) / elapsed);
+  return Math.min(100, Math.round((100 * filed) / elapsed));
 }
 
 function whenLabel(stamp: string, now: Date): string {

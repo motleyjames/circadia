@@ -10,6 +10,7 @@ import {
   inviteSendBody,
   mailtoHref,
   nameOrphan,
+  ratioPercent,
   restoreOrphan,
   smsHref,
   type ConsoleArrival,
@@ -332,12 +333,16 @@ describe("console-model", () => {
     expect(row.nightsElapsed).toBe(3);
     expect(row.flags).toEqual(["drowsy-driving"]);
     expect(row.section).toBe("safety");
-    expect(row.nightsFiled).toBe(8);
+    // A pack is a complete snapshot. Filed nights come from the newest pack only.
+    expect(row.nightsFiled).toBe(3);
   });
 
   it("a night present in two packs appears once, from the newer", () => {
+    // Older rule merged by episodeNight across every pack. A night whose slot
+    // was later corrected then appeared twice. Nights now come from the newest
+    // pack only — older packs stay on disk and are never merged in.
     const older = scoredNight(1, { rating: 1, inBedAt: "00:00", outOfBedAt: "08:00", wokeAt: "07:00" });
-    const newer = scoredNight(1, { rating: 5, inBedAt: "00:00", outOfBedAt: "07:00", wokeAt: "06:30" });
+    const newer = scoredNight(0, { rating: 5, inBedAt: "00:00", outOfBedAt: "07:00", wokeAt: "06:30" });
     const olderSe = nightGeometry({
       inBedAt: older.inBedAt,
       outOfBedAt: older.outOfBedAt,
@@ -358,12 +363,96 @@ describe("console-model", () => {
     })!.efficiencyPct;
     expect(newerSe).not.toBe(olderSe);
     const row = testerOf([
-      arrival(ALEX, "2026-09-20T10-00-00-000Z", { nightsElapsed: 2, nights: [scoredNight(0), older] }),
-      arrival(ALEX, "2026-09-21T10-00-00-000Z", { nightsElapsed: 2, nights: [scoredNight(0), newer] }),
+      arrival(ALEX, "2026-09-20T10-00-00-000Z", { nightsElapsed: 1, nights: [older] }),
+      arrival(ALEX, "2026-09-21T10-00-00-000Z", { nightsElapsed: 1, nights: [newer] }),
     ]);
-    expect(row.slots[1]?.kind).toBe("bar");
-    expect(row.slots[1]?.efficiencyPct).toBe(newerSe);
-    expect(row.slots[1]?.efficiencyPct).not.toBe(olderSe);
+    expect(row.nightsFiled).toBe(1);
+    expect(row.slots[0]?.kind).toBe("bar");
+    expect(row.slots[0]?.efficiencyPct).toBe(newerSe);
+    expect(row.slots[0]?.efficiencyPct).not.toBe(olderSe);
+    expect(row.slots[1]?.kind).not.toBe("bar");
+  });
+
+  it("James's case: slot 1 in an older pack, slot 0 in the newer, is one bar in slot 0, 1 filed, 100%", () => {
+    const view = model(
+      [
+        arrival(ALEX, "2026-09-20T10-00-00-000Z", { nightsElapsed: 1, nights: [scoredNight(1)] }),
+        arrival(ALEX, "2026-09-21T10-00-00-000Z", { nightsElapsed: 1, nights: [scoredNight(0)] }),
+      ],
+      [bookEntry(ALEX, "James")],
+    );
+    const row = view.testers[0]!;
+    expect(row.nightsFiled).toBe(1);
+    expect(row.slots[0]?.kind).toBe("bar");
+    expect(row.slots.filter((slot) => slot.kind === "bar")).toHaveLength(1);
+    expect(row.slots[1]?.kind).not.toBe("bar");
+    expect(row.completion).toBe(1);
+    expect(view.completion?.percentLabel).toBe("100%");
+  });
+
+  it("a newest pack with fewer nights than the one before is used, and data health names it; the next pack that does not shrink clears the notice", () => {
+    const shrink = model(
+      [
+        arrival(ALEX, "2026-09-19T10-00-00-000Z", {
+          nightsElapsed: 3,
+          nights: [scoredNight(0), scoredNight(1), scoredNight(2)],
+        }),
+        arrival(ALEX, "2026-09-21T10-00-00-000Z", { nightsElapsed: 1, nights: [scoredNight(0)] }),
+      ],
+      [bookEntry(ALEX, "Alex Q.")],
+    );
+    expect(shrink.testers[0]?.nightsFiled).toBe(1);
+    expect(shrink.health?.some((item) => item.kind === "shrunk" && item.message.includes("Alex Q."))).toBe(true);
+
+    const cleared = model(
+      [
+        arrival(ALEX, "2026-09-19T10-00-00-000Z", {
+          nightsElapsed: 3,
+          nights: [scoredNight(0), scoredNight(1), scoredNight(2)],
+        }),
+        arrival(ALEX, "2026-09-20T10-00-00-000Z", { nightsElapsed: 1, nights: [scoredNight(0)] }),
+        arrival(ALEX, "2026-09-21T10-00-00-000Z", {
+          nightsElapsed: 2,
+          nights: [scoredNight(0), scoredNight(1)],
+        }),
+      ],
+      [bookEntry(ALEX, "Alex Q.")],
+    );
+    expect(cleared.testers[0]?.nightsFiled).toBe(2);
+    expect(cleared.health?.some((item) => item.kind === "shrunk")).toBeFalsy();
+  });
+
+  it("a night in an unreached slot is not counted and is reported", () => {
+    const view = model(
+      [
+        arrival(ALEX, "2026-09-21T10-00-00-000Z", {
+          nightsElapsed: 1,
+          nights: [scoredNight(0), scoredNight(2)],
+        }),
+      ],
+      [bookEntry(ALEX, "Alex Q.")],
+    );
+    const row = view.testers[0]!;
+    expect(row.nightsFiled).toBe(1);
+    expect(row.slots[0]?.kind).toBe("bar");
+    expect(row.slots[2]?.kind).not.toBe("bar");
+    expect(view.health?.some((item) => item.kind === "unreached" && item.message.includes("Alex Q."))).toBe(
+      true,
+    );
+  });
+
+  it("completion never exceeds 100%", () => {
+    expect(ratioPercent(2, 1)).toBe(100);
+    expect(ratioPercent(5, 2)).toBe(100);
+    const view = model(
+      [
+        arrival(ALEX, "2026-09-20T10-00-00-000Z", { nightsElapsed: 1, nights: [scoredNight(1)] }),
+        arrival(ALEX, "2026-09-21T10-00-00-000Z", { nightsElapsed: 1, nights: [scoredNight(0)] }),
+      ],
+      [bookEntry(ALEX, "Alex Q.")],
+    );
+    expect(view.testers[0]?.completion).toBeLessThanOrEqual(1);
+    expect(Number.parseInt(view.completion?.percentLabel ?? "0", 10)).toBeLessThanOrEqual(100);
   });
 
   it("no design data ships", () => {

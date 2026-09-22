@@ -1,4 +1,7 @@
-import type { ReactNode } from "react";
+"use client";
+
+import type { MouseEvent, ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export type OperatorNavId = "week" | "testers" | "invite" | "exports";
@@ -64,6 +67,14 @@ export function OperatorChrome({
   onRefresh?: () => void;
   children: ReactNode;
 }) {
+  const router = useRouter();
+
+  function go(event: MouseEvent<HTMLAnchorElement>, href: string) {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    event.preventDefault();
+    router.push(href);
+  }
+
   return (
     <div className="flex min-h-full flex-col bg-op-paper text-op-ink">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-op-line bg-op-surface px-8">
@@ -96,6 +107,7 @@ export function OperatorChrome({
               <a
                 key={item.id}
                 href={item.href}
+                onClick={(event) => go(event, item.href)}
                 aria-current={current ? "page" : undefined}
                 className={cn(
                   "flex h-11 items-center justify-between rounded-lg px-3 text-[15px] no-underline",
