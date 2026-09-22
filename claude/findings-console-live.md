@@ -36,3 +36,22 @@ _Checked against the source and found not to apply._
 Reading the source settles this. Read src/components/send-invite-code.tsx. The component uses standard web APIs (navigator.clipboard, window.location.assign with sms:/mailto: URIs) and does not use any iOS NSUserActivity, UIActivityViewController, universal links, or system share sheet APIs. Cited src/components/send-invite-code.tsx:20: `window.location.assign(href);`
 
 `probe: read_code__ios_os_level_data_leakage_7681`
+
+---
+
+## Declined, with reasons (James, 2026-09-21)
+
+**Code presence as a proxy for enrollment (d_1_1).** Nothing reads it that way:
+enrollment is nightsElapsed, and a named orphan's null code is expected. Declined.
+
+**Abusive tel: dial strings (d_1_2).** The allowlist is by scheme, and tel: links
+come only from the app's own authored pages, never untrusted content. Declined.
+
+**sms: failing without an SMS plan (d_1_3).** The message is always copied to the
+clipboard as well, so delivery never depends on Messages. Declined.
+
+## Mutation finding
+
+console-draws-preenrollment survived after the Not enrolled section was added.
+Fixed in a follow-up by rebuilding the fixture as an enrolled tester and asserting
+its precondition.

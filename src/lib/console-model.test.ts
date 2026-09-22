@@ -205,16 +205,40 @@ describe("console-model", () => {
   });
 
   it("pre-enrollment nights are never drawn", () => {
+    const pre = { episodeNight: undefined, wokeAt: "03:15" };
     const row = testerOf([
       arrival(ALEX, "2026-09-21T10-00-00-000Z", {
-        nightsElapsed: 2,
-        nights: [scoredNight(0, { episodeNight: undefined, nightIndex: 0 }), scoredNight(0), scoredNight(1)],
+        nightsElapsed: 5,
+        nights: [
+          scoredNight(0),
+          scoredNight(1),
+          scoredNight(2),
+          scoredNight(4),
+          scoredNight(0, pre),
+          scoredNight(1, pre),
+          scoredNight(2, pre),
+        ],
       }),
     ]);
-    expect(row.nightsFiled).toBe(2);
-    expect(row.slots[0]?.kind).toBe("bar");
-    expect(row.slots[1]?.kind).toBe("bar");
-    expect(row.slots.filter((slot) => slot.kind !== "empty")).toHaveLength(2);
+    expect(row.section).toBe("in-baseline");
+    expect(row.slots).toHaveLength(BASELINE_NIGHTS);
+    expect(row.nightsFiled).toBe(4);
+    expect(row.slots.map((slot) => slot.kind)).toEqual([
+      "bar",
+      "bar",
+      "bar",
+      "dashed",
+      "bar",
+      ...Array.from({ length: 9 }, () => "empty"),
+    ]);
+    expect(row.slots.map((slot) => slot.efficiencyPct)).toEqual([
+      90,
+      90,
+      90,
+      null,
+      90,
+      ...Array.from({ length: 9 }, () => null),
+    ]);
   });
 
   it("the completion sentence excludes orphans and unknowns, and reports how many testers it covers", () => {
