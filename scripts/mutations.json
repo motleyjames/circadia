@@ -1012,7 +1012,7 @@
     "why": "A pack that fails validateStudyPack must not enter the inbox. Writing it anyway bypasses the receiver.",
     "file": "src/lib/pack-fetch.ts",
     "find": "    const checked = validateStudyPack(opened.value);\n    if (!checked.ok) {\n      rejects.push({\n        reason: checked.error,\n        arrivedAt: now.toISOString(),\n        file: `fetch:${row.participantId}`,\n      });\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
-    "replace": "    const checked = validateStudyPack(opened.value);\n    void checked;\n",
+    "replace": "    const checked = validateStudyPack(opened.value);\n    if (!checked.ok) {\n      written.push(writeInboxPack(opened.value as StudyPack, arrivedAt(row, now), inbox));\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
     "testFile": "src/lib/pack-fetch.test.ts",
     "testName": "an opened pack that fails validateStudyPack is rejected and never enters the inbox"
   },
@@ -1119,8 +1119,8 @@
     "id": "phone-build-ignores-missing-key",
     "why": "A phone without Operator's public key cannot seal. Letting the build continue ships an app that can never send.",
     "file": "scripts/require-operator-public.cjs",
-    "find": "  process.exit(14);\n",
-    "replace": "  process.exit(0);\n",
+    "find": "if (!fs.existsSync(file)) {\n  console.error(\n    \"Stopped. Operator's public key is missing. Open Operator once so it can write the key, then run this again.\",\n  );\n  process.exit(14);\n}\n",
+    "replace": "if (!fs.existsSync(file)) {\n  console.error(\n    \"Stopped. Operator's public key is missing. Open Operator once so it can write the key, then run this again.\",\n  );\n  process.exit(0);\n}\n",
     "testFile": "src/lib/phone-shell.test.ts",
     "testName": "the phone build fails when Operator's public key is missing"
   },
@@ -1216,10 +1216,10 @@
   },
   {
     "id": "console-james-slot-merge",
-    "why": "James filed one night. Merging the old slot-1 pack with the corrected slot-0 pack draws two bars and 200%.",
+    "why": "James filed one night. Merging the old slot-1 pack with the corrected slot-0 pack, and counting an unreached slot, draws two bars and 200%.",
     "file": "src/lib/console-model.ts",
-    "find": "  const source = newest.pack.nights;\n",
-    "replace": "  const source = ordered.flatMap((row) => row.pack.nights);\n",
+    "find": "  const source = newest.pack.nights;\n  const filed = new Map<number, { night: StudyNight; efficiencyPct: number | null }>();\n  for (const night of source) {\n    if (night.episodeNight === undefined) continue;\n    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n    if (nightsElapsed !== null && night.episodeNight >= nightsElapsed) continue;\n    filed.set(night.episodeNight, { night, efficiencyPct: nightEfficiency(night) });\n  }\n",
+    "replace": "  const source = ordered.flatMap((row) => row.pack.nights);\n  const filed = new Map<number, { night: StudyNight; efficiencyPct: number | null }>();\n  for (const night of source) {\n    if (night.episodeNight === undefined) continue;\n    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n    filed.set(night.episodeNight, { night, efficiencyPct: nightEfficiency(night) });\n  }\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "James's case: slot 1 in an older pack, slot 0 in the newer, is one bar in slot 0, 1 filed, 100%"
   },
