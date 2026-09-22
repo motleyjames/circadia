@@ -17,7 +17,11 @@ import {
 } from "./console-model";
 import type { OperatorInvite } from "./invite";
 import { nightGeometry } from "./sleep-metrics";
-import type { StudyNight, StudyPack } from "./types";
+import { createEpisode } from "./episode";
+import { emptyState } from "./storage";
+import { buildStudyPack } from "./study";
+import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
+import type { CircadiaState, MorningReport, Profile, StudyNight, StudyPack } from "./types";
 
 const NOW = new Date("2026-09-21T18:00:00.000Z");
 const ALEX = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0011";
@@ -602,5 +606,69 @@ describe("console-model", () => {
     );
     expect(smsHref("+1 (555) 010-0101", inviteSendBody("A10B-C3D4"))).toContain("sms:+15550100101?body=");
     expect(mailtoHref("ada@example.com", inviteSendBody("A10B-C3D4"))).toContain("mailto:ada@example.com?body=");
+  });
+
+  it("James's case through the console model: slot 0 filled, slots 1–13 empty, section In baseline", () => {
+    const enrolledAt = new Date(2026, 8, 21, 22, 0, 0, 0).toISOString();
+    const profile: Profile = {
+      firstName: "J",
+      lastName: "",
+      name: "J",
+      age: 40,
+      sex: "male",
+      heightCm: 178,
+      weightKg: 75,
+      activity: "light",
+      medications: [],
+      supplements: [],
+      struggles: ["falling"],
+      targetSleep: "23:00",
+      targetWake: "07:00",
+      units: "metric",
+      notificationsEnabled: false,
+      onboardingComplete: true,
+      email: "",
+      phone: "",
+      scheduledDays: DEFAULT_SCHEDULED_DAYS,
+    };
+    const report: MorningReport = {
+      id: "r-2026-09-22",
+      morningDate: "2026-09-22",
+      wokeAt: "07:00",
+      fellAsleepAt: "23:30",
+      rating: 3,
+      drank: false,
+      screenOffMinutes: 30,
+      sleepLatencyMinutes: 30,
+      wokeInNight: false,
+      nightWakingMinutes: 0,
+      usedSupplement: false,
+      windDownHelped: "did_not_use",
+      createdAt: "2026-09-22T13:00:00.000Z",
+    };
+    const state: CircadiaState = {
+      ...emptyState(),
+      profile,
+      reports: [report],
+      episode: createEpisode({ clinicianId: null, enrolledAt }),
+      study: {
+        ...emptyState().study,
+        asked: true,
+        consented: true,
+        participantId: ALEX,
+      },
+    };
+    const built = buildStudyPack(state, new Date(2026, 8, 22, 18, 0, 0, 0));
+    expect(built.nights[0]?.episodeNight).toBe(0);
+    expect(built.nightsElapsed).toBe(1);
+    const tester = testerOf(
+      [{ file: fileFor(ALEX, "2026-09-22T18-00-00-000Z"), pack: built }],
+      [bookEntry(ALEX, "James")],
+    );
+    expect(tester.section).toBe("in-baseline");
+    expect(tester.slots).toHaveLength(BASELINE_NIGHTS);
+    expect(tester.slots[0]?.kind).not.toBe("dashed");
+    expect(tester.slots[0]?.kind).not.toBe("empty");
+    expect(tester.slots.slice(1).every((slot) => slot.kind === "empty")).toBe(true);
   });
 });

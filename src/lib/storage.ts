@@ -155,6 +155,7 @@ export const emptyStudy = (): StudyState => ({
   packEtag: null,
   sendPending: false,
   withdrawnAt: null,
+  lastSentPackHash: null,
 });
 
 export const emptyState = (): CircadiaState => ({
@@ -1454,6 +1455,7 @@ function coerceStudy(value: unknown): StudyState {
     packEtag: typeof s.packEtag === "string" && s.packEtag ? s.packEtag : null,
     sendPending: s.sendPending === true,
     withdrawnAt: typeof s.withdrawnAt === "string" && s.withdrawnAt ? s.withdrawnAt : null,
+    lastSentPackHash: typeof s.lastSentPackHash === "string" && s.lastSentPackHash ? s.lastSentPackHash : null,
   };
 }
 

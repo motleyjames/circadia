@@ -1,7 +1,8 @@
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { describe, expect, it } from "vitest";
 import { emptyState } from "./storage";
-import { completionRate, createEpisode, nightsElapsedSince } from "./episode";
+import { completionRate, createEpisode, episodeNightOf, nightsElapsedSince } from "./episode";
 import {
   enrollWithInvite,
   flagsForPack,
@@ -579,14 +580,58 @@ describe("solo enrollment packs", () => {
 });
 
 describe("episodeNight and safety flags", () => {
+  it("enrolled Sep 21, morning Sep 22: episodeNight 0", () => {
+    const enrolledAt = new Date(2026, 8, 21, 12, 0, 0, 0).toISOString();
+    const state = enrolledOn(enrolledAt, [quietReport("2026-09-22")]);
+    const pack = buildStudyPack(state, new Date(2026, 8, 22, 18, 0, 0, 0));
+    expect(pack.nights[0]?.episodeNight).toBe(0);
+  });
+
+  it("a morning dated the day of enrollment carries no episodeNight, and none is ever negative", () => {
+    const enrolledAt = new Date(2026, 8, 21, 12, 0, 0, 0).toISOString();
+    const state = enrolledOn(enrolledAt, [quietReport("2026-09-21"), quietReport("2026-09-20")]);
+    const pack = buildStudyPack(state, new Date(2026, 8, 21, 18, 0, 0, 0));
+    expect(pack.nights[0]?.episodeNight).toBeUndefined();
+    expect(pack.nights[1]?.episodeNight).toBeUndefined();
+    expect(episodeNightOf(enrolledAt, "2026-09-21")).toBeNull();
+    expect(episodeNightOf(enrolledAt, "2026-09-20")).toBeNull();
+    for (const night of pack.nights) {
+      if (night.episodeNight === undefined) continue;
+      expect(night.episodeNight).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it("nightsElapsed on Sep 22 is still 1", () => {
+    const enrolledAt = new Date(2026, 8, 21, 12, 0, 0, 0).toISOString();
+    const state = enrolledOn(enrolledAt, [quietReport("2026-09-22")]);
+    const pack = buildStudyPack(state, new Date(2026, 8, 22, 18, 0, 0, 0));
+    expect(pack.nightsElapsed).toBe(1);
+    expect(nightsElapsedSince(enrolledAt, new Date(2026, 8, 22, 18, 0, 0, 0))).toBe(1);
+  });
+
+  it("enrolled at 22:00 local in a UTC-6 zone, morning filed the next local day: episodeNight 0", () => {
+    // 22:00 on 21 Sep in UTC-6 is 04:00 UTC on the 22nd. A UTC day-count
+    // would treat enrollment as the 22nd and drop the first night as -1.
+    const enrolled = new Date(2026, 8, 21, 22, 0, 0, 0);
+    expect(episodeNightOf(enrolled.toISOString(), "2026-09-22")).toBe(0);
+    const src = readFileSync("src/lib/episode.ts", "utf8");
+    const fn = src.slice(src.indexOf("export function episodeNightOf"), src.indexOf("export function nightsElapsedSince"));
+    expect(fn).toContain("todayIsoDate");
+    expect(fn).toContain("elapsed - 1");
+    expect(fn).not.toMatch(/getUTCDate|getUTCFullYear|getUTCMonth|toISOString\(\)\.slice/);
+  });
+
   it("episodeNight places a missed night: filed 0, 1 and 3 leave slot 2 identifiable", () => {
     const enrolledAt = "2026-09-01T12:00:00.000Z";
+    // A morning closes the night before it. The enrollment-day morning is not
+    // slot 0 — that slot is the next morning — so these dates are one day later
+    // than the old numbering that treated enrollment morning as night 0.
     const state = enrolledOn(enrolledAt, [
-      quietReport("2026-09-01"),
       quietReport("2026-09-02"),
-      quietReport("2026-09-04"),
+      quietReport("2026-09-03"),
+      quietReport("2026-09-05"),
     ]);
-    const pack = buildStudyPack(state, new Date("2026-09-05T18:00:00.000Z"));
+    const pack = buildStudyPack(state, new Date("2026-09-06T18:00:00.000Z"));
     expect(pack.nights.map((n) => n.nightIndex)).toEqual([0, 1, 2]);
     expect(pack.nights.map((n) => n.episodeNight)).toEqual([0, 1, 3]);
     const occupied = new Set(pack.nights.map((n) => n.episodeNight));
@@ -596,9 +641,11 @@ describe("episodeNight and safety flags", () => {
 
   it("episodeNight is never negative and never exceeds nightsElapsed", () => {
     const enrolledAt = "2026-09-01T12:00:00.000Z";
+    // Enrollment-day morning predates the first episode night (was slot 0).
     const state = enrolledOn(enrolledAt, [quietReport("2026-08-20"), quietReport("2026-09-01"), quietReport("2026-09-04")]);
     const pack = buildStudyPack(state, new Date("2026-09-04T18:00:00.000Z"));
     expect(pack.nights[0]?.episodeNight).toBeUndefined();
+    expect(pack.nights[1]?.episodeNight).toBeUndefined();
     for (const night of pack.nights) {
       if (night.episodeNight === undefined) continue;
       expect(night.episodeNight).toBeGreaterThanOrEqual(0);

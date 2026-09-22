@@ -111,16 +111,29 @@ export function createEpisode(input: {
 }
 
 /**
- * Position of a filed morning in the episode, from 0. Null when the morning
- * is before enrollment. A count, never a date.
+ * Slot of a filed morning in the episode, from 0. A morning closes the night
+ * before it, so the first episode night is the morning after enrollment.
+ * Null when the morning predates the episode — never negative. Local civil
+ * dates only; UTC would drop a 22:00 Mountain enrollment as the next day.
  */
 export function episodeNightOf(enrolledAt: string, morningDate: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(morningDate)) return null;
   const enrolled = new Date(enrolledAt);
   if (!Number.isFinite(enrolled.getTime())) return null;
   const enrolledDay = todayIsoDate(enrolled);
-  if (morningDate < enrolledDay) return null;
-  return nightsElapsedSince(enrolledAt, new Date(`${morningDate}T12:00:00`));
+  const elapsed = civilDaysBetween(enrolledDay, morningDate);
+  const night = elapsed - 1;
+  if (night < 0) return null;
+  return night;
+}
+
+function civilDaysBetween(fromDay: string, toDay: string): number {
+  const [fy, fm, fd] = fromDay.split("-").map(Number);
+  const [ty, tm, td] = toDay.split("-").map(Number);
+  if (!fy || !fm || !fd || !ty || !tm || !td) return 0;
+  const from = new Date(fy, fm - 1, fd);
+  const to = new Date(ty, tm - 1, td);
+  return Math.round((to.getTime() - from.getTime()) / 86_400_000);
 }
 
 /**
