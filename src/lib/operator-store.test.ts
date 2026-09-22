@@ -7,6 +7,8 @@ import { parseInboxPayload } from "./inbox-payload";
 import {
   inviteBookPath,
   loadRejectedPacks,
+  operatorPrivatePath,
+  operatorPublicPath,
   recordRejectedPack,
   reconcileRejectedPacks,
   rejectLogPath,
@@ -81,6 +83,16 @@ describe("operator store", () => {
     } finally {
       rmSync(inbox, { recursive: true, force: true });
     }
+  });
+
+  it("the private key and the public key file are ignored by git", () => {
+    const inbox = path.join(process.cwd(), "data", "study-inbox");
+    const priv = path.relative(process.cwd(), operatorPrivatePath(inbox));
+    const pub = path.relative(process.cwd(), operatorPublicPath(inbox));
+    const privOut = execFileSync("git", ["--no-optional-locks", "check-ignore", "-v", priv], { encoding: "utf8" });
+    const pubOut = execFileSync("git", ["--no-optional-locks", "check-ignore", "-v", pub], { encoding: "utf8" });
+    expect(privOut).toMatch(/study-inbox/);
+    expect(pubOut).toMatch(/study-inbox/);
   });
 
   it("the rejection record is ignored by git", () => {

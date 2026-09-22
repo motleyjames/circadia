@@ -42,6 +42,9 @@ type InboxBody = ModeratorSnapshot & {
   error?: string;
   packs?: ConsoleArrival[];
   rejects?: ConsoleReject[];
+  fingerprint?: string | null;
+  workerUnreachable?: boolean;
+  withdrawn?: string[];
 };
 
 const SECTION_COLOR: Record<string, string> = {
@@ -110,6 +113,14 @@ export default function ModeratorPage() {
     setBooted(true);
   }, [load]);
 
+  useEffect(() => {
+    if (!key) return;
+    const timer = window.setInterval(() => {
+      void load(key);
+    }, 3 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [key, load]);
+
   function persistBook(next: OperatorInvite[]) {
     setBook(next);
     void fetch("/api/moderator/book", {
@@ -130,6 +141,8 @@ export default function ModeratorPage() {
         book,
         rejects: data?.rejects ?? [],
         now: new Date(),
+        withdrawn: data?.withdrawn ?? [],
+        workerUnreachable: data?.workerUnreachable === true,
       }),
     [data, book],
   );
@@ -141,7 +154,13 @@ export default function ModeratorPage() {
   }
 
   return (
-    <OperatorChrome active="week" weekLabel={view.weekLabel} attentionCount={view.attentionCount}>
+    <OperatorChrome
+      active="week"
+      weekLabel={view.weekLabel}
+      attentionCount={view.attentionCount}
+      fingerprint={data?.fingerprint}
+      onRefresh={() => void load(key)}
+    >
       <div className="flex flex-col gap-6 px-12 py-9">
         <div className="flex flex-col gap-2">
           <h1 className="font-heading text-[36px] leading-[1.1] font-normal tracking-[-0.02em] text-op-ink">

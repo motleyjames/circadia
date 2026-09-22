@@ -53,11 +53,15 @@ export function OperatorChrome({
   active,
   weekLabel,
   attentionCount = 0,
+  fingerprint,
+  onRefresh,
   children,
 }: {
   active: OperatorNavId;
   weekLabel?: string;
   attentionCount?: number;
+  fingerprint?: string | null;
+  onRefresh?: () => void;
   children: ReactNode;
 }) {
   return (
@@ -67,8 +71,22 @@ export function OperatorChrome({
           <div className="font-heading text-[23px] font-medium tracking-[-0.02em] text-op-ink">Circadia</div>
           <div className="h-[22px] w-px bg-op-line" aria-hidden />
           <div className="text-[14px] text-op-muted">Shakedown</div>
+          {fingerprint ? (
+            <div className="font-heading text-[14px] tracking-[0.04em] tabular-nums text-op-muted">Key {fingerprint}</div>
+          ) : null}
         </div>
-        {weekLabel ? <div className="text-[14px] text-op-muted">{weekLabel}</div> : null}
+        <div className="flex items-center gap-4">
+          {weekLabel ? <div className="text-[14px] text-op-muted">{weekLabel}</div> : null}
+          {onRefresh ? (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="min-h-11 cursor-pointer border-0 bg-transparent text-[14px] font-semibold text-op-violet"
+            >
+              Refresh
+            </button>
+          ) : null}
+        </div>
       </header>
       <div className="flex min-h-0 min-w-0 flex-1">
         <nav aria-label="Primary" className="flex w-[232px] shrink-0 flex-col gap-1 border-r border-op-line bg-op-surface px-4 py-6">

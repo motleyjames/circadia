@@ -28,6 +28,8 @@ export default function InvitePage() {
   const [cohort, setCohort] = useState<Cohort>("stranger");
   const [created, setCreated] = useState<MintedInvite | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [fingerprint, setFingerprint] = useState<string | null>(null);
+  const [withdrawn, setWithdrawn] = useState<string[]>([]);
 
   const load = useCallback(async (secret: string) => {
     setLoading(true);
@@ -59,8 +61,17 @@ export default function InvitePage() {
         setInvites([]);
       }
       try {
-        const inbox = (await inboxRes.json()) as { ok?: boolean; packs?: ConsoleArrival[] };
-        if (inboxRes.ok && inbox.ok) setArrivals(inbox.packs ?? []);
+        const inbox = (await inboxRes.json()) as {
+          ok?: boolean;
+          packs?: ConsoleArrival[];
+          fingerprint?: string | null;
+          withdrawn?: string[];
+        };
+        if (inboxRes.ok && inbox.ok) {
+          setArrivals(inbox.packs ?? []);
+          setFingerprint(inbox.fingerprint ?? null);
+          setWithdrawn(inbox.withdrawn ?? []);
+        }
       } catch {
         setArrivals([]);
       }
@@ -109,7 +120,7 @@ export default function InvitePage() {
     }
   }
 
-  const book = useMemo(() => buildInviteBook(invites, arrivals, new Date()), [invites, arrivals]);
+  const book = useMemo(() => buildInviteBook(invites, arrivals, new Date(), withdrawn), [invites, arrivals, withdrawn]);
 
   if (!booted) return null;
   if (!key) {
@@ -121,7 +132,7 @@ export default function InvitePage() {
   const privacy = invitePrivacySentence(created?.name ?? trimmed);
 
   return (
-    <OperatorChrome active="invite">
+    <OperatorChrome active="invite" fingerprint={fingerprint} onRefresh={() => void load(key)}>
       <div className="flex items-start gap-7 px-12 py-9">
         <section
           aria-labelledby="invite-title"
@@ -146,7 +157,7 @@ export default function InvitePage() {
             <div className="flex flex-col gap-[18px]">
               <div className="flex flex-col gap-1.5">
                 <div className="text-[14px] text-op-muted">Invite for {displayName}</div>
-                <div className="font-heading text-[46px] font-normal tracking-[0.04em] tabular-nums text-op-ink">
+                <div className="font-heading text-[28px] font-normal tracking-[0.04em] break-all tabular-nums text-op-ink">
                   {created.code}
                 </div>
               </div>
