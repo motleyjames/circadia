@@ -3,15 +3,21 @@ import { derivePackLocation } from "@/lib/pack-derive";
 import { putSealedPack } from "@/lib/pack-send";
 import { packAssociatedData, sealPayload } from "@/lib/pack-seal";
 import type { PackHttp } from "@/lib/pack-http";
+import { sha256 } from "@/lib/password";
 import { assertSendable, buildStudyPack } from "@/lib/study";
 import { todayIsoDate } from "@/lib/time";
 import type { CircadiaState, StudyState } from "@/lib/types";
 
 export type DeliveryResult =
-  | { status: "sent"; etag: string; at: string }
+  | { status: "sent"; etag: string; at: string; packHash: string }
   | { status: "blocked" }
   | { status: "skipped" }
   | { status: "failed"; error: string };
+
+export async function fingerprintPack(payload: unknown): Promise<string> {
+  const digest = await sha256(new TextEncoder().encode(JSON.stringify(payload)));
+  return [...digest].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
 export function studyJoinNotice(state: CircadiaState, now = new Date()): string {
   if (state.study.inviteVersion === 1) {
@@ -40,6 +46,7 @@ export function applyDelivery(study: StudyState, result: DeliveryResult): StudyS
       lastStatus: "sent",
       lastError: null,
       packEtag: result.etag,
+      lastSentPackHash: result.packHash,
       sendPending: false,
     };
   }
@@ -90,6 +97,9 @@ export async function deliverPhonePack(input: {
     payload = pack;
   }
 
+  const packHash = await fingerprintPack(payload);
+  if (study.lastSentPackHash === packHash) return { status: "skipped" };
+
   try {
     const envelope = await sealPayload(payload, input.operatorPublicRaw, participantId);
     const location = await derivePackLocation(invite);
@@ -101,7 +111,7 @@ export async function deliverPhonePack(input: {
       http: input.http,
     });
     if (!put.ok) return { status: "failed", error: put.error };
-    return { status: "sent", etag: put.etag, at: (input.now ?? new Date()).toISOString() };
+    return { status: "sent", etag: put.etag, at: (input.now ?? new Date()).toISOString(), packHash };
   } catch {
     return { status: "failed", error: "Could not seal this pack." };
   }

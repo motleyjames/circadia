@@ -480,10 +480,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready || !isPhoneNative()) return;
-    if (state.study.inviteVersion === 1) return;
-    if (!state.study.sendPending) return;
     void flushPhoneDelivery();
-  }, [ready, state.study.sendPending, state.study.inviteVersion]);
+  }, [ready]);
 
   useEffect(() => {
     if (!ready || !session || peerFold.current) return;

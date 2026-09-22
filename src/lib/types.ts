@@ -158,6 +158,8 @@ export type StudyState = {
   packEtag?: string | null;
   sendPending?: boolean;
   withdrawnAt?: string | null;
+  /** SHA-256 of the last payload the Worker accepted. Vault only. */
+  lastSentPackHash?: string | null;
 };
 
 export type CircadiaState = {

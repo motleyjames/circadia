@@ -14,6 +14,7 @@ import { derivePackLocation } from "./pack-derive";
 import {
   applyDelivery,
   deliverPhonePack,
+  fingerprintPack,
   packAssociatedId,
   studyDeliveryLine,
   studyJoinNotice,
@@ -160,6 +161,7 @@ describe("pack deliver", () => {
       status: "sent",
       etag: '"e1"',
       at: "2026-09-22T13:42:00.000Z",
+      packHash: "abc",
     });
     const afterFail = applyDelivery(sent, { status: "failed", error: "offline" });
     expect(afterFail.lastSentAt).toBe(sent.lastSentAt);
@@ -275,6 +277,75 @@ describe("pack deliver", () => {
     expect(studyJoinNotice(joined!, new Date(joined!.episode!.enrolledAt))).toBe(
       "You're in. Night 1 of 14 starts tonight.",
     );
+  });
+
+  it("opening the app with a changed pack sends it; with an unchanged pack, sends nothing", async () => {
+    const keys = await generateOperatorKeyPair();
+    const invite = await generateInvite("Ada West", "friend");
+    const joined = await enrollWithInvite(withProfile(), invite.code);
+    const firstHttp = http(() => ({ status: 201, headers: { etag: '"e1"' }, data: "" }));
+    const first = await deliverPhonePack({
+      state: joined!,
+      operatorPublicRaw: keys.publicRaw,
+      http: firstHttp.impl,
+    });
+    expect(first.status).toBe("sent");
+    expect(firstHttp.calls).toHaveLength(1);
+    if (first.status !== "sent") return;
+    const after = { ...joined!, study: applyDelivery(joined!.study, first) };
+    const againHttp = http(() => {
+      throw new Error("identical pack must not be resent");
+    });
+    const again = await deliverPhonePack({
+      state: after,
+      operatorPublicRaw: keys.publicRaw,
+      http: againHttp.impl,
+    });
+    expect(again.status).toBe("skipped");
+    expect(againHttp.calls).toHaveLength(0);
+    const stale = {
+      ...after,
+      study: { ...after.study, lastSentPackHash: "not-the-current-pack" },
+    };
+    const changedHttp = http(() => ({ status: 200, headers: { etag: '"e2"' }, data: "" }));
+    const changed = await deliverPhonePack({
+      state: stale,
+      operatorPublicRaw: keys.publicRaw,
+      http: changedHttp.impl,
+    });
+    expect(changed.status).toBe("sent");
+    expect(changedHttp.calls).toHaveLength(1);
+    const store = readFileSync("src/context/circadia-store.tsx", "utf8");
+    expect(store).toContain("if (!ready || !isPhoneNative()) return;\n    void flushPhoneDelivery();");
+    expect(store).not.toContain("if (!state.study.sendPending) return;");
+  });
+
+  it("after a failed send, the next open sends again", async () => {
+    const keys = await generateOperatorKeyPair();
+    const invite = await generateInvite("Ada West", "friend");
+    const joined = await enrollWithInvite(withProfile(), invite.code);
+    const failHttp = http(() => ({ status: 500, headers: {}, data: "" }));
+    const failed = await deliverPhonePack({
+      state: joined!,
+      operatorPublicRaw: keys.publicRaw,
+      http: failHttp.impl,
+    });
+    expect(failed.status).toBe("failed");
+    const afterFail = applyDelivery(joined!.study, failed);
+    expect(afterFail.lastSentAt).toBeNull();
+    expect(afterFail.lastSentPackHash ?? null).toBeNull();
+    expect(afterFail.sendPending).toBe(true);
+    const retryHttp = http(() => ({ status: 201, headers: { etag: '"e1"' }, data: "" }));
+    const retry = await deliverPhonePack({
+      state: { ...joined!, study: afterFail },
+      operatorPublicRaw: keys.publicRaw,
+      http: retryHttp.impl,
+    });
+    expect(retry.status).toBe("sent");
+    expect(retryHttp.calls).toHaveLength(1);
+    if (retry.status === "sent") {
+      expect(retry.packHash).toBe(await fingerprintPack(buildStudyPack({ ...joined!, study: afterFail })));
+    }
   });
 
   it("the phone fingerprint is computed exactly as Operator does", async () => {

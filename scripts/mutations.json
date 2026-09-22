@@ -1150,5 +1150,68 @@
     "replace": "  if (!withdrawn && !input.state.profile) {\n    return { status: \"failed\", error: \"No profile.\" };\n  }\n  if (!withdrawn && input.state.reports.length === 0) return { status: \"skipped\" };\n",
     "testFile": "src/lib/pack-deliver.test.ts",
     "testName": "joining sends once, without waiting for a morning"
+  },
+  {
+    "id": "episode-night-skips-minus-one",
+    "why": "A morning closes the night before it. Counting enrollment-to-morning days without subtracting one puts the first night in slot 1.",
+    "file": "src/lib/episode.ts",
+    "find": "  const night = elapsed - 1;\n",
+    "replace": "  const night = elapsed;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "enrolled Sep 21, morning Sep 22: episodeNight 0"
+  },
+  {
+    "id": "episode-night-keeps-enrollment-morning",
+    "why": "The enrollment-day morning closes the night before they joined. Giving it a slot invents a negative or a false night 0.",
+    "file": "src/lib/episode.ts",
+    "find": "  if (night < 0) return null;\n",
+    "replace": "  if (false && night < 0) return null;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a morning dated the day of enrollment carries no episodeNight, and none is ever negative"
+  },
+  {
+    "id": "episode-night-shifts-james-slot",
+    "why": "James's first morning must land in slot 0. Adding one at the pack builder puts him in slot 1 and marks him Not filing.",
+    "file": "src/lib/study.ts",
+    "find": "        if (position !== null) night.episodeNight = position;\n",
+    "replace": "        if (position !== null) night.episodeNight = position + 1;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "James's case through the console model: slot 0 filled, slots 1–13 empty, section In baseline"
+  },
+  {
+    "id": "nights-elapsed-follows-slot",
+    "why": "nightsElapsed is whole civil days from enrollment, not the slot index. Changing it to match the new slot hides that a night has elapsed.",
+    "file": "src/lib/study.ts",
+    "find": "    pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);\n",
+    "replace": "    pack.nightsElapsed = Math.max(0, nightsElapsedSince(state.episode.enrolledAt, now) - 1);\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "nightsElapsed on Sep 22 is still 1"
+  },
+  {
+    "id": "phone-resends-identical-pack",
+    "why": "An unchanged pack must not be rewritten. Dropping the hash check hammers the Worker on every open.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "  if (study.lastSentPackHash === packHash) return { status: \"skipped\" };\n",
+    "replace": "  if (false && study.lastSentPackHash === packHash) return { status: \"skipped\" };\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "opening the app with a changed pack sends it; with an unchanged pack, sends nothing"
+  },
+  {
+    "id": "episode-night-uses-utc-day",
+    "why": "James enrolled at 22:00 Mountain, already the next day in UTC. A UTC count drops his first night as -1.",
+    "file": "src/lib/episode.ts",
+    "find": "  const enrolledDay = todayIsoDate(enrolled);\n",
+    "replace": "  const enrolledDay = enrolled.toISOString().slice(0, 10);\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "enrolled at 22:00 local in a UTC-6 zone, morning filed the next local day: episodeNight 0"
+  },
+  {
+    "id": "phone-records-hash-before-write",
+    "why": "A failed send that stores the pack hash looks sent and is never retried.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "    if (!put.ok) return { status: \"failed\", error: put.error };\n",
+    "replace": "    if (!put.ok) return { status: \"sent\", etag: study.packEtag ?? \"x\", at: new Date().toISOString(), packHash };\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "after a failed send, the next open sends again"
   }
 ]
