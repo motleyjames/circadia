@@ -991,7 +991,7 @@
   },
   {
     "id": "invite-v2-skips-uuid-bits",
-    "why": "Without version and variant bits the receiver rejects the id.",
+    "why": "Without version and variant bits the receiver rejects the id. A random invite can already have those bits, so this row pins golden vectors.",
     "file": "src/lib/invite.ts",
     "find": "export async function deriveInviteParticipantIdV2(normalized: string): Promise<string> {\n  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX_V2}${normalized}`));\n  return uuidFromDigest(digest);\n",
     "replace": "export async function deriveInviteParticipantIdV2(normalized: string): Promise<string> {\n  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX_V2}${normalized}`));\n  const hex = [...digest.subarray(0, 16)].map((x) => x.toString(16).padStart(2, \"0\")).join(\"\");\n  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;\n",

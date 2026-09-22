@@ -7,6 +7,7 @@ import {
   dismissOrphan,
   enrollWithInvite,
   generateInvite,
+  INVITE_DERIVE_PREFIX_V2,
   joinInvite,
   nameOrphan,
   normalizeInviteCode,
@@ -14,6 +15,7 @@ import {
   parseInviteCode,
   readInviteBook,
 } from "./invite";
+import { sha256 } from "./password";
 import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 import { emptyState } from "./storage";
 import { buildStudyPack, validateStudyPack } from "./study";
@@ -25,6 +27,48 @@ function blank(): CircadiaState {
 
 const PINNED = "A10BC3D4";
 const PINNED_ID = "af3e97d1-ea0e-4678-9582-ea1ef023cf5a";
+
+const V2_GOLDEN = [
+  { code: "KT5E-J4C2-W5HC-PPRA", id: "348e7d8b-e0a3-4c76-abcb-64448d942ff1" },
+  { code: "A10B-C3D4-E5F6-G7H8", id: "1b2adfb1-67db-443c-bda7-6034be967f2f" },
+  { code: "SHAK-ED0W-NTES-T001", id: "bcbbcd95-7e95-42aa-909d-4408c9b3ed99" },
+] as const;
+
+function studyState(participantId: string): CircadiaState {
+  return {
+    ...blank(),
+    profile: {
+      firstName: "A",
+      lastName: "",
+      name: "A",
+      age: 34,
+      sex: "female",
+      heightCm: 170,
+      weightKg: 68,
+      activity: "light",
+      medications: [],
+      supplements: [],
+      struggles: ["falling"],
+      targetSleep: "23:00",
+      targetWake: "07:00",
+      units: "metric",
+      notificationsEnabled: false,
+      onboardingComplete: true,
+      email: "",
+      phone: "",
+      scheduledDays: DEFAULT_SCHEDULED_DAYS,
+    },
+    study: {
+      asked: true,
+      consented: true,
+      participantId,
+      lastSentAt: null,
+      lastStatus: null,
+      lastError: null,
+      rosterSentAt: null,
+    },
+  };
+}
 
 describe("invite codes", () => {
   it("the same code always derives the same participantId", async () => {
@@ -53,46 +97,34 @@ describe("invite codes", () => {
   });
 
   it("a derived v2 participant id passes the receiver's validator unchanged", async () => {
-    const invite = await generateInvite("Ada West", "friend");
-    const state: CircadiaState = {
-      ...blank(),
-      profile: {
-        firstName: "A",
-        lastName: "",
-        name: "A",
-        age: 34,
-        sex: "female",
-        heightCm: 170,
-        weightKg: 68,
-        activity: "light",
-        medications: [],
-        supplements: [],
-        struggles: ["falling"],
-        targetSleep: "23:00",
-        targetWake: "07:00",
-        units: "metric",
-        notificationsEnabled: false,
-        onboardingComplete: true,
-        email: "",
-        phone: "",
-        scheduledDays: DEFAULT_SCHEDULED_DAYS,
-      },
-      study: {
-        asked: true,
-        consented: true,
-        participantId: invite.participantId,
-        lastSentAt: null,
-        lastStatus: null,
-        lastError: null,
-        rosterSentAt: null,
-      },
-    };
-    const pack = buildStudyPack(state);
-    expect(pack.participantId).toBe(invite.participantId);
-    expect(validateStudyPack(pack).ok).toBe(true);
+    for (const row of V2_GOLDEN) {
+      const normalized = normalizeInviteCodeV2(row.code);
+      expect(normalized).toBe(row.code.replace(/-/g, ""));
+      expect(await deriveInviteParticipantIdV2(normalized!)).toBe(row.id);
+      expect(await parseInviteCode(row.code)).toBe(row.id);
+      const pack = buildStudyPack(studyState(row.id));
+      expect(pack.participantId).toBe(row.id);
+      expect(validateStudyPack(pack).ok).toBe(true);
+    }
+    // KT5E raw digest version nibble is d, not 4. Skipping uuidFromDigest
+    // therefore changes the id (348e7d8b-e0a3-dc76-… vs …-4c76-…).
+    const kt5e = normalizeInviteCodeV2(V2_GOLDEN[0].code)!;
+    const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX_V2}${kt5e}`));
+    const hex = [...digest.subarray(0, 16)].map((x) => x.toString(16).padStart(2, "0")).join("");
+    const raw = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+    expect(raw).toBe("348e7d8b-e0a3-dc76-abcb-64448d942ff1");
+    expect(raw).not.toBe(V2_GOLDEN[0].id);
+    expect(raw[14]).toBe("d");
     const src = readFileSync("src/lib/study.ts", "utf8");
     expect(src).toContain("[1-8]");
     expect(src).toContain("[89ab]");
+  });
+
+  it("a randomly minted v2 invite also passes the receiver's validator", async () => {
+    const invite = await generateInvite("Ada West", "friend");
+    const pack = buildStudyPack(studyState(invite.participantId));
+    expect(pack.participantId).toBe(invite.participantId);
+    expect(validateStudyPack(pack).ok).toBe(true);
   });
 
   it("nothing computes a Worker id or bearer from a participant id", () => {
