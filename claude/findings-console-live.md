@@ -55,3 +55,10 @@ clipboard as well, so delivery never depends on Messages. Declined.
 console-draws-preenrollment survived after the Not enrolled section was added.
 Fixed in a follow-up by rebuilding the fixture as an enrolled tester and asserting
 its precondition.
+
+**Correction:** the cause above was a first guess, and it was refuted. The fixture
+was already enrolled. The mutant drew a pre-enrollment night at nightIndex 0, the
+slot episode night 0 also uses, and the episode night overwrote it, so a check that
+only looked at shape still passed. The fix gives pre-enrollment nights 40% efficiency
+against 90% for episode nights and asserts every bar's height. See
+findings-console-preenrollment.md.
