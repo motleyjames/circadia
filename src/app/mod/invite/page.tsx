@@ -228,7 +228,7 @@ export default function InvitePage() {
 
         <section
           aria-labelledby="book-title"
-          className="min-w-0 flex-1 overflow-hidden rounded-xl border border-op-line bg-op-surface"
+          className="min-w-0 flex-1 rounded-xl border border-op-line bg-op-surface"
         >
           <h2
             id="book-title"
@@ -236,37 +236,42 @@ export default function InvitePage() {
           >
             Your invites
           </h2>
-          <div className="grid grid-cols-[minmax(0,1fr)_140px_130px_150px_minmax(12rem,auto)] gap-4 border-y border-op-line px-6 py-2.5 text-[13px] text-op-muted">
+          <div className="grid grid-cols-[minmax(0,1fr)_9.5rem_8rem_8rem] gap-x-6 border-y border-op-line px-6 py-2.5 text-[13px] text-op-muted">
             <div>Name</div>
             <div>Code</div>
             <div>Found through</div>
             <div>Status</div>
-            <div />
           </div>
           {book.filter((row) => row.name).length ? (
             book.filter((row) => row.name).map((row) => (
               <div
                 key={row.participantId}
-                className="grid grid-cols-[minmax(0,1fr)_140px_130px_150px_minmax(12rem,auto)] items-start gap-4 border-b border-op-line-soft px-6 py-3.5"
+                className="border-b border-op-line-soft px-6 py-3.5"
               >
-                <div className="text-[15px] font-semibold text-op-ink">{row.name}</div>
-                <div className="flex flex-col gap-1">
-                  <div className="font-heading text-[16px] tracking-[0.04em] tabular-nums text-op-ink">
-                    {row.code ?? "—"}
+                <div className="grid grid-cols-[minmax(0,1fr)_9.5rem_8rem_8rem] items-start gap-x-6">
+                  <div className="min-w-0 truncate text-[15px] font-semibold text-op-ink">{row.name}</div>
+                  <div className="min-w-0">
+                    <div className="font-heading text-[16px] tracking-[0.04em] tabular-nums text-op-ink">
+                      {row.code ?? "—"}
+                    </div>
+                    {row.code ? (
+                      <button
+                        type="button"
+                        onClick={() => void copyCode(row.code!)}
+                        className="min-h-11 w-fit cursor-pointer border-0 bg-transparent p-0 text-left text-[13px] font-semibold text-op-violet"
+                      >
+                        {copied === row.code ? "Copied" : "Copy"}
+                      </button>
+                    ) : null}
                   </div>
-                  {row.code ? (
-                    <button
-                      type="button"
-                      onClick={() => void copyCode(row.code!)}
-                      className="min-h-11 w-fit cursor-pointer border-0 bg-transparent p-0 text-left text-[13px] font-semibold text-op-violet"
-                    >
-                      {copied === row.code ? "Copied" : "Copy"}
-                    </button>
-                  ) : null}
+                  <div className="text-[14px] text-op-body">{row.cohortLabel}</div>
+                  <div className={cn("text-[14px]", row.joined ? "text-op-ink" : "text-op-amber")}>{row.status}</div>
                 </div>
-                <div className="text-[14px] text-op-body">{row.cohortLabel}</div>
-                <div className={cn("text-[14px]", row.joined ? "text-op-ink" : "text-op-amber")}>{row.status}</div>
-                <div>{row.code ? <SendInviteCode code={row.code} /> : null}</div>
+                {row.code ? (
+                  <div className="mt-1 min-w-0">
+                    <SendInviteCode code={row.code} />
+                  </div>
+                ) : null}
               </div>
             ))
           ) : (

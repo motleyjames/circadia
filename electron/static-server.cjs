@@ -92,6 +92,8 @@ function studyNightGeometryOk(raw) {
   if (!Array.isArray(raw.nights)) return true;
   for (const row of raw.nights) {
     if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    if (row.fellAsleepAt !== undefined && !isStudyClock(row.fellAsleepAt)) return false;
+    if (row.wokeAt !== undefined && !isStudyClock(row.wokeAt)) return false;
     if (row.inBedAt !== undefined && !isStudyClock(row.inBedAt)) return false;
     if (row.triedToSleepAt !== undefined && !isStudyClock(row.triedToSleepAt)) return false;
     if (row.outOfBedAt !== undefined && !isStudyClock(row.outOfBedAt)) return false;

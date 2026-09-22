@@ -13,6 +13,7 @@ import {
   restoreOrphan,
   smsHref,
   type ConsoleArrival,
+  type ConsoleReject,
 } from "./console-model";
 import type { OperatorInvite } from "./invite";
 import { nightGeometry } from "./sleep-metrics";
@@ -99,7 +100,7 @@ function bookEntry(id: string, name: string, cohort: NonNullable<OperatorInvite[
   };
 }
 
-function model(arrivals: ConsoleArrival[], book: OperatorInvite[] = [], rejects: { reason: string; arrivedAt: string }[] = []) {
+function model(arrivals: ConsoleArrival[], book: OperatorInvite[] = [], rejects: ConsoleReject[] = []) {
   return buildConsoleModel({ arrivals, book, rejects, now: NOW });
 }
 
@@ -410,7 +411,7 @@ describe("console-model", () => {
       [{ reason: "Invalid JSON.", arrivedAt: "study-x-2026-09-20T08-00-00-000Z.json" }],
     );
     expect(view.health?.map((item) => item.kind).sort()).toEqual(["orphan", "unreadable"]);
-    expect(view.health?.some((item) => item.detail === "Invalid JSON.")).toBe(true);
+    expect(view.health?.some((item) => item.message.includes("couldn't be read: invalid JSON."))).toBe(true);
     const book = buildInviteBook(
       [bookEntry(ALEX, "Alex Q.")],
       [arrival(ALEX, "2026-09-15T08-00-00-000Z")],
@@ -516,6 +517,38 @@ describe("console-model", () => {
     const restored = model([arrival(BLAKE, "2026-09-21T10-00-00-000Z")], restoreOrphan(dismissed, BLAKE));
     expect(restored.weekTesters).toHaveLength(1);
     expect(restored.health?.some((item) => item.kind === "orphan" && item.participantId === BLAKE)).toBe(true);
+  });
+
+  it("a pack that parses is absent from data health", () => {
+    const row = arrival(ALEX, "2026-08-28T14-17-56-582Z", {
+      nights: [outlineNight(0), outlineNight(1)],
+    });
+    const view = model(
+      [row],
+      [bookEntry(ALEX, "Alex Q.")],
+      [{ reason: "Invalid night clocks.", arrivedAt: row.file, file: row.file }],
+    );
+    expect(view.health).toBeNull();
+  });
+
+  it("rejects sharing a reason render as one line with a count and date range", () => {
+    const view = model(
+      [],
+      [],
+      [
+        { reason: "Invalid night clocks.", arrivedAt: fileFor(ALEX, "2026-08-28T14-17-56-582Z") },
+        { reason: "Invalid night clocks.", arrivedAt: fileFor(BLAKE, "2026-09-13T12-00-00-000Z") },
+      ],
+    );
+    expect(view.health).toHaveLength(1);
+    expect(view.health?.[0]?.kind).toBe("unreadable");
+    expect(view.health?.[0]?.message).toBe(
+      "2 packs from Aug 28 to Sep 13 couldn't be read: invalid night clocks.",
+    );
+    expect(view.health?.[0]?.files).toEqual([
+      fileFor(ALEX, "2026-08-28T14-17-56-582Z"),
+      fileFor(BLAKE, "2026-09-13T12-00-00-000Z"),
+    ]);
   });
 
   it("every invite's code is present in the rendered book", () => {

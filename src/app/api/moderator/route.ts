@@ -5,7 +5,7 @@ import { isOperatorSurface } from "@/lib/surface";
 import { moderatorKeyOk } from "@/lib/mod-key";
 import { parseInboxPayload } from "@/lib/inbox-payload";
 import { summarizeInbox } from "@/lib/moderator";
-import { loadRejectedPacks, recordRejectedPack } from "@/lib/operator-store";
+import { reconcileRejectedPacks } from "@/lib/operator-store";
 import { studyInboxDir } from "@/lib/study-inbox";
 import type { StudyPack } from "@/lib/types";
 
@@ -32,21 +32,22 @@ export async function GET(request: Request) {
   }
 
   const files = [];
+  const inboxFails: { reason: string; file: string; arrivedAt: string }[] = [];
   for (const name of names) {
     try {
       const raw = await readFile(path.join(dir, name), "utf8");
-      files.push({ file: name, payload: JSON.parse(raw) as unknown });
+      const payload = JSON.parse(raw) as unknown;
+      files.push({ file: name, payload });
+      const parsed = parseInboxPayload(payload);
+      if (!parsed.ok) {
+        inboxFails.push({ reason: parsed.error, file: name, arrivedAt: name });
+      }
     } catch {
-      recordRejectedPack({ reason: "Unreadable inbox file.", file: name, arrivedAt: name }, dir);
+      inboxFails.push({ reason: "Unreadable inbox file.", file: name, arrivedAt: name });
     }
   }
 
-  for (const file of files) {
-    const parsed = parseInboxPayload(file.payload);
-    if (!parsed.ok) {
-      recordRejectedPack({ reason: parsed.error, file: file.file, arrivedAt: file.file }, dir);
-    }
-  }
+  const rejects = reconcileRejectedPacks(inboxFails, dir);
 
   const packs: { file: string; pack: StudyPack }[] = [];
   for (const file of files) {
@@ -60,6 +61,6 @@ export async function GET(request: Request) {
     ok: true,
     ...summarizeInbox(files),
     packs,
-    rejects: loadRejectedPacks(dir),
+    rejects,
   });
 }

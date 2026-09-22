@@ -66,6 +66,7 @@ export default function ModeratorPage() {
   const [loading, setLoading] = useState(false);
   const [booted, setBooted] = useState(false);
   const [namingId, setNamingId] = useState<string | null>(null);
+  const [whyOpen, setWhyOpen] = useState<number | null>(null);
 
   const load = useCallback(async (secret: string) => {
     setLoading(true);
@@ -172,23 +173,37 @@ export default function ModeratorPage() {
             {view.health.map((item, index) => (
               <div
                 key={`${item.kind}-${item.participantId ?? index}`}
-                className="flex items-center gap-3.5 border-t border-op-line-soft px-6 py-3"
+                className="flex items-start gap-3.5 border-t border-op-line-soft px-6 py-3"
               >
-                <div className="h-2 w-2 shrink-0 rounded-full bg-op-amber" aria-hidden />
+                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-op-amber" aria-hidden />
                 <div className="min-w-0 flex-1 text-[14px] leading-snug text-op-ink">
                   {item.message}
                   {item.detail ? (
                     <span className="mt-1 block text-[13px] text-op-muted">{item.detail}</span>
                   ) : null}
+                  {item.kind === "unreadable" && whyOpen === index && item.files.length ? (
+                    <ul className="mt-1.5 list-none space-y-0.5 p-0 text-[13px] text-op-muted">
+                      {item.files.map((file) => (
+                        <li key={file} className="break-all">
+                          {file}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   {item.actions.map((action) => {
                     if (action.id === "why") {
-                      return item.detail ? (
-                        <span key={action.id} className="text-[14px] text-op-muted">
+                      return (
+                        <button
+                          key={action.id}
+                          type="button"
+                          onClick={() => setWhyOpen(whyOpen === index ? null : index)}
+                          className="min-h-11 cursor-pointer border-0 bg-transparent text-[14px] font-semibold text-op-violet"
+                        >
                           {action.label}
-                        </span>
-                      ) : null;
+                        </button>
+                      );
                     }
                     if (action.id === "name" && item.participantId) {
                       return (
