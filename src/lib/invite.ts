@@ -239,13 +239,13 @@ export async function enrollWithInvite(
   code: string,
   now = new Date(),
 ): Promise<CircadiaState | null> {
+  const v2 = normalizeInviteCodeV2(code);
+  const v1 = v2 ? null : normalizeInviteCode(code);
+  if (!v2 && !v1) return null;
+  if (state.episode?.clinicianId) return null;
   const participantId = await parseInviteCode(code);
   if (!participantId) return null;
-  if (state.episode?.clinicianId) return null;
-  const episode =
-    state.episode && state.study.participantId === participantId
-      ? state.episode
-      : createEpisode({ clinicianId: null, enrolledAt: now.toISOString() });
+  const episode = state.episode ?? createEpisode({ clinicianId: null, enrolledAt: now.toISOString() });
   return {
     ...state,
     study: {
@@ -253,6 +253,10 @@ export async function enrollWithInvite(
       asked: true,
       consented: true,
       participantId,
+      inviteNormalized: v2 ?? v1,
+      inviteVersion: v2 ? 2 : 1,
+      sendPending: Boolean(v2),
+      withdrawnAt: null,
     },
     episode,
   };

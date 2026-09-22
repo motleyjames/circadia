@@ -45,7 +45,7 @@ export function StudyGate() {
             }}
             autoComplete="off"
             spellCheck={false}
-            placeholder="XXXX-XXXX"
+            placeholder="XXXX-XXXX-XXXX-XXXX"
           />
         </label>
         <button

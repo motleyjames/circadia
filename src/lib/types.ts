@@ -152,6 +152,12 @@ export type StudyState = {
   lastError: string | null;
   /** When the roster card last reached the inbox. */
   rosterSentAt: string | null;
+  /** Normalized invite. Vault ciphertext only. Never a pack field. */
+  inviteNormalized?: string | null;
+  inviteVersion?: 1 | 2 | null;
+  packEtag?: string | null;
+  sendPending?: boolean;
+  withdrawnAt?: string | null;
 };
 
 export type CircadiaState = {

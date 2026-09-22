@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { studyDeliveryLine, studyJoinNotice } from "@/lib/pack-deliver";
+import { isPhoneNative } from "@/lib/phone-native";
+import { operatorPublicFingerprint } from "@/lib/operator-public";
 import { STUDY_HELD_ERROR } from "@/lib/study-client";
 
 export function StudyPanel() {
@@ -12,6 +15,12 @@ export function StudyPanel() {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [fingerprint, setFingerprint] = useState<string | null>(null);
+  const phone = isPhoneNative();
+
+  useEffect(() => {
+    void operatorPublicFingerprint().then(setFingerprint);
+  }, []);
 
   return (
     <section className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 sm:p-6">
@@ -36,7 +45,7 @@ export function StudyPanel() {
               }}
               autoComplete="off"
               spellCheck={false}
-              placeholder="XXXX-XXXX"
+              placeholder="XXXX-XXXX-XXXX-XXXX"
             />
           </label>
           <Button
@@ -52,6 +61,30 @@ export function StudyPanel() {
             Start the shakedown
           </Button>
           {inviteError ? <p className="mt-2 text-[12px] text-red-300">{inviteError}</p> : null}
+        </>
+      ) : phone ? (
+        <>
+          <h2 className="font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50">Pipeline on</h2>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">{studyJoinNotice(state)}</p>
+          <p className="mt-3 text-[12px] text-zinc-400">{studyDeliveryLine(study)}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="h-10 px-1 text-[13px] text-zinc-500 hover:text-zinc-300"
+              onClick={() => setLeaveOpen(true)}
+            >
+              Leave the study
+            </button>
+          </div>
+          <ConfirmDialog
+            open={leaveOpen}
+            onOpenChange={setLeaveOpen}
+            title="Leave the study"
+            description="Stop sending nights. The diary stays here. The participant number stays unless you erase this device."
+            confirmLabel="Leave"
+            destructive
+            onConfirm={leaveStudy}
+          />
         </>
       ) : (
         <>
@@ -106,6 +139,11 @@ export function StudyPanel() {
           />
         </>
       )}
+      {fingerprint ? (
+        <p className="font-heading mt-4 text-[14px] tracking-[0.04em] tabular-nums text-zinc-500">
+          Key {fingerprint}
+        </p>
+      ) : null}
     </section>
   );
 }

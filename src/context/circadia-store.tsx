@@ -44,6 +44,9 @@ import {
 } from "@/lib/storage";
 import { isPhoneNative } from "@/lib/phone-native";
 import { enrollWithInvite, flagNightAt, recordDisclosureFlags } from "@/lib/invite";
+import { applyDelivery, deliverPhonePack } from "@/lib/pack-deliver";
+import { capacitorPackHttp } from "@/lib/pack-http";
+import { operatorPublicRaw } from "@/lib/operator-public";
 import { assertSendable, buildStudyPack } from "@/lib/study";
 import { postInbox, STUDY_HELD_ERROR } from "@/lib/study-client";
 import { applyBackfill, retainMorningDraft } from "@/lib/backfill";
@@ -215,7 +218,50 @@ async function transmitRoster() {
   }
 }
 
+let phoneSendLock: Promise<void> = Promise.resolve();
+
+async function flushPhoneDelivery() {
+  const run = async () => {
+    if (!isPhoneNative()) return;
+    const current = snapshot();
+    if (current.study.inviteVersion === 1) return;
+    const raw = operatorPublicRaw();
+    if (!raw) {
+      if (current.study.inviteVersion === 2 || current.study.withdrawnAt) {
+        patch((prev) => ({
+          ...prev,
+          study: applyDelivery(prev.study, {
+            status: "failed",
+            error: "Operator's public key is missing from this install.",
+          }),
+        }));
+      }
+      return;
+    }
+    try {
+      const http = await capacitorPackHttp();
+      const result = await deliverPhonePack({ state: snapshot(), operatorPublicRaw: raw, http });
+      if (result.status === "skipped") return;
+      patch((prev) => ({ ...prev, study: applyDelivery(prev.study, result) }));
+    } catch {
+      patch((prev) => ({
+        ...prev,
+        study: applyDelivery(prev.study, {
+          status: "failed",
+          error: "Could not reach the Worker. The pack is still on this device.",
+        }),
+      }));
+    }
+  };
+  phoneSendLock = phoneSendLock.then(run, run);
+  await phoneSendLock;
+}
+
 async function transmitStudy() {
+  if (isPhoneNative()) {
+    await flushPhoneDelivery();
+    return;
+  }
   const current = snapshot();
   if (!current.study.consented || !current.study.participantId) return;
   try {
@@ -434,10 +480,10 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready || !isPhoneNative()) return;
-    if (!state.study.consented) return;
-    if (state.study.lastStatus !== "error") return;
-    markHeld(STUDY_HELD_ERROR);
-  }, [ready, state.study.consented, state.study.lastStatus]);
+    if (state.study.inviteVersion === 1) return;
+    if (!state.study.sendPending) return;
+    void flushPhoneDelivery();
+  }, [ready, state.study.sendPending, state.study.inviteVersion]);
 
   useEffect(() => {
     if (!ready || !session || peerFold.current) return;
@@ -691,9 +737,15 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
           consented: true,
           lastError: null,
           rosterSentAt: null,
+          withdrawnAt: null,
+          sendPending: prev.study.inviteVersion === 2,
         },
       };
     });
+    if (isPhoneNative()) {
+      void flushPhoneDelivery();
+      return;
+    }
     void transmitRoster();
     if (snapshot().reports.length) void transmitStudy();
   }, []);
@@ -702,6 +754,10 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     const next = await enrollWithInvite(snapshot(), code);
     if (!next) return false;
     patch(() => next);
+    if (isPhoneNative()) {
+      void flushPhoneDelivery();
+      return true;
+    }
     void transmitRoster();
     if (next.reports.length) void transmitStudy();
     return true;
@@ -729,8 +785,11 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
         consented: false,
         lastError: null,
         rosterSentAt: null,
+        withdrawnAt: new Date().toISOString(),
+        sendPending: prev.study.inviteVersion === 2,
       },
     }));
+    if (isPhoneNative()) void flushPhoneDelivery();
   }, []);
 
   const sendStudyNow = useCallback(async () => {

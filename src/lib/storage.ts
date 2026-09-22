@@ -56,7 +56,7 @@ import type {
   StudyState,
   StudyStatus,
 } from "@/lib/types";
-import { isPackSafetyCategory } from "@/lib/invite";
+import { isPackSafetyCategory, normalizeInviteCode, normalizeInviteCodeV2 } from "@/lib/invite";
 import { isClock, normalizeClock } from "@/lib/windows";
 
 /** Legacy single-file blob. Migrated once into the vault. */
@@ -150,6 +150,11 @@ export const emptyStudy = (): StudyState => ({
   lastStatus: null,
   lastError: null,
   rosterSentAt: null,
+  inviteNormalized: null,
+  inviteVersion: null,
+  packEtag: null,
+  sendPending: false,
+  withdrawnAt: null,
 });
 
 export const emptyState = (): CircadiaState => ({
@@ -1423,6 +1428,19 @@ function coerceStudy(value: unknown): StudyState {
       : null;
   const participantId =
     typeof s.participantId === "string" && s.participantId.length >= 8 ? s.participantId : null;
+  let inviteNormalized: string | null = null;
+  let inviteVersion: 1 | 2 | null = null;
+  if (typeof s.inviteNormalized === "string") {
+    const v2 = normalizeInviteCodeV2(s.inviteNormalized);
+    const v1 = normalizeInviteCode(s.inviteNormalized);
+    if (v2) {
+      inviteNormalized = v2;
+      inviteVersion = 2;
+    } else if (v1) {
+      inviteNormalized = v1;
+      inviteVersion = 1;
+    }
+  }
   return {
     asked: Boolean(s.asked),
     consented: Boolean(s.consented) && Boolean(participantId),
@@ -1431,6 +1449,11 @@ function coerceStudy(value: unknown): StudyState {
     lastStatus,
     lastError: typeof s.lastError === "string" ? s.lastError : null,
     rosterSentAt: typeof s.rosterSentAt === "string" ? s.rosterSentAt : null,
+    inviteNormalized,
+    inviteVersion,
+    packEtag: typeof s.packEtag === "string" && s.packEtag ? s.packEtag : null,
+    sendPending: s.sendPending === true,
+    withdrawnAt: typeof s.withdrawnAt === "string" && s.withdrawnAt ? s.withdrawnAt : null,
   };
 }
 

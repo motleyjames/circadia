@@ -1,5 +1,6 @@
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { bytesFromBase64, bytesToBase64, sha256 } from "@/lib/password";
+import { bytesFromBase64, bytesToBase64 } from "@/lib/password";
+import { fingerprintPublicKey } from "@/lib/operator-fingerprint";
 import {
   generateOperatorKeyPair,
   importOperatorPrivateJwk,
@@ -17,11 +18,7 @@ export type OperatorKeys = {
   fingerprint: string;
 };
 
-export async function fingerprintPublicKey(publicRaw: Uint8Array): Promise<string> {
-  const digest = await sha256(publicRaw);
-  const hex = [...digest.subarray(0, 4)].map((b) => b.toString(16).padStart(2, "0").toUpperCase()).join("");
-  return `${hex.slice(0, 4)}-${hex.slice(4, 8)}`;
-}
+export { fingerprintPublicKey } from "@/lib/operator-fingerprint";
 
 export async function ensureOperatorKeys(inbox = studyInboxDir()): Promise<OperatorKeys> {
   const privateFile = operatorPrivatePath(inbox);

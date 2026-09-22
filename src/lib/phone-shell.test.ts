@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { APP_VERSION } from "./version";
 import { LOCAL_FILE_KEY } from "./login";
@@ -119,7 +121,8 @@ describe("phone diary shell", () => {
     expect(store).toContain("result.held");
     expect(store).toContain("markHeld");
     expect(store).toContain("isPhoneNative()");
-    expect(store).toContain("lastStatus !== \"error\"");
+    expect(store).toContain("flushPhoneDelivery");
+    expect(store).toContain("sendPending");
     expect(store).toContain("STUDY_HELD_ERROR");
     expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain("circadia:");
     expect(readFileSync("src/lib/phone-native.ts", "utf8")).toContain("PHONE_CLASS_BOOT");
@@ -377,21 +380,48 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/context/circadia-store.tsx", "utf8")).toContain("absorbPeerNights");
     // Gate only: past this point the script runs a static export and drives
     // xcodebuild, which cannot share this repo with the rest of the suite.
+    const pubDir = mkdtempSync(path.join(tmpdir(), "circadia-opub-"));
+    const pub = path.join(pubDir, "operator-public.b64");
+    writeFileSync(pub, "dGVzdA==");
     const run = spawnSync("bash", ["scripts/put-on-phone.sh"], {
       encoding: "utf8",
-      env: { ...process.env, CIRCADIA_GATE_ONLY: "1" },
+      env: { ...process.env, CIRCADIA_GATE_ONLY: "1", CIRCADIA_OPERATOR_PUBLIC: pub },
     });
+    rmSync(pubDir, { recursive: true, force: true });
     expect(run.stdout).toContain("0.14.0");
     expect(run.stdout).not.toContain("Compiling");
     // The guard must sit above the first mutating step, or the gate is decorative.
     const shell = readFileSync("scripts/put-on-phone.sh", "utf8");
-    expect(shell.indexOf("CIRCADIA_GATE_ONLY")).toBeLessThan(shell.indexOf("npm run phone:sync"));
+    expect(shell).toContain("require-operator-public.cjs");
+    expect(shell.indexOf("node scripts/require-operator-public.cjs")).toBeLessThan(shell.indexOf('CIRCADIA_GATE_ONLY:-'));
+    expect(shell.indexOf('CIRCADIA_GATE_ONLY:-')).toBeLessThan(shell.indexOf("npm run phone:sync"));
     if (process.platform === "darwin") {
-      expect([0, 5, 6, 8, 10, 11, 13]).toContain(run.status);
+      expect([0, 5, 6, 8, 10, 11, 13, 14]).toContain(run.status);
     } else {
       expect(run.status).toBe(4);
       expect(run.stdout).toContain("macOS");
     }
+  });
+
+  it("the phone build fails when Operator's public key is missing", () => {
+    const missing = spawnSync(process.execPath, ["scripts/require-operator-public.cjs"], {
+      encoding: "utf8",
+      env: { ...process.env, CIRCADIA_OPERATOR_PUBLIC: path.join(tmpdir(), "circadia-no-operator-public.b64") },
+    });
+    expect(missing.status).toBe(14);
+    expect(missing.stderr).toContain("Operator's public key is missing");
+    const emptyDir = mkdtempSync(path.join(tmpdir(), "circadia-empty-opub-"));
+    const empty = path.join(emptyDir, "operator-public.b64");
+    writeFileSync(empty, "   \n");
+    const blank = spawnSync(process.execPath, ["scripts/require-operator-public.cjs"], {
+      encoding: "utf8",
+      env: { ...process.env, CIRCADIA_OPERATOR_PUBLIC: empty },
+    });
+    rmSync(emptyDir, { recursive: true, force: true });
+    expect(blank.status).toBe(14);
+    const script = readFileSync("scripts/put-on-phone.sh", "utf8");
+    expect(script.indexOf("node scripts/require-operator-public.cjs")).toBeLessThan(script.indexOf('CIRCADIA_GATE_ONLY:-'));
+    expect(script.indexOf("node scripts/require-operator-public.cjs")).toBeLessThan(script.indexOf("npm install"));
   });
 
   it("lets an empty iPhone log in with a packed Mac diary, or bring a locked copy", () => {

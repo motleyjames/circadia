@@ -48,6 +48,11 @@ if [[ ! -d phone/ios/App/App.xcodeproj ]]; then
   exit 6
 fi
 
+# Operator's public key is baked into the phone pack. Fail before any mutating
+# step, including the gate-only path, so a missing key never ships.
+NEXT_PUBLIC_OPERATOR_PUBLIC_B64="$(node scripts/require-operator-public.cjs)" || exit $?
+export NEXT_PUBLIC_OPERATOR_PUBLIC_B64
+
 # The test suite runs this script to prove the gate refuses the wrong tree and the
 # wrong OS. Everything above this line is that gate and touches nothing. Everything
 # below installs packages, runs a static export and drives xcodebuild — so under
