@@ -3,11 +3,14 @@ import { describe, expect, it } from "vitest";
 import { createEpisode } from "./episode";
 import {
   deriveInviteParticipantId,
+  dismissOrphan,
   enrollWithInvite,
   generateInvite,
   joinInvite,
+  nameOrphan,
   normalizeInviteCode,
   parseInviteCode,
+  readInviteBook,
 } from "./invite";
 import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 import { emptyState } from "./storage";
@@ -156,5 +159,53 @@ describe("invite codes", () => {
     expect(gate).toMatch(/enrollSolo/);
     expect(panel).toMatch(/enrollSolo/);
     expect(gate).toMatch(/enrollSolo/);
+  });
+
+  it("naming an orphan never creates a code or a participantId", () => {
+    const src = readFileSync("src/lib/invite.ts", "utf8");
+    const fn = src.slice(src.indexOf("export function nameOrphan"), src.indexOf("export function dismissOrphan"));
+    expect(fn).not.toMatch(/generateInvite|mintInviteCode|deriveInviteParticipantId|crypto\.getRandomValues/);
+    const id = "0ed78a9a-bbbb-4ccc-8ddd-eeeeeeee0001";
+    const named = nameOrphan([], id, "James M.", "friend");
+    expect(named[0]?.code).toBeNull();
+    expect(named[0]?.participantId).toBe(id);
+    expect(named[0]?.name).toBe("James M.");
+    expect(readInviteBook(named)).toEqual(named);
+  });
+
+  it("naming and dismissing write only to the gitignored book", () => {
+    const store = readFileSync("src/lib/operator-store.ts", "utf8");
+    expect(store).toContain('INVITE_BOOK_FILE = "invite-book.json"');
+    const save = store.slice(store.indexOf("export function saveInviteBook"), store.indexOf("function coerceRejected"));
+    expect(save).toContain("inviteBookPath");
+    expect(save).not.toMatch(/study-|nights|pack/);
+    const home = readFileSync("src/app/mod/page.tsx", "utf8");
+    const persist = home.slice(home.indexOf("function persistBook"), home.indexOf("const nightPeople"));
+    expect(persist).toContain("/api/moderator/book");
+    expect(persist).not.toContain("/api/study");
+    expect(persist).not.toContain("localStorage");
+    expect(persist).toContain("JSON.stringify({ invites: next })");
+    const testers = readFileSync("src/app/mod/testers/page.tsx", "utf8");
+    expect(testers).toContain("/api/moderator/book");
+    expect(testers).toContain("restoreOrphan");
+    const dismissed = dismissOrphan([], "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee0011");
+    expect(dismissed[0]?.dismissed).toBe(true);
+    expect(dismissed[0]?.code).toBeNull();
+  });
+
+  it("the book's entry shape has no field for a phone number or an email; no request to the Operator server carries one; nothing written to browser storage contains one", () => {
+    const invite = readFileSync("src/lib/invite.ts", "utf8");
+    const shape = invite.slice(invite.indexOf("export type OperatorInvite"), invite.indexOf("export function isCohort"));
+    expect(shape).not.toMatch(/phone|email/i);
+    const send = readFileSync("src/components/send-invite-code.tsx", "utf8");
+    expect(send).not.toMatch(/localStorage/);
+    expect(send).not.toMatch(/fetch\(/);
+    expect(send).toContain("navigator.clipboard.writeText");
+    expect(send).toContain("The message is also on your clipboard.");
+    for (const path of ["src/app/mod/invite/page.tsx", "src/app/mod/page.tsx", "src/app/mod/testers/page.tsx"]) {
+      const text = readFileSync(path, "utf8");
+      expect(text).toContain("JSON.stringify({ invites:");
+      expect(text).not.toMatch(/JSON\.stringify\(\{[^}]*\b(phone|email)\b/);
+    }
   });
 });

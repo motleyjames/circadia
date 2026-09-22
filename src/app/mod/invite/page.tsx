@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { OperatorChrome } from "@/components/operator-chrome";
 import { OperatorGate } from "@/components/operator-gate";
+import { SendInviteCode } from "@/components/send-invite-code";
 import { buildInviteBook, invitePrivacySentence, type ConsoleArrival } from "@/lib/console-model";
-import { generateInvite, readInviteBook, type Cohort, type OperatorInvite } from "@/lib/invite";
+import { generateInvite, readInviteBook, type Cohort, type MintedInvite, type OperatorInvite } from "@/lib/invite";
 import { readOperatorKey, writeOperatorKey } from "@/lib/operator-session";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +26,8 @@ export default function InvitePage() {
   const [arrivals, setArrivals] = useState<ConsoleArrival[]>([]);
   const [name, setName] = useState("");
   const [cohort, setCohort] = useState<Cohort>("stranger");
-  const [created, setCreated] = useState<OperatorInvite | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [created, setCreated] = useState<MintedInvite | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async (secret: string) => {
     setLoading(true);
@@ -92,20 +93,19 @@ export default function InvitePage() {
       const invite = await generateInvite(name, cohort);
       persist([invite, ...invites]);
       setCreated(invite);
-      setCopied(false);
+      setCopied(null);
       setName("");
     } catch {
       setError("An invite needs a name on this Mac.");
     }
   }
 
-  async function copyCode() {
-    if (!created) return;
+  async function copyCode(code: string) {
     try {
-      await navigator.clipboard.writeText(created.code);
-      setCopied(true);
+      await navigator.clipboard.writeText(code);
+      setCopied(code);
     } catch {
-      setCopied(false);
+      setCopied(null);
     }
   }
 
@@ -154,16 +154,16 @@ export default function InvitePage() {
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => void copyCode()}
+                  onClick={() => void copyCode(created.code)}
                   className="h-[46px] cursor-pointer rounded-lg bg-op-violet px-5 text-[15px] font-semibold text-white"
                 >
-                  {copied ? "Copied" : "Copy code"}
+                  {copied === created.code ? "Copied" : "Copy code"}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setCreated(null);
-                    setCopied(false);
+                    setCopied(null);
                     setError(null);
                   }}
                   className="min-h-11 cursor-pointer border-0 bg-transparent text-[15px] font-semibold text-op-violet"
@@ -171,6 +171,7 @@ export default function InvitePage() {
                   Invite someone else
                 </button>
               </div>
+              <SendInviteCode code={created.code} />
             </div>
           ) : (
             <form className="flex flex-col gap-[22px]" onSubmit={(event) => void createInvite(event)}>
@@ -235,20 +236,37 @@ export default function InvitePage() {
           >
             Your invites
           </h2>
-          <div className="grid grid-cols-[minmax(0,1fr)_160px_170px] gap-5 border-y border-op-line px-6 py-2.5 text-[13px] text-op-muted">
+          <div className="grid grid-cols-[minmax(0,1fr)_140px_130px_150px_minmax(12rem,auto)] gap-4 border-y border-op-line px-6 py-2.5 text-[13px] text-op-muted">
             <div>Name</div>
+            <div>Code</div>
             <div>Found through</div>
             <div>Status</div>
+            <div />
           </div>
-          {book.length ? (
-            book.map((row) => (
+          {book.filter((row) => row.name).length ? (
+            book.filter((row) => row.name).map((row) => (
               <div
                 key={row.participantId}
-                className="grid grid-cols-[minmax(0,1fr)_160px_170px] items-center gap-5 border-b border-op-line-soft px-6 py-3.5"
+                className="grid grid-cols-[minmax(0,1fr)_140px_130px_150px_minmax(12rem,auto)] items-start gap-4 border-b border-op-line-soft px-6 py-3.5"
               >
                 <div className="text-[15px] font-semibold text-op-ink">{row.name}</div>
+                <div className="flex flex-col gap-1">
+                  <div className="font-heading text-[16px] tracking-[0.04em] tabular-nums text-op-ink">
+                    {row.code ?? "—"}
+                  </div>
+                  {row.code ? (
+                    <button
+                      type="button"
+                      onClick={() => void copyCode(row.code!)}
+                      className="min-h-11 w-fit cursor-pointer border-0 bg-transparent p-0 text-left text-[13px] font-semibold text-op-violet"
+                    >
+                      {copied === row.code ? "Copied" : "Copy"}
+                    </button>
+                  ) : null}
+                </div>
                 <div className="text-[14px] text-op-body">{row.cohortLabel}</div>
                 <div className={cn("text-[14px]", row.joined ? "text-op-ink" : "text-op-amber")}>{row.status}</div>
+                <div>{row.code ? <SendInviteCode code={row.code} /> : null}</div>
               </div>
             ))
           ) : (

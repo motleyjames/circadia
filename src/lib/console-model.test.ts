@@ -5,7 +5,13 @@ import {
   BASELINE_NIGHTS,
   buildConsoleModel,
   buildInviteBook,
+  dismissOrphan,
   invitePrivacySentence,
+  inviteSendBody,
+  mailtoHref,
+  nameOrphan,
+  restoreOrphan,
+  smsHref,
   type ConsoleArrival,
 } from "./console-model";
 import type { OperatorInvite } from "./invite";
@@ -82,13 +88,14 @@ function arrival(id: string, stamp: string, extras: Partial<StudyPack> = {}): Co
   return { file: fileFor(id, stamp), pack: pack(id, extras) };
 }
 
-function bookEntry(id: string, name: string, cohort: OperatorInvite["cohort"] = "friend"): OperatorInvite {
+function bookEntry(id: string, name: string, cohort: NonNullable<OperatorInvite["cohort"]> = "friend"): OperatorInvite {
   return {
-    code: "A10BC3D4",
+    code: "A10B-C3D4",
     participantId: id,
     name,
     cohort,
     createdAt: "2026-09-10T12:00:00.000Z",
+    dismissed: false,
   };
 }
 
@@ -154,7 +161,7 @@ describe("console-model", () => {
     ]);
     expect(row.nightsElapsed).toBeNull();
     expect(row.completion).toBeNull();
-    expect(row.progressLabel).toBe("—");
+    expect(row.section).toBe("not-enrolled");
   });
 
   it("a missed night never lowers sleep efficiency", () => {
@@ -387,5 +394,118 @@ describe("console-model", () => {
     );
     expect(book[0]?.joined).toBe(true);
     expect(book[0]?.status).toMatch(/^Joined /);
+    expect(book[0]?.code).toBe("A10B-C3D4");
+  });
+
+  it("a tester whose newest pack has no nightsElapsed lands in Not enrolled, never In baseline", () => {
+    const nights = Array.from({ length: 14 }, (_, i) => scoredNight(i, { episodeNight: undefined }));
+    const view = model(
+      [
+        arrival(ALEX, "2026-09-21T10-00-00-000Z", { nightsElapsed: 4, nights: [scoredNight(0), scoredNight(1), scoredNight(2), scoredNight(3)] }),
+        arrival(BLAKE, "2026-09-21T10-00-00-000Z", { nights, nightsElapsed: undefined }),
+      ],
+      [bookEntry(ALEX, "Alex Q.")],
+    );
+    const legacy = view.testers.find((row) => row.participantId === BLAKE);
+    expect(legacy?.section).toBe("not-enrolled");
+    expect(legacy?.section).not.toBe("in-baseline");
+    expect(view.sections.map((section) => section.id)).toEqual(["in-baseline", "not-enrolled"]);
+    const flagged = testerOf([
+      arrival(CASEY, "2026-09-21T10-00-00-000Z", {
+        nights,
+        nightsElapsed: undefined,
+        safetyFlags: [{ category: "witnessed-apnea", episodeNight: 0 }],
+      }),
+    ]);
+    expect(flagged.section).toBe("safety");
+  });
+
+  it("a not-enrolled row shows the nights its pack carries — never 0 filed — and no 14-slot strip", () => {
+    const nights = Array.from({ length: 14 }, (_, i) => scoredNight(i, { episodeNight: undefined }));
+    const row = testerOf([arrival(ALEX, "2026-09-21T10-00-00-000Z", { nights, nightsElapsed: undefined })]);
+    expect(row.nightsFiled).toBe(14);
+    expect(row.packNightCount).toBe(14);
+    expect(row.filedLabel).toBe("14 nights, outside any baseline");
+    expect(row.filedLabel).not.toMatch(/0 filed/);
+    expect(row.slots).toEqual([]);
+    expect(row.progressLabel).toBe("Not enrolled");
+    expect(row.sleepEfficiencyPct).not.toBeNull();
+  });
+
+  it("a not-enrolled tester never enters the completion sentence", () => {
+    const nights = Array.from({ length: 14 }, (_, i) => scoredNight(i, { episodeNight: undefined }));
+    const onlyLegacy = model(
+      [arrival(ALEX, "2026-09-21T10-00-00-000Z", { nights, nightsElapsed: undefined })],
+      [bookEntry(ALEX, "Alex Q.")],
+    );
+    expect(onlyLegacy.completion).toBeNull();
+    const mixed = model(
+      [
+        arrival(ALEX, "2026-09-21T10-00-00-000Z", { nights, nightsElapsed: undefined }),
+        arrival(BLAKE, "2026-09-21T10-00-00-000Z", {
+          nightsElapsed: 4,
+          nights: [scoredNight(0), scoredNight(1), scoredNight(2), scoredNight(3)],
+        }),
+      ],
+      [bookEntry(ALEX, "Alex Q."), bookEntry(BLAKE, "Blake R.")],
+    );
+    expect(mixed.completion?.covered).toBe(1);
+    expect(mixed.completion?.sentence).toContain("1 named tester");
+    expect(mixed.completion?.sentence).not.toContain("Alex Q.");
+  });
+
+  it("a tester with nightsElapsed still lands in In baseline", () => {
+    const row = testerOf(
+      [
+        arrival(ALEX, "2026-09-21T10-00-00-000Z", {
+          nightsElapsed: 4,
+          nights: [scoredNight(0), scoredNight(1), scoredNight(2), scoredNight(3)],
+        }),
+      ],
+      [bookEntry(ALEX, "Alex Q.")],
+    );
+    expect(row.section).toBe("in-baseline");
+    expect(row.slots).toHaveLength(BASELINE_NIGHTS);
+  });
+
+  it("naming an orphan creates a book entry with no code, and the tester then shows that name", () => {
+    const named = nameOrphan([], ALEX, "Alex Q.", "friend");
+    expect(named).toHaveLength(1);
+    expect(named[0]?.code).toBeNull();
+    expect(named[0]?.participantId).toBe(ALEX);
+    expect(named[0]?.name).toBe("Alex Q.");
+    const row = testerOf([arrival(ALEX, "2026-09-21T10-00-00-000Z")], named);
+    expect(row.name).toBe("Alex Q.");
+    expect(row.inBook).toBe(true);
+  });
+
+  it("a dismissed orphan is absent from data health and This week, and present in All testers", () => {
+    const dismissed = dismissOrphan([], BLAKE);
+    const view = model([arrival(BLAKE, "2026-09-21T10-00-00-000Z")], dismissed);
+    expect(view.weekTesters).toEqual([]);
+    expect(view.health).toBeNull();
+    expect(view.sections).toEqual([]);
+    expect(view.allTesters).toHaveLength(1);
+    expect(view.allTesters[0]?.dismissed).toBe(true);
+    expect(view.allTesters[0]?.participantId).toBe(BLAKE);
+    expect(view.allTesters[0]?.state).toBe("Dismissed");
+    const restored = model([arrival(BLAKE, "2026-09-21T10-00-00-000Z")], restoreOrphan(dismissed, BLAKE));
+    expect(restored.weekTesters).toHaveLength(1);
+    expect(restored.health?.some((item) => item.kind === "orphan" && item.participantId === BLAKE)).toBe(true);
+  });
+
+  it("every invite's code is present in the rendered book", () => {
+    const minted = bookEntry(ALEX, "Alex Q.");
+    const book = buildInviteBook([minted], [], NOW);
+    expect(book[0]?.code).toBe("A10B-C3D4");
+    const page = readFileSync("src/app/mod/invite/page.tsx", "utf8");
+    expect(page).toContain("{row.code ?? \"—\"}");
+    expect(page).toContain("Copy");
+    expect(page).toContain("SendInviteCode");
+    expect(inviteSendBody("A10B-C3D4")).toBe(
+      "Your Circadia code is A10B-C3D4. Enter it when the app asks for one. It is yours alone — please don't share it.",
+    );
+    expect(smsHref("+1 (555) 010-0101", inviteSendBody("A10B-C3D4"))).toContain("sms:+15550100101?body=");
+    expect(mailtoHref("ada@example.com", inviteSendBody("A10B-C3D4"))).toContain("mailto:ada@example.com?body=");
   });
 });

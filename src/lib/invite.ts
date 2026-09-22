@@ -20,11 +20,13 @@ export const PACK_SAFETY_CATEGORIES = ["witnessed-apnea", "drowsy-driving"] as c
  * `code` is what the tester types. `participantId` is derived from it.
  */
 export type OperatorInvite = {
-  code: string;
+  /** Null when the row names or dismisses an existing id — never minted. */
+  code: string | null;
   participantId: string;
   name: string;
-  cohort: Cohort;
+  cohort: Cohort | null;
   createdAt: string;
+  dismissed: boolean;
 };
 
 export function isCohort(value: unknown): value is Cohort {
@@ -78,7 +80,9 @@ function mintInviteCode(): string {
   return out;
 }
 
-export async function generateInvite(name: string, cohort: Cohort, now = new Date()): Promise<OperatorInvite> {
+export type MintedInvite = OperatorInvite & { code: string };
+
+export async function generateInvite(name: string, cohort: Cohort, now = new Date()): Promise<MintedInvite> {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("An invite needs a name on this Mac.");
   if (!isCohort(cohort)) throw new Error("Unknown cohort.");
@@ -89,6 +93,7 @@ export async function generateInvite(name: string, cohort: Cohort, now = new Dat
     name: trimmed,
     cohort,
     createdAt: now.toISOString(),
+    dismissed: false,
   };
 }
 
@@ -105,22 +110,81 @@ export function readInviteBook(raw: unknown): OperatorInvite[] {
   for (const row of raw) {
     if (!row || typeof row !== "object") continue;
     const r = row as Partial<OperatorInvite>;
-    const name = typeof r.name === "string" ? r.name.trim() : "";
-    if (!name || !isCohort(r.cohort)) continue;
     const participantId =
       typeof r.participantId === "string" && UUID_RE.test(r.participantId) ? r.participantId.toLowerCase() : null;
     if (!participantId) continue;
+    const name = typeof r.name === "string" ? r.name.trim() : "";
+    const cohort = isCohort(r.cohort) ? r.cohort : null;
+    const dismissed = r.dismissed === true;
+    if (!name && !dismissed) continue;
+    if (name && !cohort) continue;
     const createdAt = typeof r.createdAt === "string" ? r.createdAt : "";
-    const normalized = typeof r.code === "string" ? normalizeInviteCode(r.code) : null;
+    let code: string | null = null;
+    if (typeof r.code === "string" && r.code.trim()) {
+      const normalized = normalizeInviteCode(r.code);
+      code = normalized ? formatInviteCode(normalized) : null;
+    }
     out.push({
-      code: normalized ? formatInviteCode(normalized) : typeof r.code === "string" && r.code ? r.code : participantId,
+      code,
       participantId,
       name,
-      cohort: r.cohort,
+      cohort,
       createdAt,
+      dismissed,
     });
   }
   return out;
+}
+
+export function nameOrphan(
+  book: readonly OperatorInvite[],
+  participantId: string,
+  name: string,
+  cohort: Cohort,
+  now = new Date(),
+): OperatorInvite[] {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("A name is required.");
+  if (!isCohort(cohort)) throw new Error("Unknown cohort.");
+  const id = participantId.trim().toLowerCase();
+  if (!UUID_RE.test(id)) throw new Error("Unknown participant.");
+  const existing = book.find((row) => row.participantId.toLowerCase() === id);
+  const next: OperatorInvite = {
+    code: existing?.code ?? null,
+    participantId: id,
+    name: trimmed,
+    cohort,
+    createdAt: existing?.createdAt || now.toISOString(),
+    dismissed: false,
+  };
+  return [next, ...book.filter((row) => row.participantId.toLowerCase() !== id)];
+}
+
+export function dismissOrphan(
+  book: readonly OperatorInvite[],
+  participantId: string,
+  now = new Date(),
+): OperatorInvite[] {
+  const id = participantId.trim().toLowerCase();
+  if (!UUID_RE.test(id)) throw new Error("Unknown participant.");
+  const existing = book.find((row) => row.participantId.toLowerCase() === id);
+  const next: OperatorInvite = {
+    code: existing?.code ?? null,
+    participantId: id,
+    name: existing?.name ?? "",
+    cohort: existing?.cohort ?? null,
+    createdAt: existing?.createdAt || now.toISOString(),
+    dismissed: true,
+  };
+  return [next, ...book.filter((row) => row.participantId.toLowerCase() !== id)];
+}
+
+export function restoreOrphan(book: readonly OperatorInvite[], participantId: string): OperatorInvite[] {
+  const id = participantId.trim().toLowerCase();
+  const existing = book.find((row) => row.participantId.toLowerCase() === id);
+  if (!existing) return [...book];
+  if (!existing.name) return book.filter((row) => row.participantId.toLowerCase() !== id);
+  return book.map((row) => (row.participantId.toLowerCase() === id ? { ...row, dismissed: false } : row));
 }
 
 export function joinInvite(invites: readonly OperatorInvite[], participantId: string): OperatorInvite | null {

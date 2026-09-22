@@ -437,6 +437,29 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     }
   }
 
+  func webView(
+    _ webView: WKWebView,
+    decidePolicyFor navigationAction: WKNavigationAction,
+    decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+  ) {
+    guard let url = navigationAction.request.url else {
+      decisionHandler(.allow)
+      return
+    }
+    let scheme = (url.scheme ?? "").lowercased()
+    if scheme == "http" || scheme == "https" || scheme == "about" || scheme.isEmpty {
+      decisionHandler(.allow)
+      return
+    }
+    let nativeSchemes = ["sms", "mailto", "tel"]
+    if nativeSchemes.contains(scheme) {
+      NSWorkspace.shared.open(url)
+      decisionHandler(.cancel)
+      return
+    }
+    decisionHandler(.cancel)
+  }
+
   func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
     splash.isHidden = true
   }
