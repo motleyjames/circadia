@@ -91,7 +91,7 @@ function arrival(id: string, stamp: string, extras: Partial<StudyPack> = {}): Co
 
 function bookEntry(id: string, name: string, cohort: NonNullable<OperatorInvite["cohort"]> = "friend"): OperatorInvite {
   return {
-    code: "A10B-C3D4",
+    code: "A10B-C3D4-E5F6-G7H8",
     participantId: id,
     name,
     cohort,
@@ -419,7 +419,7 @@ describe("console-model", () => {
     );
     expect(book[0]?.joined).toBe(true);
     expect(book[0]?.status).toMatch(/^Joined /);
-    expect(book[0]?.code).toBe("A10B-C3D4");
+    expect(book[0]?.code).toBe("A10B-C3D4-E5F6-G7H8");
   });
 
   it("a tester whose newest pack has no nightsElapsed lands in Not enrolled, never In baseline", () => {
@@ -551,10 +551,48 @@ describe("console-model", () => {
     ]);
   });
 
+  it("a withdrawal marks the tester withdrawn, deletes nothing, and never reaches the reject log", () => {
+    const row = arrival(ALEX, "2026-09-21T10-00-00-000Z");
+    const view = buildConsoleModel({
+      arrivals: [row],
+      book: [bookEntry(ALEX, "Alex Q.")],
+      rejects: [],
+      now: NOW,
+      withdrawn: [ALEX],
+    });
+    expect(view.weekTesters).toEqual([]);
+    expect(view.health).toBeNull();
+    expect(view.allTesters[0]?.state).toBe("Withdrawn");
+    expect(view.allTesters[0]?.nightCount).toBeGreaterThan(0);
+    const later = buildConsoleModel({
+      arrivals: [row],
+      book: [bookEntry(ALEX, "Alex Q.")],
+      rejects: [],
+      now: NOW,
+      withdrawn: [],
+    });
+    expect(later.weekTesters).toHaveLength(1);
+    expect(later.allTesters[0]?.state).not.toBe("Withdrawn");
+  });
+
+  it("an unreachable Worker changes nothing already stored", () => {
+    const row = arrival(ALEX, "2026-09-21T10-00-00-000Z");
+    const view = buildConsoleModel({
+      arrivals: [row],
+      book: [bookEntry(ALEX, "Alex Q.")],
+      rejects: [],
+      now: NOW,
+      workerUnreachable: true,
+    });
+    expect(view.weekTesters).toHaveLength(1);
+    expect(view.health?.some((item) => item.kind === "unreachable")).toBe(true);
+    expect(view.health?.some((item) => item.message.includes("Nothing stored was changed"))).toBe(true);
+  });
+
   it("every invite's code is present in the rendered book", () => {
     const minted = bookEntry(ALEX, "Alex Q.");
     const book = buildInviteBook([minted], [], NOW);
-    expect(book[0]?.code).toBe("A10B-C3D4");
+    expect(book[0]?.code).toBe("A10B-C3D4-E5F6-G7H8");
     const page = readFileSync("src/app/mod/invite/page.tsx", "utf8");
     expect(page).toContain("{row.code ?? \"—\"}");
     expect(page).toContain("Copy");

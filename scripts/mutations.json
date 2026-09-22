@@ -507,8 +507,8 @@
     "id": "invite-normalize-skips-aliases",
     "why": "Dropping I/L/O aliases means two typings of one code derive two ids.",
     "file": "src/lib/invite.ts",
-    "find": "    if (c === \"I\" || c === \"L\") c = \"1\";\n    else if (c === \"O\") c = \"0\";\n    else if (c === \"U\") return null;\n",
-    "replace": "    if (c === \"U\") return null;\n",
+    "find": "export function normalizeInviteCode(input: string): string | null {\n  const stripped = input.toUpperCase().replace(/[\\s-]/g, \"\");\n  let out = \"\";\n  for (const raw of stripped) {\n    let c = raw;\n    if (c === \"I\" || c === \"L\") c = \"1\";\n    else if (c === \"O\") c = \"0\";\n    else if (c === \"U\") return null;\n",
+    "replace": "export function normalizeInviteCode(input: string): string | null {\n  const stripped = input.toUpperCase().replace(/[\\s-]/g, \"\");\n  let out = \"\";\n  for (const raw of stripped) {\n    let c = raw;\n    if (c === \"U\") return null;\n",
     "testFile": "src/lib/invite.test.ts",
     "testName": "invite normalization is frozen at v1"
   },
@@ -516,8 +516,8 @@
     "id": "invite-accepts-u",
     "why": "Accepting U the way the recovery code does couples two frozen formats and lets an invalid invite through.",
     "file": "src/lib/invite.ts",
-    "find": "    else if (c === \"U\") return null;\n",
-    "replace": "    else if (c === \"U\") c = \"V\";\n",
+    "find": "    else if (c === \"U\") return null;\n    if (!CROCKFORD_ALPHABET.includes(c)) return null;\n    out += c;\n  }\n  return out.length === INVITE_CODE_CHARS ? out : null;\n",
+    "replace": "    else if (c === \"U\") c = \"V\";\n    if (!CROCKFORD_ALPHABET.includes(c)) return null;\n    out += c;\n  }\n  return out.length === INVITE_CODE_CHARS ? out : null;\n",
     "testFile": "src/lib/invite.test.ts",
     "testName": "a code containing U or a non-alphabet character is rejected"
   },
@@ -525,8 +525,8 @@
     "id": "invite-constant-id",
     "why": "Every code collapsing to one id joins every tester onto one record.",
     "file": "src/lib/invite.ts",
-    "find": "  return bytesToUuidV4(digest);\n",
-    "replace": "  return \"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee\";\n",
+    "find": "export async function deriveInviteParticipantId(normalized: string): Promise<string> {\n  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX}${normalized}`));\n  return uuidFromDigest(digest);\n",
+    "replace": "export async function deriveInviteParticipantId(normalized: string): Promise<string> {\n  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX}${normalized}`));\n  return \"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee\";\n",
     "testFile": "src/lib/invite.test.ts",
     "testName": "two different codes derive different ids"
   },
@@ -858,7 +858,7 @@
     "id": "console-dismiss-stays-in-week",
     "why": "A dismissed orphan must leave This week and data health. Keeping them in weekTesters is the reminder James asked to stop.",
     "file": "src/lib/console-model.ts",
-    "find": "  const weekTesters = testers.filter((row) => !row.dismissed);\n",
+    "find": "  const weekTesters = testers.filter((row) => !row.dismissed && !row.withdrawn);\n",
     "replace": "  const weekTesters = testers;\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "a dismissed orphan is absent from data health and This week, and present in All testers"
@@ -943,5 +943,113 @@
     "replace": "    const range = first;\n    const n = 1;\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "rejects sharing a reason render as one line with a count and date range"
+  },
+  {
+    "id": "seal-skips-associated-data",
+    "why": "Without associated data a sealed pack can be moved onto another participant and still open.",
+    "file": "src/lib/pack-seal.ts",
+    "find": "  return new TextEncoder().encode(`${PACK_SEAL_LABEL}${participantId}`);\n",
+    "replace": "  void participantId;\n  return new TextEncoder().encode(PACK_SEAL_LABEL);\n",
+    "testFile": "src/lib/pack-seal.test.ts",
+    "testName": "a pack sealed for one participant fails to open as another"
+  },
+  {
+    "id": "seal-opens-with-any-key",
+    "why": "A pack that opens under a different private key is readable by anyone who can mint a pair.",
+    "file": "src/lib/pack-seal.ts",
+    "find": "  } catch {\n    return { ok: false, error: \"Could not open the sealed pack.\" };\n",
+    "replace": "  } catch {\n    return { ok: true, kind: \"pack\", value: {} };\n",
+    "testFile": "src/lib/pack-seal.test.ts",
+    "testName": "a different private key cannot open a sealed pack"
+  },
+  {
+    "id": "seal-returns-empty-object",
+    "why": "Opening must yield the sealed payload. Returning an empty object hides every night.",
+    "file": "src/lib/pack-seal.ts",
+    "find": "    return { ok: true, kind: \"pack\", value };\n",
+    "replace": "    return { ok: true, kind: \"pack\", value: {} };\n",
+    "testFile": "src/lib/pack-seal.test.ts",
+    "testName": "a sealed pack opens with Operator's key to the identical pack"
+  },
+  {
+    "id": "invite-v2-uses-displayed-dashes",
+    "why": "Deriving from the dashed display form means Operator and the phone reach different Worker objects.",
+    "file": "src/lib/invite.ts",
+    "find": "  const v2 = normalizeInviteCodeV2(code);\n  if (v2) return deriveInviteParticipantIdV2(v2);\n",
+    "replace": "  const v2 = code.toUpperCase().replace(/\\s/g, \"\");\n  if (v2.length === 19) return deriveInviteParticipantIdV2(v2);\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "the same v2 invite always derives the same ids with or without dashes, in any case"
+  },
+  {
+    "id": "invite-v2-derives-from-participant",
+    "why": "Worker id and bearer must come from the invite. Deriving them from the participant id lets anyone who sees a pack find the object.",
+    "file": "src/lib/pack-derive.ts",
+    "find": "export async function derivePackLocation(normalizedInvite: string): Promise<{ workerId: string; bearer: string }> {\n  const secret = utf8(normalizedInvite);\n",
+    "replace": "export async function derivePackLocation(normalizedInvite: string, participantId?: string): Promise<{ workerId: string; bearer: string }> {\n  const secret = utf8(participantId ?? normalizedInvite);\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "nothing computes a Worker id or bearer from a participant id"
+  },
+  {
+    "id": "invite-v2-skips-uuid-bits",
+    "why": "Without version and variant bits the receiver rejects the id.",
+    "file": "src/lib/invite.ts",
+    "find": "export async function deriveInviteParticipantIdV2(normalized: string): Promise<string> {\n  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX_V2}${normalized}`));\n  return uuidFromDigest(digest);\n",
+    "replace": "export async function deriveInviteParticipantIdV2(normalized: string): Promise<string> {\n  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX_V2}${normalized}`));\n  const hex = [...digest.subarray(0, 16)].map((x) => x.toString(16).padStart(2, \"0\")).join(\"\");\n  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "a derived v2 participant id passes the receiver's validator unchanged"
+  },
+  {
+    "id": "invite-v1-prefix-becomes-v2",
+    "why": "Changing the v1 prefix remints every existing tester's participant id.",
+    "file": "src/lib/invite.ts",
+    "find": "export const INVITE_DERIVE_PREFIX = \"circadia/invite/v1:\";\n",
+    "replace": "export const INVITE_DERIVE_PREFIX = \"circadia/invite/v2:\";\n",
+    "testFile": "src/lib/invite.test.ts",
+    "testName": "v1 codes derive the participant ids they did before"
+  },
+  {
+    "id": "fetch-writes-invalid-pack",
+    "why": "A pack that fails validateStudyPack must not enter the inbox. Writing it anyway bypasses the receiver.",
+    "file": "src/lib/pack-fetch.ts",
+    "find": "    const checked = validateStudyPack(opened.value);\n    if (!checked.ok) {\n      rejects.push({\n        reason: checked.error,\n        arrivedAt: now.toISOString(),\n        file: `fetch:${row.participantId}`,\n      });\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
+    "replace": "    const checked = validateStudyPack(opened.value);\n    void checked;\n",
+    "testFile": "src/lib/pack-fetch.test.ts",
+    "testName": "an opened pack that fails validateStudyPack is rejected and never enters the inbox"
+  },
+  {
+    "id": "fetch-deletes-on-withdrawal",
+    "why": "Withdrawal must not delete stored nights. A mark that only accumulates went stale that way; deleting them is worse.",
+    "file": "src/lib/pack-fetch.ts",
+    "find": "    if (opened.kind === \"withdrawal\") {\n      withdrawn[row.participantId] = true;\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
+    "replace": "    if (opened.kind === \"withdrawal\") {\n      withdrawn[row.participantId] = true;\n      rejects.push({ reason: \"Withdrawn.\", arrivedAt: now.toISOString(), file: `fetch:${row.participantId}` });\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
+    "testFile": "src/lib/pack-fetch.test.ts",
+    "testName": "a withdrawal marks the tester withdrawn, deletes nothing, and never reaches the reject log"
+  },
+  {
+    "id": "fetch-writes-while-unreachable",
+    "why": "An unreachable Worker must change nothing stored. Writing on failure fabricates an arrival.",
+    "file": "src/lib/pack-fetch.ts",
+    "find": "    } catch {\n      return { unreachable: true, written: [], rejects: [], withdrawn };\n    }\n",
+    "replace": "    } catch {\n      return { unreachable: false, written: [\"study-x.json\"], rejects: [], withdrawn };\n    }\n",
+    "testFile": "src/lib/pack-fetch.test.ts",
+    "testName": "an unreachable Worker changes nothing already stored"
+  },
+  {
+    "id": "fetch-ignores-etag",
+    "why": "Writing on every poll duplicates the same night. The ETag is what stops that.",
+    "file": "src/lib/pack-fetch.ts",
+    "find": "    if (row.etag && etags[row.workerId] === row.etag) continue;\n",
+    "replace": "    if (false && row.etag && etags[row.workerId] === row.etag) continue;\n",
+    "testFile": "src/lib/pack-fetch.test.ts",
+    "testName": "fetching an unchanged object twice writes one inbox file"
+  },
+  {
+    "id": "operator-keys-leave-git",
+    "why": "The private key and the public key file must stay gitignored. A tracked key is a published key.",
+    "file": "src/lib/operator-store.ts",
+    "find": "export function operatorPrivatePath(inbox = studyInboxDir()): string {\n  return path.join(operatorStoreDir(inbox), OPERATOR_PRIVATE_FILE);\n}\n",
+    "replace": "export function operatorPrivatePath(inbox = studyInboxDir()): string {\n  return path.join(process.cwd(), OPERATOR_PRIVATE_FILE);\n}\n",
+    "testFile": "src/lib/operator-store.test.ts",
+    "testName": "the private key and the public key file are ignored by git"
   }
 ]

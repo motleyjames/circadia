@@ -1,4 +1,4 @@
-import { isCohort, isPackSafetyCategory, type Cohort, type OperatorInvite } from "@/lib/invite";
+import { inviteCodeVersion, isCohort, isPackSafetyCategory, type Cohort, type OperatorInvite } from "@/lib/invite";
 
 export { dismissOrphan, nameOrphan, restoreOrphan } from "@/lib/invite";
 import { inboxStampKey } from "@/lib/moderator";
@@ -45,6 +45,7 @@ export type ConsoleTester = {
   name: string | null;
   inBook: boolean;
   dismissed: boolean;
+  withdrawn: boolean;
   cohort: Cohort | null;
   cohortLabel: string;
   section: ConsoleSectionId;
@@ -69,7 +70,7 @@ export type ConsoleSection = {
 };
 
 export type DataHealthItem = {
-  kind: "unreadable" | "orphan";
+  kind: "unreadable" | "orphan" | "unreachable";
   message: string;
   detail: string | null;
   files: string[];
@@ -204,6 +205,7 @@ export function buildInviteBook(
   book: readonly OperatorInvite[],
   arrivals: readonly ConsoleArrival[],
   now: Date,
+  withdrawn: readonly string[] = [],
 ): InviteBookRow[] {
   const firstArrival = new Map<string, Date>();
   for (const row of arrivals) {
@@ -213,18 +215,24 @@ export function buildInviteBook(
     const prev = firstArrival.get(id);
     if (!prev || at < prev) firstArrival.set(id, at);
   }
+  const withdrawnSet = new Set(withdrawn.map((id) => id.toLowerCase()));
   return book.map((invite) => {
     const joinedAt = firstArrival.get(invite.participantId.toLowerCase()) ?? null;
+    const left = withdrawnSet.has(invite.participantId.toLowerCase());
     return {
       participantId: invite.participantId,
       name: invite.name,
       code: invite.code,
       cohort: invite.cohort,
       cohortLabel: invite.cohort ? COHORT_LABEL[invite.cohort] : "—",
-      joined: joinedAt !== null,
-      status: joinedAt
-        ? `Joined ${joinedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
-        : "Not joined yet",
+      joined: joinedAt !== null && !left,
+      status: inviteCodeVersion(invite.code) === 1
+        ? "Needs a new invite"
+        : left
+          ? "Withdrawn"
+          : joinedAt
+            ? `Joined ${joinedAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+            : "Not joined yet",
       dismissed: invite.dismissed,
     };
   });
@@ -235,6 +243,8 @@ export function buildConsoleModel(input: {
   book: readonly OperatorInvite[];
   rejects: readonly ConsoleReject[];
   now: Date;
+  withdrawn?: readonly string[];
+  workerUnreachable?: boolean;
 }): ConsoleModel {
   const byPerson = new Map<string, ConsoleArrival[]>();
   for (const row of input.arrivals) {
@@ -244,12 +254,13 @@ export function buildConsoleModel(input: {
     else byPerson.set(id, [row]);
   }
 
+  const withdrawn = new Set((input.withdrawn ?? []).map((id) => id.toLowerCase()));
   const testers: ConsoleTester[] = [];
   for (const [participantId, rows] of byPerson) {
-    testers.push(stitchTester(participantId, rows, input.book, input.now));
+    testers.push(stitchTester(participantId, rows, input.book, input.now, withdrawn.has(participantId)));
   }
 
-  const weekTesters = testers.filter((row) => !row.dismissed);
+  const weekTesters = testers.filter((row) => !row.dismissed && !row.withdrawn);
   const buckets: Record<ConsoleSectionId, ConsoleTester[]> = {
     safety: [],
     "not-filing": [],
@@ -271,7 +282,12 @@ export function buildConsoleModel(input: {
     .filter((id) => buckets[id].length)
     .map((id) => ({ id, title: SECTION_TITLE[id], testers: buckets[id] }));
 
-  const health = dataHealth(weekTesters, liveRejects(input.rejects, input.arrivals), input.now);
+  const health = dataHealth(
+    weekTesters,
+    liveRejects(input.rejects, input.arrivals),
+    input.now,
+    input.workerUnreachable === true,
+  );
 
   return {
     weekLabel: weekOfLabel(input.now),
@@ -282,7 +298,7 @@ export function buildConsoleModel(input: {
     allTesters: testers.map((row) => ({
       participantId: row.participantId,
       name: row.name,
-      state: row.dismissed ? "Dismissed" : SECTION_TITLE[row.section],
+      state: row.dismissed ? "Dismissed" : row.withdrawn ? "Withdrawn" : SECTION_TITLE[row.section],
       nightCount: row.section === "not-enrolled" ? row.packNightCount : row.nightsFiled,
       lastSync: row.lastSync,
       dismissed: row.dismissed,
@@ -298,6 +314,7 @@ function stitchTester(
   rows: ConsoleArrival[],
   book: readonly OperatorInvite[],
   now: Date,
+  withdrawn: boolean,
 ): ConsoleTester {
   const ordered = [...rows].sort((a, b) => inboxStampKey(a.file).localeCompare(inboxStampKey(b.file)));
   const newest = ordered[ordered.length - 1]!;
@@ -342,6 +359,7 @@ function stitchTester(
     name,
     inBook,
     dismissed,
+    withdrawn,
     cohort,
     cohortLabel: cohortLabel(cohort, inBook),
     section,
@@ -563,8 +581,19 @@ function dataHealth(
   testers: readonly ConsoleTester[],
   rejects: readonly ConsoleReject[],
   now: Date,
+  workerUnreachable = false,
 ): DataHealthItem[] | null {
   const items: DataHealthItem[] = [];
+  if (workerUnreachable) {
+    items.push({
+      kind: "unreachable",
+      message: "The Worker could not be reached. Nothing stored was changed.",
+      detail: null,
+      files: [],
+      participantId: null,
+      actions: [],
+    });
+  }
   const byReason = new Map<string, ConsoleReject[]>();
   for (const row of rejects) {
     const list = byReason.get(row.reason) ?? [];

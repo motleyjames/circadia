@@ -8,7 +8,9 @@ export const COHORTS = ["friend", "stranger", "lab"] as const;
 export type Cohort = (typeof COHORTS)[number];
 
 export const INVITE_CODE_CHARS = 8;
+export const INVITE_CODE_CHARS_V2 = 16;
 export const INVITE_DERIVE_PREFIX = "circadia/invite/v1:";
+export const INVITE_DERIVE_PREFIX_V2 = "circadia/invite/v2:";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -59,7 +61,36 @@ export function formatInviteCode(normalized: string): string {
   return `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}`;
 }
 
-function bytesToUuidV4(bytes: Uint8Array): string {
+/**
+ * Frozen at v2. Same Crockford substitutions as v1, length 16.
+ * Never call normalizeInviteCode from here.
+ */
+export function normalizeInviteCodeV2(input: string): string | null {
+  const stripped = input.toUpperCase().replace(/[\s-]/g, "");
+  let out = "";
+  for (const raw of stripped) {
+    let c = raw;
+    if (c === "I" || c === "L") c = "1";
+    else if (c === "O") c = "0";
+    else if (c === "U") return null;
+    if (!CROCKFORD_ALPHABET.includes(c)) return null;
+    out += c;
+  }
+  return out.length === INVITE_CODE_CHARS_V2 ? out : null;
+}
+
+export function formatInviteCodeV2(normalized: string): string {
+  return `${normalized.slice(0, 4)}-${normalized.slice(4, 8)}-${normalized.slice(8, 12)}-${normalized.slice(12, 16)}`;
+}
+
+export function inviteCodeVersion(code: string | null | undefined): 1 | 2 | null {
+  if (!code) return null;
+  if (normalizeInviteCodeV2(code)) return 2;
+  if (normalizeInviteCode(code)) return 1;
+  return null;
+}
+
+function uuidFromDigest(bytes: Uint8Array): string {
   const b = new Uint8Array(bytes.subarray(0, 16));
   b[6] = (b[6]! & 0x0f) | 0x40;
   b[8] = (b[8]! & 0x3f) | 0x80;
@@ -69,11 +100,16 @@ function bytesToUuidV4(bytes: Uint8Array): string {
 
 export async function deriveInviteParticipantId(normalized: string): Promise<string> {
   const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX}${normalized}`));
-  return bytesToUuidV4(digest);
+  return uuidFromDigest(digest);
 }
 
-function mintInviteCode(): string {
-  const bytes = new Uint8Array(INVITE_CODE_CHARS);
+export async function deriveInviteParticipantIdV2(normalized: string): Promise<string> {
+  const digest = await sha256(new TextEncoder().encode(`${INVITE_DERIVE_PREFIX_V2}${normalized}`));
+  return uuidFromDigest(digest);
+}
+
+function mintInviteCodeV2(): string {
+  const bytes = new Uint8Array(INVITE_CODE_CHARS_V2);
   crypto.getRandomValues(bytes);
   let out = "";
   for (const byte of bytes) out += CROCKFORD_ALPHABET[byte & 31];
@@ -86,10 +122,10 @@ export async function generateInvite(name: string, cohort: Cohort, now = new Dat
   const trimmed = name.trim();
   if (!trimmed) throw new Error("An invite needs a name on this Mac.");
   if (!isCohort(cohort)) throw new Error("Unknown cohort.");
-  const normalized = mintInviteCode();
+  const normalized = mintInviteCodeV2();
   return {
-    code: formatInviteCode(normalized),
-    participantId: await deriveInviteParticipantId(normalized),
+    code: formatInviteCodeV2(normalized),
+    participantId: await deriveInviteParticipantIdV2(normalized),
     name: trimmed,
     cohort,
     createdAt: now.toISOString(),
@@ -99,6 +135,8 @@ export async function generateInvite(name: string, cohort: Cohort, now = new Dat
 
 /** Accepts any casing, hyphens, or spaces. Returns the derived participantId. */
 export async function parseInviteCode(code: string): Promise<string | null> {
+  const v2 = normalizeInviteCodeV2(code);
+  if (v2) return deriveInviteParticipantIdV2(v2);
   const normalized = normalizeInviteCode(code);
   if (!normalized) return null;
   return deriveInviteParticipantId(normalized);
@@ -121,8 +159,12 @@ export function readInviteBook(raw: unknown): OperatorInvite[] {
     const createdAt = typeof r.createdAt === "string" ? r.createdAt : "";
     let code: string | null = null;
     if (typeof r.code === "string" && r.code.trim()) {
-      const normalized = normalizeInviteCode(r.code);
-      code = normalized ? formatInviteCode(normalized) : null;
+      const v2 = normalizeInviteCodeV2(r.code);
+      if (v2) code = formatInviteCodeV2(v2);
+      else {
+        const normalized = normalizeInviteCode(r.code);
+        code = normalized ? formatInviteCode(normalized) : null;
+      }
     }
     out.push({
       code,

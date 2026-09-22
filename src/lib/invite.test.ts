@@ -3,12 +3,14 @@ import { describe, expect, it } from "vitest";
 import { createEpisode } from "./episode";
 import {
   deriveInviteParticipantId,
+  deriveInviteParticipantIdV2,
   dismissOrphan,
   enrollWithInvite,
   generateInvite,
   joinInvite,
   nameOrphan,
   normalizeInviteCode,
+  normalizeInviteCodeV2,
   parseInviteCode,
   readInviteBook,
 } from "./invite";
@@ -28,6 +30,77 @@ describe("invite codes", () => {
   it("the same code always derives the same participantId", async () => {
     expect(await deriveInviteParticipantId(PINNED)).toBe(PINNED_ID);
     expect(await deriveInviteParticipantId(PINNED)).toBe(await deriveInviteParticipantId(PINNED));
+  });
+
+  it("v1 codes derive the participant ids they did before", async () => {
+    expect(await deriveInviteParticipantId(PINNED)).toBe(PINNED_ID);
+    expect(await parseInviteCode("A10B-C3D4")).toBe(PINNED_ID);
+    expect(normalizeInviteCode("A10B-C3D4")).toBe(PINNED);
+  });
+
+  it("the same v2 invite always derives the same ids with or without dashes, in any case", async () => {
+    const normalized = "A10BC3D4E5F6G7H8";
+    const id = await deriveInviteParticipantIdV2(normalized);
+    for (const form of ["a10bc3d4e5f6g7h8", "A10B-C3D4-E5F6-G7H8", "  a10b-c3d4-e5f6-g7h8  ", "AI0BC3D4E5F6G7H8"]) {
+      expect(normalizeInviteCodeV2(form)).toBe(normalized);
+      expect(await parseInviteCode(form)).toBe(id);
+    }
+    const { derivePackLocation } = await import("./pack-derive");
+    const a = await derivePackLocation(normalized);
+    const b = await derivePackLocation(normalizeInviteCodeV2("a10b-c3d4-e5f6-g7h8")!);
+    expect(a).toEqual(b);
+    expect(a.workerId).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("a derived v2 participant id passes the receiver's validator unchanged", async () => {
+    const invite = await generateInvite("Ada West", "friend");
+    const state: CircadiaState = {
+      ...blank(),
+      profile: {
+        firstName: "A",
+        lastName: "",
+        name: "A",
+        age: 34,
+        sex: "female",
+        heightCm: 170,
+        weightKg: 68,
+        activity: "light",
+        medications: [],
+        supplements: [],
+        struggles: ["falling"],
+        targetSleep: "23:00",
+        targetWake: "07:00",
+        units: "metric",
+        notificationsEnabled: false,
+        onboardingComplete: true,
+        email: "",
+        phone: "",
+        scheduledDays: DEFAULT_SCHEDULED_DAYS,
+      },
+      study: {
+        asked: true,
+        consented: true,
+        participantId: invite.participantId,
+        lastSentAt: null,
+        lastStatus: null,
+        lastError: null,
+        rosterSentAt: null,
+      },
+    };
+    const pack = buildStudyPack(state);
+    expect(pack.participantId).toBe(invite.participantId);
+    expect(validateStudyPack(pack).ok).toBe(true);
+    const src = readFileSync("src/lib/study.ts", "utf8");
+    expect(src).toContain("[1-8]");
+    expect(src).toContain("[89ab]");
+  });
+
+  it("nothing computes a Worker id or bearer from a participant id", () => {
+    const derive = readFileSync("src/lib/pack-derive.ts", "utf8");
+    expect(derive).toContain("normalizedInvite");
+    expect(derive).not.toMatch(/participantId/);
+    expect(derive).toContain("PACK_ID_INFO");
+    expect(derive).toContain("PACK_AUTH_INFO");
   });
 
   it("a derived participantId passes the receiver's validator unchanged", async () => {
@@ -103,12 +176,13 @@ describe("invite codes", () => {
 
   it("codes are generated from crypto.getRandomValues, never Math.random", async () => {
     const src = readFileSync("src/lib/invite.ts", "utf8");
-    const mint = src.slice(src.indexOf("function mintInviteCode"), src.indexOf("export async function generateInvite"));
+    const mint = src.slice(src.indexOf("function mintInviteCodeV2"), src.indexOf("export async function generateInvite"));
     expect(mint).toMatch(/crypto\.getRandomValues/);
     expect(mint).not.toMatch(/Math\.random/);
     const invite = await generateInvite("Ada West", "friend");
-    expect(normalizeInviteCode(invite.code)).toHaveLength(8);
-    expect(invite.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
+    expect(invite.code).toMatch(
+      /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/,
+    );
   });
 
   it("a reinstall that re-enters the code rejoins the same record", async () => {

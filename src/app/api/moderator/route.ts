@@ -5,7 +5,9 @@ import { isOperatorSurface } from "@/lib/surface";
 import { moderatorKeyOk } from "@/lib/mod-key";
 import { parseInboxPayload } from "@/lib/inbox-payload";
 import { summarizeInbox } from "@/lib/moderator";
-import { reconcileRejectedPacks } from "@/lib/operator-store";
+import { ensureOperatorKeys } from "@/lib/operator-keys";
+import { loadInviteBook, loadRejectedPacks, loadWithdrawn, reconcileRejectedPacks } from "@/lib/operator-store";
+import { fetchBookPacks } from "@/lib/pack-fetch";
 import { studyInboxDir } from "@/lib/study-inbox";
 import type { StudyPack } from "@/lib/types";
 
@@ -24,6 +26,23 @@ export async function GET(request: Request) {
   }
 
   const dir = studyInboxDir();
+  let fingerprint: string | null = null;
+  let workerUnreachable = false;
+  let withdrawn = loadWithdrawn(dir);
+  let fetchFails = loadRejectedPacks(dir).filter((row) => row.file?.startsWith("fetch:"));
+  try {
+    const keys = await ensureOperatorKeys(dir);
+    fingerprint = keys.fingerprint;
+    const pulled = await fetchBookPacks({ book: loadInviteBook(dir), privateKey: keys.privateKey, inbox: dir });
+    workerUnreachable = pulled.unreachable;
+    if (!pulled.unreachable) {
+      withdrawn = pulled.withdrawn;
+      fetchFails = pulled.rejects;
+    }
+  } catch {
+    workerUnreachable = true;
+  }
+
   let names: string[] = [];
   try {
     names = (await readdir(dir)).filter((name) => name.endsWith(".json"));
@@ -47,7 +66,7 @@ export async function GET(request: Request) {
     }
   }
 
-  const rejects = reconcileRejectedPacks(inboxFails, dir);
+  const rejects = reconcileRejectedPacks(inboxFails, dir, fetchFails);
 
   const packs: { file: string; pack: StudyPack }[] = [];
   for (const file of files) {
@@ -62,5 +81,10 @@ export async function GET(request: Request) {
     ...summarizeInbox(files),
     packs,
     rejects,
+    fingerprint,
+    workerUnreachable,
+    withdrawn: Object.entries(withdrawn)
+      .filter(([, left]) => left)
+      .map(([id]) => id),
   });
 }

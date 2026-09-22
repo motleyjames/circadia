@@ -16,6 +16,8 @@ type InboxBody = {
   error?: string;
   packs?: ConsoleArrival[];
   rejects?: ConsoleReject[];
+  fingerprint?: string | null;
+  withdrawn?: string[];
 };
 
 export default function AllTestersPage() {
@@ -84,6 +86,7 @@ export default function AllTestersPage() {
         book,
         rejects: data?.rejects ?? [],
         now: new Date(),
+        withdrawn: data?.withdrawn ?? [],
       }),
     [data, book],
   );
@@ -94,7 +97,7 @@ export default function AllTestersPage() {
   }
 
   return (
-    <OperatorChrome active="testers">
+    <OperatorChrome active="testers" fingerprint={data?.fingerprint} onRefresh={() => void load(key)}>
       <div className="flex flex-col gap-6 px-12 py-9">
         <div className="flex flex-col gap-2">
           <h1 className="font-heading text-[36px] leading-[1.1] font-normal tracking-[-0.02em] text-op-ink">
