@@ -14,9 +14,9 @@ const { dockCompileEnv, writeDiaryServerKind } = require("./dock-env.cjs");
 const APP_KINDS = {
   diary: {
     id: "diary",
-    display: "Circadia",
+    display: "Somnadia",
     exec: "Circadia",
-    fileName: "Circadia.app",
+    fileName: "Somnadia.app",
     bundleId: "app.circadia.desktop",
     port: 43148,
     iconFile: "icon.png",
@@ -25,9 +25,9 @@ const APP_KINDS = {
   },
   mod: {
     id: "mod",
-    display: "Circadia Operator",
+    display: "Somnadia Operator",
     exec: "CircadiaOperator",
-    fileName: "Circadia Operator.app",
+    fileName: "Somnadia Operator.app",
     bundleId: "app.circadia.operator",
     port: 43149,
     iconFile: "operator-icon.png",

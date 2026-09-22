@@ -180,7 +180,7 @@ function LibraryArticle({
           <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">{article.body}</p>
           {article.confidence === "low" ? (
             <p className="mt-3 text-[11px] leading-relaxed text-amber-200/70">
-              Evidence is mixed. Circadia will not overclaim this.
+              Evidence is mixed. Somnadia will not overclaim this.
             </p>
           ) : null}
           <p className="mt-4 text-[10px] tracking-[0.2em] text-zinc-400 uppercase">Sources</p>

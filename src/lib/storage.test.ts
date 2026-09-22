@@ -196,7 +196,7 @@ describe("hydrateState", () => {
   });
 
   it("throws on garbage", () => {
-    expect(() => hydrateState("nope")).toThrow(/Circadia/);
+    expect(() => hydrateState("nope")).toThrow(/Somnadia/);
   });
 
   it("collapses two reports on the same morningDate and drops a fake date", () => {

@@ -1,4 +1,4 @@
-# Circadia blueprint
+# Somnadia blueprint
 
 **Job:** get someone who cannot fall asleep, cannot stay asleep, or both, onto a schedule they can defend — without lying about bottles, dreams, or what an app is allowed to know.
 
@@ -52,7 +52,7 @@ Ranked. If a feature fights this list, the feature loses.
 
 Walker-style overclaim is banned. If the literature is mixed, the UI says **low confidence**.
 
-**Medical non-negotiable:** Circadia never tells someone to stop a prescribed drug.
+**Medical non-negotiable:** Somnadia never tells someone to stop a prescribed drug.
 
 ---
 
@@ -68,7 +68,7 @@ week 1:      Notes reads the week from the first mornings (sketch until a few lo
 week 2+:     consult may discuss supplements, still second to behavior
 ```
 
-Open Circadia **always lands on Tonight** after the study gate, not whatever route was underneath the overlay.
+Open Somnadia **always lands on Tonight** after the study gate, not whatever route was underneath the overlay.
 
 ### Intake (door)
 
@@ -124,11 +124,11 @@ A remote LLM may *narrate* these notes later, behind an explicit key. It must no
 
 ## 5. Software architecture
 
-**Shape:** a Next.js desktop app, also packaged as an Electron Mac window (`npm run app`, `npm run dist` → `Circadia.app`). Full window, left sidebar, consult as a right rail (dock on narrower screens). Phone / Capacitor is later.
+**Shape:** a Next.js desktop app, also packaged as an Electron Mac window (`npm run app`, `npm run dist` → `Somnadia.app`). Full window, left sidebar, consult as a right rail (dock on narrower screens). Phone / Capacitor is later.
 
-**State:** diary files in `~/Library/Application Support/Circadia/vault.json` on a Mac (and a localStorage mirror). Keys `email:…` / `phone:…`. Locks are PBKDF2 hashes, never the password. Session is which file is open. Legacy `circadia:v1` migrates once. Export/import JSON. Schema-hydrate on the way in. Local login, no server account.
+**State:** diary files in `~/Library/Application Support/Somnadia/vault.json` on a Mac (and a localStorage mirror). Keys `email:…` / `phone:…`. Locks are PBKDF2 hashes, never the password. Session is which file is open. Legacy `circadia:v1` migrates once. Export/import JSON. Schema-hydrate on the way in. Local login, no server account.
 
-**Study:** optional, consent-gated after sleep intake. Yes turns the pipeline on — no Send button. Three schemas hit `POST /api/study` on the diary. `circadia-roster-v1` (name + body; email/phone fields exist for old files but new cards send null), `circadia-study-v1` (stripped nights), `circadia-fault-v1` (app errors). James reads them in Circadia Operator.app (`npm run dock:mod`, gold clock) or `npm run mod` on port 43149, gated by `CIRCADIA_MOD_KEY`. The diary 404s `/mod`. Write to `data/study-inbox/` (gitignored). Optional forward via `STUDY_INGEST_URL`. Do not store request IP. Never auto-send a loaded sample week.
+**Study:** optional, consent-gated after sleep intake. Yes turns the pipeline on — no Send button. Three schemas hit `POST /api/study` on the diary. `circadia-roster-v1` (name + body; email/phone fields exist for old files but new cards send null), `circadia-study-v1` (stripped nights), `circadia-fault-v1` (app errors). James reads them in Somnadia Operator.app (`npm run dock:mod`, gold clock) or `npm run mod` on port 43149, gated by `CIRCADIA_MOD_KEY`. The diary 404s `/mod`. Write to `data/study-inbox/` (gitignored). Optional forward via `STUDY_INGEST_URL`. Do not store request IP. Never auto-send a loaded sample week.
 
 **Audio:** Web Audio procedural noise. Unlock on a **user gesture** or devices stay silent. Meditations are a recorded bedside guide (author-time neural clips) over a breath-locked pad on that same graph — not `speechSynthesis`, not an HTML `<audio>` element.
 
@@ -140,7 +140,7 @@ src/lib/          engine (pure, tested) — advisor, chat, research, corpus, stu
 src/context/      CircadiaProvider, persistence, study send
 src/components/   login, intake, study gate, Tonight, interview, wind-down, You
 src/app/          diary: /  /check-in  /insights  /library  /you  /api/study
-                  operator: npm run dock:mod → Circadia Operator.app  /  npm run mod → :43149
+                  operator: npm run dock:mod → Somnadia Operator.app  /  npm run mod → :43149
 ```
 
 ---
@@ -159,7 +159,7 @@ src/app/          diary: /  /check-in  /insights  /library  /you  /api/study
 - Sample week labeled, confirm-before-overwrite. No user-facing JSON dump (Library is research; You is the file).
 - Desktop shell (sidebar + consult rail)
 - Anonymous study packs, consent gate, inspectable JSON, local inbox
-- Mac app window (`npm run app`) and `Circadia.app` package (`npm run dist` on a Mac)
+- Mac app window (`npm run app`) and `Somnadia.app` package (`npm run dist` on a Mac)
 
 **Next, still this repo**
 

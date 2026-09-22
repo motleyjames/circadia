@@ -1,4 +1,5 @@
 import { resolveAppUrl } from "@/lib/app-url";
+import { PRODUCT_NAME } from "@/lib/product";
 import { isPhoneNative } from "@/lib/phone-native";
 import type { AnyRosterEvent, FaultEvent, StudyPack } from "@/lib/types";
 
@@ -6,9 +7,9 @@ export type InboxBody = StudyPack | AnyRosterEvent | FaultEvent;
 
 export type InboxPostResult = { ok: boolean; held?: boolean; error?: string };
 
-/** Phone has no Next inbox. Nights stay on the device until Circadia.app sends. */
+/** Phone has no Next inbox. Nights stay on the device until Somnadia.app sends. */
 export const STUDY_HELD_ERROR =
-  "Kept on this phone. Fold a locked copy into Circadia.app when you want nights to leave.";
+  `Kept on this phone. Fold a locked copy into ${PRODUCT_NAME}.app when you want nights to leave.`;
 
 let inboxProbe: Promise<boolean> | null = null;
 

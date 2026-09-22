@@ -102,7 +102,7 @@ export function StudyPanel() {
               : study.lastStatus === "blocked"
                 ? "Blocked — anonymity check. Nothing left."
                 : study.lastStatus === "error"
-                  ? "Last send did not land. Circadia will try again after the next morning."
+                  ? "Last send did not land. Somnadia will try again after the next morning."
                   : study.lastStatus === "held"
                     ? "Nothing has left this phone."
                     : "Waiting on the first morning."}

@@ -8,9 +8,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.14.0 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.14.0");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.14.0");
+  it("is version 0.15.0 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.15.0");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.15.0");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -105,9 +105,9 @@ describe("phone diary shell", () => {
     expect(readFileSync("src/lib/diary-shell.ts", "utf8")).toContain("CircadiaOpenWindow");
     expect(shell).toContain("skipWebOpenCover");
     expect(shell).toContain("useLayoutEffect");
-    expect(shell).toContain('aria-label="Circadia, Tonight"');
+    expect(shell).toContain("aria-label={`${PRODUCT_NAME}, Tonight`}");
     expect(shell).toContain("<Mark className=\"size-7 shrink-0\" />");
-    expect(shell).toContain(">Circadia</span>");
+    expect(shell).toContain("{PRODUCT_NAME}</span>");
     expect(audio).toContain("export async function loadWavPcm");
     expect(audio).toContain("pcmCache");
     expect(voice).toContain("loadWavPcm");
@@ -242,7 +242,7 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.14.0");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.15.0");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 42");
     const scene = readFileSync("phone/ios/App/App/SceneDelegate.swift", "utf8");
     expect(scene).toContain("class CircadiaBridgeViewController: CAPBridgeViewController");
@@ -315,6 +315,7 @@ describe("phone diary shell", () => {
     expect(spawnSync("node", ["scripts/deps-missing.cjs"]).status).toBe(0);
     expect(script).toContain("Not Operator");
     expect(script).not.toContain("Circadia Operator");
+    expect(script).not.toContain("Somnadia Operator");
     expect(script).not.toContain("run-device");
     expect(script).not.toMatch(/cap open/);
     expect(script).not.toMatch(/--live-reload/);
@@ -388,7 +389,7 @@ describe("phone diary shell", () => {
       env: { ...process.env, CIRCADIA_GATE_ONLY: "1", CIRCADIA_OPERATOR_PUBLIC: pub },
     });
     rmSync(pubDir, { recursive: true, force: true });
-    expect(run.stdout).toContain("0.14.0");
+    expect(run.stdout).toContain("0.15.0");
     expect(run.stdout).not.toContain("Compiling");
     // The guard must sit above the first mutating step, or the gate is decorative.
     const shell = readFileSync("scripts/put-on-phone.sh", "utf8");

@@ -74,8 +74,8 @@ describe("diary vs operator Dock kinds", () => {
     expect(bundle.APP_KINDS.mod.port).toBe(43149);
     expect(bundle.APP_KINDS.diary.exec).toBe("Circadia");
     expect(bundle.APP_KINDS.mod.exec).toBe("CircadiaOperator");
-    expect(bundle.APP_KINDS.diary.fileName).toBe("Circadia.app");
-    expect(bundle.APP_KINDS.mod.fileName).toBe("Circadia Operator.app");
+    expect(bundle.APP_KINDS.diary.fileName).toBe("Somnadia.app");
+    expect(bundle.APP_KINDS.mod.fileName).toBe("Somnadia Operator.app");
     expect(bundle.APP_KINDS.diary.bundleId).not.toBe(bundle.APP_KINDS.mod.bundleId);
     expect(bundle.APP_KINDS.diary.surface).toBeNull();
     expect(bundle.APP_KINDS.mod.surface).toBe("mod");

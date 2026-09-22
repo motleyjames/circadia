@@ -62,7 +62,7 @@ export function formatReviewedThrough(value: string): string {
 
 /**
  * Curated, conservative sleep-science notes.
- * These are teaching texts for Circadia — not a dump of papers, and not medical advice.
+ * These are teaching texts for Somnadia — not a dump of papers, and not medical advice.
  * Claims stay close to AASM / NSF / CBT-I consensus and name uncertainty when the literature is mixed.
  * Freshness is a review stamp plus a test, not a network call.
  */
@@ -91,7 +91,7 @@ export const RESEARCH: ResearchArticle[] = [
       "Outdoor light in the first hour after you get up advances tonight. A dim indoor morning does not count.",
     aliases: ["morning light", "sunlight", "outdoor light", "get outside", "go outside"],
     say: "Outdoor light in the first hour after you get up is the other half of a stable wake time. A dim indoor morning does not count. You do not need a gadget — a walk, a window, a few minutes outside.",
-    body: "Light is the main time cue for the clock in the brain (the SCN). Intrinsically photosensitive retinal ganglion cells (melanopsin) tell that clock it is daytime; outdoor illuminance in the morning is typically orders of magnitude brighter than indoor lamps. Timed morning light advances a late clock. Circadia will not sell you a 10,000-lux box as a requirement — daylight, even through open shade, is the usual tool. The pairing is deliberate: a stable get-up time, then light. One without the other is a weaker lesson. Evening bright light and a dim morning push the other way. Wearable 'circadian scores' are not a substitute for going outside.",
+    body: "Light is the main time cue for the clock in the brain (the SCN). Intrinsically photosensitive retinal ganglion cells (melanopsin) tell that clock it is daytime; outdoor illuminance in the morning is typically orders of magnitude brighter than indoor lamps. Timed morning light advances a late clock. Somnadia will not sell you a 10,000-lux box as a requirement — daylight, even through open shade, is the usual tool. The pairing is deliberate: a stable get-up time, then light. One without the other is a weaker lesson. Evening bright light and a dim morning push the other way. Wearable 'circadian scores' are not a substitute for going outside.",
     tags: ["light", "morning", "circadian", "wake"],
     reviewedThrough: "2026-09",
     confidence: "high",
@@ -113,7 +113,7 @@ export const RESEARCH: ResearchArticle[] = [
       "variable wake",
     ],
     say: "If your get-up time swings by more than about an hour, the clock is learning a moving target. How long you slept is not the only score. Defend one morning.",
-    body: "Sleep duration is the number people track. Regularity is the one they skip. A Sleep Regularity Index (day-to-day overlap of sleep and wake) tracks how similar consecutive 24-hour patterns are; large cohort work (including Windred and colleagues, 2023–2024) reports that irregular sleep associates with worse cardiometabolic and mortality signals even after accounting for average duration. That is population data, not a diagnosis of this diary. Circadia will not invent an index score from a week of bubbles. It will say when get-up times are swinging hard enough that the clock cannot learn the morning. Social jet lag is the weekend version of the same idea. The lever is still one wake time you protect.",
+    body: "Sleep duration is the number people track. Regularity is the one they skip. A Sleep Regularity Index (day-to-day overlap of sleep and wake) tracks how similar consecutive 24-hour patterns are; large cohort work (including Windred and colleagues, 2023–2024) reports that irregular sleep associates with worse cardiometabolic and mortality signals even after accounting for average duration. That is population data, not a diagnosis of this diary. Somnadia will not invent an index score from a week of bubbles. It will say when get-up times are swinging hard enough that the clock cannot learn the morning. Social jet lag is the weekend version of the same idea. The lever is still one wake time you protect.",
     tags: ["schedule", "regularity", "wake", "consistency"],
     reviewedThrough: "2026-09",
     confidence: "high",
@@ -134,8 +134,8 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "The gap between school or work mornings and free mornings, reported in hours. Group findings in the literature are not a personal forecast.",
     aliases: ["social jet lag", "social jetlag", "social jet-lag", "weekend sleep shift", "mctq"],
-    say: "When school or work mornings sit earlier than free mornings, that gap is social jet lag. Circadia reports the gap in hours. Links in the literature to mood or weight are about groups of people — not a forecast about you.",
-    body: "Social jet lag is the gap between when you sleep on mornings you have to get up (school, work) and mornings you do not. Circadia measures that gap over the last four weeks and reports it in hours. It does not turn the number into a personal health forecast.\n\nRoenneberg, Wittmann, and colleagues named the pattern in 2006, in the MCTQ line of work that compares obligated days with free days. Later papers in that line report population-level associations with mood and metabolic markers. Those are group findings. They are not a diagnosis of this diary, and Circadia will not attach them to you.\n\nThe number is withheld when there are no obligated mornings (a school break), or when too few school or free mornings are logged in the window. A zero would be a lie: unknown is not aligned.",
+    say: "When school or work mornings sit earlier than free mornings, that gap is social jet lag. Somnadia reports the gap in hours. Links in the literature to mood or weight are about groups of people — not a forecast about you.",
+    body: "Social jet lag is the gap between when you sleep on mornings you have to get up (school, work) and mornings you do not. Somnadia measures that gap over the last four weeks and reports it in hours. It does not turn the number into a personal health forecast.\n\nRoenneberg, Wittmann, and colleagues named the pattern in 2006, in the MCTQ line of work that compares obligated days with free days. Later papers in that line report population-level associations with mood and metabolic markers. Those are group findings. They are not a diagnosis of this diary, and Somnadia will not attach them to you.\n\nThe number is withheld when there are no obligated mornings (a school break), or when too few school or free mornings are logged in the window. A zero would be a lie: unknown is not aligned.",
     tags: ["schedule", "weekend", "social jet lag", "mctq"],
     reviewedThrough: "2026-08",
     confidence: "high",
@@ -159,7 +159,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Sleep pressure is not the same thing as being 'tired'",
     summary:
       "Adenosine builds while you are awake. Long time in bed, late naps, and lying awake all scramble the signal.",
-    body: "Homeostatic sleep pressure accumulates with hours awake and dissipates during sleep. If you get into bed at 9 and do not fall asleep until 12, you have trained the bed as a waking place and spent three hours flattening the pressure you needed. Stimulus control (Bootzin): bed is for sleep. If you are awake ~20 minutes, get up, keep lights dim, do something boring, return only when sleepy. Sleep restriction — shrinking time in bed toward actual sleep time — is first-line CBT-I, and it is uncomfortable on purpose. Circadia will not prescribe a restriction window without a clinician; it will tell you when time-in-bed looks too long for the sleep you are getting.",
+    body: "Homeostatic sleep pressure accumulates with hours awake and dissipates during sleep. If you get into bed at 9 and do not fall asleep until 12, you have trained the bed as a waking place and spent three hours flattening the pressure you needed. Stimulus control (Bootzin): bed is for sleep. If you are awake ~20 minutes, get up, keep lights dim, do something boring, return only when sleepy. Sleep restriction — shrinking time in bed toward actual sleep time — is first-line CBT-I, and it is uncomfortable on purpose. Somnadia will not prescribe a restriction window without a clinician; it will tell you when time-in-bed looks too long for the sleep you are getting.",
     tags: ["latency", "insomnia", "cbt-i", "falling"],
     aliases: ["sleep pressure", "stimulus control"],
     say: "The longer you are awake, the more sleep pressure you build. Lying in bed trying flattens that. If you are awake about 20 minutes, get up, keep it dim, come back when sleepy.",
@@ -175,7 +175,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Screens, light, and the hour before bed",
     summary:
       "The hour before bed is for dim, boring, offline. Blue light matters — arousal from content usually matters more.",
-    body: "Intrinsically photosensitive retinal ganglion cells (melanopsin) tell the clock it is daytime. Bright, especially short-wavelength light in the evening can delay melatonin onset. That is real. What wellness marketing skips: scrolling, gaming, and unfinished work are alerting even on night mode. Circadia's one-hour screen-off is a behavioral gate, not a blue-light gadget. Dim the room, park the phone outside the bedroom if you can, and do a wind-down you could do half-asleep. Morning outdoor light is the other half of this: it advances the clock and makes the next night easier.",
+    body: "Intrinsically photosensitive retinal ganglion cells (melanopsin) tell the clock it is daytime. Bright, especially short-wavelength light in the evening can delay melatonin onset. That is real. What wellness marketing skips: scrolling, gaming, and unfinished work are alerting even on night mode. Somnadia's one-hour screen-off is a behavioral gate, not a blue-light gadget. Dim the room, park the phone outside the bedroom if you can, and do a wind-down you could do half-asleep. Morning outdoor light is the other half of this: it advances the clock and makes the next night easier.",
     tags: ["screens", "light", "melatonin", "evening"],
     aliases: ["blue light", "night shift mode", "screens off"],
     reviewedThrough: "2026-08",
@@ -206,7 +206,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Melatonin is a clock signal, not a sleeping pill",
     summary:
       "Low-dose, correctly timed melatonin can shift a late clock. High doses at lights-out usually miss the point.",
-    body: "Endogenous melatonin rises in dim evening light and tells the body it is night. Supplemental melatonin can phase-shift the clock, which is why it is used (carefully) for delayed sleep phase and jet lag. The AASM 2017 pharmacologic guideline suggests clinicians not use melatonin as a treatment for chronic insomnia versus no treatment (weak recommendation) — that is about knockout use, not clock timing. Hypnotic use — 5–10 mg at bedtime because you cannot fall asleep — is usually the wrong tool: next-day grogginess, and you have not trained the clock. Circadian-science doses in the phase-response literature are closer to 0.3–1 mg, taken earlier than people expect (often 1–3 hours before desired sleep, sometimes earlier for delayed phase under clinical guidance). CBT-I remains first-line for chronic insomnia. Do not start melatonin if you are pregnant, on interacting medications, or under 18 without a clinician. Circadia will only raise it after a week of logs, and only as education.",
+    body: "Endogenous melatonin rises in dim evening light and tells the body it is night. Supplemental melatonin can phase-shift the clock, which is why it is used (carefully) for delayed sleep phase and jet lag. The AASM 2017 pharmacologic guideline suggests clinicians not use melatonin as a treatment for chronic insomnia versus no treatment (weak recommendation) — that is about knockout use, not clock timing. Hypnotic use — 5–10 mg at bedtime because you cannot fall asleep — is usually the wrong tool: next-day grogginess, and you have not trained the clock. Circadian-science doses in the phase-response literature are closer to 0.3–1 mg, taken earlier than people expect (often 1–3 hours before desired sleep, sometimes earlier for delayed phase under clinical guidance). CBT-I remains first-line for chronic insomnia. Do not start melatonin if you are pregnant, on interacting medications, or under 18 without a clinician. Somnadia will only raise it after a week of logs, and only as education.",
     tags: ["melatonin", "supplement", "circadian", "delayed"],
     aliases: ["melatonin"],
     say: "Melatonin is a clock signal, not a sleeping pill. Sleep clinics try a stable wake time first. If a clinician later agrees, the usual discussion is a low dose (often 0.3–1 mg) earlier than bedtime, not 10 mg at lights-out.",
@@ -222,7 +222,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Magnesium: modest evidence, not a cure",
     summary:
       "Glycinate is the form people mean for sleep. The trial evidence is small and mixed. Deficiency is the cleanest case.",
-    body: "Magnesium is involved in NMDA/GABA signaling and muscle relaxation, which is why it gets marketed for sleep. Human evidence is still small and mixed: older-adult RCTs (including Abbasi 2012) and later systematic reviews (Mah & Pitre 2021, and reviews through 2025) do not support a strong recommendation. People who are deficient, eat little, drink heavily, or have restless legs sometimes feel a difference. Typical discussed doses are 200–400 mg elemental magnesium in the evening, glycinate or citrate preferred over oxide. Kidney disease is a hard stop — magnesium can accumulate. It should never outrank schedule, alcohol, and stimulus control. Circadia treats it as an optional adjunct after a week of data, with low confidence.",
+    body: "Magnesium is involved in NMDA/GABA signaling and muscle relaxation, which is why it gets marketed for sleep. Human evidence is still small and mixed: older-adult RCTs (including Abbasi 2012) and later systematic reviews (Mah & Pitre 2021, and reviews through 2025) do not support a strong recommendation. People who are deficient, eat little, drink heavily, or have restless legs sometimes feel a difference. Typical discussed doses are 200–400 mg elemental magnesium in the evening, glycinate or citrate preferred over oxide. Kidney disease is a hard stop — magnesium can accumulate. It should never outrank schedule, alcohol, and stimulus control. Somnadia treats it as an optional adjunct after a week of data, with low confidence.",
     tags: ["magnesium", "supplement", "latency", "restless"],
     aliases: ["magnesium", "glycinate"],
     reviewedThrough: "2026-08",
@@ -238,7 +238,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "How much sleep you actually need",
     summary:
       "Adults: at least 7 hours. Young adults often need the upper end of 7–9. More time in bed is not always more sleep.",
-    body: "The American Academy of Sleep Medicine recommends adults sleep 7 or more hours (2015 consensus, still the adult floor). The National Sleep Foundation bands — teens 8–10, younger adults 7–9, adults 7–9, older adults 7–8 — were reaffirmed in June 2026 after a 10-year review of 133 meta-analyses in Sleep Health. That review also found no basis for separate duration bands by sex. Short sleep raises cardiometabolic and mood risk over years — that is population data, not a diagnosis from one Tuesday. Duration is only one piece of sleep health (regularity and daytime function count). Long time in bed with poor sleep is a different problem (insomnia phenotype) and is treated by shrinking the window, not stretching it. Circadia scores your logs against the band for your age, then looks at whether the nights are consistent.",
+    body: "The American Academy of Sleep Medicine recommends adults sleep 7 or more hours (2015 consensus, still the adult floor). The National Sleep Foundation bands — teens 8–10, younger adults 7–9, adults 7–9, older adults 7–8 — were reaffirmed in June 2026 after a 10-year review of 133 meta-analyses in Sleep Health. That review also found no basis for separate duration bands by sex. Short sleep raises cardiometabolic and mood risk over years — that is population data, not a diagnosis from one Tuesday. Duration is only one piece of sleep health (regularity and daytime function count). Long time in bed with poor sleep is a different problem (insomnia phenotype) and is treated by shrinking the window, not stretching it. Somnadia scores your logs against the band for your age, then looks at whether the nights are consistent.",
     tags: ["duration", "age", "need"],
     reviewedThrough: "2026-08",
     confidence: "high",
@@ -252,7 +252,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Movement helps sleep — timing still matters",
     summary:
       "Regular moderate activity improves sleep quality on average. A hard workout in the last hour can delay it for some people.",
-    body: "Meta-analyses find that regular aerobic and resistance training improve sleep quality and reduce insomnia symptoms. The mechanism is mixed: body temperature, anxiety reduction, and higher sleep pressure. Elite nuance: vigorous late-night training can delay sleep onset in some people via core temperature and sympathetic arousal. Circadia does not ban evening exercise; it flags a pattern if high activity plus late intense sessions sit next to long latency. Sedentary weeks with poor ratings get a gentle push toward daytime walking and morning light, which is also circadian medicine.",
+    body: "Meta-analyses find that regular aerobic and resistance training improve sleep quality and reduce insomnia symptoms. The mechanism is mixed: body temperature, anxiety reduction, and higher sleep pressure. Elite nuance: vigorous late-night training can delay sleep onset in some people via core temperature and sympathetic arousal. Somnadia does not ban evening exercise; it flags a pattern if high activity plus late intense sessions sit next to long latency. Sedentary weeks with poor ratings get a gentle push toward daytime walking and morning light, which is also circadian medicine.",
     tags: ["activity", "exercise", "latency"],
     reviewedThrough: "2026-08",
     confidence: "moderate",
@@ -266,7 +266,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Unrefreshing sleep and airway risk",
     summary:
       "If sleep is long but you wake wrecked, or BMI is high, snoring and apnea belong on the checklist — with a clinician, not an app.",
-    body: "Obstructive sleep apnea fragments sleep without always looking like 'insomnia' on a diary. Higher BMI, larger neck, snoring, gasping, and unrefreshing sleep are classic flags. Circadia does not diagnose OSA and does not score STOP-BANG. It will mention screening when body mass and poor ratings line up, because treating insomnia techniques alone will not fix an airway problem. PAP is first-line treatment when OSA is diagnosed (AASM 2019 adult PAP CPG) — that is a clinician and a sleep study, not another supplement or this app.",
+    body: "Obstructive sleep apnea fragments sleep without always looking like 'insomnia' on a diary. Higher BMI, larger neck, snoring, gasping, and unrefreshing sleep are classic flags. Somnadia does not diagnose OSA and does not score STOP-BANG. It will mention screening when body mass and poor ratings line up, because treating insomnia techniques alone will not fix an airway problem. PAP is first-line treatment when OSA is diagnosed (AASM 2019 adult PAP CPG) — that is a clinician and a sleep study, not another supplement or this app.",
     tags: ["osa", "bmi", "staying", "rating"],
     reviewedThrough: "2026-08",
     confidence: "high",
@@ -280,7 +280,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "What dreams actually are",
     summary:
       "Dreams are mostly REM cognition: emotion, memory stitching, a noisy narrator. They are not a dictionary.",
-    body: "Most vivid dreaming clusters in REM. Leading accounts: activation-synthesis (the cortex stories noisy brainstem activation), memory consolidation, and emotional processing. Nightmares rise with trauma, alcohol withdrawal/rebound REM, and some medications (notably some antidepressants). There is no reputable evidence for a universal symbol book. If you ask Circadia 'what it means,' it will reflect themes you wrote, note sleep-state physiology (alcohol, late sleep, supplements), and refuse prophecy. Keeping a dream log can still be useful: it is a journal of affect, and nightmare rehearsal therapy is a real clinical tool for recurrent nightmares.",
+    body: "Most vivid dreaming clusters in REM. Leading accounts: activation-synthesis (the cortex stories noisy brainstem activation), memory consolidation, and emotional processing. Nightmares rise with trauma, alcohol withdrawal/rebound REM, and some medications (notably some antidepressants). There is no reputable evidence for a universal symbol book. If you ask Somnadia 'what it means,' it will reflect themes you wrote, note sleep-state physiology (alcohol, late sleep, supplements), and refuse prophecy. Keeping a dream log can still be useful: it is a journal of affect, and nightmare rehearsal therapy is a real clinical tool for recurrent nightmares.",
     tags: ["dreams", "rem", "meaning"],
     reviewedThrough: "2026-08",
     confidence: "moderate",
@@ -294,7 +294,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Medications that commonly collide with sleep",
     summary:
       "Stimulants, some antidepressants, steroids, and decongestants are frequent hidden clocks. Never stop a prescribed drug from an app.",
-    body: "Common disruptors: amphetamine salts and methylphenidate (dose timing), bupropion, SSRIs (sleep architecture changes, sometimes insomnia or vivid dreams), corticosteroids, pseudoephedrine, and some beta blockers (melatonin suppression, nightmares). Common sedating drugs (diphenhydramine, some antipsychotics) can knock you out and still wreck sleep quality. Circadia only pattern-matches names you typed so the advisor can talk about timing and questions for your prescriber. It will never tell you to change a dose.",
+    body: "Common disruptors: amphetamine salts and methylphenidate (dose timing), bupropion, SSRIs (sleep architecture changes, sometimes insomnia or vivid dreams), corticosteroids, pseudoephedrine, and some beta blockers (melatonin suppression, nightmares). Common sedating drugs (diphenhydramine, some antipsychotics) can knock you out and still wreck sleep quality. Somnadia only pattern-matches names you typed so the advisor can talk about timing and questions for your prescriber. It will never tell you to change a dose.",
     tags: ["medications", "supplements", "context"],
     aliases: ["adderall", "vyvanse", "ritalin", "wellbutrin"],
     reviewedThrough: "2026-08",
@@ -308,7 +308,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Wind-down is a skill, not a vibe",
     summary:
       "Breathing, muscle release, and stable noise work because they drop arousal — not because they are magic frequencies.",
-    body: "Pre-sleep arousal (cognitive and physiologic) is a core insomnia maintaining factor. Slow breathing (including 4-7-8 as a simple cadence), progressive muscle relaxation, and a body scan are CBT-I-adjacent tools with reasonable evidence for reducing latency in people who practice them. Broadband noise (pink/brown) can mask household sound and give the attention system something boring to hold. There is no special '528 Hz heal the circadian rhythm' effect Circadia will claim. Use a session, then tell the morning interview whether it helped — that is how we learn your response, not a population average.",
+    body: "Pre-sleep arousal (cognitive and physiologic) is a core insomnia maintaining factor. Slow breathing (including 4-7-8 as a simple cadence), progressive muscle relaxation, and a body scan are CBT-I-adjacent tools with reasonable evidence for reducing latency in people who practice them. Broadband noise (pink/brown) can mask household sound and give the attention system something boring to hold. There is no special '528 Hz heal the circadian rhythm' effect Somnadia will claim. Use a session, then tell the morning interview whether it helped — that is how we learn your response, not a population average.",
     tags: ["wind-down", "meditation", "sound", "latency"],
     reviewedThrough: "2026-08",
     confidence: "moderate",
@@ -322,7 +322,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Caffeine is an adenosine blocker",
     summary:
       "It does not just 'give energy.' It occupies the receptor that tells the brain you have been awake long enough to sleep.",
-    body: "Adenosine accumulates with hours awake and promotes sleepiness. Caffeine is an adenosine-receptor antagonist. Typical half-life is about 5–6 hours; it is longer in pregnancy, with oral contraceptives, and in slow CYP1A2 metabolizers. A 3 pm coffee can still be pharmacologically present at 11. Elite practice: if sleep-onset is the complaint, last caffeine before early afternoon, and do not use it to paper over a late wake time. Circadia does not yet log caffeine in the morning interview — if it is in your life, say so in chat so the note can include it.",
+    body: "Adenosine accumulates with hours awake and promotes sleepiness. Caffeine is an adenosine-receptor antagonist. Typical half-life is about 5–6 hours; it is longer in pregnancy, with oral contraceptives, and in slow CYP1A2 metabolizers. A 3 pm coffee can still be pharmacologically present at 11. Elite practice: if sleep-onset is the complaint, last caffeine before early afternoon, and do not use it to paper over a late wake time. Somnadia does not yet log caffeine in the morning interview — if it is in your life, say so in chat so the note can include it.",
     tags: ["caffeine", "coffee", "adenosine", "latency", "falling"],
     aliases: ["caffeine", "coffee", "espresso", "energy drink"],
     reviewedThrough: "2026-08",
@@ -351,7 +351,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Unisom, Benadryl, and other aisle sleep aids",
     summary:
       "They are old allergy medicines sold for sleep. They can knock you out. They are not good sleep, and they are not a nightly plan.",
-    body: "Unisom SleepTabs are usually doxylamine. Some Unisom gels, ZzzQuil, Tylenol PM, Advil PM, and Benadryl use diphenhydramine. Both are first-generation antihistamines. The \u201cPM\u201d products are combination drugs \u2014 the antihistamine plus a painkiller (acetaminophen in Tylenol PM, ibuprofen in Advil PM) \u2014 which is a common way to exceed a daily acetaminophen limit without noticing. They make you drowsy by blocking a wake signal (histamine), not by fixing the clock or sleep pressure. The AASM 2017 pharmacologic guideline suggests clinicians not use diphenhydramine for chronic insomnia (weak). Next-day fog is common, the effect fades if you take them often, and the sleep you get is often lighter and more broken. The 2025 restless-legs guideline separately notes that diphenhydramine and similar antihistamines can worsen that urge-to-move pattern. Rare backup for a one-off night is a different question than a habit. Do not mix with alcohol. Older adults (Beers criteria), glaucoma, urinary retention, and other drowsy meds raise the risk — pharmacist or doctor, not an aisle. Circadia will not tell you to start these.",
+    body: "Unisom SleepTabs are usually doxylamine. Some Unisom gels, ZzzQuil, Tylenol PM, Advil PM, and Benadryl use diphenhydramine. Both are first-generation antihistamines. The \u201cPM\u201d products are combination drugs \u2014 the antihistamine plus a painkiller (acetaminophen in Tylenol PM, ibuprofen in Advil PM) \u2014 which is a common way to exceed a daily acetaminophen limit without noticing. They make you drowsy by blocking a wake signal (histamine), not by fixing the clock or sleep pressure. The AASM 2017 pharmacologic guideline suggests clinicians not use diphenhydramine for chronic insomnia (weak). Next-day fog is common, the effect fades if you take them often, and the sleep you get is often lighter and more broken. The 2025 restless-legs guideline separately notes that diphenhydramine and similar antihistamines can worsen that urge-to-move pattern. Rare backup for a one-off night is a different question than a habit. Do not mix with alcohol. Older adults (Beers criteria), glaucoma, urinary retention, and other drowsy meds raise the risk — pharmacist or doctor, not an aisle. Somnadia will not tell you to start these.",
     tags: ["unisom", "benadryl", "zzzquil", "doxylamine", "diphenhydramine", "otc", "sleep aid"],
     aliases: [
       "unisom",
@@ -383,7 +383,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Prescription sleep drugs",
     summary:
       "Ambien, the newer wake-signal blockers, and off-label trazodone can help some people sleep. They do not replace a wake-time plan. An app will never change your dose.",
-    body: "Zolpidem (Ambien), eszopiclone (Lunesta), zaleplon (Sonata), and some benzodiazepines are GABA-acting hypnotics. Dual orexin receptor antagonists (DORAs) — suvorexant (Belsomra, in the 2017 AASM CPG), lemborexant (Dayvigo, 2019), daridorexant (Quviviq, 2022) — block a wake-promoting peptide rather than boosting sleep circuitry the old way; they were mostly approved after the 2017 drug-by-drug CPG, so that document is incomplete for the class. Trazodone and hydroxyzine are often used off-label; AASM 2017 suggests clinicians not use trazodone for chronic insomnia (weak). All of these can shorten latency or waking. They can also cause next-day grogginess, odd nighttime behavior (especially zolpidem), and rebound if stopped suddenly. ACP 2016 and AASM 2021 still put CBT-I first. The AASM 2026 combination CPG (conditional, low certainty) suggests CBT-I plus a medication over a medication alone, and suggests against combination over CBT-I alone. Circadia will never tell you to start, stop, or change a prescribed drug.",
+    body: "Zolpidem (Ambien), eszopiclone (Lunesta), zaleplon (Sonata), and some benzodiazepines are GABA-acting hypnotics. Dual orexin receptor antagonists (DORAs) — suvorexant (Belsomra, in the 2017 AASM CPG), lemborexant (Dayvigo, 2019), daridorexant (Quviviq, 2022) — block a wake-promoting peptide rather than boosting sleep circuitry the old way; they were mostly approved after the 2017 drug-by-drug CPG, so that document is incomplete for the class. Trazodone and hydroxyzine are often used off-label; AASM 2017 suggests clinicians not use trazodone for chronic insomnia (weak). All of these can shorten latency or waking. They can also cause next-day grogginess, odd nighttime behavior (especially zolpidem), and rebound if stopped suddenly. ACP 2016 and AASM 2021 still put CBT-I first. The AASM 2026 combination CPG (conditional, low certainty) suggests CBT-I plus a medication over a medication alone, and suggests against combination over CBT-I alone. Somnadia will never tell you to start, stop, or change a prescribed drug.",
     tags: ["ambien", "zolpidem", "lunesta", "trazodone", "prescription", "hypnotic", "dora"],
     aliases: [
       "ambien",
@@ -423,7 +423,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "THC, CBD, and sleep",
     summary:
       "THC can make you sleepy and then steal REM. CBD is mixed. Neither is a clean insomnia treatment.",
-    body: "THC is sedating for many people on the way in, then it suppresses REM. When it wears off you can get vivid or restless nights — similar in shape to alcohol, not identical. A 2025 pilot randomized night in adults with insomnia (oral 10 mg THC + 200 mg CBD vs placebo) found less total sleep and a large REM cut, not a longer night. CBD-alone evidence for insomnia is still small and mixed; high doses can be alerting for some people. Edibles last longer than smoke and are easier to overshoot. Nightly THC is a trade: easier onset, worse architecture. Circadia will not tell you to start or stop cannabis; it will treat it as a confounder on the diary if you say you use it.",
+    body: "THC is sedating for many people on the way in, then it suppresses REM. When it wears off you can get vivid or restless nights — similar in shape to alcohol, not identical. A 2025 pilot randomized night in adults with insomnia (oral 10 mg THC + 200 mg CBD vs placebo) found less total sleep and a large REM cut, not a longer night. CBD-alone evidence for insomnia is still small and mixed; high doses can be alerting for some people. Edibles last longer than smoke and are easier to overshoot. Nightly THC is a trade: easier onset, worse architecture. Somnadia will not tell you to start or stop cannabis; it will treat it as a confounder on the diary if you say you use it.",
     tags: ["thc", "cbd", "cannabis", "weed", "rem"],
     aliases: ["thc", "cbd", "cannabis", "weed", "marijuana", "edible", "edibles", "gummies"],
     say: "THC can make you sleepy, then steal dream sleep. A recent lab night in people who already have insomnia found less total sleep and less REM, not more. CBD evidence is still mixed. I will not tell you to start or stop cannabis.",
@@ -440,7 +440,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "Cigarettes, vapes, and pouches all delay falling asleep. A 1 a.m. pouch is still a stimulant.",
     say: "Nicotine is a stimulant. Cigarettes, vapes, and pouches all count. It delays falling asleep and can fragment the night. If sleep is the goal, last nicotine earlier — not as a 1 a.m. ritual. I will not run a quit lecture from here; I will treat it as part of the clock.",
-    body: "Nicotine is a cholinergic stimulant. Night use (including nicotine pouches and vaping) is associated with longer sleep latency and more nocturnal waking. Withdrawal in the second half of the night can also wake people who are dependent. Circadia does not run a cessation program; it names nicotine as a sleep disruptor when the user brings it up.",
+    body: "Nicotine is a cholinergic stimulant. Night use (including nicotine pouches and vaping) is associated with longer sleep latency and more nocturnal waking. Withdrawal in the second half of the night can also wake people who are dependent. Somnadia does not run a cessation program; it names nicotine as a sleep disruptor when the user brings it up.",
     tags: ["nicotine", "vape", "zyn", "pouches", "latency"],
     aliases: ["nicotine", "vape", "vaping", "zyn", "cigarette", "cigarettes", "smoking", "nic pouch"],
     reviewedThrough: "2026-08",
@@ -456,7 +456,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "Light at the right time is the treatment. Melatonin is sometimes used as a clock signal — not as a knockout dose at the hotel.",
     say: "Jet lag is your clock sitting in the old time zone. Morning outdoor light at the destination is the main lever. Melatonin is sometimes used as a clock signal for travel, at a low dose, timed by a clinician — not 10 mg at hotel lights-out. I will not build you a pill schedule from here.",
-    body: "Transmeridian travel desynchronizes the SCN from local time. Eastward travel is usually harder than westward. Timed light is first-line; melatonin can help as a phase-shift signal under guidance. Circadia will not emit a milligram-by-milligram jet-lag protocol.",
+    body: "Transmeridian travel desynchronizes the SCN from local time. Eastward travel is usually harder than westward. Timed light is first-line; melatonin can help as a phase-shift signal under guidance. Somnadia will not emit a milligram-by-milligram jet-lag protocol.",
     tags: ["jet lag", "travel", "timezone", "flight"],
     aliases: ["jet lag", "jetlag", "time zone", "timezone", "red eye", "long haul"],
     reviewedThrough: "2026-08",
@@ -472,7 +472,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "Protect a dark, regular sleep window on work days. Do not copy a 9-to-5 plan onto a 7 p.m. wake.",
     say: "Night shift fights the sun. On work days, protect a dark, regular sleep window and treat it like a real job. Sunglasses on the commute home, blackout curtains, no 'quick errands' that blow the window. This is not the same problem as college-insomnia-plus-phone. Occupational health or a sleep clinic can help if you cannot stay safe at work.",
-    body: "Shift work disorder is circadian misalignment from a required night or rotating schedule. Sleep hygiene copied from a day-shift blog often fails. Anchored sleep timing on work blocks, light control, and safety (driving, errors) dominate. Circadia will not pretend a 7 a.m. wake target is honest for someone who clocks out at 7 a.m.",
+    body: "Shift work disorder is circadian misalignment from a required night or rotating schedule. Sleep hygiene copied from a day-shift blog often fails. Anchored sleep timing on work blocks, light control, and safety (driving, errors) dominate. Somnadia will not pretend a 7 a.m. wake target is honest for someone who clocks out at 7 a.m.",
     tags: ["shift work", "nights", "rotating", "hospital"],
     aliases: ["night shift", "shift work", "graveyard shift", "rotating shift"],
     reviewedThrough: "2026-08",
@@ -488,7 +488,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "An urge to move, worse at rest in the evening, needs a clinician — sometimes iron. Not Unisom.",
     say: "Restless legs is an urge to move, worse at rest, worse in the evening. It is not the same as a racing mind. A clinician may check iron. Unisom and other drowsy antihistamines can make it worse for some people. I will not diagnose you from a chat line — if this is you, say it to a human.",
-    body: "A crawling or aching urge to move the legs, worse in the evening, better when you walk — that pattern is restless legs, not ordinary tossing. It is common, under-diagnosed, and it wrecks sleep because it hits exactly when you are trying to fall asleep. Iron is still the first thing a clinician checks; low ferritin is a treatable cause. The 2025 AASM restless-legs / periodic-limb-movement guideline (Winkelman et al., J Clin Sleep Med) updates the 2012 parameter: iron evaluation stays central, several over-the-counter sedating antihistamines (diphenhydramine among them) can make the urge worse, and valerian is specifically suggested against for RLS. The larger change is the move away from pramipexole and ropinirole as first-line because of augmentation \u2014 symptoms becoming more intense, starting earlier in the day, or spreading \u2014 toward alpha-2-delta ligands and, in the right patient, intravenous iron. Some antidepressants and dopamine-blocking drugs can worsen it too. Caffeine and alcohol often do as well. Circadia does not diagnose restless legs, score severity, or pick a medicine. If the pattern matches, that is a clinic conversation, not a diary tweak or an aisle sedative.",
+    body: "A crawling or aching urge to move the legs, worse in the evening, better when you walk — that pattern is restless legs, not ordinary tossing. It is common, under-diagnosed, and it wrecks sleep because it hits exactly when you are trying to fall asleep. Iron is still the first thing a clinician checks; low ferritin is a treatable cause. The 2025 AASM restless-legs / periodic-limb-movement guideline (Winkelman et al., J Clin Sleep Med) updates the 2012 parameter: iron evaluation stays central, several over-the-counter sedating antihistamines (diphenhydramine among them) can make the urge worse, and valerian is specifically suggested against for RLS. The larger change is the move away from pramipexole and ropinirole as first-line because of augmentation \u2014 symptoms becoming more intense, starting earlier in the day, or spreading \u2014 toward alpha-2-delta ligands and, in the right patient, intravenous iron. Some antidepressants and dopamine-blocking drugs can worsen it too. Caffeine and alcohol often do as well. Somnadia does not diagnose restless legs, score severity, or pick a medicine. If the pattern matches, that is a clinic conversation, not a diary tweak or an aisle sedative.",
     tags: ["rls", "restless", "legs", "iron"],
     aliases: ["restless legs", "rls", "jimmy legs", "urge to move"],
     reviewedThrough: "2026-08",
@@ -504,7 +504,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "I will not recommend melatonin, Unisom, or herbals in pregnancy. Ask the obstetric clinician.",
     say: "If you are pregnant or could be, I will not recommend melatonin, Unisom, herbals, or a new sleep drug. That is your obstetric clinician and pharmacist. Position, reflux, and the clock still matter — left side later in pregnancy, finish eating earlier if heartburn wakes you — but dosing does not come from this app.",
-    body: "Pregnancy changes sleep architecture, reflux, and nocturia. Many OTC sleep aids and supplements lack adequate safety data or have mixed guidance. Circadia withholds pharmacologic suggestions in pregnancy and sends the person to their obstetric clinician.",
+    body: "Pregnancy changes sleep architecture, reflux, and nocturia. Many OTC sleep aids and supplements lack adequate safety data or have mixed guidance. Somnadia withholds pharmacologic suggestions in pregnancy and sends the person to their obstetric clinician.",
     tags: ["pregnancy", "pregnant", "prenatal"],
     aliases: ["pregnant", "pregnancy", "prenatal", "postpartum"],
     reviewedThrough: "2026-08",
@@ -520,7 +520,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "Mild at best, mixed evidence, not a plan. Valerian has liver rare-risk noise. None outrank wake time.",
     say: "L-theanine is mild. Glycine has small sleep data. Ashwagandha is mixed and not a sleep drug. Valerian is mixed and has rare liver-injury reports — not something to stack 'to be sure.' None of these beat a wake time and getting out of bed if you are awake. I will not tell you to start them.",
-    body: "Theanine, valerian, ashwagandha, and glycine are marketed for sleep with small or mixed trials. The AASM 2017 pharmacologic guideline suggests clinicians not use valerian for chronic insomnia (weak). The 2025 restless-legs guideline separately suggested against valerian for RLS — a different question, and still not a reason to start it for sleep. Valerian also has rare hepatotoxicity reports. Circadia treats them as optional, low-confidence, never first-line, and never a stack.",
+    body: "Theanine, valerian, ashwagandha, and glycine are marketed for sleep with small or mixed trials. The AASM 2017 pharmacologic guideline suggests clinicians not use valerian for chronic insomnia (weak). The 2025 restless-legs guideline separately suggested against valerian for RLS — a different question, and still not a reason to start it for sleep. Valerian also has rare hepatotoxicity reports. Somnadia treats them as optional, low-confidence, never first-line, and never a stack.",
     tags: ["theanine", "valerian", "ashwagandha", "glycine", "herbal"],
     aliases: ["theanine", "l-theanine", "valerian", "ashwagandha", "glycine", "chamomile", "lemon balm"],
     reviewedThrough: "2026-08",
@@ -536,7 +536,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "Finish eating a few hours before bed if nights end with heartburn or a sour taste.",
     say: "A heavy late meal, especially spicy food or alcohol, can wake you as reflux — burning, cough, sour taste — which looks like 'insomnia' on a diary. Finish eating a few hours before bed if that is you. This is not a reason to start melatonin.",
-    body: "Nocturnal gastroesophageal reflux fragments sleep. Late large meals, recumbency, alcohol, and high-fat food are classic triggers. Circadia distinguishes reflux waking from primary insomnia when the user describes heartburn or a sour taste.",
+    body: "Nocturnal gastroesophageal reflux fragments sleep. Late large meals, recumbency, alcohol, and high-fat food are classic triggers. Somnadia distinguishes reflux waking from primary insomnia when the user describes heartburn or a sour taste.",
     tags: ["reflux", "gerd", "heartburn", "eating", "meal"],
     aliases: ["heartburn", "reflux", "gerd", "acid reflux", "late meal", "eat late", "eating late"],
     reviewedThrough: "2026-08",
@@ -568,7 +568,7 @@ export const RESEARCH: ResearchArticle[] = [
     summary:
       "Protect the wake time. A short early nap. Caffeine early, not at 9 p.m. Safety first if you drive.",
     say: "After a brutal short night, sleeping until noon trains a later clock and makes tonight worse. Protect your wake time. If you need it, a ~20 minute nap before mid-afternoon. Caffeine in the morning, not at 9 p.m. If you might drive or cannot stay awake, sleep is safety — that is a doctor if it keeps happening.",
-    body: "Acute sleep restriction raises accident risk. Recovery that delays wake time compounds circadian drift. Short naps and earlier bedtime once sleepy are the usual tools. Circadia will not glorify all-nighters.",
+    body: "Acute sleep restriction raises accident risk. Recovery that delays wake time compounds circadian drift. Short naps and earlier bedtime once sleepy are the usual tools. Somnadia will not glorify all-nighters.",
     tags: ["sleep debt", "all nighter", "4 hours", "short night"],
     aliases: ["all nighter", "all-nighter", "slept 4 hours", "only slept", "pulling an all"],
     reviewedThrough: "2026-08",
@@ -604,7 +604,7 @@ export const RESEARCH: ResearchArticle[] = [
     title: "Shrinking time in bed, and who should not",
     summary:
       "The most effective single piece of insomnia therapy is also the most uncomfortable, and it is not safe for everyone to run alone.",
-    body: "Sleep restriction therapy (Spielman) compresses time in bed toward the sleep a person is actually getting, which raises sleep pressure and consolidates a broken night into a solid block; the window is then widened as sleep efficiency improves. It is a core component of CBT-I and carries the strongest evidence in the package. It is also genuinely hard for the first one to two weeks: daytime sleepiness increases before it improves, which is why it is not a self-help manoeuvre for everyone. Contraindications and cautions are specific — bipolar disorder (sleep loss can precipitate mania), seizure disorders (sleep deprivation lowers the threshold), untreated obstructive sleep apnea, parasomnias, and anyone who drives professionally or operates machinery. Circadia will tell you when time in bed looks too long for the sleep you are getting; it will not set a restriction window, because the titration and the safety screening belong with a clinician.",
+    body: "Sleep restriction therapy (Spielman) compresses time in bed toward the sleep a person is actually getting, which raises sleep pressure and consolidates a broken night into a solid block; the window is then widened as sleep efficiency improves. It is a core component of CBT-I and carries the strongest evidence in the package. It is also genuinely hard for the first one to two weeks: daytime sleepiness increases before it improves, which is why it is not a self-help manoeuvre for everyone. Contraindications and cautions are specific — bipolar disorder (sleep loss can precipitate mania), seizure disorders (sleep deprivation lowers the threshold), untreated obstructive sleep apnea, parasomnias, and anyone who drives professionally or operates machinery. Somnadia will tell you when time in bed looks too long for the sleep you are getting; it will not set a restriction window, because the titration and the safety screening belong with a clinician.",
     tags: ["insomnia", "cbt-i", "treatment", "staying"],
     aliases: [
       "sleep restriction", "restrict sleep", "cut time in bed", "shrink my window", "shrink the window",

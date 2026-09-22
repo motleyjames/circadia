@@ -236,12 +236,12 @@ func startNext(_ install: Install) throws {
   let serve = (install.repo as NSString).appendingPathComponent(serveRel)
   guard FileManager.default.isExecutableFile(atPath: install.node) else {
     throw NSError(domain: "Circadia", code: 1, userInfo: [
-      NSLocalizedDescriptionKey: "Node is gone.\n\(install.node)\nOpen Circadia.app again after Node is installed.",
+      NSLocalizedDescriptionKey: "Node is gone.\n\(install.node)\nOpen Somnadia.app again after Node is installed.",
     ])
   }
   guard FileManager.default.fileExists(atPath: serve) else {
     throw NSError(domain: "Circadia", code: 2, userInfo: [
-      NSLocalizedDescriptionKey: "This app is stale. Open Circadia.app from the clone at github.com/motleyjames/circadia.",
+      NSLocalizedDescriptionKey: "This app is stale. Open Somnadia.app from the clone at github.com/motleyjames/circadia.",
     ])
   }
 
@@ -321,17 +321,17 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     return WKWebView(frame: .zero, configuration: config)
   }()
   let splash = NSTextField(labelWithString: "Starting the night clock…")
-  var appTitle = "Circadia"
+  var appTitle = "Somnadia"
   var operatorApp = false
 
   func applyIdentity(_ install: Install?) {
     if let name = install?.logFile, !name.isEmpty {
       logURL = logsDir.appendingPathComponent(name)
     }
-    appTitle = install?.title ?? "Circadia"
+    appTitle = install?.title ?? "Somnadia"
     operatorApp = install?.surface == "mod"
     window.title = appTitle
-    splash.stringValue = operatorApp ? "Updating the inbox…" : "Updating Circadia…"
+    splash.stringValue = operatorApp ? "Updating the inbox…" : "Updating Somnadia…"
   }
 
   func applicationDidFinishLaunching(_ notification: Notification) {
@@ -394,12 +394,12 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
       return
     }
     if !FileManager.default.fileExists(atPath: install.repo) {
-      fail("The Circadia folder moved.\nLast seen:\n\(install.repo)\nPut that clone back, or run npm run put-on-dock once.")
+      fail("The Somnadia folder moved.\nLast seen:\n\(install.repo)\nPut that clone back, or run npm run put-on-dock once.")
       return
     }
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
-      self.splash.stringValue = self.operatorApp ? "Updating the inbox…" : "Updating Circadia…"
+      self.splash.stringValue = self.operatorApp ? "Updating the inbox…" : "Updating Somnadia…"
     }
     do {
       try startNext(install)
@@ -429,8 +429,8 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
       self.splash.stringValue = message
       let alert = NSAlert()
       alert.messageText = self.operatorApp
-        ? "Circadia Operator is running. The inbox is not."
-        : "Circadia is running. The diary is not."
+        ? "Somnadia Operator is running. The inbox is not."
+        : "Somnadia is running. The diary is not."
       alert.informativeText = message
       alert.alertStyle = .warning
       alert.runModal()

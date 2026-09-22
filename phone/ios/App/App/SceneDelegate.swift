@@ -293,7 +293,7 @@ final class CircadiaOpenWindow {
 
     private func buildIdentity(in host: UIView) {
         title.attributedText = NSAttributedString(
-            string: "Circadia",
+            string: "Somnadia",
             attributes: [
                 .font: Self.wordmarkFont(),
                 .foregroundColor: UIColor(white: 0.98, alpha: 1),

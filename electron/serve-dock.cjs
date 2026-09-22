@@ -44,7 +44,7 @@ function freePort() {
 }
 
 function build() {
-  console.log(operator ? "Circadia Operator: source is newer than the Dock compile. Building…" : "Circadia: source is newer than the Dock compile. Building…");
+  console.log(operator ? "Somnadia Operator: source is newer than the Dock compile. Building…" : "Somnadia: source is newer than the Dock compile. Building…");
   const env = dockCompileEnv(operator);
   const result = spawnSync(process.execPath, [nextBin, "build"], { cwd: root, stdio: "inherit", env });
   if (result.status !== 0) {
@@ -57,11 +57,11 @@ function build() {
 try {
   const { pullDockTree } = require("./dock-update.cjs");
   const update = pullDockTree(root);
-  if (update.updated) console.log("Circadia Dock pulled", update.to);
-  else if (!update.ok) console.error("Circadia Dock update failed; starting current tree.", update.error);
-  else if (update.skipped && update.skipped !== "env") console.log("Circadia Dock update skipped:", update.skipped);
+  if (update.updated) console.log("Somnadia Dock pulled", update.to);
+  else if (!update.ok) console.error("Somnadia Dock update failed; starting current tree.", update.error);
+  else if (update.skipped && update.skipped !== "env") console.log("Somnadia Dock update skipped:", update.skipped);
 } catch (err) {
-  console.error("Circadia Dock update crashed; starting current tree.", err && err.message ? err.message : err);
+  console.error("Somnadia Dock update crashed; starting current tree.", err && err.message ? err.message : err);
 }
 
 try {
@@ -72,20 +72,20 @@ try {
     relaunch: process.platform === "darwin",
   });
   if (rebuilt.ok && rebuilt.updated) {
-    console.log("Circadia Dock recompiled the native launcher.");
+    console.log("Somnadia Dock recompiled the native launcher.");
   } else if (!rebuilt.ok) {
-    console.error("Circadia launcher rebuild failed; starting current window.", rebuilt.error);
+    console.error("Somnadia launcher rebuild failed; starting current window.", rebuilt.error);
   }
   if (rebuilt.relaunched) {
-    console.log("Circadia Dock relaunching so the new window process can start.");
+    console.log("Somnadia Dock relaunching so the new window process can start.");
     process.exit(0);
   }
 } catch (err) {
-  console.error("Circadia launcher rebuild skipped.", err && err.message ? err.message : err);
+  console.error("Somnadia launcher rebuild skipped.", err && err.message ? err.message : err);
 }
 
 if (!fs.existsSync(nextBin)) {
-  console.error("Next is missing. Run npm install inside this Circadia folder.");
+  console.error("Next is missing. Run npm install inside this Somnadia folder.");
   process.exit(1);
 }
 

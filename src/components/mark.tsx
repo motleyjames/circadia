@@ -1,5 +1,5 @@
 /**
- * The Circadia clock. Static everywhere except inside the Dock open cover,
+ * The Somnadia clock. Static everywhere except inside the Dock open cover,
  * where `globals.css` draws it: ring strokes in from 12, ticks blink, hands
  * sweep from 12 and settle, moon rises, halo breathes once.
  *

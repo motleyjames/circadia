@@ -700,7 +700,7 @@ describe("console-model", () => {
     expect(page).toContain("Copy");
     expect(page).toContain("SendInviteCode");
     expect(inviteSendBody("A10B-C3D4")).toBe(
-      "Your Circadia code is A10B-C3D4. Enter it when the app asks for one. It is yours alone — please don't share it.",
+      "Your Somnadia code is A10B-C3D4. Enter it when the app asks for one. It is yours alone — please don't share it.",
     );
     expect(smsHref("+1 (555) 010-0101", inviteSendBody("A10B-C3D4"))).toContain("sms:+15550100101?body=");
     expect(mailtoHref("ada@example.com", inviteSendBody("A10B-C3D4"))).toContain("mailto:ada@example.com?body=");

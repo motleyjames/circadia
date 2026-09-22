@@ -7,6 +7,7 @@ import { CrisisLine } from "@/components/crisis-line";
 import { useCircadia } from "@/context/circadia-store";
 import { CLINIC_STARTERS } from "@/lib/chat";
 import { hapticLight } from "@/lib/haptics";
+import { PRODUCT_NAME } from "@/lib/product";
 import {
   consultDayLabel,
   formatConsultTime,
@@ -306,7 +307,7 @@ export function ChatBar({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Falling asleep, 3 a.m., a bottle on the aisle…"
-            aria-label="Ask Circadia"
+            aria-label={`Ask ${PRODUCT_NAME}`}
             className={cn(
               "h-11 min-w-0 flex-1 rounded-full border border-white/12 bg-white/[0.06] px-4 text-zinc-100 outline-none placeholder:text-zinc-400 focus:border-sky-300/40",
               sheet ? "text-base" : "text-[13px]",

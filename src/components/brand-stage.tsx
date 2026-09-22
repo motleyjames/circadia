@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Mark } from "@/components/mark";
+import { PRODUCT_NAME } from "@/lib/product";
 import { APP_VERSION } from "@/lib/version";
 
 export function BrandStage({ cta }: { cta?: ReactNode }) {
@@ -15,7 +16,7 @@ export function BrandStage({ cta }: { cta?: ReactNode }) {
             <Mark className="relative size-[5.25rem]" />
           </div>
           <h1 className="brand-open-title font-heading mt-10 text-[2.85rem] leading-none tracking-tight text-zinc-50">
-            Circadia
+            {PRODUCT_NAME}
           </h1>
           <p className="brand-open-line mt-5 max-w-[22rem] text-[15px] leading-relaxed text-zinc-400">
             For falling asleep. For staying asleep. For a clock that holds.

@@ -7,8 +7,8 @@ describe("Dock window drag", () => {
     const kinds = readFileSync("electron/native-bundle.cjs", "utf8");
     expect(install).toContain("launcher.swift");
     expect(install).toContain("One swiftc. Two bundles. No Electron.");
-    expect(kinds).toContain("Circadia.app");
-    expect(kinds).toContain("Circadia Operator.app");
+    expect(kinds).toContain("Somnadia.app");
+    expect(kinds).toContain("Somnadia Operator.app");
     expect(kinds).toContain("Never wrap Electron.");
 
     const shell = readFileSync("electron/launcher.swift", "utf8");

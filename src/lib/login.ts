@@ -1,4 +1,5 @@
 import { extractEmail, isPhone, phoneDigits } from "@/lib/contact";
+import { PRODUCT_NAME } from "@/lib/product";
 
 /** Vault key for a diary that was never given an email or phone. */
 export const LOCAL_FILE_KEY = "local:this-computer";
@@ -12,8 +13,8 @@ export const AUTH_ERRORS = {
     "There's no diary on this device yet. Log in with the same email or phone this app was packed with, bring a locked copy, or sign up.",
   credentials: "Wrong password.",
   recovery: "Wrong recovery code.",
-  crypto: "This page could not check a password. Open the Circadia app — not a file on disk.",
-  noop: "This window is not the diary. Open Circadia, not the operator.",
+  crypto: `This page could not check a password. Open the ${PRODUCT_NAME} app — not a file on disk.`,
+  noop: `This window is not the diary. Open ${PRODUCT_NAME}, not the operator.`,
   orphan:
     "This device already has a diary with no login. Sign up — that attaches your email or phone. It does not start you over.",
 } as const;

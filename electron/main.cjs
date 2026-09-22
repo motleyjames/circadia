@@ -26,7 +26,7 @@ function isOperator() {
 }
 
 function appTitle() {
-  return isOperator() ? "Circadia Operator" : "Circadia";
+  return isOperator() ? "Somnadia Operator" : "Somnadia";
 }
 
 function appIcon() {
@@ -227,7 +227,7 @@ async function ensureUi() {
   if (app.isPackaged) {
     const embedded = await startEmbeddedUi();
     if (embedded) return;
-    throw new Error("This Circadia.app has no project pointer. Run npm run dock from the rest-ai folder.");
+    throw new Error("This Somnadia.app has no project pointer. Run npm run dock from the rest-ai folder.");
   }
   appUrl = DEV_URL;
   await waitForUrl(DEV_URL, 60_000);

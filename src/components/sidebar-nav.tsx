@@ -5,6 +5,7 @@ import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
 import { TABS } from "@/lib/nav";
 import { morningFileDue } from "@/lib/morning-file";
+import { PRODUCT_NAME } from "@/lib/product";
 import { APP_VERSION } from "@/lib/version";
 import { tabIsActive, useDiaryPath } from "@/lib/diary-route";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ export function SidebarNav() {
       <div className="flex items-center gap-3 px-5 pt-5 pb-10">
         <Mark className="size-6" />
         <div>
-          <p className="font-heading text-lg leading-none text-zinc-50">Circadia</p>
+          <p className="font-heading text-lg leading-none text-zinc-50">{PRODUCT_NAME}</p>
           <p className="mt-1 text-[10px] tracking-[0.22em] text-zinc-400 uppercase">{APP_VERSION}</p>
         </div>
       </div>
