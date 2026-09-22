@@ -1051,5 +1051,104 @@
     "replace": "export function operatorPrivatePath(inbox = studyInboxDir()): string {\n  return path.join(process.cwd(), OPERATOR_PRIVATE_FILE);\n}\n",
     "testFile": "src/lib/operator-store.test.ts",
     "testName": "the private key and the public key file are ignored by git"
+  },
+  {
+    "id": "phone-derive-stores-display-form",
+    "why": "Worker id and bearer must come from the normalized invite. Storing the typed form with dashes sends Operator and the phone to different objects.",
+    "file": "src/lib/invite.ts",
+    "find": "      inviteNormalized: v2 ?? v1,\n",
+    "replace": "      inviteNormalized: code.trim(),\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "the phone derives the same participant id, Worker id and bearer as Operator, from any casing and dashes"
+  },
+  {
+    "id": "phone-put-includes-pack-fields",
+    "why": "The Worker must receive only the envelope. Adding pack field names puts plaintext study keys on the wire.",
+    "file": "src/lib/pack-send.ts",
+    "find": "  const body = JSON.stringify(input.envelope);\n",
+    "replace": "  const body = JSON.stringify({ ...input.envelope, schema: \"circadia-study-v1\", participantId: \"x\" });\n",
+    "testFile": "src/lib/pack-send.test.ts",
+    "testName": "what reaches the Worker is an envelope — no pack field name appears in it"
+  },
+  {
+    "id": "phone-seals-the-invite",
+    "why": "The invite is a write secret. Sealing it into the envelope gives it to whoever opens the pack.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "    payload = pack;\n",
+    "replace": "    payload = { ...pack, invite };\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "the invite never appears in a pack, a log, or unencrypted storage"
+  },
+  {
+    "id": "phone-skips-anonymity-scan",
+    "why": "A pack that fails the scan must never be sealed or sent. Skipping the scan puts identified nights on the Worker.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "    if (assertSendable(pack, input.state).length) return { status: \"blocked\" };\n",
+    "replace": "    void assertSendable(pack, input.state);\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "a pack that fails the anonymity scan is never sealed or sent"
+  },
+  {
+    "id": "phone-filing-awaits-send",
+    "why": "Filing must not wait on the Worker. Awaiting the send leaves the morning unfiled when the network fails.",
+    "file": "src/context/circadia-store.tsx",
+    "find": "    if (shouldSend) {\n      if (!snapshot().study.rosterSentAt) void transmitRoster();\n      void transmitStudy();\n    }\n",
+    "replace": "    if (shouldSend) {\n      if (!snapshot().study.rosterSentAt) void transmitRoster();\n      await transmitStudy();\n    }\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "filing a morning succeeds when the send fails"
+  },
+  {
+    "id": "phone-indicator-stamps-failure",
+    "why": "Last sent must only move after a successful write. Stamping it on failure tells the tester a pack left when it did not.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "  if (result.status === \"failed\") {\n    return {\n      ...study,\n      lastStatus: \"error\",\n      lastError: result.error,\n      sendPending: true,\n    };\n  }\n",
+    "replace": "  if (result.status === \"failed\") {\n    return {\n      ...study,\n      lastSentAt: new Date().toISOString(),\n      lastStatus: \"error\",\n      lastError: result.error,\n      sendPending: true,\n    };\n  }\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "the indicator never shows Last sent after a failed send"
+  },
+  {
+    "id": "phone-leave-skips-withdrawal",
+    "why": "Leaving must overwrite the object with a sealed withdrawal. Skipping that leaves the last nights on the Worker.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "  if (withdrawn) {\n    payload = { withdrawn: true };\n  } else {\n",
+    "replace": "  if (withdrawn) {\n    return { status: \"skipped\" };\n  } else {\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "leaving sends a sealed withdrawal and no further packs"
+  },
+  {
+    "id": "phone-build-ignores-missing-key",
+    "why": "A phone without Operator's public key cannot seal. Letting the build continue ships an app that can never send.",
+    "file": "scripts/require-operator-public.cjs",
+    "find": "  process.exit(14);\n",
+    "replace": "  process.exit(0);\n",
+    "testFile": "src/lib/phone-shell.test.ts",
+    "testName": "the phone build fails when Operator's public key is missing"
+  },
+  {
+    "id": "phone-v1-still-sends",
+    "why": "A v1 invite cannot derive a Worker location. Sending anyway would register the wrong object or fail closed after leaking.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "  if (study.inviteVersion !== 2) return { status: \"skipped\" };\n",
+    "replace": "  if (false && study.inviteVersion !== 2) return { status: \"skipped\" };\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "a v1 device sends nothing"
+  },
+  {
+    "id": "phone-join-keeps-legacy-id",
+    "why": "If the id does not switch, the phone seals for the v2 id while the pack still says the old one, and Operator files nights under someone else.",
+    "file": "src/lib/invite.ts",
+    "find": "      participantId,\n      inviteNormalized: v2 ?? v1,\n",
+    "replace": "      participantId: state.study.participantId ?? participantId,\n      inviteNormalized: v2 ?? v1,\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "after a v2 join, the pack's participant id equals the id in its associated data"
+  },
+  {
+    "id": "phone-join-waits-for-morning",
+    "why": "Joining must send once so existing nights arrive without waiting for a morning. Skipping an empty diary hides the tester from Operator.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "  if (!withdrawn && !input.state.profile) {\n    return { status: \"failed\", error: \"No profile.\" };\n  }\n",
+    "replace": "  if (!withdrawn && !input.state.profile) {\n    return { status: \"failed\", error: \"No profile.\" };\n  }\n  if (!withdrawn && input.state.reports.length === 0) return { status: \"skipped\" };\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "joining sends once, without waiting for a morning"
   }
 ]

@@ -185,6 +185,26 @@ describe("invite codes", () => {
     );
   });
 
+  it("a v2 join replaces a legacy id and keeps the existing episode", async () => {
+    const invite = await generateInvite("Ada West", "friend");
+    const episode = createEpisode({ clinicianId: null, enrolledAt: "2026-09-08T12:00:00Z" });
+    const legacy: CircadiaState = {
+      ...blank(),
+      episode,
+      study: {
+        ...blank().study,
+        asked: true,
+        consented: true,
+        participantId: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      },
+    };
+    const joined = await enrollWithInvite(legacy, invite.code.toLowerCase(), new Date("2026-09-16T12:00:00Z"));
+    expect(joined?.study.participantId).toBe(invite.participantId);
+    expect(joined?.episode?.id).toBe(episode.id);
+    expect(joined?.study.inviteVersion).toBe(2);
+    expect(joined?.study.inviteNormalized).toBeTruthy();
+  });
+
   it("a reinstall that re-enters the code rejoins the same record", async () => {
     const invite = await generateInvite("Ada West", "friend");
     const first = await enrollWithInvite(blank(), invite.code, new Date("2026-09-01T12:00:00Z"));
