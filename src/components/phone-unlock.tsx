@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useCircadia } from "@/context/circadia-store";
 import { defaultContactField, identitiesFromVaultKeys } from "@/lib/login";
 import { packedDiaryStatus, readInlinePackedDiary } from "@/lib/packed-diary";
+import { PRODUCT_NAME } from "@/lib/product";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +30,7 @@ export function PhoneUnlock() {
   return (
     <GateShell>
       <p className="mt-4 max-w-[34ch] text-[15px] leading-relaxed text-zinc-400">
-        A locked diary is in this app — packed from the Circadia that installed it. Log in with the same
+        A locked diary is in this app — packed from the Somnadia that installed it. Log in with the same
         email or phone and password.
       </p>
 
@@ -89,8 +90,8 @@ export function PhoneUnlock() {
 
         <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">
           {recover
-            ? "The recovery code is checked on this device. Circadia cannot email another."
-            : "The password is checked on this device. Circadia cannot email a reset."}
+            ? "The recovery code is checked on this device. Somnadia cannot email another."
+            : "The password is checked on this device. Somnadia cannot email a reset."}
         </p>
 
         <button
@@ -135,11 +136,11 @@ export function PhoneEmptyPack({
   return (
     <GateShell>
       <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-        This app has no diary packed in it. Circadia is local — nights live on the device that wrote them,
+        This app has no diary packed in it. Somnadia is local — nights live on the device that wrote them,
         not in the cloud.
       </p>
       <ol className="mt-8 max-w-[40ch] list-decimal space-y-3 pl-5 text-[14px] leading-relaxed text-zinc-400">
-        <li>Open Circadia on the computer that has your nights and log in.</li>
+        <li>Open Somnadia on the computer that has your nights and log in.</li>
         <li>
           In that clone: <span className="text-zinc-200">npm run put-on-phone</span>
         </li>
@@ -175,7 +176,7 @@ function GateShell({ children }: { children: ReactNode }) {
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <div className="gate-brand">
           <Mark className="size-8" />
-          <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">Circadia</h1>
+          <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">{PRODUCT_NAME}</h1>
         </div>
         {children}
       </div>

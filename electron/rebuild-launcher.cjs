@@ -45,7 +45,7 @@ function isLauncherStale(dest, swiftSrc) {
 }
 
 function findInstalled(operator) {
-  const appFile = operator ? "Circadia Operator.app" : "Circadia.app";
+  const appFile = operator ? "Somnadia Operator.app" : "Somnadia.app";
   const system = path.join("/Applications", appFile);
   const home = path.join(os.homedir(), "Applications", appFile);
   if (fs.existsSync(system)) return system;

@@ -155,7 +155,7 @@ export function InsightsView() {
           <p className="mt-4 text-[12px] leading-relaxed text-zinc-400">
             Efficiency is time asleep divided by time in bed. Sleep clinics generally treat 85% and
             up as healthy; under that usually means too much time in bed rather than too little
-            sleep. Circadia will not set you a sleep window — that belongs with a clinician, and it
+            sleep. Somnadia will not set you a sleep window — that belongs with a clinician, and it
             is the one part of this that needs a person.
           </p>
         </>
@@ -490,7 +490,7 @@ function EmptyWeek({ onSample, notes }: { onSample: () => void; notes: SleepNote
         <p className="text-sm text-zinc-100">No mornings yet.</p>
         <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-400">
           File tomorrow morning and the first night appears here. Already filed on the other
-          Circadia? Fold a locked copy in You — the two files do not update each other on their own.
+          Somnadia? Fold a locked copy in You — the two files do not update each other on their own.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <DiaryLink

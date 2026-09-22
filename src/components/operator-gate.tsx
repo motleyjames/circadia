@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { DEFAULT_MOD_KEY } from "@/lib/mod-key-shared";
+import { OPERATOR_PRODUCT_NAME } from "@/lib/product";
 
 export function OperatorGate({
   error,
@@ -22,7 +23,7 @@ export function OperatorGate({
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-16 text-op-ink">
       <p className="text-[12px] font-semibold tracking-[0.18em] text-op-muted uppercase">Shakedown</p>
       <h1 className="font-heading mt-3 text-[2.2rem] leading-none tracking-tight text-op-ink">
-        Circadia Operator
+        {OPERATOR_PRODUCT_NAME}
       </h1>
       <p className="mt-4 text-[15px] leading-relaxed text-op-body">
         This is the console, not the diary. Local default is{" "}

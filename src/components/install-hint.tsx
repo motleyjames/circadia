@@ -27,7 +27,7 @@ export function InstallHint() {
   return (
     <div className="mt-6 hidden border-t border-white/8 pt-5 md:block">
       <p className="text-[13px] leading-relaxed text-zinc-400">
-        Bookmark this window if you want it in the browser. Circadia.app on the Mac is the same diary.
+        Bookmark this window if you want it in the browser. Somnadia.app on the Mac is the same diary.
       </p>
       <button
         type="button"

@@ -100,6 +100,10 @@ function run() {
   console.log("Drag these onto the Dock (remove any tile named Electron):");
   for (const item of installed) console.log("  " + item.dest);
   console.log("");
+  console.log("Circadia.app and Circadia Operator.app are still installed if they were.");
+  console.log("This install did not delete, move, or modify them.");
+  console.log("They are James's to remove once Somnadia opens with his diary.");
+  console.log("");
   return installed;
 }
 

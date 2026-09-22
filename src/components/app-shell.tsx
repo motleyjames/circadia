@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { CircadiaProvider, CircadiaSafeTree, useCircadia } from "@/context/circadia-store";
+import { PRODUCT_NAME } from "@/lib/product";
 import { AuthGate } from "@/components/auth-gate";
 import { BottomNav } from "@/components/bottom-nav";
 import { BrandStage } from "@/components/brand-stage";
@@ -104,15 +105,15 @@ function PhoneAsk({ onAsk }: { onAsk: () => void }) {
       <DiaryTabLink
         href="/"
         // The sidebar already shows the mark and wordmark from `md` up. Without
-        // this, every window between 768 and 1280px drew Circadia twice.
+        // this, every window between 768 and 1280px drew Somnadia twice.
         className="pointer-events-auto inline-flex h-11 items-center gap-2.5 px-3 md:hidden"
-        aria-label="Circadia, Tonight"
+        aria-label={`${PRODUCT_NAME}, Tonight`}
         onClick={() => {
           void hapticLight();
         }}
       >
         <Mark className="size-7 shrink-0" />
-        <span className="font-heading text-[17px] leading-none tracking-tight text-zinc-50" aria-hidden>Circadia</span>
+        <span className="font-heading text-[17px] leading-none tracking-tight text-zinc-50" aria-hidden>{PRODUCT_NAME}</span>
       </DiaryTabLink>
       <button
         type="button"

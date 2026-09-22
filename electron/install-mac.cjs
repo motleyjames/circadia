@@ -9,10 +9,10 @@ const { isElectronApp, repairAll, repairDest } = require("./fix-mac.cjs");
 const { dockCompileEnv, writeDiaryServerKind } = require("./dock-env.cjs");
 
 const operator = process.argv.includes("--operator");
-const APP_DISPLAY = operator ? "Circadia Operator" : "Circadia";
+const APP_DISPLAY = operator ? "Somnadia Operator" : "Somnadia";
 const EXEC_NAME = operator ? "CircadiaOperator" : "Circadia";
 const BUNDLE_ID = operator ? "app.circadia.operator" : "app.circadia.desktop";
-const APP_FILE = operator ? "Circadia Operator.app" : "Circadia.app";
+const APP_FILE = operator ? "Somnadia Operator.app" : "Somnadia.app";
 const SYSTEM = path.join("/Applications", APP_FILE);
 const HOME = path.join(os.homedir(), "Applications", APP_FILE);
 const DOCK_PORT = operator ? 43149 : 43148;
@@ -106,8 +106,8 @@ function buildDiary() {
   }
   console.log(
     operator
-      ? "Compiling Circadia Operator for the Dock (gold clock, not the diary)…"
-      : "Compiling Circadia once for the Dock window (not a live-reload server)…",
+      ? "Compiling Somnadia Operator for the Dock (gold clock, not the diary)…"
+      : "Compiling Somnadia once for the Dock window (not a live-reload server)…",
   );
   const env = dockCompileEnv(operator);
   console.log(`Dock compile env: surface=${operator ? "mod" : "diary"} electron=off pack_static=off`);
@@ -308,7 +308,7 @@ try {
     mode = "electron-repaired";
     console.warn("Patched the existing Electron app. Did not copy a new Electron.app.");
   } else {
-    console.error(`${APP_FILE} was not installed. Circadia needs a native window (xcode-select --install), then npm run dock.`);
+    console.error(`${APP_FILE} was not installed. Somnadia needs a native window (xcode-select --install), then npm run dock.`);
     console.error("If a broken Electron Circadia is already in /Applications: node electron/fix-mac.cjs");
     process.exit(1);
   }
@@ -328,11 +328,11 @@ console.log(dest);
 console.log(`Node: ${process.execPath}`);
 console.log(`Repo: ${root}`);
 if (operator) {
-  console.log("Gold clock. That is Circadia Operator — the inbox. Testers never see this.");
-  console.log("Look on your Desktop for Circadia Operator, and in /Applications.");
+  console.log("Gold clock. That is Somnadia Operator — the inbox. Testers never see this.");
+  console.log("Look on your Desktop for Somnadia Operator, and in /Applications.");
 } else {
-  console.log("Ice clock. That is Circadia — Sign up / Log in, then Tonight.");
-  console.log("Drag THIS Circadia to the Dock. Remove any icon named Electron.");
+  console.log("Ice clock. That is Somnadia — Sign up / Log in, then Tonight.");
+  console.log("Drag THIS Somnadia to the Dock. Remove any icon named Electron.");
   console.log("Installing the gold Operator next…");
 }
 reveal(dest);

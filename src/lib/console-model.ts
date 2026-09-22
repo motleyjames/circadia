@@ -1,4 +1,5 @@
 import { inviteCodeVersion, isCohort, isPackSafetyCategory, type Cohort, type OperatorInvite } from "@/lib/invite";
+import { PRODUCT_NAME } from "@/lib/product";
 
 export { dismissOrphan, nameOrphan, restoreOrphan } from "@/lib/invite";
 import { inboxStampKey } from "@/lib/moderator";
@@ -180,7 +181,7 @@ export function invitePrivacySentence(name: string): string {
 }
 
 export function inviteSendBody(code: string): string {
-  return `Your Circadia code is ${code}. Enter it when the app asks for one. It is yours alone — please don't share it.`;
+  return `Your ${PRODUCT_NAME} code is ${code}. Enter it when the app asks for one. It is yours alone — please don't share it.`;
 }
 
 export function smsHref(to: string, body: string): string {

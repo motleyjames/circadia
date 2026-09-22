@@ -375,7 +375,7 @@ if (require.main === module) {
     ingestToken: process.env.STUDY_INGEST_TOKEN,
   })
     .then(({ url }) => {
-      console.log(`Circadia UI on ${url}`);
+      console.log(`Somnadia UI on ${url}`);
     })
     .catch((error) => {
       console.error(error);

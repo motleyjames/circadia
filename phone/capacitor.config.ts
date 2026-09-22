@@ -3,7 +3,7 @@ import { KeyboardResize } from "@capacitor/keyboard";
 
 const config: CapacitorConfig = {
   appId: "app.circadia.diary",
-  appName: "Circadia",
+  appName: "Somnadia",
   webDir: "../out",
   ios: {
     contentInset: "never",

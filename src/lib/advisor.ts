@@ -82,7 +82,7 @@ export function buildSleepNotes(profile: Profile, reports: MorningReport[]): Sle
       note(
         "screens",
         "Screens are still in the last hour",
-        `Average screen-off is about ${Math.round(week.meanScreenOffMinutes)} minutes, and you are still taking roughly ${Math.round(week.meanLatencyMinutes)} minutes to fall asleep. The content is usually the stimulant, not just the LED. Park the phone when Circadia pings — then use a wind-down here instead of one more scroll.`,
+        `Average screen-off is about ${Math.round(week.meanScreenOffMinutes)} minutes, and you are still taking roughly ${Math.round(week.meanLatencyMinutes)} minutes to fall asleep. The content is usually the stimulant, not just the LED. Park the phone when Somnadia pings — then use a wind-down here instead of one more scroll.`,
         "high",
         ["light-screens", "wind-down"],
         "lever",
@@ -124,7 +124,7 @@ export function buildSleepNotes(profile: Profile, reports: MorningReport[]): Sle
       note(
         "staying",
         "You are waking and not falling back easily",
-        "Maintenance insomnia is usually not solved by a heavier nighttime pill. Check the alcohol notes, keep the bedroom for sleep, and get out of bed if the mind is up. If you snore, gasp, or wake wrecked despite a long night, that is an airway question for a clinician — Circadia cannot hear you sleep.",
+        "Maintenance insomnia is usually not solved by a heavier nighttime pill. Check the alcohol notes, keep the bedroom for sleep, and get out of bed if the mind is up. If you snore, gasp, or wake wrecked despite a long night, that is an airway question for a clinician — Somnadia cannot hear you sleep.",
         "moderate",
         ["sleep-pressure", "bmi-osa", "alcohol"],
         "lever",
@@ -162,7 +162,7 @@ export function buildSleepNotes(profile: Profile, reports: MorningReport[]): Sle
       note(
         "delayed",
         "Your clock looks delayed relative to the target",
-        `Average sleep onset is later than ${formatClock(profile.targetSleep, units)}. Classic young-adult pattern. Morning outdoor light within an hour of ${formatClock(profile.targetWake, units)}, dim evenings, and a defended wake time shift this faster than raising melatonin. After a week of logs Circadia may discuss low-dose melatonin as a clock tool — not as a hypnotic.`,
+        `Average sleep onset is later than ${formatClock(profile.targetSleep, units)}. Classic young-adult pattern. Morning outdoor light within an hour of ${formatClock(profile.targetWake, units)}, dim evenings, and a defended wake time shift this faster than raising melatonin. After a week of logs Somnadia may discuss low-dose melatonin as a clock tool — not as a hypnotic.`,
         "moderate",
         ["circadian-anchor", "melatonin", "light-screens"],
         "lever",

@@ -26,7 +26,7 @@ export function StudyGate() {
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
         James also gets a roster card once: the invite he already issued, your sleep window, and
         whether falling or staying asleep is the problem. Not your name. Not a phone number. Not a
-        way to message you. Circadia will not email or text you. It is not a backup of your dreams.
+        way to message you. Somnadia will not email or text you. It is not a backup of your dreams.
       </p>
       <ul className="mt-8 max-w-[42ch] space-y-2 text-[13px] leading-relaxed text-zinc-500">
         <li>Night packs never carry dream text, chat, or the bottle you typed — only a class.</li>

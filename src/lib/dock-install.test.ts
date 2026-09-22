@@ -27,7 +27,7 @@ describe("Dock install invariants", () => {
     expect(launcher).toContain("self.operatorApp");
     expect(launcher).toContain("43148");
     expect(launcher).toContain("serve-dock.cjs");
-    expect(readFileSync("electron/native-bundle.cjs", "utf8")).toContain("Circadia Operator.app");
+    expect(readFileSync("electron/native-bundle.cjs", "utf8")).toContain("Somnadia Operator.app");
     expect(readFileSync("electron/native-bundle.cjs", "utf8")).toContain("43149");
     expect(readFileSync("electron/install-both-native.cjs", "utf8")).toContain("launcher.swift");
     expect(readFileSync("electron/install-both-native.cjs", "utf8")).not.toContain("Electron.app");
@@ -141,7 +141,7 @@ describe("Dock install invariants", () => {
     expect(install).toContain("aliasOnDesktop");
     expect(install).not.toMatch(/function aliasOnDesktop[\s\S]{0,80}if \(!operator\) return/);
     expect(install).toContain("--operator");
-    expect(install).toContain("Circadia Operator.app");
+    expect(install).toContain("Somnadia Operator.app");
     expect(install).toContain("app.circadia.operator");
     expect(install).toContain("operator-icon.png");
     expect(existsSync("electron/operator-icon.png")).toBe(true);
@@ -179,7 +179,7 @@ describe("morning sleep-aid question", () => {
     expect(checkIn).toContain("File this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("Notes for this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).not.toContain("The interview is closed");
-    expect(APP_VERSION).toBe("0.14.0");
+    expect(APP_VERSION).toBe("0.15.0");
   });
 
   it("does not run diary views while compiling the operator", () => {
@@ -235,8 +235,8 @@ describe("put-on-dock script", () => {
       env: { ...process.env, CIRCADIA_GATE_ONLY: "1" },
     });
     if (process.platform === "darwin") {
-      expect(run.stdout).toContain(`Circadia ${APP_VERSION}`);
-      expect(run.stdout).not.toContain("Compiling Circadia");
+      expect(run.stdout).toContain(`Somnadia ${APP_VERSION}`);
+      expect(run.stdout).not.toContain("Compiling Somnadia");
       expect([0, 5]).toContain(run.status);
     } else {
       expect(run.status).toBe(4);

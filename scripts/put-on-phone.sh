@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Put the Circadia diary on a reachable iPhone.
+# Put the Somnadia diary on a reachable iPhone.
 # Destination is never Any iOS Device. Signing does not open Xcode.
 # A leftover development profile is enough. An Xcode Accounts team is enough.
 # A signed-in Xcode 16 Apple ID with no stored team id is enough.
 # A keychain certificate alone is not automatic signing.
 #
 # USB: only this install, and only if the idle tunnel never comes back.
-# After Circadia is on the home screen, unplug. The app does not talk to the Mac.
-# Diary only. Not Operator. Not the simulator. Not a Circadia server. Not live-reload.
+# After Somnadia is on the home screen, unplug. The app does not talk to the Mac.
+# Diary only. Not Operator. Not the simulator. Not a Somnadia server. Not live-reload.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,16 +16,16 @@ node -e '
 const fs = require("fs");
 const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
 if (p.name !== "circadia") {
-  console.error("Not Circadia. cd into the Circadia folder from GitHub main.");
+  console.error("Not Somnadia. cd into the Somnadia folder from GitHub main.");
   process.exit(2);
 }
 const [maj, min] = String(p.version).split(".").map((n) => parseInt(n, 10));
 const ok = maj > 0 || min >= 7;
 if (!ok) {
-  console.error("This folder is Circadia " + p.version + ". The phone port needs 0.7.0+.");
+  console.error("This folder is Somnadia " + p.version + ". The phone port needs 0.7.0+.");
   process.exit(3);
 }
-console.log("Circadia " + p.version);
+console.log("Somnadia " + p.version);
 '
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -90,7 +90,7 @@ INDEX="phone/ios/App/App/public/index.html"
 if [[ ! -f "$INDEX" ]] || ! grep -q '__CIRCADIA_PACK_STATUS__="packed"' "$INDEX"; then
   echo
   echo "Stopped. This iPhone build has no locked diary in it — login would miss."
-  echo "Open Circadia.app, log in, wait a few seconds, then run this again."
+  echo "Open Somnadia.app, log in, wait a few seconds, then run this again."
   echo "Looked for ~/Library/Application Support/Circadia/vault.json"
   echo "Empty iPhone (no nights): CIRCADIA_ALLOW_EMPTY_PHONE=1 npm run put-on-phone"
   exit 8
@@ -98,7 +98,7 @@ fi
 
 if ! node scripts/assert-phone-app.cjs phone/ios/App/App/public; then
   echo
-  echo "Stopped. The packed iPhone diary is not this Circadia version."
+  echo "Stopped. The packed iPhone diary is not this Somnadia version."
   echo "CIRCADIA_FORCE_PHONE_SYNC=1 npm run put-on-phone"
   exit 11
 fi
@@ -124,7 +124,7 @@ PICK="$(node scripts/ios-target.cjs)" || {
   echo "No iPhone hardware UDID on this Mac. Pair James-iPhone (USB once, Trust)."
   echo "Unlock it. Plug in USB for this one install if the list stays empty."
   echo "The diary pack is already on disk. The next run skips the Next.js rebuild."
-  echo "After Circadia is on the home screen, unplug. The app does not talk to the Mac."
+  echo "After Somnadia is on the home screen, unplug. The app does not talk to the Mac."
   exit 10
 }
 
@@ -134,7 +134,7 @@ CORE=""
 IFS=$'\t' read -r NAME ID CORE <<< "$PICK"
 echo "Target: $NAME ($ID)"
 
-echo "Copying the phone diary onto this Mac (ciphertext) so Circadia.app can fold those nights."
+echo "Copying the phone diary onto this Mac (ciphertext) so Somnadia.app can fold those nights."
 node scripts/ios-pull-vault.cjs --target "$ID" || true
 
 INSTALL_ARGS=(--target "$ID")
@@ -161,7 +161,7 @@ if [[ "$STATUS" -eq 13 ]]; then
 fi
 if [[ "$STATUS" -ne 0 ]]; then
   echo
-    echo "Install did not finish. Circadia is not on the phone until this step succeeds."
+    echo "Install did not finish. Somnadia is not on the phone until this step succeeds."
     echo "CoreDevice needs a live tunnel, not just a paired row. Unlock James-iPhone, keep the screen on, plug in USB."
   echo "The diary pack is already on disk. The next run skips the Next.js rebuild."
   echo "Do not use destination Any iOS Device (arm64). Do not press Run in Xcode."
@@ -170,7 +170,7 @@ fi
 
 VERSION="$(node -p 'require("./package.json").version')"
 echo
-echo "Circadia should now open on $NAME. Footer must read ${VERSION} · diary packed."
+echo "Somnadia should now open on $NAME. Footer must read ${VERSION} · diary packed."
 echo "Then Log in with the same email or phone and password."
 echo "Unplug. The installed app does not need the Mac after that."
 echo

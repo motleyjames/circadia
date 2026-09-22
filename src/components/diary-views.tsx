@@ -7,7 +7,7 @@ import { TonightView } from "@/components/tonight-view";
 import { YouView } from "@/components/you-view";
 import { diaryPathname } from "@/lib/diary-route";
 
-/** Same five views on Circadia.app and the iPhone. Only the chrome around them changes. */
+/** Same five views on Somnadia.app and the iPhone. Only the chrome around them changes. */
 export function DiaryViews({ path }: { path: string }) {
   const p = diaryPathname(path);
   if (p === "/check-in" || p.startsWith("/check-in/")) return <CheckInFlow />;

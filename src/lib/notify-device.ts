@@ -1,9 +1,10 @@
 import { Capacitor } from "@capacitor/core";
+import { PRODUCT_NAME } from "@/lib/product";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { planNotifications, type PlanInput, type Ping } from "@/lib/sleep-notifications";
 
 /**
- * The one place Circadia talks to the operating system's notification centre.
+ * The one place Somnadia talks to the operating system's notification centre.
  *
  * ## Why this file exists at all
  *
@@ -18,7 +19,7 @@ import { planNotifications, type PlanInput, type Ping } from "@/lib/sleep-notifi
  * `@capacitor/local-notifications` schedules on the device itself: it fires with
  * the app closed, needs no server, no APNs certificate and no push token, so
  * nothing about a person's sleep schedule leaves their phone. That is the only
- * notification architecture consistent with the rest of Circadia.
+ * notification architecture consistent with the rest of Somnadia.
  *
  * Everything that decides *what* to send lives in `sleep-notifications.ts` and is
  * pure. This file only carries the result across the bridge, and every call is
@@ -80,7 +81,7 @@ export async function notificationPermission(): Promise<NotificationPermission> 
   }
 }
 
-/** Take everything Circadia has pending off the device. */
+/** Take everything Somnadia has pending off the device. */
 export async function clearScheduled(): Promise<void> {
   if (!canNotify()) return;
   try {
@@ -231,7 +232,7 @@ export async function sendTestNotification(seconds = 5): Promise<boolean> {
       notifications: [
         {
           id: TEST_PING_ID,
-          title: "Circadia",
+          title: PRODUCT_NAME,
           body: `Reminders are on. This is the only one that will ever arrive on demand.`,
           schedule: { at: new Date(Date.now() + seconds * 1000), allowWhileIdle: true },
         },

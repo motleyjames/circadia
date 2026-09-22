@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { AppShell } from "@/components/app-shell";
 import { CircadiaSafeTree } from "@/context/circadia-store";
 import { PHONE_CLASS_BOOT } from "@/lib/phone-native";
+import { OPERATOR_PRODUCT_NAME, PRODUCT_NAME } from "@/lib/product";
 import { APP_VERSION } from "@/lib/version";
 import "./globals.css";
 
@@ -33,16 +34,16 @@ const instrument = localFont({
 });
 
 export const metadata: Metadata = {
-  title: process.env.CIRCADIA_SURFACE === "mod" ? "Circadia Operator" : "Circadia",
+  title: process.env.CIRCADIA_SURFACE === "mod" ? OPERATOR_PRODUCT_NAME : PRODUCT_NAME,
   description:
     process.env.CIRCADIA_SURFACE === "mod"
       ? "James-only inbox. Not the diary."
       : "A local sleep companion for falling asleep, staying asleep, and holding a schedule.",
-  applicationName: process.env.CIRCADIA_SURFACE === "mod" ? "Circadia Operator" : "Circadia",
+  applicationName: process.env.CIRCADIA_SURFACE === "mod" ? OPERATOR_PRODUCT_NAME : PRODUCT_NAME,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Circadia",
+    title: PRODUCT_NAME,
   },
   formatDetection: {
     telephone: false,

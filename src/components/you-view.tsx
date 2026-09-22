@@ -278,7 +278,7 @@ export function YouView() {
               </div>
               <Chips
                 label="Medications"
-                empty="None on file. Circadia will not change a prescription."
+                empty="None on file. Somnadia will not change a prescription."
                 items={profile.medications}
                 draft={medDraft}
                 setDraft={setMedDraft}
@@ -329,7 +329,7 @@ export function YouView() {
                   <p className="text-[13px] text-zinc-200">Save a login</p>
                   <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
                     Email or phone plus a password lets you sign out and open this diary again.
-                    Circadia will not contact you.
+                    Somnadia will not contact you.
                   </p>
                   <Input
                     value={loginDraft}
@@ -447,7 +447,7 @@ export function YouView() {
                   <div className="mt-4 rounded-2xl border border-white/8 bg-black/25 p-4">
                     <p className="text-[13px] text-zinc-200">Recovery code</p>
                     <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
-                      A second way to open this diary if the password is gone. Circadia cannot email
+                      A second way to open this diary if the password is gone. Somnadia cannot email
                       one. Write it down and keep it off this device.
                     </p>
                     {sessionOpenedWithRecovery() ? (
@@ -540,7 +540,7 @@ export function YouView() {
         <section className="mt-8">
           <p className="px-1 text-[13px] text-zinc-500">This device</p>
           <p className="mt-2 max-w-[52ch] px-1 text-[13px] leading-relaxed text-zinc-500">
-            Circadia.app and the phone each keep a file. A morning you file on one is not on the
+            Somnadia.app and the phone each keep a file. A morning you file on one is not on the
             other until you fold a locked copy in. There is no cloud account.
           </p>
           <div className="mt-3 overflow-hidden rounded-[10px] bg-white/[0.055]">
@@ -920,8 +920,8 @@ function NotificationSetting({
 
       {blocked ? (
         <p className="mt-2 text-[13px] leading-relaxed text-amber-200">
-          iOS is blocking notifications for Circadia, and only Settings can undo that:
-          Settings → Notifications → Circadia → Allow Notifications. Nothing will arrive
+          iOS is blocking notifications for Somnadia, and only Settings can undo that:
+          Settings → Notifications → Somnadia → Allow Notifications. Nothing will arrive
           until then.
         </p>
       ) : null}

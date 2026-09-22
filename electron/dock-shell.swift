@@ -77,7 +77,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     let config = WKWebViewConfiguration()
     return WKWebView(frame: .zero, configuration: config)
   }()
-  let splash = NSTextField(labelWithString: "Starting Circadia…")
+  let splash = NSTextField(labelWithString: "Starting Somnadia…")
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     logLine("native dock-shell started")
@@ -89,7 +89,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     }
 
     window.minSize = NSSize(width: 960, height: 640)
-    window.title = "Circadia"
+    window.title = "Somnadia"
     window.titlebarAppearsTransparent = true
     window.titleVisibility = .hidden
     window.backgroundColor = NSColor(red: 0.02, green: 0.016, blue: 0.04, alpha: 1)
@@ -124,7 +124,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
 
     let mainMenu = NSMenu()
     let appMenu = NSMenu()
-    appMenu.addItem(withTitle: "Quit Circadia", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+    appMenu.addItem(withTitle: "Quit Somnadia", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     let appItem = NSMenuItem()
     appItem.submenu = appMenu
     mainMenu.addItem(appItem)
@@ -150,7 +150,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
     }
 
     guard let install = readInstall() else {
-      fail("Circadia.app has no install.json.")
+      fail("Somnadia.app has no install.json.")
       return
     }
     do {
@@ -222,7 +222,7 @@ final class Shell: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigati
       guard let self else { return }
       self.splash.stringValue = message
       let alert = NSAlert()
-      alert.messageText = "Circadia is running. The diary is not."
+      alert.messageText = "Somnadia is running. The diary is not."
       alert.informativeText = message
       alert.alertStyle = .warning
       alert.runModal()

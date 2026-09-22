@@ -111,7 +111,7 @@ export function Onboarding() {
   );
   const offClock = screenOffClock(targetSleep);
   const bodyReady = Number(age) >= 13;
-  const ageHint = age.trim() === "" ? "Add your age to continue." : !bodyReady ? "Circadia is for ages 13 and up." : null;
+  const ageHint = age.trim() === "" ? "Add your age to continue." : !bodyReady ? "Somnadia is for ages 13 and up." : null;
 
   function pickPhase(next: Phase) {
     setPhase(next);
@@ -203,7 +203,7 @@ export function Onboarding() {
               Age, height, weight.
             </h1>
             <p className="mt-3 max-w-[38ch] text-[15px] leading-relaxed text-zinc-400">
-              Circadia uses this when it writes notes. It will not change a medication for you.
+              Somnadia uses this when it writes notes. It will not change a medication for you.
             </p>
 
             <div className="mt-8 grid grid-cols-4 gap-2">
@@ -292,7 +292,7 @@ export function Onboarding() {
               Which mornings do you have to get up for something?
             </h1>
             <p className="mt-3 max-w-[38ch] text-[15px] leading-relaxed text-zinc-400">
-              Class, a shift, a bus. Not “I like a routine.” Circadia cannot guess this from a
+              Class, a shift, a bus. Not “I like a routine.” Somnadia cannot guess this from a
               calendar — a free Friday is still a free Friday.
             </p>
             <div className="mt-8">
@@ -307,7 +307,7 @@ export function Onboarding() {
               A stimulant is not a personality.
             </h1>
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-              If you take one, Circadia will never tell you to stop it. It becomes a constraint on
+              If you take one, Somnadia will never tell you to stop it. It becomes a constraint on
               bedtime and caffeine. Leave blank if none.
             </p>
             <Input
@@ -325,7 +325,7 @@ export function Onboarding() {
               One ping. One hour before bed.
             </h1>
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-              Circadia does not nag. The useful alert is screen-off. Allow it or skip — the
+              Somnadia does not nag. The useful alert is screen-off. Allow it or skip — the
               countdown on Tonight still runs either way.
             </p>
             <p className="mt-8 border-t border-white/8 pt-6 text-[13px] leading-relaxed text-zinc-500">
@@ -403,7 +403,7 @@ export function Onboarding() {
             }
             className="h-14 flex-1 rounded-full btn-primary text-[17px] font-semibold disabled:opacity-50"
           >
-            {busy ? "Opening…" : "Open Circadia"}
+            {busy ? "Opening…" : "Open Somnadia"}
           </button>
         )}
       </footer>

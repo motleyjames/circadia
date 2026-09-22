@@ -1276,5 +1276,50 @@
     "replace": "import { readOperatorKey, writeOperatorKey } from \"@/lib/operator-session\";\nimport { fetchBookPacks } from \"@/lib/pack-fetch\";\n",
     "testFile": "src/context/operator-inbox.test.ts",
     "testName": "no browser component imports the private key or the Worker fetch"
+  },
+  {
+    "id": "rename-product-becomes-circadia",
+    "why": "The visible name is Somnadia. Shipping Circadia again on a display surface is the rename failing.",
+    "file": "src/lib/product.ts",
+    "find": "export const PRODUCT_NAME = \"Somnadia\";\n",
+    "replace": "export const PRODUCT_NAME = \"Circadia\";\n",
+    "testFile": "src/lib/product-rename.test.ts",
+    "testName": "display surfaces contain no whole-word Circadia"
+  },
+  {
+    "id": "rename-invite-prefix-becomes-somnadia",
+    "why": "A somnadia invite prefix remints every tester's participant id, including James's golden invite.",
+    "file": "src/lib/invite.ts",
+    "find": "export const INVITE_DERIVE_PREFIX_V2 = \"circadia/invite/v2:\";\n",
+    "replace": "export const INVITE_DERIVE_PREFIX_V2 = \"somnadia/invite/v2:\";\n",
+    "testFile": "src/lib/product-rename.test.ts",
+    "testName": "frozen identities stay circadia, never somnadia"
+  },
+  {
+    "id": "rename-golden-pack-id-label",
+    "why": "Changing the pack-id HKDF label remints the Worker object for every invite, including the golden one.",
+    "file": "src/lib/pack-derive.ts",
+    "find": "export const PACK_ID_INFO = \"circadia/pack-id/v2\";\n",
+    "replace": "export const PACK_ID_INFO = \"somnadia/pack-id/v2\";\n",
+    "testFile": "src/lib/product-rename.test.ts",
+    "testName": "the golden v2 invite still derives the recorded participant, worker id, and bearer"
+  },
+  {
+    "id": "rename-circadian-word",
+    "why": "circadian is a real word. A rename that touches it is a false match.",
+    "file": "src/lib/research.ts",
+    "find": "    title: \"The wake time is the circadian anchor\",\n",
+    "replace": "    title: \"The wake time is the daily anchor\",\n",
+    "testFile": "src/lib/product-rename.test.ts",
+    "testName": "circadian is untouched"
+  },
+  {
+    "id": "rename-dock-deletes-old-app",
+    "why": "The install must leave Circadia.app alone. Deleting it is James's diary until he removes it.",
+    "file": "electron/install-both-native.cjs",
+    "find": "  console.log(\"Circadia.app and Circadia Operator.app are still installed if they were.\");\n",
+    "replace": "  require(\"node:fs\").rmSync(\"/Applications/Circadia.app\", { recursive: true, force: true });\n  console.log(\"Circadia.app and Circadia Operator.app are still installed if they were.\");\n",
+    "testFile": "src/lib/product-rename.test.ts",
+    "testName": "put-on-dock does not remove or move Circadia.app"
   }
 ]

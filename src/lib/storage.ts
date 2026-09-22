@@ -381,7 +381,7 @@ async function persistUnlockNow(login: string): Promise<void> {
     await phoneSecureSet(login, payload);
     return;
   }
-  // Circadia.app Keychain first — Node `security` ACL breaks after a Node path change.
+  // Somnadia.app Keychain first — Node `security` ACL breaks after a Node path change.
   await persistUnlockNative(login, payload);
   await persistUnlockViaApi(login, payload);
 }
@@ -553,7 +553,7 @@ export async function installLockedVault(
 export const FOLD_ERRORS = {
   session: "Log in on this device first, then fold the locked copy in.",
   login: "That copy is a different login. Use the same email or phone as this diary.",
-  password: "That copy was locked with a different password. Fold a copy saved from the Circadia that has the night.",
+  password: "That copy was locked with a different password. Fold a copy saved from the Somnadia that has the night.",
 } as const;
 
 /**
@@ -619,7 +619,7 @@ function diaryHasNights(state: CircadiaState): boolean {
 }
 
 /**
- * Pull nights that already live on the other Circadia into this open session.
+ * Pull nights that already live on the other Somnadia into this open session.
  * Packed Mac diary on the phone, USB/AirDrop inbox on the Dock. Same-date
  * pages keep the later write. A failed fold does not sign the user out.
  */
@@ -897,7 +897,7 @@ async function persistEncrypted(login: string, state: CircadiaState, gen: number
 
 async function readDiary(login: string, master: Uint8Array): Promise<CircadiaState> {
   const file = readRawVault()[login];
-  if (!file) throw new Error("Not a Circadia file.");
+  if (!file) throw new Error("Not a Somnadia file.");
   if (isVaultEnvelope(file)) {
     return hydrateState(await decryptPayload(file, master));
   }
@@ -1071,7 +1071,7 @@ async function unlockLocalDiary(
     dropMaster(login);
     if (openLogin === login) openLogin = null;
     plainByLogin.delete(login);
-    if (err instanceof Error && err.message === "Not a Circadia file.") {
+    if (err instanceof Error && err.message === "Not a Somnadia file.") {
       return { ok: false, error: AUTH_ERRORS.credentials };
     }
     return authCaught(err);
@@ -1299,7 +1299,7 @@ async function unlockLocalDiaryWithRecovery(
     dropMaster(login);
     if (openLogin === login) openLogin = null;
     plainByLogin.delete(login);
-    if (err instanceof Error && err.message === "Not a Circadia file.") {
+    if (err instanceof Error && err.message === "Not a Somnadia file.") {
       return { ok: false, error: AUTH_ERRORS.recovery };
     }
     const caught = authCaught(err);
@@ -1387,7 +1387,7 @@ export function importStateJson(raw: string): CircadiaState {
 
 export function hydrateState(parsed: unknown): CircadiaState {
   if (!parsed || typeof parsed !== "object") {
-    throw new Error("Not a Circadia file.");
+    throw new Error("Not a Somnadia file.");
   }
   const raw = parsed as Partial<CircadiaState>;
   const parked = parkLiveConsult({

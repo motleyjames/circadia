@@ -11,6 +11,7 @@ import { AUTH_ERRORS, defaultAuthMode, defaultContactField, identitiesFromVaultK
 import { fetchPackedDiary, packedDiaryStatus, readInlinePackedDiary } from "@/lib/packed-diary";
 import { isPhoneNative } from "@/lib/phone-native";
 import { isVaultEmpty, listDiaryLogins } from "@/lib/storage";
+import { PRODUCT_NAME } from "@/lib/product";
 import { APP_VERSION } from "@/lib/version";
 import { hapticSelect } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,7 @@ export function AuthGate() {
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
           <div className="gate-brand">
             <Mark className="size-8" />
-            <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">Circadia</h1>
+            <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">{PRODUCT_NAME}</h1>
           </div>
         </div>
       </div>
@@ -118,19 +119,19 @@ function DesktopAuthGate() {
         <div className="gate-brand">
           <Mark className="size-8" />
           <h1 className="font-heading mt-8 text-[2.55rem] leading-none tracking-tight text-zinc-50">
-            Circadia
+            {PRODUCT_NAME}
           </h1>
         </div>
         <p className="mt-4 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
           {brought
             ? "The locked diary is on this device. Log in with the same email or phone and password."
             : orphan && !named.length
-            ? "This device already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. The diary is encrypted here. Circadia will not contact you."
+            ? "This device already has a diary. Sign up to keep it. Email or phone plus a password is how you log back in. The diary is encrypted here. Somnadia will not contact you."
             : named.length
-              ? "Log in to the diary on this device. After that, Circadia stays signed in here until you log out. The file is encrypted here — Circadia does not keep your password, and there is no reset email."
+              ? "Log in to the diary on this device. After that, Somnadia stays signed in here until you log out. The file is encrypted here — Somnadia does not keep your password, and there is no reset email."
               : empty
-                ? "There is no diary on this device yet. Circadia lives here, not in the cloud — so there is no account to recover and no reset email. If you already have a diary on another device, log in with the same details, or bring a locked copy across."
-                : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this device — not a way for anyone to reach you. Circadia stays signed in here until you log out."}
+                ? "There is no diary on this device yet. Somnadia lives here, not in the cloud — so there is no account to recover and no reset email. If you already have a diary on another device, log in with the same details, or bring a locked copy across."
+                : "Sign up or log in. Email or phone plus a password opens the encrypted diary on this device — not a way for anyone to reach you. Somnadia stays signed in here until you log out."}
         </p>
 
         {named.length ? (
@@ -249,10 +250,10 @@ function DesktopAuthGate() {
             {mode === "signup"
               ? orphan
                 ? "This does not start you over. It attaches a login to the diary already here."
-                : "At least 8 characters. Circadia will not email or text you."
+                : "At least 8 characters. Somnadia will not email or text you."
               : mode === "recover"
-                ? "The recovery code is checked on this device. It is still valid after you use it. Circadia cannot email another."
-                : "Circadia cannot email a reset. If you saved a recovery code, you can use it instead."}
+                ? "The recovery code is checked on this device. It is still valid after you use it. Somnadia cannot email another."
+                : "Somnadia cannot email a reset. If you saved a recovery code, you can use it instead."}
           </p>
 
           {mode === "login" ? (
@@ -326,7 +327,7 @@ function DesktopAuthGate() {
         />
 
         <p className="mt-auto pt-10 text-[12px] leading-relaxed text-zinc-400">
-          The password is checked on this device. It is not sent to the person who built Circadia.
+          The password is checked on this device. It is not sent to the person who built Somnadia.
         </p>
         <p className="mt-3 text-[11px] tracking-[0.18em] text-zinc-500 uppercase">{APP_VERSION}</p>
       </div>

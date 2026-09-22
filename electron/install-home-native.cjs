@@ -7,7 +7,7 @@ const { assembleNativeApp, compileSwift, whichNode } = require("./native-bundle.
 function installNativeHome() {
   const repo = process.env.CIRCADIA_REPO || path.join(__dirname, "..");
   const swiftSrc = process.env.CIRCADIA_SWIFT || path.join(__dirname, "launcher.swift");
-  const dest = process.env.CIRCADIA_DEST || path.join(os.homedir(), "Applications", "Circadia.app");
+  const dest = process.env.CIRCADIA_DEST || path.join(os.homedir(), "Applications", "Somnadia.app");
   const binTmp = process.env.CIRCADIA_PREBUILT_BIN || path.join(os.tmpdir(), "CircadiaBin");
 
   if (process.env.CIRCADIA_PREBUILT_BIN) {

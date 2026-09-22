@@ -2,6 +2,7 @@
 
 import type { MouseEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { PRODUCT_NAME } from "@/lib/product";
 import { cn } from "@/lib/utils";
 
 export type OperatorNavId = "week" | "testers" | "invite" | "exports";
@@ -79,7 +80,7 @@ export function OperatorChrome({
     <div className="flex min-h-full flex-col bg-op-paper text-op-ink">
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-op-line bg-op-surface px-8">
         <div className="flex items-center gap-5">
-          <div className="font-heading text-[23px] font-medium tracking-[-0.02em] text-op-ink">Circadia</div>
+          <div className="font-heading text-[23px] font-medium tracking-[-0.02em] text-op-ink">{PRODUCT_NAME}</div>
           <div className="h-[22px] w-px bg-op-line" aria-hidden />
           <div className="text-[14px] text-op-muted">Shakedown</div>
           {fingerprint ? (

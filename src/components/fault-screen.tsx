@@ -1,9 +1,11 @@
 "use client";
 
+import { PRODUCT_NAME } from "@/lib/product";
+
 export function FaultScreen({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="night-sky flex min-h-dvh flex-col items-center justify-center px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-      <p className="text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">Circadia</p>
+      <p className="text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">{PRODUCT_NAME}</p>
       <h1 className="font-heading mt-3 text-3xl tracking-tight text-zinc-50">Something went wrong</h1>
       <p className="mt-3 max-w-[40ch] text-center text-[15px] leading-relaxed text-zinc-400">
         This screen hit a fault. Your mornings are still on this device.

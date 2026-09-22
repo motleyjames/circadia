@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Put Circadia + Circadia Operator on this Mac's Dock.
+# Put Somnadia + Somnadia Operator on this Mac's Dock.
 # Must run from the 0.6.5+ tree. Will refuse ~/rest-ai at 0.5.0.
 
 set -euo pipefail
@@ -9,17 +9,17 @@ node -e '
 const fs = require("fs");
 const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
 if (p.name !== "circadia") {
-  console.error("Not Circadia. cd into the Circadia 0.6.5 folder.");
+  console.error("Not Somnadia. cd into the Somnadia 0.6.5 folder.");
   process.exit(2);
 }
 const [maj, min, pat] = String(p.version).split(".").map((n) => parseInt(n, 10));
 const ok = maj > 0 || min > 6 || (min === 6 && pat >= 5);
 if (!ok) {
-  console.error("This folder is Circadia " + p.version + ". Dock install needs 0.6.5+.");
+  console.error("This folder is Somnadia " + p.version + ". Dock install needs 0.6.5+.");
   console.error("Do not run this in an old rest-ai clone.");
   process.exit(3);
 }
-console.log("Circadia " + p.version);
+console.log("Somnadia " + p.version);
 '
 
 if [[ "$(uname -s)" != "Darwin" ]]; then

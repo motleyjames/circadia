@@ -34,7 +34,7 @@ async function offerLockedCopy(): Promise<"share" | "downloads" | "file" | "abor
   if (isPhoneNative() && typeof nav.share === "function") {
     try {
       if (!nav.canShare || nav.canShare({ files: [file] })) {
-        await nav.share({ files: [file], title: "Circadia locked diary" });
+        await nav.share({ files: [file], title: "Somnadia locked diary" });
         return "share";
       }
     } catch (err) {
@@ -68,7 +68,7 @@ async function offerLockedCopy(): Promise<"share" | "downloads" | "file" | "abor
 const SAVE_MSG: Record<"share" | "downloads" | "file", string> = {
   share: "Locked copy sent.",
   downloads:
-    "Locked copy is in Downloads as circadia-locked.circadia. AirDrop it, then bring it on the other Circadia.",
+    "Locked copy is in Downloads as circadia-locked.circadia. AirDrop it, then bring it on the other Somnadia.",
   file: "Locked copy saved as circadia-locked.circadia.",
 };
 
@@ -175,7 +175,7 @@ export function FoldLockedDiaryButton({ className }: { className?: string }) {
           if (!open) setPending(null);
         }}
         title="Fold nights into this device?"
-        description="Mornings already here stay. If both copies have the same morning, the later page wins. You stay signed in. Circadia does not send this file anywhere — it is read on this device."
+        description="Mornings already here stay. If both copies have the same morning, the later page wins. You stay signed in. Somnadia does not send this file anywhere — it is read on this device."
         confirmLabel="Fold nights in"
         onConfirm={() => {
           const vault = pending;

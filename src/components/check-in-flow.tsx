@@ -377,7 +377,7 @@ function MorningInterview({
       {!existing && !filedLate ? <MissedMornings dates={missedDates} onPick={onPickMissed} /> : null}
       {!existing && state.reports.length === 0 ? (
         <p className="mt-3 max-w-[44ch] text-[12px] leading-relaxed text-zinc-500">
-          Already filed on the other Circadia?{" "}
+          Already filed on the other Somnadia?{" "}
           <DiaryLink href="/you" className="text-zinc-300">
             Fold a locked copy in You
           </DiaryLink>
@@ -709,7 +709,7 @@ function MorningInterview({
         ) : null}
 
         {current === "dream" ? (
-          <Block title="Dream report — optional" hint="Skip if you do not care. Toggle meaning only if you want Circadia to look.">
+          <Block title="Dream report — optional" hint="Skip if you do not care. Toggle meaning only if you want Somnadia to look.">
             <YesNo value={includeDream} onChange={setIncludeDream} yesLabel="Add a dream" noLabel="Skip" />
             {includeDream ? (
               <div className="mt-4 space-y-3">
