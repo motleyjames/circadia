@@ -1,19 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { OperatorChrome } from "@/components/operator-chrome";
 import { OperatorGate } from "@/components/operator-gate";
+import { useOperatorInbox } from "@/context/operator-inbox";
 import {
   buildConsoleModel,
   dismissOrphan,
   nameOrphan,
-  type ConsoleArrival,
-  type ConsoleReject,
   type ConsoleTester,
   type NightSlot,
 } from "@/lib/console-model";
-import { isCohort, readInviteBook, type Cohort, type OperatorInvite } from "@/lib/invite";
+import { isCohort, type Cohort, type OperatorInvite } from "@/lib/invite";
 import {
   formatInboxReceived,
   groupNightsByParticipant,
@@ -21,9 +20,7 @@ import {
   type ModeratorFault,
   type ModeratorNightPerson,
   type ModeratorPerson,
-  type ModeratorSnapshot,
 } from "@/lib/moderator";
-import { readOperatorKey, writeOperatorKey } from "@/lib/operator-session";
 import { formatDuration } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -36,16 +33,6 @@ const PACK_COLS =
   "grid grid-cols-[9.5rem_4.25rem_3.5rem_3.25rem_3.75rem_minmax(0,1fr)] gap-x-3";
 const TABLE_COLS =
   "grid grid-cols-[200px_124px_180px_116px_minmax(0,1fr)_120px] gap-6";
-
-type InboxBody = ModeratorSnapshot & {
-  ok?: boolean;
-  error?: string;
-  packs?: ConsoleArrival[];
-  rejects?: ConsoleReject[];
-  fingerprint?: string | null;
-  workerUnreachable?: boolean;
-  withdrawn?: string[];
-};
 
 const SECTION_COLOR: Record<string, string> = {
   safety: "text-op-safety",
@@ -62,64 +49,9 @@ const COHORTS: { id: Cohort; label: string }[] = [
 ];
 
 export default function ModeratorPage() {
-  const [key, setKey] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<InboxBody | null>(null);
-  const [book, setBook] = useState<OperatorInvite[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [booted, setBooted] = useState(false);
+  const { key, error, data, book, setBook, loading, booted, open, refresh } = useOperatorInbox();
   const [namingId, setNamingId] = useState<string | null>(null);
   const [whyOpen, setWhyOpen] = useState<number | null>(null);
-
-  const load = useCallback(async (secret: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [inboxRes, bookRes] = await Promise.all([
-        fetch("/api/moderator", { headers: { "x-circadia-mod": secret } }),
-        fetch("/api/moderator/book", { headers: { "x-circadia-mod": secret } }),
-      ]);
-      if (inboxRes.status === 401 || bookRes.status === 401) {
-        setData(null);
-        setKey("");
-        writeOperatorKey("");
-        setError("That passphrase is not the operator key.");
-        return;
-      }
-      const body = (await inboxRes.json()) as InboxBody;
-      if (!inboxRes.ok || !body.ok) {
-        setError(body.error ?? "Could not read the inbox.");
-        return;
-      }
-      setData(body);
-      setKey(secret);
-      writeOperatorKey(secret);
-      try {
-        const bookBody = (await bookRes.json()) as { ok?: boolean; invites?: unknown };
-        if (bookRes.ok && bookBody.ok) setBook(readInviteBook(bookBody.invites));
-      } catch {
-        setBook([]);
-      }
-    } catch {
-      setError("Could not reach the inbox on this machine.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const stored = readOperatorKey();
-    if (stored) void load(stored);
-    setBooted(true);
-  }, [load]);
-
-  useEffect(() => {
-    if (!key) return;
-    const timer = window.setInterval(() => {
-      void load(key);
-    }, 3 * 60 * 1000);
-    return () => window.clearInterval(timer);
-  }, [key, load]);
 
   function persistBook(next: OperatorInvite[]) {
     setBook(next);
@@ -150,7 +82,7 @@ export default function ModeratorPage() {
   if (!booted) return null;
 
   if (!key) {
-    return <OperatorGate error={error} loading={loading} onOpen={(secret) => void load(secret)} />;
+    return <OperatorGate error={error} loading={loading} onOpen={(secret) => void open(secret)} />;
   }
 
   return (
@@ -159,7 +91,7 @@ export default function ModeratorPage() {
       weekLabel={view.weekLabel}
       attentionCount={view.attentionCount}
       fingerprint={data?.fingerprint}
-      onRefresh={() => void load(key)}
+      onRefresh={refresh}
     >
       <div className="flex flex-col gap-6 px-12 py-9">
         <div className="flex flex-col gap-2">

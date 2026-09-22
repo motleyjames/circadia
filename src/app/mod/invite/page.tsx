@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { OperatorChrome } from "@/components/operator-chrome";
 import { OperatorGate } from "@/components/operator-gate";
 import { SendInviteCode } from "@/components/send-invite-code";
-import { buildInviteBook, invitePrivacySentence, type ConsoleArrival } from "@/lib/console-model";
-import { generateInvite, readInviteBook, type Cohort, type MintedInvite, type OperatorInvite } from "@/lib/invite";
-import { readOperatorKey, writeOperatorKey } from "@/lib/operator-session";
+import { useOperatorInbox } from "@/context/operator-inbox";
+import { buildInviteBook, invitePrivacySentence } from "@/lib/console-model";
+import { generateInvite, type Cohort, type MintedInvite, type OperatorInvite } from "@/lib/invite";
 import { cn } from "@/lib/utils";
 
 const INVITE_BOOK_KEY = "circadia-operator-invites";
@@ -18,78 +18,18 @@ const COHORTS: { id: Cohort; label: string; hint: string }[] = [
 ];
 
 export default function InvitePage() {
-  const [key, setKey] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [booted, setBooted] = useState(false);
-  const [invites, setInvites] = useState<OperatorInvite[]>([]);
-  const [arrivals, setArrivals] = useState<ConsoleArrival[]>([]);
+  const { key, error, data, book: invites, setBook, loading, booted, open, refresh } = useOperatorInbox();
   const [name, setName] = useState("");
   const [cohort, setCohort] = useState<Cohort>("stranger");
+  const [formError, setFormError] = useState<string | null>(null);
   const [created, setCreated] = useState<MintedInvite | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  const [fingerprint, setFingerprint] = useState<string | null>(null);
-  const [withdrawn, setWithdrawn] = useState<string[]>([]);
-
-  const load = useCallback(async (secret: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [bookRes, inboxRes] = await Promise.all([
-        fetch("/api/moderator/book", { headers: { "x-circadia-mod": secret } }),
-        fetch("/api/moderator", { headers: { "x-circadia-mod": secret } }),
-      ]);
-      if (bookRes.status === 401 || inboxRes.status === 401) {
-        setKey("");
-        writeOperatorKey("");
-        setError("That passphrase is not the operator key.");
-        return;
-      }
-      setKey(secret);
-      writeOperatorKey(secret);
-      try {
-        const bookBody = (await bookRes.json()) as { ok?: boolean; invites?: unknown };
-        if (bookRes.ok && bookBody.ok) {
-          const fromDisk = readInviteBook(bookBody.invites);
-          if (fromDisk.length) {
-            setInvites(fromDisk);
-          } else {
-            setInvites(readInviteBook(JSON.parse(localStorage.getItem(INVITE_BOOK_KEY) ?? "[]")));
-          }
-        }
-      } catch {
-        setInvites([]);
-      }
-      try {
-        const inbox = (await inboxRes.json()) as {
-          ok?: boolean;
-          packs?: ConsoleArrival[];
-          fingerprint?: string | null;
-          withdrawn?: string[];
-        };
-        if (inboxRes.ok && inbox.ok) {
-          setArrivals(inbox.packs ?? []);
-          setFingerprint(inbox.fingerprint ?? null);
-          setWithdrawn(inbox.withdrawn ?? []);
-        }
-      } catch {
-        setArrivals([]);
-      }
-    } catch {
-      setError("Could not reach the inbox on this machine.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const stored = readOperatorKey();
-    if (stored) void load(stored);
-    setBooted(true);
-  }, [load]);
+  const arrivals = data?.packs ?? [];
+  const fingerprint = data?.fingerprint ?? null;
+  const withdrawn = data?.withdrawn ?? [];
 
   function persist(next: OperatorInvite[]) {
-    setInvites(next);
+    setBook(next);
     localStorage.setItem(INVITE_BOOK_KEY, JSON.stringify(next));
     void fetch("/api/moderator/book", {
       method: "PUT",
@@ -106,8 +46,9 @@ export default function InvitePage() {
       setCreated(invite);
       setCopied(null);
       setName("");
+      setFormError(null);
     } catch {
-      setError("An invite needs a name on this Mac.");
+      setFormError("An invite needs a name on this Mac.");
     }
   }
 
@@ -124,7 +65,7 @@ export default function InvitePage() {
 
   if (!booted) return null;
   if (!key) {
-    return <OperatorGate error={error} loading={loading} onOpen={(secret) => void load(secret)} />;
+    return <OperatorGate error={error} loading={loading} onOpen={(secret) => void open(secret)} />;
   }
 
   const trimmed = name.trim();
@@ -132,7 +73,7 @@ export default function InvitePage() {
   const privacy = invitePrivacySentence(created?.name ?? trimmed);
 
   return (
-    <OperatorChrome active="invite" fingerprint={fingerprint} onRefresh={() => void load(key)}>
+    <OperatorChrome active="invite" fingerprint={fingerprint} onRefresh={refresh}>
       <div className="flex items-start gap-7 px-12 py-9">
         <section
           aria-labelledby="invite-title"
@@ -151,7 +92,7 @@ export default function InvitePage() {
             </p>
           </div>
 
-          {error ? <p className="text-[14px] text-op-safety">{error}</p> : null}
+          {error || formError ? <p className="text-[14px] text-op-safety">{error ?? formError}</p> : null}
 
           {created ? (
             <div className="flex flex-col gap-[18px]">
@@ -175,7 +116,7 @@ export default function InvitePage() {
                   onClick={() => {
                     setCreated(null);
                     setCopied(null);
-                    setError(null);
+                    setFormError(null);
                   }}
                   className="min-h-11 cursor-pointer border-0 bg-transparent text-[15px] font-semibold text-op-violet"
                 >
