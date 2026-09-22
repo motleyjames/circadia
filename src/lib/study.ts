@@ -479,9 +479,14 @@ export function validateStudyPack(raw: unknown): ValidateResult {
     const nightExtra = extraKeys(row, NIGHT_KEYS);
     if (nightExtra.length) return { ok: false, error: `Unknown night field: ${nightExtra[0]}` };
     const n = row as Record<string, unknown>;
-    if (typeof n.nightIndex !== "number" || !isClock(n.fellAsleepAt) || !isClock(n.wokeAt)) {
+    if (typeof n.nightIndex !== "number") {
       return { ok: false, error: "Invalid night clocks." };
     }
+    if (!isWallClock(n.fellAsleepAt) || !isWallClock(n.wokeAt)) {
+      return { ok: false, error: "Invalid night clocks." };
+    }
+    n.fellAsleepAt = normalizeClock(n.fellAsleepAt);
+    n.wokeAt = normalizeClock(n.wokeAt);
     if (typeof n.durationMinutes !== "number" || n.durationMinutes < 0 || n.durationMinutes > 24 * 60) {
       return { ok: false, error: "Invalid duration." };
     }

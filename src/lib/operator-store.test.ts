@@ -8,6 +8,7 @@ import {
   inviteBookPath,
   loadRejectedPacks,
   recordRejectedPack,
+  reconcileRejectedPacks,
   rejectLogPath,
 } from "./operator-store";
 
@@ -61,6 +62,22 @@ describe("operator store", () => {
       for (const row of disk as Record<string, unknown>[]) {
         expect(Object.keys(row).sort()).toEqual(["arrivedAt", "reason"]);
       }
+    } finally {
+      rmSync(inbox, { recursive: true, force: true });
+    }
+  });
+
+  it("inbox rejects that now parse are dropped from the log", () => {
+    const inbox = mkdtempSync(path.join(tmpdir(), "circadia-reconcile-"));
+    try {
+      recordRejectedPack(
+        { reason: "Invalid night clocks.", file: "study-aaaaaaaa-stamp.json", arrivedAt: "study-aaaaaaaa-stamp.json" },
+        inbox,
+      );
+      recordRejectedPack({ reason: "Invalid JSON.", arrivedAt: "2026-09-01T12:00:00.000Z" }, inbox);
+      const next = reconcileRejectedPacks([], inbox);
+      expect(next).toEqual([{ reason: "Invalid JSON.", arrivedAt: "2026-09-01T12:00:00.000Z" }]);
+      expect(loadRejectedPacks(inbox)).toEqual(next);
     } finally {
       rmSync(inbox, { recursive: true, force: true });
     }

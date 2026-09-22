@@ -315,6 +315,70 @@ describe("study pack night geometry", () => {
     expect(parseInboxPayload(pack).ok).toBe(true);
   });
 
+  it("a pack with ordinary night clocks and no in-bed fields validates", async () => {
+    const pack = buildStudyPack(hostileState());
+    const seed = pack.nights[0];
+    expect(seed).toBeTruthy();
+    const nights = [
+      { ...seed, nightIndex: 0, fellAsleepAt: "22:30", wokeAt: "08:30", inBedAt: undefined, triedToSleepAt: undefined, outOfBedAt: undefined },
+      { ...seed, nightIndex: 1, fellAsleepAt: "00:30", wokeAt: "08:00", inBedAt: undefined, triedToSleepAt: undefined, outOfBedAt: undefined },
+    ];
+    const shaped = { ...pack, nights };
+    expect(validateStudyPack(shaped).ok).toBe(true);
+    expect(parseInboxPayload(shaped).ok).toBe(true);
+
+    const { mkdtempSync, writeFileSync, rmSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    const tmp = mkdtempSync(join(tmpdir(), "circadia-clocks-ok-"));
+    writeFileSync(join(tmp, "index.html"), "<h1>Circadia</h1>");
+    const inbox = join(tmp, "inbox");
+    const started = await listen({ root: tmp, inbox, port: 0 });
+    try {
+      const res = await fetch(`${started.url}/api/study`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(shaped),
+      });
+      expect(res.status).toBe(200);
+      expect((await res.json()).ok).toBe(true);
+    } finally {
+      started.server.close();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("a clock that is not HH:MM within the day is rejected", async () => {
+    const pack = buildStudyPack(hostileState());
+    const seed = pack.nights[0];
+    expect(seed).toBeTruthy();
+    const bad = { ...pack, nights: [{ ...seed, fellAsleepAt: "25:00" }] };
+    const parsed = validateStudyPack(bad);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.error).toBe("Invalid night clocks.");
+    expect(parseInboxPayload(bad).ok).toBe(false);
+
+    const { mkdtempSync, writeFileSync, rmSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const { tmpdir } = await import("node:os");
+    const tmp = mkdtempSync(join(tmpdir(), "circadia-clocks-bad-"));
+    writeFileSync(join(tmp, "index.html"), "<h1>Circadia</h1>");
+    const inbox = join(tmp, "inbox");
+    const started = await listen({ root: tmp, inbox, port: 0 });
+    try {
+      const res = await fetch(`${started.url}/api/study`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(bad),
+      });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error).toBe("Invalid night clocks.");
+    } finally {
+      started.server.close();
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
   it("sleep efficiency survives the pack round trip", () => {
     const report = fullGeometryReport();
     const fromReport = nightGeometry(report);

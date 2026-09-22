@@ -65,6 +65,22 @@ export function loadRejectedPacks(inbox = studyInboxDir()): RejectedPack[] {
   }
 }
 
+function writeRejectedPacks(rows: readonly RejectedPack[], inbox: string): void {
+  ensureOperatorDir(inbox);
+  writeFileSync(rejectLogPath(inbox), JSON.stringify(rows, null, 2), { encoding: "utf8", mode: 0o600 });
+}
+
+/** Inbox-file rejects are replaced by what still fails to parse. Arrival-only rows have no file and stay. */
+export function reconcileRejectedPacks(
+  inboxFails: readonly RejectedPack[],
+  inbox = studyInboxDir(),
+): RejectedPack[] {
+  const arrivalOnly = loadRejectedPacks(inbox).filter((row) => !row.file);
+  const next = [...arrivalOnly, ...inboxFails];
+  writeRejectedPacks(next, inbox);
+  return next;
+}
+
 export function recordRejectedPack(
   entry: { reason: string; arrivedAt?: string; file?: string },
   inbox = studyInboxDir(),

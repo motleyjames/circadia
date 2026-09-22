@@ -72,6 +72,7 @@ export type DataHealthItem = {
   kind: "unreadable" | "orphan";
   message: string;
   detail: string | null;
+  files: string[];
   participantId: string | null;
   actions: { id: "name" | "dismiss" | "why"; label: string }[];
 };
@@ -270,7 +271,7 @@ export function buildConsoleModel(input: {
     .filter((id) => buckets[id].length)
     .map((id) => ({ id, title: SECTION_TITLE[id], testers: buckets[id] }));
 
-  const health = dataHealth(weekTesters, input.rejects, input.now);
+  const health = dataHealth(weekTesters, liveRejects(input.rejects, input.arrivals), input.now);
 
   return {
     weekLabel: weekOfLabel(input.now),
@@ -538,18 +539,50 @@ function completionLine(testers: readonly ConsoleTester[]): CompletionLine | nul
   };
 }
 
+function liveRejects(
+  rejects: readonly ConsoleReject[],
+  arrivals: readonly ConsoleArrival[],
+): ConsoleReject[] {
+  const parsed = new Set(arrivals.map((row) => row.file));
+  return rejects.filter((row) => !row.file || !parsed.has(row.file));
+}
+
+function reasonPhrase(reason: string): string {
+  const trimmed = reason.trim().replace(/\.$/, "");
+  return trimmed ? trimmed.charAt(0).toLowerCase() + trimmed.slice(1) : "unreadable pack";
+}
+
+function rejectInstant(row: ConsoleReject): number {
+  const fromFile = parseInboxStamp(row.arrivedAt);
+  if (fromFile) return fromFile.getTime();
+  const iso = new Date(row.arrivedAt);
+  return Number.isFinite(iso.getTime()) ? iso.getTime() : Number.POSITIVE_INFINITY;
+}
+
 function dataHealth(
   testers: readonly ConsoleTester[],
   rejects: readonly ConsoleReject[],
   now: Date,
 ): DataHealthItem[] | null {
   const items: DataHealthItem[] = [];
+  const byReason = new Map<string, ConsoleReject[]>();
   for (const row of rejects) {
-    const when = whenLabel(row.arrivedAt, now);
+    const list = byReason.get(row.reason) ?? [];
+    list.push(row);
+    byReason.set(row.reason, list);
+  }
+  for (const [reason, rows] of byReason) {
+    const ordered = [...rows].sort((a, b) => rejectInstant(a) - rejectInstant(b));
+    const first = whenLabel(ordered[0]!.arrivedAt, now);
+    const lastStamp = ordered.at(-1)!.arrivedAt;
+    const last = rejectInstant(ordered.at(-1)!) !== rejectInstant(ordered[0]!) ? whenLabel(lastStamp, now) : null;
+    const range = last ? `${first} to ${last}` : first;
+    const n = rows.length;
     items.push({
       kind: "unreadable",
-      message: `One pack arriving ${when} couldn't be read. A tester's night may be missing.`,
-      detail: row.reason,
+      message: `${n} ${n === 1 ? "pack" : "packs"} from ${range} couldn't be read: ${reasonPhrase(reason)}.`,
+      detail: null,
+      files: ordered.map((row) => row.file ?? row.arrivedAt),
       participantId: null,
       actions: [{ id: "why", label: "See why" }],
     });
@@ -561,6 +594,7 @@ function dataHealth(
       kind: "orphan",
       message: `Code ${code} isn't in your book. Add a name, or check whether a tester mistyped their code.`,
       detail: null,
+      files: [],
       participantId: tester.participantId,
       actions: [
         { id: "name", label: "Add a name" },

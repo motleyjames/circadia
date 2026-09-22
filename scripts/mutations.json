@@ -751,7 +751,7 @@
     "why": "Data health with nothing to say must be absent. Rendering '0 faults' is a pipeline count in different clothes.",
     "file": "src/lib/console-model.ts",
     "find": "  return items.length ? items : null;\n",
-    "replace": "  return items.length ? items : [{ kind: \"unreadable\", message: \"0 faults\", detail: null, participantId: null, actions: [] }];\n",
+    "replace": "  return items.length ? items : [{ kind: \"unreadable\", message: \"0 faults\", detail: null, files: [], participantId: null, actions: [] }];\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "data health is absent when there is nothing to report"
   },
@@ -907,5 +907,41 @@
     "replace": "        href={`https://988lifeline.org`}\n",
     "testFile": "src/lib/native-schemes.test.ts",
     "testName": "the patient app still renders 988 as a tel: link, and tel: is in the shell's allowlist"
+  },
+  {
+    "id": "pack-ordinary-clocks-need-inBedAt",
+    "why": "Ordinary HH:MM nights without in-bed fields are every pack collected so far. Requiring inBedAt refuses testers who already filed.",
+    "file": "src/lib/study.ts",
+    "find": "    if (typeof n.nightIndex !== \"number\") {\n      return { ok: false, error: \"Invalid night clocks.\" };\n    }\n",
+    "replace": "    if (typeof n.nightIndex !== \"number\") {\n      return { ok: false, error: \"Invalid night clocks.\" };\n    }\n    if (n.inBedAt === undefined) return { ok: false, error: \"Invalid night clocks.\" };\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a pack with ordinary night clocks and no in-bed fields validates"
+  },
+  {
+    "id": "pack-accepts-out-of-day-clock",
+    "why": "25:00 is not a time of day. Accepting any string as a clock stores nights the diary could not have filed.",
+    "file": "src/lib/study.ts",
+    "find": "    if (!isWallClock(n.fellAsleepAt) || !isWallClock(n.wokeAt)) {\n      return { ok: false, error: \"Invalid night clocks.\" };\n    }\n",
+    "replace": "    if (typeof n.fellAsleepAt !== \"string\" || typeof n.wokeAt !== \"string\") {\n      return { ok: false, error: \"Invalid night clocks.\" };\n    }\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "a clock that is not HH:MM within the day is rejected"
+  },
+  {
+    "id": "console-keeps-parsed-reject",
+    "why": "A pack that now parses must leave data health. Keeping its old reject row reports nights that are no longer missing.",
+    "file": "src/lib/console-model.ts",
+    "find": "  return rejects.filter((row) => !row.file || !parsed.has(row.file));\n",
+    "replace": "  return [...rejects];\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a pack that parses is absent from data health"
+  },
+  {
+    "id": "console-lists-each-reject",
+    "why": "Nine packs with the same reason must be one line with a count and a date range, not nine identical bullets.",
+    "file": "src/lib/console-model.ts",
+    "find": "    const range = last ? `${first} to ${last}` : first;\n    const n = rows.length;\n",
+    "replace": "    const range = first;\n    const n = 1;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "rejects sharing a reason render as one line with a count and date range"
   }
 ]
