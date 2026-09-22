@@ -10,6 +10,26 @@
   --font-sans: var(--font-sans);
   --font-heading: var(--font-heading);
   --font-mono: var(--font-sans);
+  --font-console: var(--font-console);
+  --color-op-paper: #f4f5f7;
+  --color-op-surface: #ffffff;
+  --color-op-ink: #171a26;
+  --color-op-body: #3b4152;
+  --color-op-muted: #5a6072;
+  --color-op-line: #e3e5ea;
+  --color-op-line-soft: #edeef2;
+  --color-op-violet: #4f3fb8;
+  --color-op-violet-deep: #3a2c99;
+  --color-op-violet-soft: #eeebfb;
+  --color-op-violet-wash: #f4f2fd;
+  --color-op-violet-ring: #b9afec;
+  --color-op-violet-track: #e9e6fa;
+  --color-op-violet-edge: #d6d0f3;
+  --color-op-safety: #b42318;
+  --color-op-amber: #a15c07;
+  --color-op-slot: #f3f4f7;
+  --color-op-slot-edge: #b6bac6;
+  --color-op-input: #cfd2db;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -749,16 +769,37 @@ select,
 }
 
 .operator-board {
-  background: #07060c;
+  --op-paper: #f4f5f7;
+  --op-surface: #ffffff;
+  --op-ink: #171a26;
+  --op-body: #3b4152;
+  --op-muted: #5a6072;
+  --op-line: #e3e5ea;
+  --op-line-soft: #edeef2;
+  --op-violet: #4f3fb8;
+  --op-safety: #b42318;
+  --op-amber: #a15c07;
+  --op-radius: 12px;
+  --op-radius-sm: 8px;
+  background: var(--op-paper);
+  color: var(--op-ink);
+  font-family: var(--font-console), var(--font-sans), system-ui, sans-serif;
   font-variant-numeric: tabular-nums lining-nums;
+  color-scheme: light;
 }
 
-.operator-board::before {
-  content: "";
-  display: block;
-  height: 1px;
-  background: #c4a574;
-  opacity: 0.7;
+.operator-board :where(a, button, [role="button"], input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--op-violet);
+  outline-offset: 2px;
+}
+
+html.operator {
+  color-scheme: light;
+}
+
+html.operator body {
+  background: var(--color-op-paper);
+  color: var(--color-op-ink);
 }
 
 .native-drag {

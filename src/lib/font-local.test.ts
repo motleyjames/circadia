@@ -11,8 +11,12 @@ describe("local self-hosted fonts", () => {
     expect(layout).toContain('variable: "--font-heading"');
     expect(existsSync("src/app/fonts/Outfit-Variable-latin.woff2")).toBe(true);
     expect(existsSync("src/app/fonts/Fraunces-Variable-latin.woff2")).toBe(true);
+    expect(existsSync("src/app/fonts/InstrumentSans-Variable-latin.woff2")).toBe(true);
     expect(existsSync("src/app/fonts/OFL-Outfit.txt")).toBe(true);
     expect(existsSync("src/app/fonts/OFL-Fraunces.txt")).toBe(true);
+    expect(existsSync("src/app/fonts/OFL-InstrumentSans.txt")).toBe(true);
+    expect(layout).toContain('variable: "--font-console"');
+    expect(layout).toContain("InstrumentSans-Variable-latin.woff2");
   });
 
   it("keeps Fraunces variation settings on .font-heading", () => {
@@ -20,5 +24,7 @@ describe("local self-hosted fonts", () => {
     expect(css).toContain('font-variation-settings: "SOFT" 50, "WONK" 0.4');
     expect(css).toContain("var(--font-heading)");
     expect(css).toContain("var(--font-sans)");
+    expect(css).toContain("var(--font-console)");
+    expect(css).toContain("font-variant-numeric: tabular-nums lining-nums");
   });
 });
