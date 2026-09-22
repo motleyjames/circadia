@@ -49,3 +49,9 @@ _Checked against the source and found not to apply._
 '"name":' appears in package.json at package.json:2 "name": "circadia",.
 
 `probe: check_value__package_json_name_field_2297`
+
+**Decisions (James, Sep 22)**
+- d_1_0 declined: package.json "name" stays "circadia" by design. It is an identity, not a display name, and was not changed.
+- d_1_1 declined: manifest "id", "start_url" and "scope" are unchanged in cf11d35; only "name" and "short_name" changed.
+- d_1_2 declined: no service worker exists; grep for serviceWorker in src and public returns nothing.
+- d_1_3 declined: Somnadia has no OAuth sign-in.
