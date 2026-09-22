@@ -2,12 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { Mark } from "@/components/mark";
-import { Input } from "@/components/ui/input";
-import { DEFAULT_MOD_KEY } from "@/lib/mod-key-shared";
+import { OperatorChrome } from "@/components/operator-chrome";
+import { OperatorGate } from "@/components/operator-gate";
+import {
+  buildConsoleModel,
+  type ConsoleArrival,
+  type ConsoleReject,
+  type ConsoleTester,
+  type NightSlot,
+} from "@/lib/console-model";
+import { readInviteBook, type OperatorInvite } from "@/lib/invite";
 import {
   formatInboxReceived,
-  groupFaultsByParticipant,
   groupNightsByParticipant,
   shortParticipantId,
   type ModeratorFault,
@@ -15,12 +21,9 @@ import {
   type ModeratorPerson,
   type ModeratorSnapshot,
 } from "@/lib/moderator";
+import { readOperatorKey, writeOperatorKey } from "@/lib/operator-session";
 import { formatDuration } from "@/lib/time";
-import { generateInvite, readInviteBook, type Cohort, type OperatorInvite } from "@/lib/invite";
-import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
-
-type Tab = "people" | "nights" | "faults";
 
 const NIGHT_COLS =
   "grid grid-cols-[7.25rem_3.5rem_3.25rem_3.75rem_minmax(0,1fr)_3rem_1rem] gap-x-3";
@@ -29,35 +32,60 @@ const SIGNUP_COLS =
 const FAULT_COLS = "grid grid-cols-[7.25rem_3.5rem_minmax(0,1fr)_1rem] gap-x-3";
 const PACK_COLS =
   "grid grid-cols-[9.5rem_4.25rem_3.5rem_3.25rem_3.75rem_minmax(0,1fr)] gap-x-3";
+const TABLE_COLS =
+  "grid grid-cols-[200px_124px_180px_116px_minmax(0,1fr)_120px] gap-6";
+
+type InboxBody = ModeratorSnapshot & {
+  ok?: boolean;
+  error?: string;
+  packs?: ConsoleArrival[];
+  rejects?: ConsoleReject[];
+};
+
+const SECTION_COLOR: Record<string, string> = {
+  safety: "text-op-safety",
+  "not-filing": "text-op-amber",
+  "in-baseline": "text-op-ink",
+  "baseline-complete": "text-op-violet",
+};
 
 export default function ModeratorPage() {
   const [key, setKey] = useState("");
-  const [draft, setDraft] = useState("");
-  const [tab, setTab] = useState<Tab>("nights");
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<ModeratorSnapshot | null>(null);
+  const [data, setData] = useState<InboxBody | null>(null);
+  const [book, setBook] = useState<OperatorInvite[]>([]);
   const [loading, setLoading] = useState(false);
+  const [booted, setBooted] = useState(false);
 
   const load = useCallback(async (secret: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/moderator", {
-        headers: { "x-circadia-mod": secret },
-      });
-      if (res.status === 401) {
+      const [inboxRes, bookRes] = await Promise.all([
+        fetch("/api/moderator", { headers: { "x-circadia-mod": secret } }),
+        fetch("/api/moderator/book", { headers: { "x-circadia-mod": secret } }),
+      ]);
+      if (inboxRes.status === 401 || bookRes.status === 401) {
         setData(null);
-        setError("That passphrase is not the operator key.");
         setKey("");
+        writeOperatorKey("");
+        setError("That passphrase is not the operator key.");
         return;
       }
-      const body = (await res.json()) as ModeratorSnapshot & { ok?: boolean; error?: string };
-      if (!res.ok || !body.ok) {
+      const body = (await inboxRes.json()) as InboxBody;
+      if (!inboxRes.ok || !body.ok) {
         setError(body.error ?? "Could not read the inbox.");
         return;
       }
       setData(body);
       setKey(secret);
+      writeOperatorKey(secret);
+      try {
+        const bookBody = (await bookRes.json()) as { ok?: boolean; invites?: unknown };
+        if (bookRes.ok && bookBody.ok) setBook(readInviteBook(bookBody.invites));
+      } catch {
+        setBook([]);
+      }
     } catch {
       setError("Could not reach the inbox on this machine.");
     } finally {
@@ -65,149 +93,238 @@ export default function ModeratorPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const stored = readOperatorKey();
+    if (stored) void load(stored);
+    setBooted(true);
+  }, [load]);
+
   const nightPeople = useMemo(
     () => (data ? groupNightsByParticipant(data.nights) : []),
     [data],
   );
-  const faultPeople = useMemo(
-    () => (data ? groupFaultsByParticipant(data.faults) : []),
-    [data],
+  const view = useMemo(
+    () =>
+      buildConsoleModel({
+        arrivals: data?.packs ?? [],
+        book,
+        rejects: data?.rejects ?? [],
+        now: new Date(),
+      }),
+    [data, book],
   );
 
+  if (!booted) return null;
+
   if (!key) {
-    return (
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-16">
-        <Mark className="size-8" />
-        <p className="mt-8 text-[11px] font-medium tracking-[0.22em] text-zinc-500 uppercase">
-          Operator
-        </p>
-        <h1 className="font-heading mt-3 text-[2.2rem] leading-none tracking-tight text-zinc-50">
-          Circadia does not live here.
-        </h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-zinc-400">
-          This is the operator. The diary is a different app, on a different port. Local default is{" "}
-          <span className="text-zinc-200">{DEFAULT_MOD_KEY}</span> until you set{" "}
-          <span className="text-zinc-200">CIRCADIA_MOD_KEY</span>.
-        </p>
-        <form
-          className="mt-8"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void load(draft.trim());
-          }}
-        >
-          <Input
-            type="password"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Passphrase"
-            className="h-14 rounded-2xl border-white/10 bg-white/4 px-5 text-zinc-50"
-            autoFocus
-          />
-          {error ? <p className="mt-3 text-[13px] text-red-300">{error}</p> : null}
-          <button
-            type="submit"
-            disabled={loading || !draft.trim()}
-            className="mt-4 h-14 w-full cursor-pointer rounded-full btn-primary text-[15px] font-medium disabled:opacity-50"
-          >
-            {loading ? "Opening…" : "Open the inbox"}
-          </button>
-        </form>
-      </div>
-    );
+    return <OperatorGate error={error} loading={loading} onOpen={(secret) => void load(secret)} />;
   }
 
-  const snapshot = data;
-
   return (
-    <div className="mx-auto min-h-dvh max-w-5xl px-6 pt-5 pb-16 md:px-10">
-      <header className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-            <Mark className="size-4" />
-            <p className="text-[10px] font-medium tracking-[0.22em] text-zinc-500 uppercase">
-              Operator · {APP_VERSION}
-            </p>
-          </div>
-          <h1 className="font-heading mt-2 text-[1.85rem] leading-none tracking-tight text-zinc-50">
-            Inbox
+    <OperatorChrome active="week" weekLabel={view.weekLabel} attentionCount={view.attentionCount}>
+      <div className="flex flex-col gap-6 px-12 py-9">
+        <div className="flex flex-col gap-2">
+          <h1 className="font-heading text-[36px] leading-[1.1] font-normal tracking-[-0.02em] text-op-ink">
+            Your testers this week
           </h1>
-          <p className="mt-2 max-w-[52ch] text-[12px] leading-relaxed text-zinc-500">
-            Participant numbers only. No names, email, phone, or body measurements.
-          </p>
+          {view.completion ? (
+            <p className="max-w-[820px] text-[15px] leading-normal text-op-body">
+              Completion so far is{" "}
+              <strong className="font-semibold text-op-ink">{view.completion.percentLabel}</strong>{" "}
+              {view.completion.sentence.replace(/^Completion so far is \d+% /, "")}
+            </p>
+          ) : (
+            <p className="max-w-[820px] text-[15px] leading-normal text-op-body">
+              Named testers with a known night count will make a completion sentence here.
+            </p>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => void load(key)}
-          className="mt-1 cursor-pointer text-[12px] text-zinc-500 hover:text-zinc-200"
-        >
-          {loading ? "Refreshing…" : "Refresh"}
-        </button>
-      </header>
 
-      {error ? <p className="mt-4 text-[13px] text-red-300">{error}</p> : null}
+        {error ? <p className="text-[14px] text-op-safety">{error}</p> : null}
 
-      <div className="mt-8 flex flex-wrap items-end gap-x-10 gap-y-4 border-b border-white/[0.08] pb-5">
-        <Metric label="Signups" value={snapshot?.userCount ?? "—"} />
-        <Metric label="Nights" value={snapshot?.nightCount ?? "—"} />
-        <Metric label="Packs" value={snapshot?.nightPackCount ?? "—"} />
-        <Metric label="Faults" value={snapshot?.faultCount ?? "—"} />
+        {view.health ? (
+          <section
+            aria-labelledby="health-title"
+            className="overflow-hidden rounded-xl border border-op-line bg-op-surface"
+          >
+            <h2 id="health-title" className="px-6 pt-3.5 pb-2.5 text-[14px] font-semibold text-op-ink">
+              Data health
+            </h2>
+            {view.health.map((item, index) => (
+              <div
+                key={`${item.kind}-${index}`}
+                className="flex items-center gap-3.5 border-t border-op-line-soft px-6 py-3"
+              >
+                <div className="h-2 w-2 shrink-0 rounded-full bg-op-amber" aria-hidden />
+                <div className="min-w-0 flex-1 text-[14px] leading-snug text-op-ink">
+                  {item.message}
+                  {item.detail ? (
+                    <span className="mt-1 block text-[13px] text-op-muted">{item.detail}</span>
+                  ) : null}
+                </div>
+                <a
+                  href={item.href}
+                  className="flex min-h-11 items-center text-[14px] font-semibold text-op-violet no-underline hover:text-op-violet-deep"
+                >
+                  {item.actionLabel}
+                </a>
+              </div>
+            ))}
+          </section>
+        ) : null}
+
+        {view.empty ? (
+          <section className="rounded-xl border border-op-line bg-op-surface px-6 py-10">
+            <p className="text-[16px] font-semibold text-op-ink">No testers have sent a pack yet.</p>
+            <p className="mt-2 max-w-[46ch] text-[15px] leading-relaxed text-op-body">
+              Invite the first one. Their name stays on this Mac; only the code reaches their phone.
+            </p>
+            <a
+              href="/mod/invite"
+              className="mt-5 inline-flex h-12 items-center rounded-lg bg-op-violet px-5 text-[15px] font-semibold text-white no-underline"
+            >
+              Invite a tester
+            </a>
+          </section>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-op-line bg-op-surface">
+            <div
+              className={cn(
+                TABLE_COLS,
+                "border-b border-op-line px-6 py-3 text-[13px] text-op-muted",
+              )}
+            >
+              <div>Tester</div>
+              <div>Baseline</div>
+              <div>14 nights</div>
+              <div>Sleep efficiency</div>
+              <div>Why it is here</div>
+              <div>Last sync</div>
+            </div>
+            {view.sections.map((section) => (
+              <div key={section.id}>
+                <div className="flex items-baseline gap-2.5 border-b border-op-line-soft bg-[#fafafb] px-6 py-3">
+                  <div className={cn("text-[14px] font-semibold", SECTION_COLOR[section.id])}>
+                    {section.title}
+                  </div>
+                  <div className="text-[13px] text-op-muted tabular-nums">{section.testers.length}</div>
+                </div>
+                {section.testers.map((tester) => (
+                  <TesterRow
+                    key={tester.participantId}
+                    tester={tester}
+                    nightPerson={nightPeople.find((row) => row.participantId === tester.participantId)}
+                    person={data?.people.find((row) => row.participantId === tester.participantId)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+    </OperatorChrome>
+  );
+}
 
-      <InviteBook secret={key} />
-
-      <div className="mt-6 flex gap-6 border-b border-white/[0.08]">
-        {(
-          [
-            ["nights", "Nights", nightPeople.length],
-            ["people", "Signups", snapshot?.userCount ?? 0],
-            ["faults", "Faults", faultPeople.length],
-          ] as const
-        ).map(([id, label, count]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
+function TesterRow({
+  tester,
+  nightPerson,
+  person,
+}: {
+  tester: ConsoleTester;
+  nightPerson?: ModeratorNightPerson;
+  person?: ModeratorPerson;
+}) {
+  const [open, setOpen] = useState(false);
+  const histId = `tester-hist-${tester.participantId}`;
+  const elapsed = tester.nightsElapsed;
+  const stripLabel =
+    elapsed !== null
+      ? `${tester.nightsFiled} of ${elapsed} nights filed so far; bar height is sleep efficiency`
+      : `${tester.nightsFiled} nights filed; bar height is sleep efficiency`;
+  return (
+    <div className="border-b border-op-line-soft">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        aria-controls={histId}
+        {...onActivate(() => setOpen((value) => !value))}
+        className={cn(TABLE_COLS, "w-full cursor-pointer items-center px-6 py-3.5 text-left")}
+      >
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="truncate text-[16px] font-semibold tabular-nums text-op-ink">
+            {tester.name ?? shortParticipantId(tester.participantId)}
+          </div>
+          <div className={cn("text-[13px]", tester.inBook ? "text-op-muted" : "text-op-amber")}>
+            {tester.cohortLabel}
+          </div>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <div className="text-[15px] tabular-nums text-op-ink">{tester.progressLabel}</div>
+          <div className="text-[13px] text-op-muted tabular-nums">{tester.filedLabel}</div>
+        </div>
+        <NightStrip slots={tester.slots} label={stripLabel} />
+        <div className="text-[20px] font-semibold tabular-nums text-op-ink">
+          {tester.sleepEfficiencyPct !== null ? `${tester.sleepEfficiencyPct}%` : "—"}
+        </div>
+        <div className="flex flex-col items-start gap-1">
+          <div
             className={cn(
-              "-mb-px cursor-pointer border-b pb-2.5 text-[12px]",
-              tab === id
-                ? "border-[#c4a574] text-[#c4a574]"
-                : "border-transparent text-zinc-500 hover:text-zinc-300",
+              "text-[14px] leading-snug",
+              tester.section === "safety"
+                ? "text-op-safety"
+                : tester.section === "not-filing"
+                  ? "text-op-amber"
+                  : "text-op-ink",
             )}
           >
-            {label}
-            <span className="ml-2 text-zinc-400">{count}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-1 overflow-x-auto">
-        <div className="min-w-[44rem]">
-          {tab === "nights" ? (
-            !nightPeople.length ? (
-              <Empty>No night packs yet. They arrive after a real morning — not a sample week.</Empty>
-            ) : (
-              <NightLedger people={nightPeople} />
-            )
-          ) : null}
-
-          {tab === "people" ? (
-            !snapshot?.people.length ? (
-              <Empty>No signups yet. A join still counts as a user — without a name.</Empty>
-            ) : (
-              <SignupLedger people={snapshot.people} />
-            )
-          ) : null}
-
-          {tab === "faults" ? (
-            !faultPeople.length ? (
-              <Empty>No faults. That is the desired state.</Empty>
-            ) : (
-              <FaultLedger people={faultPeople} />
-            )
+            {tester.reason}
+          </div>
+          {tester.action && tester.actionHref ? (
+            <a
+              href={tester.actionHref}
+              onClick={(event) => event.stopPropagation()}
+              className="text-[14px] font-semibold text-op-violet no-underline hover:text-op-violet-deep"
+            >
+              {tester.action}
+            </a>
           ) : null}
         </div>
+        <div className="text-[14px] text-op-muted">{tester.lastSync}</div>
       </div>
+      {open ? (
+        <div id={histId} className="border-t border-op-line-soft bg-[#fafafb] px-6 py-3">
+          {nightPerson ? <NightRow person={nightPerson} /> : null}
+          {person ? <SignupRow person={person} /> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function NightStrip({ slots, label }: { slots: NightSlot[]; label: string }) {
+  return (
+    <div className="flex h-[30px] items-end gap-[3px]" role="img" aria-label={label}>
+      {slots.map((slot, index) => (
+        <div
+          key={index}
+          className={cn(
+            "relative h-[30px] w-2.5 overflow-hidden rounded-[2px] box-border",
+            slot.kind === "bar" && "border border-solid border-op-violet-edge bg-op-violet-track",
+            slot.kind === "outline" && "border border-solid border-op-slot-edge bg-transparent",
+            slot.kind === "dashed" && "border border-dashed border-op-slot-edge bg-transparent",
+            slot.kind === "empty" && "border border-solid border-op-slot bg-op-slot",
+          )}
+        >
+          {slot.kind === "bar" && slot.efficiencyPct !== null ? (
+            <div
+              className="absolute right-0 bottom-0 left-0 bg-op-violet"
+              style={{ height: `${Math.max(0, Math.min(100, slot.efficiencyPct))}%` }}
+            />
+          ) : null}
+        </div>
+      ))}
     </div>
   );
 }
@@ -218,7 +335,7 @@ function NightLedger({ people }: { people: ModeratorNightPerson[] }) {
       <div
         className={cn(
           NIGHT_COLS,
-          "h-8 items-center border-b border-white/[0.08] px-1 text-[10px] font-medium tracking-[0.16em] text-zinc-500 uppercase",
+          "h-8 items-center border-b border-op-line px-1 text-[10px] font-medium tracking-[0.16em] text-op-muted uppercase",
         )}
       >
         <span>Id</span>
@@ -244,35 +361,30 @@ function NightRow({ person }: { person: ModeratorNightPerson }) {
   const histId = `night-hist-${person.participantId}`;
   const flagText = latest.flags.length ? latest.flags.join(" · ") : "—";
   return (
-    <div
-      className={cn(
-        "border-b border-white/[0.06]",
-        open && "bg-white/[0.02] shadow-[inset_2px_0_0_0_#c4a574]",
-      )}
-    >
+    <div className={cn("border-b border-op-line-soft", open && "bg-op-violet-wash")}>
       <div
         role="button"
         tabIndex={0}
         aria-expanded={open}
         aria-controls={histId}
         {...onActivate(() => setOpen((v) => !v))}
-        className={cn(NIGHT_COLS, "h-11 w-full cursor-pointer items-center px-1 text-left hover:bg-white/[0.03]")}
+        className={cn(NIGHT_COLS, "h-11 w-full cursor-pointer items-center px-1 text-left")}
       >
-        <span className="truncate text-[13px] font-medium tracking-[0.04em] text-zinc-100">{id}</span>
-        <span className="text-right text-[13px] text-zinc-200">{latest.nightCount}</span>
-        <span className="text-right text-[13px] text-zinc-300">
+        <span className="truncate text-[13px] font-medium tracking-[0.04em] text-op-ink">{id}</span>
+        <span className="text-right text-[13px] text-op-ink">{latest.nightCount}</span>
+        <span className="text-right text-[13px] text-op-body">
           {latest.meanRating != null ? latest.meanRating.toFixed(1) : "—"}
         </span>
-        <span className="text-right text-[13px] text-zinc-300">
+        <span className="text-right text-[13px] text-op-body">
           {latest.lastDurationMinutes != null ? formatDuration(latest.lastDurationMinutes) : "—"}
         </span>
-        <span className="truncate text-[10px] tracking-[0.14em] text-zinc-500 uppercase" title={flagText}>
+        <span className="truncate text-[10px] tracking-[0.14em] text-op-muted uppercase" title={flagText}>
           {flagText}
         </span>
-        <span className="text-right text-[13px] text-zinc-500">{person.packs.length}</span>
+        <span className="text-right text-[13px] text-op-muted">{person.packs.length}</span>
         <ChevronRight
           aria-hidden
-          className={cn("size-3.5 text-zinc-400 transition-transform", open && "rotate-90")}
+          className={cn("size-3.5 text-op-muted transition-transform", open && "rotate-90")}
         />
       </div>
       {open ? (
@@ -280,7 +392,7 @@ function NightRow({ person }: { person: ModeratorNightPerson }) {
           <div
             className={cn(
               PACK_COLS,
-              "h-6 items-center text-[10px] font-medium tracking-[0.16em] text-zinc-400 uppercase",
+              "h-6 items-center text-[10px] font-medium tracking-[0.16em] text-op-muted uppercase",
             )}
           >
             <span>Received</span>
@@ -291,18 +403,15 @@ function NightRow({ person }: { person: ModeratorNightPerson }) {
             <span>Flags</span>
           </div>
           {person.packs.map((pack, i) => (
-            <div
-              key={`${pack.receivedAt}-${i}`}
-              className={cn(PACK_COLS, "h-8 items-center text-[12px] text-zinc-400")}
-            >
-              <span className="text-zinc-500">{formatInboxReceived(pack.receivedAt)}</span>
-              <span className="text-zinc-300">v{pack.appVersion}</span>
+            <div key={`${pack.receivedAt}-${i}`} className={cn(PACK_COLS, "h-8 items-center text-[12px] text-op-body")}>
+              <span className="text-op-muted">{formatInboxReceived(pack.receivedAt)}</span>
+              <span className="text-op-ink">v{pack.appVersion}</span>
               <span className="text-right">{pack.nightCount}</span>
               <span className="text-right">{pack.meanRating != null ? pack.meanRating.toFixed(1) : "—"}</span>
               <span className="text-right">
                 {pack.lastDurationMinutes != null ? formatDuration(pack.lastDurationMinutes) : "—"}
               </span>
-              <span className="truncate text-[10px] tracking-[0.12em] text-zinc-500 uppercase">
+              <span className="truncate text-[10px] tracking-[0.12em] text-op-muted uppercase">
                 {pack.flags.length ? pack.flags.join(" · ") : "—"}
               </span>
             </div>
@@ -319,7 +428,7 @@ function SignupLedger({ people }: { people: ModeratorPerson[] }) {
       <div
         className={cn(
           SIGNUP_COLS,
-          "h-8 items-center border-b border-white/[0.08] px-1 text-[10px] font-medium tracking-[0.16em] text-zinc-500 uppercase",
+          "h-8 items-center border-b border-op-line px-1 text-[10px] font-medium tracking-[0.16em] text-op-muted uppercase",
         )}
       >
         <span>Id</span>
@@ -344,47 +453,39 @@ function SignupRow({ person }: { person: ModeratorPerson }) {
   const windowLabel =
     person.targetSleep && person.targetWake ? `${person.targetSleep}–${person.targetWake}` : "—";
   return (
-    <div
-      className={cn(
-        "border-b border-white/[0.06]",
-        open && "bg-white/[0.02] shadow-[inset_2px_0_0_0_#c4a574]",
-      )}
-    >
+    <div className={cn("border-b border-op-line-soft", open && "bg-op-violet-wash")}>
       <div
         role="button"
         tabIndex={0}
         aria-expanded={open}
         aria-controls={histId}
         {...onActivate(() => setOpen((v) => !v))}
-        className={cn(SIGNUP_COLS, "h-11 w-full cursor-pointer items-center px-1 text-left hover:bg-white/[0.03]")}
+        className={cn(SIGNUP_COLS, "h-11 w-full cursor-pointer items-center px-1 text-left")}
       >
-        <span className="truncate text-[13px] font-medium tracking-[0.04em] text-zinc-100">{id}</span>
-        <span className="text-[12px] text-zinc-400">{person.ageBand ?? "—"}</span>
-        <span className="text-right text-[13px] text-zinc-200">{person.nightsLogged}</span>
-        <span className="text-right text-[13px] text-zinc-400">{person.faultCount}</span>
-        <span className="truncate text-[12px] text-zinc-400">{windowLabel}</span>
-        <span className="text-right text-[12px] text-zinc-500">
+        <span className="truncate text-[13px] font-medium tracking-[0.04em] text-op-ink">{id}</span>
+        <span className="text-[12px] text-op-muted">{person.ageBand ?? "—"}</span>
+        <span className="text-right text-[13px] text-op-ink">{person.nightsLogged}</span>
+        <span className="text-right text-[13px] text-op-muted">{person.faultCount}</span>
+        <span className="truncate text-[12px] text-op-muted">{windowLabel}</span>
+        <span className="text-right text-[12px] text-op-muted">
           {person.lastAppVersion ? `v${person.lastAppVersion}` : "—"}
         </span>
         <ChevronRight
           aria-hidden
-          className={cn("size-3.5 text-zinc-400 transition-transform", open && "rotate-90")}
+          className={cn("size-3.5 text-op-muted transition-transform", open && "rotate-90")}
         />
       </div>
       {open ? (
-        <div id={histId} className="grid gap-x-8 gap-y-2 px-1 pt-1 pb-4 pl-[7.25rem] text-[12px] max-md:pl-1 sm:grid-cols-2">
+        <div className="grid gap-x-8 gap-y-2 px-1 pt-1 pb-4 pl-[7.25rem] text-[12px] max-md:pl-1 sm:grid-cols-2" id={histId}>
           <Fact label="Mean rating" value={person.meanRating != null ? person.meanRating.toFixed(1) : "—"} />
           <Fact
             label="Last sleep"
             value={person.lastDurationMinutes != null ? formatDuration(person.lastDurationMinutes) : "—"}
           />
-          <Fact
-            label="Struggles"
-            value={person.struggles.length ? person.struggles.join(" + ") : "—"}
-          />
+          <Fact label="Struggles" value={person.struggles.length ? person.struggles.join(" + ") : "—"} />
           <Fact label="Flags" value={person.flags.length ? person.flags.join(" · ") : "—"} />
           {person.lastFault ? (
-            <p className="sm:col-span-2 text-[12px] text-amber-200/80">Last fault: {person.lastFault}</p>
+            <p className="text-[12px] text-op-amber sm:col-span-2">Last fault: {person.lastFault}</p>
           ) : null}
         </div>
       ) : null}
@@ -402,7 +503,7 @@ function FaultLedger({
       <div
         className={cn(
           FAULT_COLS,
-          "h-8 items-center border-b border-white/[0.08] px-1 text-[10px] font-medium tracking-[0.16em] text-zinc-500 uppercase",
+          "h-8 items-center border-b border-op-line px-1 text-[10px] font-medium tracking-[0.16em] text-op-muted uppercase",
         )}
       >
         <span>Id</span>
@@ -428,38 +529,33 @@ function FaultRow({
   const id = shortParticipantId(person.participantId);
   const histId = `fault-hist-${person.participantId}`;
   return (
-    <div
-      className={cn(
-        "border-b border-white/[0.06]",
-        open && "bg-white/[0.02] shadow-[inset_2px_0_0_0_#c4a574]",
-      )}
-    >
+    <div className={cn("border-b border-op-line-soft", open && "bg-op-violet-wash")}>
       <div
         role="button"
         tabIndex={0}
         aria-expanded={open}
         aria-controls={histId}
         {...onActivate(() => setOpen((v) => !v))}
-        className={cn(FAULT_COLS, "h-11 w-full cursor-pointer items-center px-1 text-left hover:bg-white/[0.03]")}
+        className={cn(FAULT_COLS, "h-11 w-full cursor-pointer items-center px-1 text-left")}
       >
-        <span className="truncate text-[13px] font-medium tracking-[0.04em] text-zinc-100">{id}</span>
-        <span className="text-right text-[13px] text-zinc-200">{person.faults.length}</span>
-        <span className="truncate text-[13px] text-zinc-400">{latest.message}</span>
+        <span className="truncate text-[13px] font-medium tracking-[0.04em] text-op-ink">{id}</span>
+        <span className="text-right text-[13px] text-op-ink">{person.faults.length}</span>
+        <span className="truncate text-[13px] text-op-muted">{latest.message}</span>
         <ChevronRight
           aria-hidden
-          className={cn("size-3.5 text-zinc-400 transition-transform", open && "rotate-90")}
+          className={cn("size-3.5 text-op-muted transition-transform", open && "rotate-90")}
         />
       </div>
       {open ? (
         <ol id={histId} className="space-y-3 px-1 pt-1 pb-4 pl-[7.25rem] max-md:pl-1">
           {person.faults.map((fault, i) => (
             <li key={`${fault.at}-${i}`}>
-              <p className="text-[11px] text-zinc-500">
+              <p className="text-[11px] text-op-muted">
                 {new Date(fault.at).toLocaleString()}
                 {fault.href ? ` · ${fault.href}` : ""}
                 {` · v${fault.appVersion}`}
               </p>
-              <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-200">{fault.message}</p>
+              <p className="mt-0.5 text-[13px] leading-relaxed text-op-ink">{fault.message}</p>
             </li>
           ))}
         </ol>
@@ -480,126 +576,11 @@ function onActivate(fn: () => void) {
   };
 }
 
-const INVITE_BOOK_KEY = "circadia-operator-invites";
-
-function InviteBook({ secret }: { secret: string }) {
-  const [invites, setInvites] = useState<OperatorInvite[]>([]);
-  const [name, setName] = useState("");
-  const [cohort, setCohort] = useState<Cohort>("stranger");
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/moderator/book", { headers: { "x-circadia-mod": secret } });
-        const body = (await res.json()) as { ok?: boolean; invites?: unknown };
-        if (!cancelled && res.ok && body.ok) {
-          const fromDisk = readInviteBook(body.invites);
-          if (fromDisk.length) {
-            setInvites(fromDisk);
-            return;
-          }
-        }
-      } catch {
-        /* fall through to localStorage */
-      }
-      if (cancelled) return;
-      try {
-        setInvites(readInviteBook(JSON.parse(localStorage.getItem(INVITE_BOOK_KEY) ?? "[]")));
-      } catch {
-        setInvites([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [secret]);
-
-  function persist(next: OperatorInvite[]) {
-    setInvites(next);
-    localStorage.setItem(INVITE_BOOK_KEY, JSON.stringify(next));
-    void fetch("/api/moderator/book", {
-      method: "PUT",
-      headers: { "content-type": "application/json", "x-circadia-mod": secret },
-      body: JSON.stringify({ invites: next }),
-    });
-  }
-
-  return (
-    <section className="mt-8 rounded-2xl border border-white/[0.08] p-4">
-      <p className="text-[10px] font-medium tracking-[0.22em] text-zinc-500 uppercase">Shakedown book</p>
-      <p className="mt-1 text-[12px] text-zinc-500">Names and cohort stay on this Mac. The pack only carries the code.</p>
-      <form
-        className="mt-4 flex flex-wrap items-end gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void (async () => {
-            try {
-              persist([await generateInvite(name, cohort), ...invites]);
-              setName("");
-            } catch {
-              /* name or cohort rejected */
-            }
-          })();
-        }}
-      >
-        <label className="text-[12px] text-zinc-500">
-          Name
-          <Input
-            className="mt-1 h-10 w-48 border-white/10 bg-white/4 text-zinc-50"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <label className="text-[12px] text-zinc-500">
-          Cohort
-          <select
-            className="mt-1 h-10 rounded-md border border-white/10 bg-transparent px-2 text-zinc-200"
-            value={cohort}
-            onChange={(event) => setCohort(event.target.value as Cohort)}
-          >
-            <option value="friend">friend</option>
-            <option value="stranger">stranger</option>
-            <option value="lab">lab</option>
-          </select>
-        </label>
-        <button type="submit" className="h-10 cursor-pointer rounded-full btn-primary px-4 text-[13px]">
-          Mint a code
-        </button>
-      </form>
-      {invites.length ? (
-        <ul className="mt-4 space-y-2 text-[12px] text-zinc-400">
-          {invites.map((row) => (
-            <li key={row.participantId}>
-              <span className="text-zinc-200">{row.name}</span>
-              <span className="mx-2 text-zinc-600">{row.cohort}</span>
-              <span className="font-mono text-zinc-300">{row.code}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </section>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div>
-      <p className="font-heading text-[1.65rem] leading-none text-zinc-50">{value}</p>
-      <p className="mt-1.5 text-[10px] tracking-[0.18em] text-zinc-500 uppercase">{label}</p>
-    </div>
-  );
-}
-
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[10px] tracking-[0.16em] text-zinc-400 uppercase">{label}</p>
-      <p className="mt-0.5 text-zinc-300">{value}</p>
+      <p className="text-[10px] tracking-[0.16em] text-op-muted uppercase">{label}</p>
+      <p className="mt-0.5 text-op-body">{value}</p>
     </div>
   );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-  return <p className="px-1 py-10 text-[13px] text-zinc-500">{children}</p>;
 }

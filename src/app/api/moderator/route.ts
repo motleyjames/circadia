@@ -5,8 +5,9 @@ import { isOperatorSurface } from "@/lib/surface";
 import { moderatorKeyOk } from "@/lib/mod-key";
 import { parseInboxPayload } from "@/lib/inbox-payload";
 import { summarizeInbox } from "@/lib/moderator";
-import { recordRejectedPack } from "@/lib/operator-store";
+import { loadRejectedPacks, recordRejectedPack } from "@/lib/operator-store";
 import { studyInboxDir } from "@/lib/study-inbox";
+import type { StudyPack } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -47,5 +48,18 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, ...summarizeInbox(files) });
+  const packs: { file: string; pack: StudyPack }[] = [];
+  for (const file of files) {
+    const parsed = parseInboxPayload(file.payload);
+    if (parsed.ok && parsed.kind === "study") {
+      packs.push({ file: file.file, pack: parsed.value });
+    }
+  }
+
+  return NextResponse.json({
+    ok: true,
+    ...summarizeInbox(files),
+    packs,
+    rejects: loadRejectedPacks(dir),
+  });
 }

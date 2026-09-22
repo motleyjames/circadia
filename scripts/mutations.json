@@ -1,7 +1,7 @@
 [
   {
     "id": "fold-drops-incoming-episode",
-    "why": "mergeDiaryStates returns local.episode instead of the folded result, so an episode that exists only on the incoming device is silently dropped on a Mac/phone fold — the 0.9.0 '...local' regression that the fold was written to close.",
+    "why": "mergeDiaryStates returns local.episode instead of the folded result, so an episode that exists only on the incoming device is silently dropped on a Mac/phone fold \u2014 the 0.9.0 '...local' regression that the fold was written to close.",
     "file": "src/lib/diary-fold.ts",
     "find": "    episode: folded.episode,\n",
     "replace": "    episode: local.episode,\n",
@@ -10,7 +10,7 @@
   },
   {
     "id": "window-built-outside-factory",
-    "why": "Invariant 1 is enforced textually: episode.test.ts walks every non-test .ts/.tsx under src/ (sourceFiles(\"src\")) and requires /prescribedInBed\\s*:/ to match episode.ts alone. src/lib/storage.ts is inside that scan scope and already assembles a TreatmentWindow literal in coerceTreatmentWindow, staying off the scan only because it uses property shorthand. Making that key explicit is the realistic drift — a second construction site for a treatment window appears in a diary-hydration module — and it typechecks identically, so no other test changes behaviour.",
+    "why": "Invariant 1 is enforced textually: episode.test.ts walks every non-test .ts/.tsx under src/ (sourceFiles(\"src\")) and requires /prescribedInBed\\s*:/ to match episode.ts alone. src/lib/storage.ts is inside that scan scope and already assembles a TreatmentWindow literal in coerceTreatmentWindow, staying off the scan only because it uses property shorthand. Making that key explicit is the realistic drift \u2014 a second construction site for a treatment window appears in a diary-hydration module \u2014 and it typechecks identically, so no other test changes behaviour.",
     "file": "src/lib/storage.ts",
     "find": "    id: w.id,\n    prescribedInBed,\n    prescribedOutOfBed,\n",
     "replace": "    id: w.id,\n    prescribedInBed: prescribedInBed,\n    prescribedOutOfBed,\n",
@@ -82,7 +82,7 @@
   },
   {
     "id": "recovery-breaks-unaware-client",
-    "why": "Adding recovery strips wrap and leaves kdf 3. A client that has never heard of recovery — the phone that has not updated yet — then treats the correct password as wrong.",
+    "why": "Adding recovery strips wrap and leaves kdf 3. A client that has never heard of recovery \u2014 the phone that has not updated yet \u2014 then treats the correct password as wrong.",
     "file": "src/lib/password.ts",
     "find": "  return { ...lock, recovery: recoveryWrap };\n",
     "replace": "  return { ...lock, wrap: undefined, kdf: 3, recovery: recoveryWrap };\n",
@@ -253,7 +253,7 @@
   },
   {
     "id": "sync-email-collapses-tags",
-    "why": "Normalization strips dots and plus-tags. ada.lovelace and ada+sync collapse onto other addresses — the kdf:2 class of lockout.",
+    "why": "Normalization strips dots and plus-tags. ada.lovelace and ada+sync collapse onto other addresses \u2014 the kdf:2 class of lockout.",
     "file": "src/lib/sync-account.ts",
     "find": "  return raw.trim().toLowerCase();\n",
     "replace": "  return raw.trim().toLowerCase().replace(/\\+.*@/, \"@\").replace(/\\./g, \"\");\n",
@@ -298,7 +298,7 @@
   },
   {
     "id": "sync-lookup-auth-decrypts",
-    "why": "The record is encrypted under lookupAuth. Possessing the hop-1 bearer — which the Worker sees — reads the account record.",
+    "why": "The record is encrypted under lookupAuth. Possessing the hop-1 bearer \u2014 which the Worker sees \u2014 reads the account record.",
     "file": "src/lib/sync-account.ts",
     "find": "  const envelope = await encryptPayload(plain, lookupKey);\n",
     "replace": "  const envelope = await encryptPayload(plain, lookupAuth);\n",
@@ -325,7 +325,7 @@
   },
   {
     "id": "pack-requires-inBedAt",
-    "why": "inBedAt becomes required, so every pre-0.10.0 night — every pack collected so far — fails validation and never arrives.",
+    "why": "inBedAt becomes required, so every pre-0.10.0 night \u2014 every pack collected so far \u2014 fails validation and never arrives.",
     "file": "src/lib/study.ts",
     "find": "    if (n.inBedAt !== undefined) {\n      if (!isWallClock(n.inBedAt)) return { ok: false, error: \"Invalid night clocks.\" };\n",
     "replace": "    if (n.inBedAt === undefined) return { ok: false, error: \"Invalid night clocks.\" };\n    if (n.inBedAt !== undefined) {\n      if (!isWallClock(n.inBedAt)) return { ok: false, error: \"Invalid night clocks.\" };\n",
@@ -582,7 +582,7 @@
     "find": "    out.push({ category: flag.category, episodeNight: flag.episodeNight });\n",
     "replace": "    out.push({ ...flag, category: flag.category, episodeNight: flag.episodeNight });\n",
     "testFile": "src/lib/study.test.ts",
-    "testName": "a flag carries a category and an episodeNight only — no text survives"
+    "testName": "a flag carries a category and an episodeNight only \u2014 no text survives"
   },
   {
     "id": "flag-allowlist-grows",
@@ -595,7 +595,7 @@
   },
   {
     "id": "receivers-reject-new-fields",
-    "why": "Leaving safetyFlags off TOP_KEYS refuses every pack that carries a flag — the fifth-occurrence trap.",
+    "why": "Leaving safetyFlags off TOP_KEYS refuses every pack that carries a flag \u2014 the fifth-occurrence trap.",
     "file": "src/lib/study.ts",
     "find": "  \"nightsElapsed\",\n  \"safetyFlags\",\n",
     "replace": "  \"nightsElapsed\",\n",
@@ -640,7 +640,7 @@
   },
   {
     "id": "fold-drops-incoming-flags",
-    "why": "mergeDiaryStates keeps only local.safetyFlags, so a flag that exists only on the incoming device is dropped — the same class of bug as the 0.9.0 incoming-episode loss.",
+    "why": "mergeDiaryStates keeps only local.safetyFlags, so a flag that exists only on the incoming device is dropped \u2014 the same class of bug as the 0.9.0 incoming-episode loss.",
     "file": "src/lib/diary-fold.ts",
     "find": "    safetyFlags: mergeSafetyFlags(local.safetyFlags, incoming.safetyFlags),\n",
     "replace": "    safetyFlags: local.safetyFlags ?? [],\n",
@@ -658,7 +658,7 @@
   },
   {
     "id": "reject-stores-payload",
-    "why": "Spreading the caller's entry onto the reject row writes whatever they passed — a name, a dream, the pack itself — into a file on this Mac.",
+    "why": "Spreading the caller's entry onto the reject row writes whatever they passed \u2014 a name, a dream, the pack itself \u2014 into a file on this Mac.",
     "file": "src/lib/operator-store.ts",
     "find": "  const next: RejectedPack = {\n    reason: String(entry.reason || \"Rejected.\").trim().slice(0, 500) || \"Rejected.\",\n    arrivedAt: entry.arrivedAt?.trim() || new Date().toISOString(),\n  };\n",
     "replace": "  const next: RejectedPack = {\n    ...entry,\n    reason: String(entry.reason || \"Rejected.\").trim().slice(0, 500) || \"Rejected.\",\n    arrivedAt: entry.arrivedAt?.trim() || new Date().toISOString(),\n  };\n",
@@ -682,5 +682,122 @@
     "replace": "    _ = event\n",
     "testFile": "src/lib/dock-window-drag.test.ts",
     "testName": "both windows configure a drag region, exclude interactive elements, and keep the title bar hidden"
+  },
+  {
+    "id": "console-tester-in-two-sections",
+    "why": "A tester who matches two rules must still appear once. Pushing every row into in-baseline as well as their section double-counts the queue.",
+    "file": "src/lib/console-model.ts",
+    "find": "    if (tester.section === \"safety\") buckets.safety.push(tester);\n    else if (tester.section === \"not-filing\") buckets[\"not-filing\"].push(tester);\n",
+    "replace": "    buckets[\"in-baseline\"].push(tester);\n    if (tester.section === \"safety\") buckets.safety.push(tester);\n    else if (tester.section === \"not-filing\") buckets[\"not-filing\"].push(tester);\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a tester appears in exactly one section, following the precedence order"
+  },
+  {
+    "id": "console-safety-loses-precedence",
+    "why": "Not-filing before safety hides a flagged tester under adherence, so the one thing that must never be missed is missed.",
+    "file": "src/lib/console-model.ts",
+    "find": "  if (flags.length > 0) return \"safety\";\n  if (notFiling) return \"not-filing\";\n",
+    "replace": "  if (notFiling) return \"not-filing\";\n  if (flags.length > 0) return \"safety\";\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "safety outranks everything: a flagged tester who is also not filing appears only under Safety"
+  },
+  {
+    "id": "console-estimates-missing-elapsed",
+    "why": "Guessing completion against a 14-night baseline when nightsElapsed is absent invents a number the pack never sent.",
+    "file": "src/lib/console-model.ts",
+    "find": "    nightsElapsed === null || nightsElapsed <= 0 ? null : nightsFiled / nightsElapsed;\n",
+    "replace": "    nightsElapsed === null || nightsElapsed <= 0 ? nightsFiled / BASELINE_NIGHTS : nightsFiled / nightsElapsed;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "completion is unknown \u2014 never a number \u2014 when nightsElapsed is absent"
+  },
+  {
+    "id": "console-missed-night-zeros-efficiency",
+    "why": "Dividing scored nights by nightsElapsed treats a missed morning as 0% efficiency, which is not a night that was filed.",
+    "file": "src/lib/console-model.ts",
+    "find": "  const sleepEfficiencyPct = scored.length\n    ? Math.round(scored.reduce((sum, n) => sum + n, 0) / scored.length)\n    : null;\n",
+    "replace": "  const sleepEfficiencyPct = nightsElapsed\n    ? Math.round(scored.reduce((sum, n) => sum + n, 0) / nightsElapsed)\n    : null;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a missed night never lowers sleep efficiency"
+  },
+  {
+    "id": "console-missed-slot-is-empty",
+    "why": "An elapsed night that was not filed must be a dashed slot. Rendering it empty hides the miss.",
+    "file": "src/lib/console-model.ts",
+    "find": "      slots.push({ kind: \"dashed\", efficiencyPct: null });\n",
+    "replace": "      slots.push({ kind: \"empty\", efficiencyPct: null });\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "filed nights 0, 1 and 3 with nightsElapsed 5 yield slots: bar, bar, dashed, bar, dashed, then empty"
+  },
+  {
+    "id": "console-draws-preenrollment",
+    "why": "A night filed before enrollment has no episodeNight. Drawing it on nightIndex puts a bar in a slot that is not part of the episode.",
+    "file": "src/lib/console-model.ts",
+    "find": "      if (night.episodeNight === undefined) continue;\n      if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n",
+    "replace": "      if (night.episodeNight === undefined) {\n        byNight.set(night.nightIndex, { ...night, episodeNight: night.nightIndex });\n        continue;\n      }\n      if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "pre-enrollment nights are never drawn"
+  },
+  {
+    "id": "console-sentence-includes-orphans",
+    "why": "The completion sentence is for named testers with a known count. Including orphans lets a mistyped code move the one number on the screen.",
+    "file": "src/lib/console-model.ts",
+    "find": "  const covered = testers.filter((row) => row.inBook && row.nightsElapsed !== null && row.nightsElapsed > 0);\n",
+    "replace": "  const covered = testers.filter((row) => row.nightsElapsed !== null && row.nightsElapsed > 0);\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "the completion sentence excludes orphans and unknowns, and reports how many testers it covers"
+  },
+  {
+    "id": "console-health-zero-faults",
+    "why": "Data health with nothing to say must be absent. Rendering '0 faults' is a pipeline count in different clothes.",
+    "file": "src/lib/console-model.ts",
+    "find": "  return items.length ? items : null;\n",
+    "replace": "  return items.length ? items : [{ kind: \"unreadable\", message: \"0 faults\", actionLabel: \"\", href: \"/mod\", detail: null }];\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "data health is absent when there is nothing to report"
+  },
+  {
+    "id": "console-name-from-id",
+    "why": "A name that did not come from the book is an invented identity. Showing the id as a name makes an orphan look named.",
+    "file": "src/lib/console-model.ts",
+    "find": "  const name = inBook ? invite.name : null;\n",
+    "replace": "  const name = inBook ? invite.name : shortTesterId(participantId);\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a name appears only when the book supplies it"
+  },
+  {
+    "id": "console-renders-unknown-flag",
+    "why": "Crisis and mania must not appear even if a malformed pack carried them. Accepting any string undoes the allowlist.",
+    "file": "src/lib/console-model.ts",
+    "find": "    if (!isPackSafetyCategory(category)) continue;\n",
+    "replace": "    if (typeof category !== \"string\") continue;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a category outside the two allowlisted never renders, even if a malformed pack carried one"
+  },
+  {
+    "id": "console-picks-longest-pack",
+    "why": "Choosing the pack with the most nights lets a stale snapshot hide a new safety flag.",
+    "file": "src/lib/console-model.ts",
+    "find": "  const newest = ordered[ordered.length - 1]!;\n",
+    "replace": "  const newest = [...ordered].sort((a, b) => a.pack.nights.length - b.pack.nights.length).at(-1)!;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a safety flag in a tester's newest pack is shown even when an older pack carries more nights"
+  },
+  {
+    "id": "console-keeps-older-night",
+    "why": "When two packs file the same episodeNight, the older geometry must not win. Skipping a key that is already set keeps the stale night.",
+    "file": "src/lib/console-model.ts",
+    "find": "      byNight.set(night.episodeNight, night);\n",
+    "replace": "      if (!byNight.has(night.episodeNight)) byNight.set(night.episodeNight, night);\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "a night present in two packs appears once, from the newer"
+  },
+  {
+    "id": "console-ships-sample-name",
+    "why": "A sample name from the design next to real packs makes every other number on the screen doubtful.",
+    "file": "src/lib/console-model.ts",
+    "find": "export const CONSOLE_NAME_SOURCE = \"invite-book\" as const;\n",
+    "replace": "export const CONSOLE_NAME_SOURCE = \"Rosa M.\" as const;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "no design data ships"
   }
 ]

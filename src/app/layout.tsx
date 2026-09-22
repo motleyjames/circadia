@@ -6,6 +6,8 @@ import { PHONE_CLASS_BOOT } from "@/lib/phone-native";
 import { APP_VERSION } from "@/lib/version";
 import "./globals.css";
 
+const operator = process.env.CIRCADIA_SURFACE === "mod";
+
 const outfit = localFont({
   src: "./fonts/Outfit-Variable-latin.woff2",
   variable: "--font-sans",
@@ -20,6 +22,14 @@ const fraunces = localFont({
   display: "swap",
   weight: "100 900",
   adjustFontFallback: "Times New Roman",
+});
+
+const instrument = localFont({
+  src: "./fonts/InstrumentSans-Variable-latin.woff2",
+  variable: "--font-console",
+  display: "swap",
+  weight: "400 700",
+  adjustFontFallback: "Arial",
 });
 
 export const metadata: Metadata = {
@@ -45,7 +55,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07060f",
+  themeColor: process.env.CIRCADIA_SURFACE === "mod" ? "#F4F5F7" : "#07060f",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -54,7 +64,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`dark ${outfit.variable} ${fraunces.variable} h-full overflow-hidden antialiased`}>
+    <html
+      lang="en"
+      className={`${operator ? "operator" : "dark"} ${outfit.variable} ${fraunces.variable} ${instrument.variable} h-full overflow-hidden antialiased`}
+    >
       <head>
         <meta name="circadia-version" content={APP_VERSION} />
         <script dangerouslySetInnerHTML={{ __html: PHONE_CLASS_BOOT }} />
