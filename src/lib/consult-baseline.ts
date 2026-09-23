@@ -77,6 +77,29 @@ function wait(solo: boolean): string {
   return solo ? WAIT_SOLO : WAIT_CLINIC;
 }
 
+export const BASELINE_WHY =
+  "One or two nights say very little — sleep swings a lot from one night to the next. Fourteen nights show the usual ones, the bad ones, and weekdays against weekends. Clinics usually ask for one to two weeks of diary before any treatment starts, and two gives the fairer picture.";
+
+export const BASELINE_CLOCK =
+  'Watching the clock at night tends to keep people awake — every check is a small jolt of "how long have I been lying here". The diary only needs your best guess in the morning. A rough answer from memory is worth more than an exact one that cost you sleep.';
+
+export const BASELINE_AFTER_SOLO =
+  "Your Notes open and you can see all fourteen nights. After that, Somnadia goes back to its usual reminders and notes.";
+
+export const BASELINE_AFTER_CLINIC =
+  "Your Notes open and you can see all fourteen nights. Your clinician reads the same diary, and the plan comes from there — fitted to your nights rather than a general rule.";
+
+export const BASELINE_MISSED =
+  "That is fine. You can file the last few mornings from memory on the morning screen; they are marked late so nobody mistakes them for same-morning answers. If you cannot remember a night, leave it — a gap is more honest than a guess.";
+
+export function baselineChangeReply(solo: boolean): string {
+  return `Nothing needs to change for these two weeks. For these two weeks the most useful thing you can do is sleep the way you usually do and fill in the mornings honestly, the bad ones included. There is no score to improve and no way to fail this. ${wait(solo)}`;
+}
+
+export function baselineAfterReply(solo: boolean): string {
+  return solo ? BASELINE_AFTER_SOLO : BASELINE_AFTER_CLINIC;
+}
+
 function who(solo: boolean): string {
   return solo ? "this test" : "your clinician";
 }
@@ -138,7 +161,7 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return {
       kind: "baseline",
       reply: {
-        text: "One or two nights say very little — sleep swings a lot from one night to the next. Fourteen nights show the usual ones, the bad ones, and weekdays against weekends. Clinics usually ask for one to two weeks of diary before any treatment starts, and two gives the fairer picture.",
+        text: BASELINE_WHY,
         citations: ["sleep-regularity"],
       },
     };
@@ -147,7 +170,7 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return {
       kind: "baseline",
       reply: {
-        text: 'Watching the clock at night tends to keep people awake — every check is a small jolt of "how long have I been lying here". The diary only needs your best guess in the morning. A rough answer from memory is worth more than an exact one that cost you sleep.',
+        text: BASELINE_CLOCK,
         citations: ["racing-mind"],
       },
     };
@@ -156,9 +179,7 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return {
       kind: "baseline",
       reply: {
-        text: solo
-          ? "Your Notes open and you can see all fourteen nights. After that, Somnadia goes back to its usual reminders and notes."
-          : "Your Notes open and you can see all fourteen nights. Your clinician reads the same diary, and the plan comes from there — fitted to your nights rather than a general rule.",
+        text: baselineAfterReply(solo),
         citations: [],
       },
     };
@@ -167,7 +188,7 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return {
       kind: "baseline",
       reply: {
-        text: "That is fine. You can file the last few mornings from memory on the morning screen; they are marked late so nobody mistakes them for same-morning answers. If you cannot remember a night, leave it — a gap is more honest than a guess.",
+        text: BASELINE_MISSED,
         citations: [],
       },
     };
@@ -178,7 +199,7 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return {
       kind: "baseline",
       reply: {
-        text: `Nothing needs to change for these two weeks. For these two weeks the most useful thing you can do is sleep the way you usually do and fill in the mornings honestly, the bad ones included. There is no score to improve and no way to fail this. ${wait(solo)}`,
+        text: baselineChangeReply(solo),
         citations: [],
       },
     };

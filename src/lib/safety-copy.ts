@@ -6,7 +6,7 @@
  */
 
 export const MEDICAL_DISCLAIMER =
-  "Educational tool. Not medical care. If you stop breathing at night, fall asleep while driving, or cannot stay awake, that is a clinic, not a chat bar.";
+  "Somnadia is a diary, not medical care. If you stop breathing at night, fall asleep while driving, or can't stay awake, please see a doctor.";
 
 export const CRISIS_LIFELINE_NUMBER = "988";
 

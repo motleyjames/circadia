@@ -9,7 +9,7 @@ import { readDream } from "@/lib/dreams";
 import { researchById } from "@/lib/research";
 import { socialJetLagCopyFromReports } from "@/lib/social-jetlag-copy";
 import { formatClock, formatDuration } from "@/lib/time";
-import type { MorningReport, Profile, SleepNote } from "@/lib/types";
+import type { CircadiaState, MorningReport, Profile, SleepNote } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MorningReadingCard } from "@/components/morning-reading";
 import { suggestMorningReadingForLogs } from "@/lib/morning-reading";
@@ -27,6 +27,8 @@ import {
 } from "@/lib/sleep-metrics";
 import { standingOn, weekSentence } from "@/lib/week-sentence";
 import { isObserving } from "@/lib/observation";
+import { inTheTest } from "@/lib/in-the-test";
+import { morningDateForSlot, weekdayOfMorning } from "@/lib/today-surface";
 import { useWallClock } from "@/lib/wall-clock";
 
 /** The note taxonomy is internal. Users were reading raw "LEVER" and "STEADY". */
@@ -114,6 +116,9 @@ export function InsightsView() {
         </p>
       </div>
     );
+  }
+  if (inTheTest(state)) {
+    return <RecordDiary state={state} />;
   }
   const units = profile.units;
   const empty = state.reports.length === 0;
@@ -641,5 +646,95 @@ function NoteCard({ note }: { note: SleepNote }) {
         </p>
       ) : null}
     </article>
+  );
+}
+
+function RecordDiary({ state }: { state: CircadiaState }) {
+  const profile = state.profile;
+  const episode = state.episode;
+  if (!profile) return null;
+  const nights = episode?.baselineNights ?? 14;
+  const enrolledAt = episode?.enrolledAt;
+  const byDate = new Map(state.reports.map((r) => [r.morningDate, r]));
+
+  return (
+    <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
+      <h1 className="font-heading mt-1 text-3xl text-zinc-50">Your diary</h1>
+      <p className="mt-3 max-w-[46ch] text-[15px] leading-relaxed text-zinc-400">
+        Your answers, as you gave them. Your clinician reads the same record.
+      </p>
+      <ol className="mt-8 space-y-5">
+        {Array.from({ length: nights }, (_, slot) => {
+          const morning = enrolledAt ? morningDateForSlot(enrolledAt, slot) : null;
+          const report = morning ? byDate.get(morning) : undefined;
+          return (
+            <li key={slot} className="rounded-3xl border border-white/8 bg-white/[0.03] px-4 py-4">
+              <p className="text-[11px] tracking-[0.18em] text-zinc-500 uppercase">
+                Night {slot + 1}
+                {morning ? ` · ${weekdayOfMorning(morning)}` : ""}
+              </p>
+              {!report ? (
+                <p className="mt-2 text-[15px] text-zinc-300">Not filed</p>
+              ) : (
+                <RecordAnswers report={report} units={profile.units} />
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function RecordAnswers({ report, units }: { report: MorningReport; units: Profile["units"] }) {
+  const different = differentDayBefore(report);
+  return (
+    <dl className="mt-3 space-y-2 text-[14px] leading-relaxed text-zinc-300">
+      {report.filedLate ? <p className="text-[13px] text-zinc-400">Filed later</p> : null}
+      <Fact label="Into bed" value={clockOrBlank(report.inBedAt, units)} />
+      <Fact label="Tried to sleep" value={clockOrBlank(report.triedToSleepAt, units)} />
+      <Fact label="Final waking" value={clockOrBlank(report.wokeAt, units)} />
+      <Fact label="Out of bed" value={clockOrBlank(report.outOfBedAt, units)} />
+      <Fact label="Time to fall asleep" value={`${report.sleepLatencyMinutes}`} />
+      <Fact
+        label="Wakings"
+        value={
+          report.awakeningCount !== undefined
+            ? String(report.awakeningCount)
+            : report.wokeInNight
+              ? "Yes"
+              : "None"
+        }
+      />
+      <Fact label="Time awake" value={`${report.nightWakingMinutes}`} />
+      <Fact label="Quality" value={String(report.rating)} />
+      <Fact label="Anything different the day before" value={different} />
+    </dl>
+  );
+}
+
+function clockOrBlank(value: string | undefined, units: Profile["units"]): string {
+  return value ? formatClock(value, units) : "—";
+}
+
+function differentDayBefore(report: MorningReport): string {
+  const bits: string[] = [];
+  if (report.drank) {
+    bits.push(report.drinkCount !== undefined ? `Alcohol, ${report.drinkCount}` : "Alcohol");
+  }
+  if (report.caffeineAfter2pm) bits.push("Caffeine after 2 pm");
+  if (report.usedSupplement) {
+    bits.push(report.supplementKind ? `Sleep supplement, ${report.supplementKind}` : "Sleep supplement");
+  }
+  if (report.napMinutes) bits.push(`Nap, ${report.napMinutes}`);
+  return bits.length ? bits.join(". ") : "Nothing noted.";
+}
+
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-[11px] tracking-[0.14em] text-zinc-500 uppercase">{label}</dt>
+      <dd className="mt-0.5 text-zinc-200">{value}</dd>
+    </div>
   );
 }

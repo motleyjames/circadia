@@ -1603,10 +1603,10 @@
   },
   {
     "id": "observation-tonight-branch-off",
-    "why": "Disabling the Tonight observation branch leaves the countdown on during a baseline.",
+    "why": "Disabling the Today-in-test branch leaves the countdown on during a baseline.",
     "file": "src/components/tonight-view.tsx",
-    "find": "  if (observing) {\n    const baselineNights = state.episode?.baselineNights ?? 14;\n",
-    "replace": "  if (false && observing) {\n    const baselineNights = state.episode?.baselineNights ?? 14;\n",
+    "find": "  if (inTheTest(state)) {\n    const copy = todayCopy(state, now);\n",
+    "replace": "  if (false && inTheTest(state)) {\n    const copy = todayCopy(state, now);\n",
     "testFile": "src/lib/observation.test.ts",
     "testName": "while observing, non-solo, on night 6 shows Night 6 of 14 and no sleep figure above WindDown"
   },
@@ -1711,19 +1711,19 @@
   },
   {
     "id": "a2-clock-labels-stay-asleep-by",
-    "why": "While observing, Asleep-by still implies a time the tester never stated.",
+    "why": "While in a test, Asleep-by still implies a time the tester never stated.",
     "file": "src/components/you-view.tsx",
-    "find": "                  {observing ? \"Usual bedtime\" : \"Asleep-by\"}\n",
-    "replace": "                  Asleep-by\n",
+    "find": "                  <p className=\"mb-2 text-[12px] text-zinc-500\">bedtime</p>\n",
+    "replace": "                  <p className=\"mb-2 text-[12px] text-zinc-500\">Asleep-by</p>\n",
     "testFile": "src/lib/walkthrough.test.ts",
     "testName": "intake step 3 asks both clocks; You clock labels change only while observing"
   },
   {
     "id": "a3-enrollment-morning-link",
     "why": "The enrollment afternoon must not offer a morning that has no episode slot.",
-    "file": "src/components/tonight-view.tsx",
-    "find": "            {state.episode && episodeNightOf(state.episode.enrolledAt, todayIsoDate(now)) === null ? (\n",
-    "replace": "            {false && state.episode && episodeNightOf(state.episode.enrolledAt, todayIsoDate(now)) === null ? (\n",
+    "file": "src/lib/today-surface.ts",
+    "find": "  if (!episode || slot === null) {\n",
+    "replace": "  if (false && (!episode || slot === null)) {\n",
     "testFile": "src/lib/walkthrough.test.ts",
     "testName": "Tonight on the enrollment afternoon shows Your first morning is tomorrow"
   },
@@ -1789,5 +1789,68 @@
     "replace": "          <h2 className=\"font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50\">Pipeline on</h2>\n",
     "testFile": "src/lib/walkthrough.test.ts",
     "testName": "shows In the test, the night count, Last sent, and Leave the test"
+  },
+  {
+    "id": "c1-test-tabs-stay-consumer",
+    "why": "A tester must see Today · Record · Help · You, not the consumer five.",
+    "file": "src/components/bottom-nav.tsx",
+    "find": "  const tabs = testing ? TEST_TABS : TABS;\n",
+    "replace": "  const tabs = TABS;\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "phone and Mac nav show Today, Record, Help, You while in a test"
+  },
+  {
+    "id": "c2-today-morning-due-line",
+    "why": "The morning-due line is the only action on Today. Losing it leaves a tester with no way to file.",
+    "file": "src/lib/today-surface.ts",
+    "find": "      line: \"Your diary for last night is ready.\",\n",
+    "replace": "      line: \"Nothing to change tonight. Sleep the way you usually do.\",\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "morning due offers the diary and no orb"
+  },
+  {
+    "id": "c3-record-after-baseline",
+    "why": "After the baseline, Record must list her answers, not the consumer week dashboard.",
+    "file": "src/components/insights-view.tsx",
+    "find": "  if (inTheTest(state)) {\n    return <RecordDiary state={state} />;\n  }\n",
+    "replace": "  if (false && inTheTest(state)) {\n    return <RecordDiary state={state} />;\n  }\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "after the baseline lists her answers, missing and late nights, and nothing computed"
+  },
+  {
+    "id": "c4-help-imports-baseline",
+    "why": "Help must import the baseline answers. An empty why-fourteen line is a silent delete.",
+    "file": "src/components/help-view.tsx",
+    "find": "          <HelpItem title=\"Why fourteen nights\" body={BASELINE_WHY} />\n",
+    "replace": "          <HelpItem title=\"Why fourteen nights\" body=\"\" />\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "renders the imported baseline answers, consent link, leave, safety, and contact"
+  },
+  {
+    "id": "c5-you-usual-times-bedtime",
+    "why": "Usual times in a test are bedtime and get-up time, not Asleep-by.",
+    "file": "src/components/you-view.tsx",
+    "find": "                  <p className=\"mb-2 text-[12px] text-zinc-500\">bedtime</p>\n",
+    "replace": "                  <p className=\"mb-2 text-[12px] text-zinc-500\">Asleep-by</p>\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "keeps account, morning reminders, the test, usual times, privacy and about"
+  },
+  {
+    "id": "c6-neither-empty-struggles",
+    "why": "Neither is stored as struggles: []. Mapping it to [problem] would send an invalid value.",
+    "file": "src/components/onboarding.tsx",
+    "find": "    const struggles: Struggle[] =\n      problem === \"neither\" ? [] : problem === \"both\" ? [\"falling\", \"staying\"] : [problem];\n",
+    "replace": "    const struggles: Struggle[] = problem === \"both\" ? [\"falling\", \"staying\"] : [problem];\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "Neither is stored as an empty struggles array"
+  },
+  {
+    "id": "c7-brand-line",
+    "why": "The tagline is the clinical-instrument line, not the clock that holds.",
+    "file": "src/components/brand-stage.tsx",
+    "find": "            The sleep diary your clinician reads.\n",
+    "replace": "            For falling asleep. For staying asleep. For a clock that holds.\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "brand line is The sleep diary your clinician reads"
   }
 ]

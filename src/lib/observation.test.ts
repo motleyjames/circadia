@@ -88,6 +88,8 @@ function visibleText(html: string): string {
   return html
     .replace(/<[^>]+>/g, " ")
     .replace(/<!-- -->/g, "")
+    .replace(/&#x27;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -224,14 +226,16 @@ describe("hasSleepFigure", () => {
 describe("rendered TonightView", () => {
   it("while observing, non-solo, on night 6 shows Night 6 of 14 and no sleep figure above WindDown", () => {
     const html = renderTonight(observingState());
-    const above = visibleText(html.slice(0, html.indexOf("Guided meditations")));
-    expect(above).toContain("Night 6 of 14");
-    expect(above).toContain("your clinician needs to see");
-    expect(hasSleepFigure(above)).toBe(false);
-    expect(above).not.toMatch(/Screens/);
-    expect(above).not.toMatch(/\bping\b/);
-    expect(above).not.toContain("until your");
-    expect(above).not.toContain("Asleep-by");
+    const text = visibleText(html);
+    expect(text).toContain("Night 6 of 14");
+    expect(text).toContain("Your diary for last night is ready.");
+    expect(text).toContain("Fill in this morning's diary");
+    expect(hasSleepFigure(text)).toBe(false);
+    expect(text).not.toMatch(/Screens/);
+    expect(text).not.toMatch(/\bping\b/);
+    expect(text).not.toContain("until your");
+    expect(text).not.toContain("Asleep-by");
+    expect(text).not.toContain("Guided meditations");
   });
 
   it("while observing, solo, names the test and not a clinician", () => {
@@ -246,9 +250,9 @@ describe("rendered TonightView", () => {
       },
     });
     const html = renderTonight(state);
-    const above = visibleText(html.slice(0, html.indexOf("Guided meditations")));
-    expect(above).toContain("this test needs to see");
-    expect(above).not.toContain("clinician");
+    const text = visibleText(html);
+    expect(text).toContain("Your diary for last night is ready.");
+    expect(text).not.toContain("clinician");
   });
 
   it("when not observing matches the pre-change render for the same state", async () => {
@@ -280,9 +284,9 @@ describe("rendered TonightView", () => {
       },
     });
     const html = renderTonight(state);
-    const above = visibleText(html.slice(0, html.indexOf("Guided meditations")));
-    expect(above).toContain("Your baseline is almost done");
-    expect(above).not.toContain("Night 15");
+    const text = visibleText(html);
+    expect(text).toContain("Your baseline is almost done");
+    expect(text).not.toContain("Night 15");
   });
 
   it("at 03:00 on the morning after night 6, unfiled, shows Night 6 of 14", async () => {
@@ -290,8 +294,9 @@ describe("rendered TonightView", () => {
       diary({ episode: episode({ state: "enrolled" }) }),
       new Date(2026, 8, 26, 3, 0, 0),
     );
-    const above = visibleText(html.slice(0, html.indexOf("Guided meditations")));
-    expect(above).toContain("Night 6 of 14");
+    const text = visibleText(html);
+    expect(text).toContain("Night 6 of 14");
+    expect(text).toContain("Your diary for last night is ready.");
   });
 
   it("at 08:00 on the same morning, filed, shows Night 7 of 14", async () => {
@@ -302,8 +307,9 @@ describe("rendered TonightView", () => {
       }),
       new Date(2026, 8, 26, 8, 0, 0),
     );
-    const above = visibleText(html.slice(0, html.indexOf("Guided meditations")));
-    expect(above).toContain("Night 7 of 14");
+    const text = visibleText(html);
+    expect(text).toContain("Night 7 of 14");
+    expect(text).toContain("Nothing to change tonight. Sleep the way you usually do.");
   });
 
   it("at 03:00 on the morning after night 14, unfiled, shows Night 14 of 14, not almost done", async () => {
@@ -311,9 +317,9 @@ describe("rendered TonightView", () => {
       diary({ episode: episode({ state: "enrolled" }) }),
       new Date(2026, 9, 4, 3, 0, 0),
     );
-    const above = visibleText(html.slice(0, html.indexOf("Guided meditations")));
-    expect(above).toContain("Night 14 of 14");
-    expect(above).not.toContain("Your baseline is almost done");
+    const text = visibleText(html);
+    expect(text).toContain("Night 14 of 14");
+    expect(text).not.toContain("Your baseline is almost done");
   });
 
   it("at 18:00 on that same day, still unfiled, shows Your baseline is almost done", async () => {
@@ -321,10 +327,10 @@ describe("rendered TonightView", () => {
       diary({ episode: episode({ state: "enrolled" }) }),
       new Date(2026, 9, 4, 18, 0, 0),
     );
-    const above = visibleText(html.slice(0, html.indexOf("Guided meditations")));
-    expect(above).toContain("Your baseline is almost done");
-    expect(above).toContain("One morning left to file.");
-    expect(above).not.toContain("Night 15");
+    const text = visibleText(html);
+    expect(text).toContain("Your baseline is almost done");
+    expect(text).toContain("One morning left to file.");
+    expect(text).not.toContain("Night 15");
   });
 });
 
@@ -358,7 +364,9 @@ describe("rendered InsightsView", () => {
       reports: [1, 2, 3, 4, 5].map((n) => night(`2026-09-${20 + n}`)),
     });
     const html = renderNotes(state);
-    expect(visibleText(html)).toContain("The week.");
+    expect(visibleText(html)).toContain("Your diary");
+    expect(visibleText(html)).toContain("Your answers, as you gave them");
+    expect(visibleText(html)).not.toContain("The week.");
   });
 });
 

@@ -16,7 +16,7 @@ describe("iPhone UIKit open", () => {
     expect(scene).toContain("UIView.animate");
     expect(scene).toContain("identity.alpha = 1");
     expect(scene).toContain("CFBundleShortVersionString");
-    expect(scene).toContain("For falling asleep. For staying asleep. For a clock that holds.");
+    expect(scene).toContain("The sleep diary your clinician reads.");
     expect(scene).toContain("sceneDidBecomeActive");
     expect(scene).toContain("CircadiaOpenWindow.install");
     expect(scene).toContain("CircadiaOpenWindow.arm");

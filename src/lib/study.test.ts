@@ -157,6 +157,14 @@ describe("buildStudyPack", () => {
     expect(validateStudyPack(pack).ok).toBe(true);
   });
 
+  it("validateStudyPack accepts struggles: []", () => {
+    const state = hostileState();
+    state.profile = { ...hostileProfile, struggles: [] };
+    const pack = buildStudyPack(state);
+    expect(pack.profile.struggles).toEqual([]);
+    expect(validateStudyPack(pack).ok).toBe(true);
+  });
+
   it("counts filed consults in the pack without sending their text", () => {
     const state = hostileState();
     state.chat = [];
