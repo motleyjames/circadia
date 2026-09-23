@@ -29,7 +29,7 @@ export function buildRoster(state: CircadiaState): RosterEventV2 {
     participantId,
     appVersion: APP_VERSION,
     ageBand: ageBand(profile.age),
-    bmiBand: bmiBand(profile.heightCm, profile.weightKg),
+    bmiBand: bmiBand(profile.heightCm, profile.weightKg, profile.bodyConfirmed),
     activity: profile.activity,
     struggles: [...profile.struggles],
     targetSleep: profile.targetSleep,

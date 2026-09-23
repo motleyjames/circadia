@@ -11,7 +11,7 @@ import {
   recordDisclosureFlags,
 } from "./invite";
 import { allowlistedSafetyKinds, isCrisisDisclosure, safetyKind } from "./safety-triage";
-import { anonymityViolations, buildStudyPack, validateStudyPack } from "./study";
+import { anonymityViolations, bmiBand, buildStudyPack, validateStudyPack } from "./study";
 import { nightGeometry } from "./sleep-metrics";
 import { medicationClasses } from "./metrics";
 import type { CircadiaState, MorningReport, Profile, SafetyFlag } from "./types";
@@ -194,6 +194,23 @@ describe("buildStudyPack", () => {
     state.profile = { ...hostileProfile, heightCm: 175, weightKg: 70, name: "you", medications: [] };
     const pack = buildStudyPack(state);
     expect(pack.profile.bmiBand).toBe("unconfirmed");
+  });
+
+  it("bmiBand is unconfirmed unless bodyConfirmed is set; legacy profiles keep the magic-value rule", () => {
+    expect(bmiBand(177.8, 65.8)).toBe("healthy");
+    expect(bmiBand(177.8, 65.8, false)).toBe("unconfirmed");
+    expect(bmiBand(177.8, 65.8, true)).toBe("healthy");
+    expect(bmiBand(175, 70)).toBe("unconfirmed");
+    expect(bmiBand(175, 70, true)).toBe("healthy");
+    const confirmed = { ...hostileState(), profile: { ...hostileProfile, bodyConfirmed: true } };
+    const pack = buildStudyPack(confirmed);
+    expect(pack.profile.bmiBand).toBe("healthy");
+    expect(JSON.stringify(pack)).not.toContain("bodyConfirmed");
+    const denied = {
+      ...hostileState(),
+      profile: { ...hostileProfile, heightCm: 180, weightKg: 75, bodyConfirmed: false },
+    };
+    expect(buildStudyPack(denied).profile.bmiBand).toBe("unconfirmed");
   });
 
   it("rejects a pack that smuggles a name field", () => {

@@ -17,7 +17,9 @@ import {
   overnightDuration,
   screenOffClock,
   secondsUntilClock,
+  todayIsoDate,
 } from "@/lib/time";
+import { episodeNightOf } from "@/lib/episode";
 import { isObserving, tonightNight } from "@/lib/observation";
 import { useWallClock } from "@/lib/wall-clock";
 
@@ -52,7 +54,11 @@ export function TonightView() {
                   ? "Nothing to change tonight. Sleep the way you usually do — that's what this test needs to see."
                   : "Nothing to change tonight. Sleep the way you usually do — that's what your clinician needs to see."}
             </p>
-            {page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
+            {state.episode && episodeNightOf(state.episode.enrolledAt, todayIsoDate(now)) === null ? (
+              <p className="mt-8 max-w-[34ch] text-center text-[15px] leading-relaxed text-zinc-400">
+                Your first morning is tomorrow.
+              </p>
+            ) : page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
               <DiaryLink
                 href="/check-in"
                 className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full px-6 text-[15px] text-zinc-100 ring-1 ring-white/14"

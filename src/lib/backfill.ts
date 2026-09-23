@@ -1,4 +1,4 @@
-import type { Episode } from "@/lib/episode";
+import { episodeNightOf, type Episode } from "@/lib/episode";
 import { reportForMorning, upsertMorningReport } from "@/lib/morning-file";
 import { isCivilDate, shiftIsoDate } from "@/lib/schedule";
 import type { MorningDraft, MorningReport } from "@/lib/types";
@@ -15,14 +15,13 @@ export function backfillableDates(
   episode: Episode | null,
 ): string[] {
   if (!isCivilDate(today)) return [];
-  const enrolledDay = episode ? episode.enrolledAt.slice(0, 10) : null;
   const dates: string[] = [];
   for (let i = 1; i <= BACKFILL_NIGHTS; i += 1) {
     const date = shiftIsoDate(today, -i);
     if (!date) continue;
     if (date >= today) continue;
     if (reportForMorning(reports, date)) continue;
-    if (enrolledDay && date < enrolledDay) continue;
+    if (episode && episodeNightOf(episode.enrolledAt, date) === null) continue;
     dates.push(date);
   }
   return dates;
@@ -65,7 +64,7 @@ export function applyBackfill(
   if (incoming.morningDate >= today) return reports;
   const oldest = shiftIsoDate(today, -BACKFILL_NIGHTS);
   if (!oldest || incoming.morningDate < oldest) return reports;
-  if (episode && incoming.morningDate < episode.enrolledAt.slice(0, 10)) return reports;
+  if (episode && episodeNightOf(episode.enrolledAt, incoming.morningDate) === null) return reports;
   if (reportForMorning(reports, incoming.morningDate)) return reports;
   return upsertMorningReport(reports, { ...incoming, filedLate: true });
 }

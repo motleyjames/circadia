@@ -6,14 +6,25 @@ import { ConsentScreen } from "@/components/consent-screen";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { normalizeInviteCode, normalizeInviteCodeV2 } from "@/lib/invite";
-import { studyDeliveryLine, studyJoinNotice } from "@/lib/pack-deliver";
 import { isPhoneNative } from "@/lib/phone-native";
 import { operatorPublicFingerprint } from "@/lib/operator-public";
-import { STUDY_HELD_ERROR } from "@/lib/study-client";
+import { tonightNight } from "@/lib/observation";
+import { useWallClock } from "@/lib/wall-clock";
+
+function lastSentLabel(at: string): string {
+  return new Date(at).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 export function StudyPanel() {
   const { state, enrollSolo, leaveStudy, sendStudyNow } = useCircadia();
   const study = state.study;
+  const now = useWallClock();
+  const night = tonightNight(state.episode, state.reports, now);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -81,56 +92,28 @@ export function StudyPanel() {
           </Button>
           {inviteError ? <p className="mt-2 text-[12px] text-red-300">{inviteError}</p> : null}
         </>
-      ) : phone ? (
-        <>
-          <h2 className="font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50">Pipeline on</h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">{studyJoinNotice(state)}</p>
-          <p className="mt-3 text-[12px] text-zinc-400">{studyDeliveryLine(study)}</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="h-10 px-1 text-[13px] text-zinc-500 hover:text-zinc-300"
-              onClick={() => setLeaveOpen(true)}
-            >
-              Leave the study
-            </button>
-          </div>
-          <ConfirmDialog
-            open={leaveOpen}
-            onOpenChange={setLeaveOpen}
-            title="Leave the study"
-            description="Stop sending nights. The diary stays here. The participant number stays unless you erase this device."
-            confirmLabel="Leave"
-            destructive
-            onConfirm={leaveStudy}
-          />
-        </>
       ) : (
         <>
-          <h2 className="font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50">
-            {study.lastStatus === "held" ? "Pipeline waiting" : "Pipeline on"}
-          </h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">
-            {study.lastStatus === "held"
-              ? STUDY_HELD_ERROR
-              : "Nights and faults leave after each morning. No Send button. Dreams and chat stay here."}
-          </p>
+          <h2 className="font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50">In the test</h2>
+          {night !== null ? (
+            <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">Night {night} of 14</p>
+          ) : null}
           <p className="mt-3 text-[12px] text-zinc-400">
-            {study.lastStatus === "sent" && study.lastSentAt
-              ? `Last reached James ${new Date(study.lastSentAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`
-              : study.lastStatus === "blocked"
-                ? "Blocked — anonymity check. Nothing left."
-                : study.lastStatus === "error"
-                  ? "Last send did not land. Somnadia will try again after the next morning."
-                  : study.lastStatus === "held"
-                    ? "Nothing has left this phone."
+            {study.lastStatus === "held"
+              ? "Waiting to send — it will go when you're online."
+              : study.lastSentAt
+                ? `Last sent ${lastSentLabel(study.lastSentAt)}`
+                : study.lastStatus === "blocked"
+                  ? "Blocked — anonymity check. Nothing left."
+                  : study.lastStatus === "error"
+                    ? "Last send did not land. Somnadia will try again after the next morning."
                     : "Waiting on the first morning."}
           </p>
           {study.lastError && study.lastStatus === "error" ? (
             <p className="mt-1 text-[12px] text-red-300">{study.lastError}</p>
           ) : null}
           <div className="mt-5 flex flex-wrap gap-2">
-            {study.lastStatus === "error" || study.lastStatus === "blocked" ? (
+            {!phone && (study.lastStatus === "error" || study.lastStatus === "blocked") ? (
               <Button
                 type="button"
                 className="h-10 cursor-pointer rounded-full btn-primary px-4"
@@ -144,7 +127,7 @@ export function StudyPanel() {
               className="h-10 px-1 text-[13px] text-zinc-500 hover:text-zinc-300"
               onClick={() => setLeaveOpen(true)}
             >
-              Leave the study
+              Leave the test
             </button>
           </div>
           <ConfirmDialog

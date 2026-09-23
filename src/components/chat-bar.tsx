@@ -264,7 +264,13 @@ export function ChatBar({
               </li>
             ))}
           </ul>
-          {groups.length > 0 ? <div className="mt-8">{files}</div> : null}
+          {observing ? (
+            <p className="mt-8 text-[13px] leading-relaxed text-zinc-500">
+              Your earlier consults open again after night 14.
+            </p>
+          ) : groups.length > 0 ? (
+            <div className="mt-8">{files}</div>
+          ) : null}
         </div>
       ) : null}
 
@@ -293,7 +299,7 @@ export function ChatBar({
         </div>
       ) : null}
 
-      {pane === "files" && !empty ? files : null}
+      {pane === "files" && !empty && !observing ? files : null}
     </div>
   );
 
@@ -351,7 +357,9 @@ export function ChatBar({
           New
         </button>
       )}
-      {!empty && pane === "desk" && groups.length > 0 ? (
+      {observing && !empty && pane === "desk" ? (
+        <p className="text-[11px] text-zinc-500">Your earlier consults open again after night 14.</p>
+      ) : !empty && pane === "desk" && groups.length > 0 ? (
         <button
           type="button"
           className="text-[11px] text-zinc-500 transition-colors hover:text-zinc-300"

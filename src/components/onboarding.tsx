@@ -1,25 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import {
-  DEFAULT_HEIGHT_CM,
-  DEFAULT_WEIGHT_KG,
-  feetInchesToCm,
-  formatClock,
-  lbToKg,
-  screenOffClock,
-  sleepFromWake,
-  sleepNeedHours,
-  targetDurationMinutes,
-} from "@/lib/time";
+import { feetInchesToCm, lbToKg, sleepNeedHours } from "@/lib/time";
 import { ScheduledDaysPicker } from "@/components/scheduled-days-picker";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS } from "@/lib/schedule";
 import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
 import type { IntakeDraft, IntakePhase, IntakeProblem, Profile, Struggle } from "@/lib/types";
-import { normalizeClock } from "@/lib/windows";
+import { isClock, normalizeClock } from "@/lib/windows";
 import { useCircadia } from "@/context/circadia-store";
 import { hapticSelect } from "@/lib/haptics";
 
@@ -71,7 +61,7 @@ const PHASES: { id: Phase; title: string; body: string }[] = [
 const INTAKE = [
   { kicker: "01", title: "Body" },
   { kicker: "02", title: "The problem" },
-  { kicker: "03", title: "Wake time" },
+  { kicker: "03", title: "Usual times" },
   { kicker: "04", title: "Obligated mornings" },
   { kicker: "05", title: "What you take" },
   { kicker: "06", title: "Alerts" },
@@ -82,14 +72,20 @@ export function Onboarding() {
   const existing = state.profile;
   const stored = state.intakeDraft;
   const closed = useRef(false);
+  const returning = Boolean(existing?.onboardingComplete);
   const [step, setStep] = useState(stored?.step ?? 0);
-  const [age, setAge] = useState(stored?.age ?? (existing?.age ? String(existing.age) : "19"));
-  const [feet, setFeet] = useState(stored?.feet ?? "5");
-  const [inches, setInches] = useState(stored?.inches ?? "10");
-  const [pounds, setPounds] = useState(stored?.pounds ?? "145");
+  const [age, setAge] = useState(stored?.age ?? (returning && existing?.age ? String(existing.age) : ""));
+  const [feet, setFeet] = useState(stored?.feet ?? "");
+  const [inches, setInches] = useState(stored?.inches ?? "");
+  const [pounds, setPounds] = useState(stored?.pounds ?? "");
   const [problem, setProblem] = useState<Problem>(stored?.problem ?? "falling");
   const [phase, setPhase] = useState<Phase>(stored?.phase ?? "neither");
-  const [wakeTime, setWakeTime] = useState(stored?.wakeTime ?? PHASE_WAKE.neither);
+  const [sleepTime, setSleepTime] = useState(
+    stored?.sleepTime ?? (returning && existing?.targetSleep ? existing.targetSleep : ""),
+  );
+  const [wakeTime, setWakeTime] = useState(
+    stored?.wakeTime ?? (returning && existing?.targetWake ? existing.targetWake : ""),
+  );
   const [stimulant, setStimulant] = useState(stored?.stimulant ?? "");
   const [scheduledDays, setScheduledDays] = useState(() =>
     stored?.scheduledDays
@@ -102,37 +98,57 @@ export function Onboarding() {
   const [error, setError] = useState<string | null>(null);
   const pickingUp = Boolean(stored && stored.step > 0);
 
-  const ageNum = Math.min(90, Math.max(13, Number(age) || 19));
-  const duration = targetDurationMinutes(ageNum);
-  const need = sleepNeedHours(ageNum);
-  const targetSleep = useMemo(
-    () => sleepFromWake(wakeTime || "07:00", duration),
-    [wakeTime, duration],
-  );
-  const offClock = screenOffClock(targetSleep);
-  const bodyReady = Number(age) >= 13;
-  const ageHint = age.trim() === "" ? "Add your age to continue." : !bodyReady ? "Somnadia is for ages 13 and up." : null;
+  const ageNum = Number(age);
+  const ageOk = age.trim() !== "" && Number.isFinite(ageNum) && ageNum >= 13 && ageNum <= 90;
+  const enteredHeightCm = feetInchesToCm(Number(feet) || 0, Number(inches) || 0);
+  const enteredWeightKg = lbToKg(Number(pounds) || 0);
+  const heightOk = feet.trim() !== "" && enteredHeightCm >= 100;
+  const weightOk = pounds.trim() !== "" && enteredWeightKg >= 30;
+  const bodyReady = ageOk && heightOk && weightOk;
+  const clocksReady = isClock(sleepTime) && isClock(wakeTime);
+  const need = sleepNeedHours(ageOk ? Math.min(90, Math.max(13, ageNum)) : 19);
+  const ageHint =
+    age.trim() === ""
+      ? "Add your age to continue."
+      : !Number.isFinite(ageNum) || ageNum < 13 || ageNum > 90
+        ? "Somnadia is for ages 13 to 90."
+        : null;
 
   function pickPhase(next: Phase) {
     setPhase(next);
     setWakeTime(PHASE_WAKE[next]);
   }
 
-  function heightCm(): number {
-    const cm = feetInchesToCm(Number(feet) || 0, Number(inches) || 0);
-    return cm >= 100 ? cm : DEFAULT_HEIGHT_CM;
-  }
-
-  function weightKg(): number {
-    const kg = lbToKg(Number(pounds) || 0);
-    return kg >= 30 ? kg : DEFAULT_WEIGHT_KG;
-  }
-
   useEffect(() => {
     if (closed.current) return;
-    const draft: IntakeDraft = { step, age, feet, inches, pounds, problem, phase, wakeTime, stimulant, scheduledDays };
+    const draft: IntakeDraft = {
+      step,
+      age,
+      feet,
+      inches,
+      pounds,
+      problem,
+      phase,
+      sleepTime,
+      wakeTime,
+      stimulant,
+      scheduledDays,
+    };
     saveIntakeDraft(draft);
-  }, [age, feet, inches, phase, pounds, problem, saveIntakeDraft, scheduledDays, step, stimulant, wakeTime]);
+  }, [
+    age,
+    feet,
+    inches,
+    phase,
+    pounds,
+    problem,
+    saveIntakeDraft,
+    scheduledDays,
+    sleepTime,
+    step,
+    stimulant,
+    wakeTime,
+  ]);
 
   async function finish() {
     closed.current = true;
@@ -148,18 +164,19 @@ export function Onboarding() {
       firstName: existing?.firstName ?? "",
       lastName: existing?.lastName ?? "",
       name: existing?.name ?? "you",
-      age: ageNum,
+      age: Math.min(90, Math.max(13, ageNum)),
       sex: existing?.sex ?? "unspecified",
-      heightCm: heightCm(),
-      weightKg: weightKg(),
+      heightCm: enteredHeightCm,
+      weightKg: enteredWeightKg,
+      bodyConfirmed: true,
       email: existing?.email ?? "",
       phone: existing?.phone ?? "",
       activity: existing?.activity ?? "light",
       medications: med ? [med] : [],
       supplements: existing?.supplements ?? [],
       struggles,
-      targetSleep,
-      targetWake: normalizeClock(wakeTime || "07:00"),
+      targetSleep: normalizeClock(sleepTime),
+      targetWake: normalizeClock(wakeTime),
       units: "imperial",
       notificationsEnabled: true,
       onboardingComplete: true,
@@ -216,7 +233,7 @@ export function Onboarding() {
                 onChange={(v) => setPounds(v.replace(/[^\d]/g, "").slice(0, 3))}
               />
             </div>
-            <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">{need.label}.</p>
+            {ageOk ? <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">{need.label}.</p> : null}
             {ageHint ? (
               <p role="status" className="mt-2 text-[13px] leading-relaxed text-amber-200">
                 {ageHint}
@@ -254,8 +271,7 @@ export function Onboarding() {
               The morning is the anchor.
             </h1>
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-              Not bedtime. The time you get up trains the clock — even after a bad night. Asleep-by
-              is figured from that.
+              Two times you actually keep. Somnadia will not invent the other one.
             </p>
             <ul className="mt-8 space-y-2">
               {PHASES.map((c) => (
@@ -270,7 +286,18 @@ export function Onboarding() {
             </ul>
             <label className="mt-8 block">
               <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
-                Wake time
+                When do you usually get into bed?
+              </span>
+              <Input
+                type="time"
+                value={sleepTime}
+                onChange={(e) => setSleepTime(e.target.value)}
+                className="mt-3 h-16 rounded-2xl border-white/10 bg-white/4 px-5 font-heading text-3xl text-zinc-50"
+              />
+            </label>
+            <label className="mt-6 block">
+              <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
+                When do you usually get out of bed?
               </span>
               <Input
                 type="time"
@@ -279,10 +306,6 @@ export function Onboarding() {
                 className="mt-3 h-16 rounded-2xl border-white/10 bg-white/4 px-5 font-heading text-3xl text-zinc-50"
               />
             </label>
-            <p className="mt-5 text-[13px] leading-relaxed text-zinc-500">
-              Asleep-by {formatClock(targetSleep)}. Screens down {formatClock(offClock)}.{" "}
-              {Math.round(duration / 60)}h window — you can move it in You.
-            </p>
           </section>
         )}
 
@@ -360,13 +383,14 @@ export function Onboarding() {
               void hapticSelect();
               saveIntakeDraft(null);
               setStep(0);
-              setAge(existing?.age ? String(existing.age) : "19");
-              setFeet("5");
-              setInches("10");
-              setPounds("145");
+              setAge(returning && existing?.age ? String(existing.age) : "");
+              setFeet("");
+              setInches("");
+              setPounds("");
               setProblem("falling");
               setPhase("neither");
-              setWakeTime(PHASE_WAKE.neither);
+              setSleepTime(returning && existing?.targetSleep ? existing.targetSleep : "");
+              setWakeTime(returning && existing?.targetWake ? existing.targetWake : "");
               setStimulant("");
               setScheduledDays(
                 existing?.scheduledDays
@@ -382,7 +406,7 @@ export function Onboarding() {
         {step < 5 ? (
           <button
             type="button"
-            disabled={step === 0 && !bodyReady}
+            disabled={(step === 0 && !bodyReady) || (step === 2 && !clocksReady)}
             onClick={() => {
               void hapticSelect();
               setStep((s) => s + 1);

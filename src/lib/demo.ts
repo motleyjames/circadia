@@ -33,6 +33,11 @@ const SAMPLE_PROFILE: Profile = {
   scheduledDays: DEFAULT_SCHEDULED_DAYS,
 };
 
+export function applySampleWeek(state: CircadiaState): CircadiaState {
+  if (state.episode || state.study.consented) return state;
+  return sampleWeekState(state);
+}
+
 /** A plausible messy student week — not a miracle recovery arc. */
 export function sampleWeekState(existing: CircadiaState): CircadiaState {
   const reports: MorningReport[] = [

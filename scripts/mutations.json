@@ -1434,7 +1434,7 @@
     "id": "consent-version-stays-1",
     "why": "Anyone who accepted version 1 must read the new words before the next send. Leaving the version at 1 lets James send without seeing them.",
     "file": "src/lib/consent.ts",
-    "find": "export const CONSENT_VERSION = 4;\n",
+    "find": "export const CONSENT_VERSION = 5;\n",
     "replace": "export const CONSENT_VERSION = 1;\n",
     "testFile": "src/lib/consent.test.ts",
     "testName": "no pack is sealed or sent without consent at CONSENT_VERSION"
@@ -1542,19 +1542,19 @@
     "id": "consent-version-stays-2",
     "why": "What testers agree to has changed. Anyone who accepted 2 must see the screen again.",
     "file": "src/lib/consent.ts",
-    "find": "export const CONSENT_VERSION = 4;\n",
+    "find": "export const CONSENT_VERSION = 5;\n",
     "replace": "export const CONSENT_VERSION = 2;\n",
     "testFile": "src/lib/diary-2.test.ts",
-    "testName": "CONSENT_VERSION is 4 and a person who accepted 3 sees the screen again"
+    "testName": "CONSENT_VERSION is 5 and a person who accepted 3 sees the screen again"
   },
   {
     "id": "consent-version-stays-3",
     "why": "Anyone who accepted 3 agreed to a list that omitted schema, participantId and surface. Leaving the version at 3 lets the next send go without those words.",
     "file": "src/lib/consent.ts",
-    "find": "export const CONSENT_VERSION = 4;\n",
+    "find": "export const CONSENT_VERSION = 5;\n",
     "replace": "export const CONSENT_VERSION = 3;\n",
     "testFile": "src/lib/diary-2.test.ts",
-    "testName": "CONSENT_VERSION is 4 and a person who accepted 3 sees the screen again"
+    "testName": "CONSENT_VERSION is 5 and a person who accepted 3 sees the screen again"
   },
   {
     "id": "consent-group-drops-age-band",
@@ -1699,5 +1699,95 @@
     "replace": "        text: `Even one or two drinks can steal dream sleep. Heavier drinks make you drowsy going in, then shred the second half — more wake-ups, less dreaming. “Spins” means the dose was already past useful sleep. If we run one experiment: two dry nights, compare how you rate the morning. That beats a new bottle. ${USUAL}`,\n",
     "testFile": "src/lib/consult-baseline.test.ts",
     "testName": "every corpus row stays free of golden tokens and coaching, except safety and library for coaching"
+  },
+  {
+    "id": "a1-bmi-ignores-body-confirmed",
+    "why": "Without the flag, imperial intake converts to a healthy band for numbers nobody typed.",
+    "file": "src/lib/study.ts",
+    "find": "  if (bodyConfirmed === true) return bandFromBmi(heightCm, weightKg);\n  if (bodyConfirmed === false) return \"unconfirmed\";\n",
+    "replace": "  void bodyConfirmed;\n",
+    "testFile": "src/lib/study.test.ts",
+    "testName": "bmiBand is unconfirmed unless bodyConfirmed is set; legacy profiles keep the magic-value rule"
+  },
+  {
+    "id": "a2-clock-labels-stay-asleep-by",
+    "why": "While observing, Asleep-by still implies a time the tester never stated.",
+    "file": "src/components/you-view.tsx",
+    "find": "                  {observing ? \"Usual bedtime\" : \"Asleep-by\"}\n",
+    "replace": "                  Asleep-by\n",
+    "testFile": "src/lib/walkthrough.test.ts",
+    "testName": "intake step 3 asks both clocks; You clock labels change only while observing"
+  },
+  {
+    "id": "a3-enrollment-morning-link",
+    "why": "The enrollment afternoon must not offer a morning that has no episode slot.",
+    "file": "src/components/tonight-view.tsx",
+    "find": "            {state.episode && episodeNightOf(state.episode.enrolledAt, todayIsoDate(now)) === null ? (\n",
+    "replace": "            {false && state.episode && episodeNightOf(state.episode.enrolledAt, todayIsoDate(now)) === null ? (\n",
+    "testFile": "src/lib/walkthrough.test.ts",
+    "testName": "Tonight on the enrollment afternoon shows Your first morning is tomorrow"
+  },
+  {
+    "id": "a4-sample-week-overwrites-baseline",
+    "why": "Load sample week must no-op once an episode or consent exists, or it wipes a real baseline.",
+    "file": "src/lib/demo.ts",
+    "find": "  if (state.episode || state.study.consented) return state;\n  return sampleWeekState(state);\n",
+    "replace": "  return sampleWeekState(state);\n",
+    "testFile": "src/lib/walkthrough.test.ts",
+    "testName": "is hidden in You once an episode or consent exists, and the action no-ops"
+  },
+  {
+    "id": "a5-library-pins-morning-reading",
+    "why": "The morning-reading card recites last night during observation.",
+    "file": "src/components/library-view.tsx",
+    "find": "      {reading && !observing ? (\n",
+    "replace": "      {reading ? (\n",
+    "testFile": "src/lib/walkthrough.test.ts",
+    "testName": "does not render Why this one, today while observing"
+  },
+  {
+    "id": "a6-consult-history-stays-open",
+    "why": "History during observation reopens old answers that contain numbers.",
+    "file": "src/components/chat-bar.tsx",
+    "find": "          {observing ? (\n            <p className=\"mt-8 text-[13px] leading-relaxed text-zinc-500\">\n              Your earlier consults open again after night 14.\n            </p>\n          ) : groups.length > 0 ? (\n",
+    "replace": "          {groups.length > 0 ? (\n",
+    "testFile": "src/lib/walkthrough.test.ts",
+    "testName": "hides History and shows the night-14 line; New still works"
+  },
+  {
+    "id": "a7-baseline-change-beats-hold",
+    "why": "what should I do must not steal onset and waking Holds.",
+    "file": "src/lib/consult-baseline.ts",
+    "find": "  if (TOPIC_BASELINE_CHANGE.test(lower) && !holdBeatsChange) {\n",
+    "replace": "  if (TOPIC_BASELINE_CHANGE.test(lower)) {\n",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "I can't fall asleep, what should I do → onset Hold"
+  },
+  {
+    "id": "a8-consent-drops-fault",
+    "why": "Fault reports leave the phone. The consent must say so.",
+    "file": "src/components/consent-screen.tsx",
+    "find": "        <p className={`mt-4 ${copy}`}>{CONSENT_FAULT_DISCLOSURE}</p>\n",
+    "replace": "",
+    "testFile": "src/lib/walkthrough.test.ts",
+    "testName": "shows the v5 disclosure, including See every item"
+  },
+  {
+    "id": "a9-study-gate-pipeline",
+    "why": "The gate must not contradict the consent with pipeline and roster language.",
+    "file": "src/components/study-gate.tsx",
+    "find": "        Joining a test?\n",
+    "replace": "        Optional study\n",
+    "testFile": "src/lib/walkthrough.test.ts",
+    "testName": "asks for the invite and points at the next screen"
+  },
+  {
+    "id": "a10-study-panel-pipeline",
+    "why": "You → Study still saying Pipeline on contradicts the consent.",
+    "file": "src/components/study-panel.tsx",
+    "find": "          <h2 className=\"font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50\">In the test</h2>\n",
+    "replace": "          <h2 className=\"font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50\">Pipeline on</h2>\n",
+    "testFile": "src/lib/walkthrough.test.ts",
+    "testName": "shows In the test, the night count, Last sent, and Leave the test"
   }
 ]
