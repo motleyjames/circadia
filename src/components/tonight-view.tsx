@@ -17,10 +17,9 @@ import {
   overnightDuration,
   screenOffClock,
   secondsUntilClock,
-  todayIsoDate,
 } from "@/lib/time";
-import { episodeNightOf } from "@/lib/episode";
-import { isObserving, tonightNight } from "@/lib/observation";
+import { inTheTest } from "@/lib/in-the-test";
+import { lastFiledLine, todayCopy } from "@/lib/today-surface";
 import { useWallClock } from "@/lib/wall-clock";
 
 const ORB_C = 2 * Math.PI * 46;
@@ -34,46 +33,28 @@ export function TonightView() {
 
   if (!profile) return null;
 
-  const observing = isObserving(state.episode, state.reports, now);
-  const night = tonightNight(state.episode, state.reports, now);
-  if (observing) {
-    const baselineNights = state.episode?.baselineNights ?? 14;
-    const almostDone = night !== null && night > baselineNights;
-    const solo = state.episode?.clinicianId === null;
+  if (inTheTest(state)) {
+    const copy = todayCopy(state, now);
     return (
       <div className="phone-page-y flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-10">
         <div className="mx-auto flex w-full max-w-[22rem] flex-1 flex-col sm:max-w-[26rem] lg:max-w-[28rem]">
           <section className="flex min-h-full flex-1 flex-col items-center justify-center">
             <h1 className="font-heading text-center text-[2.4rem] leading-[1.05] tracking-tight text-zinc-50">
-              {almostDone ? "Your baseline is almost done" : `Night ${night} of ${baselineNights}`}
+              {copy.heading}
             </h1>
+            <p className="mt-3 text-center text-[12px] text-zinc-500">{lastFiledLine(state.reports)}</p>
             <p className="mt-5 max-w-[34ch] text-center text-[15px] leading-relaxed text-zinc-400">
-              {almostDone
-                ? "One morning left to file."
-                : solo
-                  ? "Nothing to change tonight. Sleep the way you usually do — that's what this test needs to see."
-                  : "Nothing to change tonight. Sleep the way you usually do — that's what your clinician needs to see."}
+              {copy.line}
             </p>
-            {state.episode && episodeNightOf(state.episode.enrolledAt, todayIsoDate(now)) === null ? (
-              <p className="mt-8 max-w-[34ch] text-center text-[15px] leading-relaxed text-zinc-400">
-                Your first morning is tomorrow.
-              </p>
-            ) : page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
+            {copy.actionHref ? (
               <DiaryLink
-                href="/check-in"
+                href={copy.actionHref}
                 className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full px-6 text-[15px] text-zinc-100 ring-1 ring-white/14"
               >
-                {page === "filed"
-                  ? "Open this morning's page"
-                  : page === "unfiled-open"
-                    ? "Start the morning interview"
-                    : "File this morning"}
+                {copy.actionLabel}
               </DiaryLink>
             ) : null}
           </section>
-          <div className="mt-10 w-full shrink-0">
-            <WindDown />
-          </div>
         </div>
       </div>
     );

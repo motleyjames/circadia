@@ -304,7 +304,7 @@ final class CircadiaOpenWindow {
         title.textAlignment = .center
         title.adjustsFontForContentSizeCategory = false
 
-        line.text = "For falling asleep. For staying asleep. For a clock that holds."
+        line.text = "The sleep diary your clinician reads."
         line.textColor = UIColor(red: 161 / 255.0, green: 161 / 255.0, blue: 170 / 255.0, alpha: 1)
         line.textAlignment = .center
         line.numberOfLines = 0

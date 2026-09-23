@@ -3,7 +3,10 @@
 import { DiaryTabLink } from "@/components/diary-tab-link";
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
-import { TABS } from "@/lib/nav";
+import { TABS, TEST_TABS } from "@/lib/nav";
+import { inTheTest } from "@/lib/in-the-test";
+import { tonightNight } from "@/lib/observation";
+import { isTestComplete } from "@/lib/today-surface";
 import { morningFileDue } from "@/lib/morning-file";
 import { PRODUCT_NAME } from "@/lib/product";
 import { APP_VERSION } from "@/lib/version";
@@ -13,8 +16,13 @@ import { cn } from "@/lib/utils";
 export function SidebarNav() {
   const path = useDiaryPath();
   const { state } = useCircadia();
-  const study = state.study;
   const morningDue = morningFileDue(state.reports, new Date(), state.profile?.targetWake);
+  const testing = inTheTest(state);
+  const tabs = testing ? TEST_TABS : TABS;
+  const dueHref = testing ? "/" : "/check-in";
+  const night = tonightNight(state.episode, state.reports, new Date());
+  const complete = isTestComplete(state, new Date());
+  const shownNight = night !== null && night > 14 ? 14 : (night ?? 1);
 
   return (
     <aside className="relative z-20 hidden w-[13.5rem] shrink-0 flex-col md:flex">
@@ -26,7 +34,7 @@ export function SidebarNav() {
         </div>
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 px-3">
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const active = tabIsActive(tab.href, path);
           const Icon = tab.icon;
           return (
@@ -42,7 +50,7 @@ export function SidebarNav() {
             >
               <span className="relative">
                 <Icon className={cn("size-4", active && "drop-shadow-[0_0_10px_rgba(196,181,253,0.8)]")} />
-                {tab.href === "/check-in" && morningDue ? (
+                {tab.href === dueHref && morningDue ? (
                   <span
                     className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-sky-300"
                     aria-hidden
@@ -55,7 +63,11 @@ export function SidebarNav() {
         })}
       </nav>
       <p className="px-5 pb-6 text-[11px] leading-relaxed text-zinc-400">
-        {study.consented ? "Study is on. The switch is in You." : "Diary stays on this device."}
+        {testing
+          ? complete
+            ? "Test complete"
+            : `In the test · Night ${shownNight} of 14`
+          : "Diary stays on this device."}
       </p>
     </aside>
   );

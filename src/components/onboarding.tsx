@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { feetInchesToCm, lbToKg, sleepNeedHours } from "@/lib/time";
+import { feetInchesToCm, lbToKg } from "@/lib/time";
 import { ScheduledDaysPicker } from "@/components/scheduled-days-picker";
 import { coerceScheduledDays, copyScheduledDays, DEFAULT_SCHEDULED_DAYS } from "@/lib/schedule";
 import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
@@ -14,47 +14,28 @@ import { useCircadia } from "@/context/circadia-store";
 import { hapticSelect } from "@/lib/haptics";
 
 type Phase = IntakePhase;
-type Problem = IntakeProblem;
-
-const PHASE_WAKE: Record<Phase, string> = {
-  earlier: "06:30",
-  neither: "07:00",
-  later: "08:30",
-};
+type Problem = IntakeProblem | "neither";
 
 const PROBLEMS: { id: Problem; title: string; body: string }[] = [
   {
     id: "falling",
     title: "Falling asleep",
-    body: "Latency. The first hour is the problem.",
+    body: "It takes a long time to fall asleep.",
   },
   {
     id: "staying",
     title: "Staying asleep",
-    body: "Middle-of-the-night wakes. Second half of the night.",
+    body: "You wake in the night and struggle to get back to sleep.",
   },
   {
     id: "both",
     title: "Both",
-    body: "Onset and maintenance. We treat them as different problems.",
-  },
-];
-
-const PHASES: { id: Phase; title: string; body: string }[] = [
-  {
-    id: "earlier",
-    title: "Earlier",
-    body: "Alert in the morning. Evenings feel like a fight.",
+    body: "",
   },
   {
     id: "neither",
     title: "Neither",
-    body: "No strong pull either way.",
-  },
-  {
-    id: "later",
-    title: "Later",
-    body: "The night is when you come online. Mornings cost you.",
+    body: "I'm here to help test.",
   },
 ];
 
@@ -106,18 +87,12 @@ export function Onboarding() {
   const weightOk = pounds.trim() !== "" && enteredWeightKg >= 30;
   const bodyReady = ageOk && heightOk && weightOk;
   const clocksReady = isClock(sleepTime) && isClock(wakeTime);
-  const need = sleepNeedHours(ageOk ? Math.min(90, Math.max(13, ageNum)) : 19);
   const ageHint =
     age.trim() === ""
       ? "Add your age to continue."
       : !Number.isFinite(ageNum) || ageNum < 13 || ageNum > 90
         ? "Somnadia is for ages 13 to 90."
         : null;
-
-  function pickPhase(next: Phase) {
-    setPhase(next);
-    setWakeTime(PHASE_WAKE[next]);
-  }
 
   useEffect(() => {
     if (closed.current) return;
@@ -127,13 +102,13 @@ export function Onboarding() {
       feet,
       inches,
       pounds,
-      problem,
       phase,
       sleepTime,
       wakeTime,
       stimulant,
       scheduledDays,
     };
+    if (problem !== "neither") draft.problem = problem;
     saveIntakeDraft(draft);
   }, [
     age,
@@ -158,7 +133,8 @@ export function Onboarding() {
     // No permission prompt here. iOS asks once, and asked on the install screen most
     // people decline — which cannot be undone from inside the app. This records that
     // they want reminders; the prompt comes after the first morning is filed.
-    const struggles: Struggle[] = problem === "both" ? ["falling", "staying"] : [problem];
+    const struggles: Struggle[] =
+      problem === "neither" ? [] : problem === "both" ? ["falling", "staying"] : [problem];
     const med = stimulant.trim();
     const profile: Profile = {
       firstName: existing?.firstName ?? "",
@@ -233,7 +209,6 @@ export function Onboarding() {
                 onChange={(v) => setPounds(v.replace(/[^\d]/g, "").slice(0, 3))}
               />
             </div>
-            {ageOk ? <p className="mt-3 text-[13px] leading-relaxed text-zinc-500">{need.label}.</p> : null}
             {ageHint ? (
               <p role="status" className="mt-2 text-[13px] leading-relaxed text-amber-200">
                 {ageHint}
@@ -248,8 +223,7 @@ export function Onboarding() {
               What is actually broken.
             </h1>
             <p className="mt-3 max-w-[34ch] text-[15px] leading-relaxed text-zinc-400">
-              Falling asleep and staying asleep are different problems. We do not treat them as one
-              complaint.
+              Falling asleep and staying asleep are different problems.
             </p>
             <ul className="mt-8 space-y-2">
               {PROBLEMS.map((s) => (
@@ -273,17 +247,6 @@ export function Onboarding() {
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
               Two times you actually keep. Somnadia will not invent the other one.
             </p>
-            <ul className="mt-8 space-y-2">
-              {PHASES.map((c) => (
-                <Choice
-                  key={c.id}
-                  selected={phase === c.id}
-                  title={c.title}
-                  body={c.body}
-                  onSelect={() => pickPhase(c.id)}
-                />
-              ))}
-            </ul>
             <label className="mt-8 block">
               <span className="text-[11px] font-medium tracking-[0.18em] text-zinc-500 uppercase">
                 When do you usually get into bed?
@@ -312,7 +275,7 @@ export function Onboarding() {
         {step === 3 && (
           <section className="mt-5">
             <h1 className="max-w-[18ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
-              Which mornings do you have to get up for something?
+              Which mornings do you have to be up at a set time?
             </h1>
             <p className="mt-3 max-w-[38ch] text-[15px] leading-relaxed text-zinc-400">
               Class, a shift, a bus. Not “I like a routine.” Somnadia cannot guess this from a
@@ -327,7 +290,7 @@ export function Onboarding() {
         {step === 4 && (
           <section className="mt-5">
             <h1 className="max-w-[18ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
-              A stimulant is not a personality.
+              Do you take anything that affects sleep?
             </h1>
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
               If you take one, Somnadia will never tell you to stop it. It becomes a constraint on
@@ -345,11 +308,10 @@ export function Onboarding() {
         {step === 5 && (
           <section className="mt-5">
             <h1 className="max-w-[16ch] font-heading text-[1.85rem] leading-[1.12] font-medium tracking-tight text-zinc-50">
-              One ping. One hour before bed.
+              A morning reminder
             </h1>
             <p className="mt-3 max-w-[36ch] text-[15px] leading-relaxed text-zinc-400">
-              Somnadia does not nag. The useful alert is screen-off. Allow it or skip — the
-              countdown on Tonight still runs either way.
+              Somnadia can remind you each morning to fill in the diary. It never sends anything overnight.
             </p>
             <p className="mt-8 border-t border-white/8 pt-6 text-[13px] leading-relaxed text-zinc-500">
               Next you choose whether nights can leave this device. The diary itself stays here
@@ -482,7 +444,7 @@ function Choice({
         )}
       >
         <p className="text-[15px] font-medium tracking-tight text-zinc-50">{title}</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">{body}</p>
+        {body ? <p className="mt-1 text-[13px] leading-relaxed text-zinc-500">{body}</p> : null}
       </button>
     </li>
   );

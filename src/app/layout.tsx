@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   description:
     process.env.CIRCADIA_SURFACE === "mod"
       ? "James-only inbox. Not the diary."
-      : "A local sleep companion for falling asleep, staying asleep, and holding a schedule.",
+      : "The sleep diary your clinician reads.",
   applicationName: process.env.CIRCADIA_SURFACE === "mod" ? OPERATOR_PRODUCT_NAME : PRODUCT_NAME,
   appleWebApp: {
     capable: true,

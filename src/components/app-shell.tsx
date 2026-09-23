@@ -33,6 +33,7 @@ import { diaryPathname, useDiaryPath } from "@/lib/diary-route";
 import { hapticLight } from "@/lib/haptics";
 import { skipWebOpenCover } from "@/lib/phone-native";
 import { isOperatorSurface } from "@/lib/surface";
+import { inTheTest } from "@/lib/in-the-test";
 import { cn } from "@/lib/utils";
 
 function useReducedMotion(): boolean {
@@ -101,7 +102,7 @@ function OpenCover({ phase, onSkip }: { phase: OpenCoverPhase; onSkip: () => voi
   );
 }
 
-function PhoneAsk({ onAsk }: { onAsk: () => void }) {
+function PhoneAsk({ onAsk, hideAsk = false }: { onAsk: () => void; hideAsk?: boolean }) {
   return (
     <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex h-[calc(env(safe-area-inset-top)+2.75rem)] items-end justify-between bg-gradient-to-b from-[#05040a]/85 to-transparent px-[max(0.35rem,env(safe-area-inset-left))] pr-[max(0.35rem,env(safe-area-inset-right))] xl:hidden">
       <DiaryTabLink
@@ -117,14 +118,16 @@ function PhoneAsk({ onAsk }: { onAsk: () => void }) {
         <Mark className="size-7 shrink-0" />
         <span className="font-heading text-[17px] leading-none tracking-tight text-zinc-50" aria-hidden>{PRODUCT_NAME}</span>
       </DiaryTabLink>
-      <button
-        type="button"
-        className="pointer-events-auto inline-flex h-11 min-w-11 items-center justify-end px-3 text-[15px] font-medium tracking-[0.04em] text-sky-300/90"
-        onClick={onAsk}
-        aria-haspopup="dialog"
-      >
-        Ask
-      </button>
+      {hideAsk ? null : (
+        <button
+          type="button"
+          className="pointer-events-auto inline-flex h-11 min-w-11 items-center justify-end px-3 text-[15px] font-medium tracking-[0.04em] text-sky-300/90"
+          onClick={onAsk}
+          aria-haspopup="dialog"
+        >
+          Ask
+        </button>
+      )}
     </header>
   );
 }
@@ -165,6 +168,7 @@ function ShellInner() {
   );
   const pastGate = Boolean(state.study.asked || hasCurrentConsent(state.study) || gateSkipped || consentDeferred);
   const appChrome = Boolean(signedIn && state.profile?.onboardingComplete && pastGate);
+  const testing = inTheTest(state);
 
   useLayoutEffect(() => {
     if (!skipWebOpenCover()) return;
@@ -281,6 +285,7 @@ function ShellInner() {
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
             {consultOpen ? null : (
               <PhoneAsk
+                hideAsk={testing}
                 onAsk={() => {
                   void hapticLight();
                   setConsultPath(pathname);
@@ -293,9 +298,11 @@ function ShellInner() {
                   <DiaryViews path={path} />
                 </div>
               </main>
-              <ChatBar variant="rail" />
+              {testing ? null : <ChatBar variant="rail" />}
             </div>
-            <ChatBar variant="sheet" open={consultOpen} onClose={() => setConsultPath(null)} />
+            {testing ? null : (
+              <ChatBar variant="sheet" open={consultOpen} onClose={() => setConsultPath(null)} />
+            )}
             {consultOpen ? null : <BottomNav />}
           </div>
         </>

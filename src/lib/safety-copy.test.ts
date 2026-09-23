@@ -20,7 +20,7 @@ const onboardSrc = readFileSync("src/components/onboarding.tsx", "utf8");
 describe("safety copy — shared strings", () => {
   it("keeps the medical disclaimer Circadia already ships on You", () => {
     expect(MEDICAL_DISCLAIMER).toBe(
-      "Educational tool. Not medical care. If you stop breathing at night, fall asleep while driving, or cannot stay awake, that is a clinic, not a chat bar.",
+      "Somnadia is a diary, not medical care. If you stop breathing at night, fall asleep while driving, or can't stay awake, please see a doctor.",
     );
     expect(MEDICAL_DISCLAIMER).not.toMatch(ENGINE_JARGON);
   });

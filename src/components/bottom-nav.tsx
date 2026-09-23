@@ -3,7 +3,8 @@
 import { DiaryTabLink } from "@/components/diary-tab-link";
 import { useCircadia } from "@/context/circadia-store";
 import { hapticSelect } from "@/lib/haptics";
-import { TABS } from "@/lib/nav";
+import { TABS, TEST_TABS } from "@/lib/nav";
+import { inTheTest } from "@/lib/in-the-test";
 import { morningFileDue } from "@/lib/morning-file";
 import { tabIsActive, useDiaryPath } from "@/lib/diary-route";
 import { cn } from "@/lib/utils";
@@ -12,13 +13,19 @@ export function BottomNav() {
   const path = useDiaryPath();
   const { state } = useCircadia();
   const morningDue = morningFileDue(state.reports, new Date(), state.profile?.targetWake);
+  const testing = inTheTest(state);
+  const tabs = testing ? TEST_TABS : TABS;
+  const dueHref = testing ? "/" : "/check-in";
 
   return (
     <nav
-      className="grid grid-cols-5 border-t border-white/[0.08] bg-[#0b0914]/80 px-1 pt-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden"
+      className={cn(
+        "grid border-t border-white/[0.08] bg-[#0b0914]/80 px-1 pt-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl md:hidden",
+        testing ? "grid-cols-4" : "grid-cols-5",
+      )}
       aria-label="Diary"
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = tabIsActive(tab.href, path);
         const Icon = tab.icon;
         return (
@@ -47,7 +54,7 @@ export function BottomNav() {
                   aria-hidden
                 />
               ) : null}
-              {tab.href === "/check-in" && morningDue ? (
+              {tab.href === dueHref && morningDue ? (
                 <span className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-sky-300" aria-hidden />
               ) : null}
             </span>

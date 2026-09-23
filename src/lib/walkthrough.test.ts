@@ -155,8 +155,8 @@ describe("A2 usual times", () => {
     expect(src).not.toContain("Asleep-by is figured from that");
 
     const observing = visibleText(render(enrolledToday(), createElement(YouView)));
-    expect(observing).toContain("Usual bedtime");
-    expect(observing).toContain("Usual get-up time");
+    expect(observing).toContain("bedtime");
+    expect(observing).toContain("get-up time");
     expect(observing).not.toMatch(/\bAsleep-by\b/);
     expect(observing).not.toMatch(/\bWake\b/);
 

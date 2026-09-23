@@ -4,12 +4,15 @@ import { useEffect, useState, type InputHTMLAttributes, type ReactNode } from "r
 import { Eye, EyeOff } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
 import { BubbleGroup } from "@/components/bubbles";
+import { ConsentCopy } from "@/components/consent-copy";
 import { StudyPanel } from "@/components/study-panel";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { BringLockedDiaryButton, FoldLockedDiaryButton, SaveLockedCopyButton } from "@/components/locked-diary-controls";
 import { CrisisLine } from "@/components/crisis-line";
 import { ERASE_CONFIRM_WORD } from "@/lib/confirm-word";
+import { CONSENT_EMAIL } from "@/lib/consent";
 import { MEDICAL_DISCLAIMER } from "@/lib/safety-copy";
+import { inTheTest } from "@/lib/in-the-test";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -78,6 +81,7 @@ export function YouView() {
   const [supDraft, setSupDraft] = useState("");
   const [sampleOpen, setSampleOpen] = useState(false);
   const [eraseOpen, setEraseOpen] = useState(false);
+  const [showConsent, setShowConsent] = useState(false);
 
   if (!profile) return null;
   const current = profile;
@@ -109,6 +113,196 @@ export function YouView() {
   const windowMin = overnightDuration(profile.targetSleep, profile.targetWake);
   const need = sleepNeedHours(profile.age);
   const loginLabel = prettyContactDisplay(session);
+
+  if (inTheTest(state)) {
+    return (
+      <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-24 md:px-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
+        <div className="mx-auto w-full max-w-5xl">
+          <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">You</p>
+          <h1 className="font-heading mt-1 text-[2.35rem] leading-none tracking-tight text-zinc-50">
+            {profile.name}
+          </h1>
+
+          <div className="mt-8 space-y-4">
+            <Panel kicker="Account" title="This diary">
+              <div className="grid grid-cols-2 gap-3">
+                <Field
+                  label="First name"
+                  value={firstName}
+                  autoComplete="given-name"
+                  onChange={setFirstName}
+                  onBlur={persistName}
+                />
+                <Field
+                  label="Last name"
+                  value={lastName}
+                  autoComplete="family-name"
+                  onChange={setLastName}
+                  onBlur={persistName}
+                />
+              </div>
+              {!canLogOut ? (
+                <div className="rounded-2xl border border-white/8 bg-black/25 p-4">
+                  <p className="text-[13px] text-zinc-200">Save a login</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
+                    Email or phone plus a password lets you sign out and open this diary again.
+                    Somnadia will not contact you.
+                  </p>
+                  <Input
+                    value={loginDraft}
+                    onChange={(e) => setLoginDraft(e.target.value)}
+                    placeholder="you@school.edu or a phone number"
+                    autoComplete="username"
+                    className="mt-3 h-10 rounded-xl border-white/10 bg-white/5"
+                  />
+                  <YouSecret
+                    label="Password"
+                    value={loginPassword}
+                    onChange={setLoginPassword}
+                    autoComplete="new-password"
+                  />
+                  <YouSecret
+                    label="Confirm password"
+                    value={loginConfirm}
+                    onChange={setLoginConfirm}
+                    autoComplete="new-password"
+                  />
+                  {loginError ? <p className="mt-2 text-[13px] text-amber-200/90">{loginError}</p> : null}
+                  <button
+                    type="button"
+                    className="mt-4 h-10 w-full rounded-full btn-primary text-[13px] font-medium"
+                    onClick={() => {
+                      void attachLogin(loginDraft, loginPassword, loginConfirm).then((result) => {
+                        if (!result.ok) setLoginError(result.error);
+                        else setLoginError(null);
+                      });
+                    }}
+                  >
+                    Save login
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-[12px] text-zinc-500">Login</p>
+                      <p className="mt-1 truncate text-[15px] text-zinc-50">{loginLabel || "Signed in"}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3 text-[13px]">
+                      <button
+                        type="button"
+                        className="text-zinc-300 hover:text-zinc-50"
+                        aria-expanded={changingPassword}
+                        onClick={() => {
+                          setChangingPassword((open) => !open);
+                          setPasswordMsg(null);
+                        }}
+                      >
+                        {changingPassword ? "Cancel" : "Change password"}
+                      </button>
+                      <span className="text-zinc-500" aria-hidden>
+                        ·
+                      </span>
+                      <button type="button" className="text-zinc-500 hover:text-zinc-300" onClick={logOut}>
+                        Log out
+                      </button>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-[12px] leading-relaxed text-zinc-400">
+                    Closing the app does not log you out. Log out here when you want the password gate
+                    back.
+                  </p>
+                </div>
+              )}
+              <button
+                type="button"
+                className="mt-4 text-[13px] text-red-300/90"
+                onClick={() => setEraseOpen(true)}
+              >
+                Erase this device
+              </button>
+            </Panel>
+
+            <Panel kicker="Reminders" title="Morning only">
+              <NotificationSetting
+                enabled={profile.notificationsEnabled}
+                observing
+                onChange={(notificationsEnabled) => persist({ notificationsEnabled })}
+              />
+            </Panel>
+
+            <StudyPanel />
+
+            <Panel kicker="Usual times" title="Diary pre-fill">
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-[12px] text-zinc-500">bedtime</p>
+                  <BubbleGroup
+                    size="compact"
+                    value={profile.targetSleep}
+                    onChange={(targetSleep) => persist({ targetSleep })}
+                    columns={3}
+                    options={SLEEP_TARGET_OPTIONS.map((t) => ({
+                      value: t,
+                      label: formatClock(t, profile.units),
+                    }))}
+                  />
+                </div>
+                <div>
+                  <p className="mb-2 text-[12px] text-zinc-500">get-up time</p>
+                  <BubbleGroup
+                    size="compact"
+                    value={profile.targetWake}
+                    onChange={(targetWake) => persist({ targetWake })}
+                    columns={3}
+                    options={WAKE_TARGET_OPTIONS.map((t) => ({
+                      value: t,
+                      label: formatClock(t, profile.units),
+                    }))}
+                  />
+                </div>
+              </div>
+            </Panel>
+
+            <Panel kicker="Privacy" title="What leaves this phone">
+              <button
+                type="button"
+                className="text-[15px] font-medium text-zinc-200 underline decoration-white/20 underline-offset-2"
+                onClick={() => setShowConsent((open) => !open)}
+              >
+                {showConsent ? "Hide the consent" : "Read the consent you accepted"}
+              </button>
+              {showConsent ? <ConsentCopy /> : null}
+            </Panel>
+
+            <Panel kicker="About" title="Somnadia">
+              <p className="text-[11px] tracking-[0.18em] text-zinc-500 uppercase">{APP_VERSION}</p>
+              <p className="mt-3 text-[15px] leading-relaxed text-zinc-400">
+                <a
+                  href={`mailto:${CONSENT_EMAIL}`}
+                  className="font-medium text-zinc-200 underline decoration-white/20 underline-offset-2"
+                >
+                  {CONSENT_EMAIL}
+                </a>
+              </p>
+              <p className="mt-4 text-[12px] leading-relaxed text-zinc-400">{MEDICAL_DISCLAIMER}</p>
+            </Panel>
+          </div>
+
+          <ConfirmDialog
+            open={eraseOpen}
+            onOpenChange={setEraseOpen}
+            title="Erase this device"
+            description="Mornings, the password, and the stay-signed-in key leave this device. Type erase to confirm."
+            confirmLabel="Erase"
+            destructive
+            confirmWord={ERASE_CONFIRM_WORD}
+            onConfirm={resetAll}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-24 md:px-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
