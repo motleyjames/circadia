@@ -450,9 +450,10 @@ describe("diary 2.0 invariants", () => {
     expect(after).not.toMatch(/nightGeometry|formatDuration/);
   });
 
-  it("CONSENT_VERSION is 3 and a person who accepted 2 sees the screen again", () => {
-    expect(CONSENT_VERSION).toBe(3);
+  it("CONSENT_VERSION is 4 and a person who accepted 3 sees the screen again", () => {
+    expect(CONSENT_VERSION).toBe(4);
+    expect(hasCurrentConsent({ consentVersion: 3 })).toBe(false);
     expect(hasCurrentConsent({ consentVersion: 2 })).toBe(false);
-    expect(hasCurrentConsent({ consentVersion: 3 })).toBe(true);
+    expect(hasCurrentConsent({ consentVersion: 4 })).toBe(true);
   });
 });

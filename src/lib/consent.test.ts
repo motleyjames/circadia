@@ -9,13 +9,27 @@ import {
   CONSENT_EMAIL,
   CONSENT_LEAVE_PATH,
   CONSENT_LEAVE_UNINSTALL,
+  CONSENT_NOW_RECEIVES_LESS,
   CONSENT_VERSION,
+  DISCLOSURE_GROUP_HEADINGS,
+  DISCLOSURE_GROUP_SUMMARIES,
   DISCLOSURE_LINES,
+  HIDDEN_COVERED_BY,
+  HIDDEN_FROM_LIST,
+  LISTED_ADDED_KEYS,
+  addedToListLine,
+  groupsMissingSummary,
+  hiddenKeysMissingCover,
   hasCurrentConsent,
+  isReturningConsentReader,
   joinConsentGate,
   joinWithConsent,
+  keysInMultipleGroups,
   recordStudyConsent,
   receivesCoversEveryMappedKey,
+  returningConsentLines,
+  stoppedSendingLine,
+  ungroupedDisclosureKeys,
   unmappedPackKeys,
   whatJamesReceives,
 } from "./consent";
@@ -72,6 +86,49 @@ describe("consent disclosure", () => {
     expect(receivesCoversEveryMappedKey()).toEqual([]);
     expect(DISCLOSURE_LINES.inBedAt).toBe("the time you went to bed");
   });
+
+  it("every sent key belongs to exactly one disclosure group", () => {
+    expect(ungroupedDisclosureKeys()).toEqual([]);
+    expect(keysInMultipleGroups()).toEqual([]);
+    expect(groupsMissingSummary()).toEqual([]);
+    expect(DISCLOSURE_GROUP_HEADINGS).toEqual([
+      "About you",
+      "Each morning",
+      "How the test runs",
+      "Safety notes",
+    ]);
+    expect(DISCLOSURE_GROUP_SUMMARIES["About you"]).toBe(
+      "a few facts, mostly as groups — like your age group and the sex you chose — never your name or exact measurements.",
+    );
+    expect(DISCLOSURE_GROUP_SUMMARIES["Each morning"]).toBe(
+      "your times, how long things took, how you rated the night, and anything different the day before.",
+    );
+    expect(DISCLOSURE_GROUP_SUMMARIES["How the test runs"]).toBe(
+      "which night of the test it is, and how long each morning took.",
+    );
+    expect(DISCLOSURE_GROUP_SUMMARIES["Safety notes"]).toBe("two kinds, only if they come up.");
+  });
+
+  it("every hidden key names the visible line that covers it", () => {
+    expect(hiddenKeysMissingCover()).toEqual([]);
+    expect([...HIDDEN_FROM_LIST].sort()).toEqual(["category", "nights", "profile", "safetyFlags"]);
+    expect(HIDDEN_COVERED_BY).toEqual({
+      profile: "ageBand",
+      nights: "fellAsleepAt",
+      safetyFlags: "witnessed-apnea",
+      category: "drowsy-driving",
+    });
+    expect(whatJamesReceives()).toContain(DISCLOSURE_LINES.ageBand);
+    expect(whatJamesReceives()).toContain(DISCLOSURE_LINES.fellAsleepAt);
+    expect(whatJamesReceives()).toContain(DISCLOSURE_LINES["witnessed-apnea"]);
+    expect(whatJamesReceives()).toContain(DISCLOSURE_LINES["drowsy-driving"]);
+    expect(DISCLOSURE_LINES[HIDDEN_COVERED_BY.profile]).toBe("your age group, not your exact age");
+    expect(DISCLOSURE_LINES[HIDDEN_COVERED_BY.nights]).toBe("the time you fell asleep");
+    expect(DISCLOSURE_LINES[HIDDEN_COVERED_BY.safetyFlags]).toBe(
+      "that someone saw you stop breathing in the night",
+    );
+    expect(DISCLOSURE_LINES[HIDDEN_COVERED_BY.category]).toBe("that you said you drive while drowsy");
+  });
 });
 
 describe("consent gates sending", () => {
@@ -80,7 +137,8 @@ describe("consent gates sending", () => {
     const fresh = await joinWithConsent(withProfile(), invite.code, true);
     expect(fresh.ok).toBe(true);
     if (!fresh.ok) return;
-    expect(CONSENT_VERSION).toBe(3);
+    expect(CONSENT_VERSION).toBe(4);
+    expect(hasCurrentConsent({ consentVersion: 3 })).toBe(false);
     expect(hasCurrentConsent({ consentVersion: 2 })).toBe(false);
     expect(hasCurrentConsent({ consentVersion: 1 })).toBe(false);
     expect(hasCurrentConsent(fresh.state.study)).toBe(true);
@@ -164,6 +222,36 @@ describe("consent screen copy", () => {
     expect(src).toContain("Not now");
     expect(src).toContain("I&apos;m 18 or older");
     expect(src).toContain("disabled={!eighteen || busy}");
+    expect(src).toContain("It takes about a minute.");
+    expect(src).not.toContain("two minutes");
+    expect(src).toContain("See every item");
+    expect(src).toContain("<details");
+    expect(src).toContain("disclosureGroupItems");
+    expect(src).toContain("DISCLOSURE_GROUP_SUMMARIES");
+    expect(src).toContain("max-w-[34rem]");
+    expect(src).toContain("mx-auto");
+    expect(src).toContain("CONSENT_NOW_RECEIVES_LESS");
+    expect(src).toContain("returningConsentLines");
+    expect(CONSENT_NOW_RECEIVES_LESS).toBe("Somnadia now receives less");
+    expect(isReturningConsentReader({ consentVersion: 1 })).toBe(true);
+    expect(isReturningConsentReader({ consentVersion: 2 })).toBe(true);
+    expect(isReturningConsentReader({ consentVersion: 3 })).toBe(true);
+    expect(isReturningConsentReader({ consentVersion: 4 })).toBe(false);
+    expect(isReturningConsentReader({ consentVersion: null })).toBe(false);
+    expect(stoppedSendingLine()).toContain(DISCLOSURE_LINES.hadDream);
+    expect(stoppedSendingLine()).toContain(DISCLOSURE_LINES.spins);
+    expect(stoppedSendingLine()).toContain(DISCLOSURE_LINES.sessions);
+    expect([...LISTED_ADDED_KEYS]).toEqual(["schema", "participantId", "surface"]);
+    expect(addedToListLine()).toContain(DISCLOSURE_LINES.schema);
+    expect(addedToListLine()).toContain(DISCLOSURE_LINES.participantId.replace(/\.+$/, ""));
+    expect(addedToListLine()).toContain(DISCLOSURE_LINES.surface);
+    expect(returningConsentLines({ consentVersion: 3 })).toEqual([addedToListLine()]);
+    expect(returningConsentLines({ consentVersion: 3 })).not.toContain(stoppedSendingLine());
+    expect(returningConsentLines({ consentVersion: 2 })).toEqual([
+      stoppedSendingLine(),
+      addedToListLine(),
+    ]);
+    expect(returningConsentLines({ consentVersion: 4 })).toEqual([]);
   });
 
   it("the Leaving section tells testers to email if they delete the app without leaving", () => {
@@ -180,6 +268,9 @@ describe("consent screen copy", () => {
       src.replaceAll("{CONSENT_LEAVE_UNINSTALL}", CONSENT_LEAVE_UNINSTALL),
       CONSENT_LEAVE_UNINSTALL,
       ...whatJamesReceives(),
+      ...Object.values(DISCLOSURE_GROUP_SUMMARIES),
+      stoppedSendingLine(),
+      addedToListLine(),
       ...Object.values(DISCLOSURE_LINES),
     ].join("\n");
     expect(rendered.match(/\bJames\b/g)).toEqual(["James"]);
