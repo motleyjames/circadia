@@ -80,6 +80,8 @@ describe("consent gates sending", () => {
     const fresh = await joinWithConsent(withProfile(), invite.code, true);
     expect(fresh.ok).toBe(true);
     if (!fresh.ok) return;
+    expect(CONSENT_VERSION).toBe(2);
+    expect(hasCurrentConsent({ consentVersion: 1 })).toBe(false);
     expect(hasCurrentConsent(fresh.state.study)).toBe(true);
     expect(fresh.state.study.consentVersion).toBe(CONSENT_VERSION);
 
@@ -150,22 +152,40 @@ describe("consent screen copy", () => {
     expect(src).toContain(CONSENT_LEAVE_PATH);
     expect(src).toContain("You → Leave the study");
     expect(CONSENT_LEAVE_UNINSTALL).toBe(
-      "If you delete Somnadia without leaving first, email James and he'll delete your nights.",
+      "If you delete Somnadia without leaving first, email hello@somnadia.com and your nights will be deleted.",
     );
     expect(src).toContain("CONSENT_LEAVE_UNINSTALL");
     expect(src).toContain(CONSENT_EMAIL);
+    expect(src).toContain("What Somnadia receives");
+    expect(src).toContain("What Somnadia never receives");
+    expect(src).toContain("All test data is deleted within 30 days.");
     expect(src).toContain("Join the test");
     expect(src).toContain("Not now");
     expect(src).toContain("I&apos;m 18 or older");
     expect(src).toContain("disabled={!eighteen || busy}");
   });
 
-  it("the Leaving section tells testers to email James if they delete the app without leaving", () => {
+  it("the Leaving section tells testers to email if they delete the app without leaving", () => {
     expect(CONSENT_LEAVE_UNINSTALL).toBe(
-      "If you delete Somnadia without leaving first, email James and he'll delete your nights.",
+      "If you delete Somnadia without leaving first, email hello@somnadia.com and your nights will be deleted.",
     );
     const src = readFileSync("src/components/consent-screen.tsx", "utf8");
-    expect(src).toContain("Your diary stays on\n        your phone. {CONSENT_LEAVE_UNINSTALL}");
+    expect(src).toContain("diary stays on your phone. {CONSENT_LEAVE_UNINSTALL}");
+  });
+
+  it("James is named once on the consent screen", () => {
+    const src = readFileSync("src/components/consent-screen.tsx", "utf8").replaceAll("&apos;", "'");
+    const rendered = [
+      src.replaceAll("{CONSENT_LEAVE_UNINSTALL}", CONSENT_LEAVE_UNINSTALL),
+      CONSENT_LEAVE_UNINSTALL,
+      ...whatJamesReceives(),
+      ...Object.values(DISCLOSURE_LINES),
+    ].join("\n");
+    expect(rendered.match(/\bJames\b/g)).toEqual(["James"]);
+    expect(rendered).toContain("The test is run by James Motley,");
+    expect(DISCLOSURE_LINES.participantId).toBe("which invite code you joined with.");
+    expect(CONSENT_LEAVE_UNINSTALL).not.toMatch(/\bJames\b/);
+    expect(CONSENT_EMAIL).toBe("hello@somnadia.com");
   });
 });
 
