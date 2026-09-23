@@ -5,6 +5,7 @@ import { parseLockedDiary, serializeLockedDiary } from "@/lib/diary-pack";
 import { lockedDiaryDestPath } from "@/lib/locked-diary-file";
 import { sessionTokenOk } from "@/lib/session-token";
 import { isOperatorSurface } from "@/lib/surface";
+import { PRODUCT_NAME } from "@/lib/product";
 import { isLocalRequest } from "@/lib/vault";
 
 export const runtime = "nodejs";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
   }
   const vault = parseLockedDiary(raw);
   if (!vault) {
-    return NextResponse.json({ ok: false, error: "That file is not a Circadia diary." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: `That file is not a ${PRODUCT_NAME} diary.` }, { status: 400 });
   }
   const pack = serializeLockedDiary(vault);
   const dest = lockedDiaryDestPath();

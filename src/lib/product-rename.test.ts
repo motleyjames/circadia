@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { CIRCADIA_SYNC_ORIGIN } from "./circadia-sync";
 import { deriveInviteParticipantIdV2, INVITE_DERIVE_PREFIX, INVITE_DERIVE_PREFIX_V2, normalizeInviteCodeV2 } from "./invite";
@@ -44,6 +45,38 @@ const DISPLAY_FILES = [
   "public/manifest.webmanifest",
   "phone/ios/App/App/Info.plist",
 ];
+
+function apiRouteFiles(dir: string): string[] {
+  const out: string[] = [];
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name);
+    const st = statSync(path);
+    if (st.isDirectory()) {
+      out.push(...apiRouteFiles(path));
+      continue;
+    }
+    if (/\.(ts|tsx)$/.test(name) && !name.endsWith(".test.ts") && !name.endsWith(".test.tsx")) {
+      out.push(path);
+    }
+  }
+  return out;
+}
+
+/** Quoted strings inside a NextResponse returned to the caller. Identifiers are not strings. */
+function returnedApiStrings(source: string): string[] {
+  const chunks: string[] = [];
+  const reply = /return (?:new )?NextResponse(?:\.json)?\(([\s\S]*?)\);/g;
+  let block: RegExpExecArray | null;
+  while ((block = reply.exec(source))) chunks.push(block[1] ?? "");
+  const out: string[] = [];
+  const lit = /(["'`])((?:\\.|(?!\1)[^\\])*)\1/g;
+  for (const chunk of chunks) {
+    lit.lastIndex = 0;
+    let quoted: RegExpExecArray | null;
+    while ((quoted = lit.exec(chunk))) out.push(quoted[2] ?? "");
+  }
+  return out;
+}
 
 describe("Somnadia rename invariants", () => {
   it("frozen identities stay circadia, never somnadia", () => {
@@ -114,6 +147,14 @@ describe("Somnadia rename invariants", () => {
     for (const file of DISPLAY_FILES) {
       const text = readFileSync(file, "utf8");
       expect(text, file).not.toMatch(word);
+    }
+    const sample =
+      'function useCircadia() {\n  type CircadiaSafeTree = never;\n  return NextResponse.json({ error: "Not found." });\n}';
+    expect(returnedApiStrings(sample)).toEqual(["Not found."]);
+    expect(returnedApiStrings(sample).join("\n")).not.toMatch(word);
+    for (const file of apiRouteFiles("src/app/api")) {
+      const hits = returnedApiStrings(readFileSync(file, "utf8")).filter((s) => word.test(s));
+      expect(hits, file).toEqual([]);
     }
     expect(readFileSync("phone/ios/App/App/SceneDelegate.swift", "utf8")).toContain('string: "Somnadia"');
     expect(readFileSync("phone/ios/App/App/Info.plist", "utf8")).toContain("<string>Somnadia</string>");
