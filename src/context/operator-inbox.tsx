@@ -27,6 +27,7 @@ type OperatorInboxValue = {
   open: (secret: string) => Promise<void>;
   refresh: () => void;
   eraseStudyData: (confirmation: string) => Promise<true | string>;
+  deleteTesterNights: (participantId: string, confirmation: string) => Promise<true | string>;
 };
 
 const OperatorInboxContext = createContext<OperatorInboxValue | null>(null);
@@ -42,6 +43,7 @@ const NOOP: OperatorInboxValue = {
   open: async () => {},
   refresh: () => {},
   eraseStudyData: async () => "Not signed in.",
+  deleteTesterNights: async () => "Not signed in.",
 };
 
 async function readDisk(secret: string): Promise<
@@ -150,6 +152,26 @@ export function OperatorInboxProvider({ children }: { children: ReactNode }) {
     [applyDisk, key],
   );
 
+  const deleteTesterNights = useCallback(
+    async (participantId: string, confirmation: string) => {
+      if (!key) return "Not signed in.";
+      try {
+        const res = await fetch("/api/moderator/nights", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-circadia-mod": key },
+          body: JSON.stringify({ participantId, confirmation }),
+        });
+        const body = (await res.json()) as { ok?: boolean; error?: string };
+        if (!res.ok || !body.ok) return body.error ?? "Could not delete this tester's nights.";
+        await applyDisk(key, false);
+        return true;
+      } catch {
+        return "Could not delete this tester's nights.";
+      }
+    },
+    [applyDisk, key],
+  );
+
   const refresh = useCallback(() => {
     if (!key) return;
     void (async () => {
@@ -178,7 +200,19 @@ export function OperatorInboxProvider({ children }: { children: ReactNode }) {
 
   return (
     <OperatorInboxContext.Provider
-      value={{ key, error, loading, booted, data, book, setBook, open, refresh, eraseStudyData }}
+      value={{
+        key,
+        error,
+        loading,
+        booted,
+        data,
+        book,
+        setBook,
+        open,
+        refresh,
+        eraseStudyData,
+        deleteTesterNights,
+      }}
     >
       {children}
     </OperatorInboxContext.Provider>

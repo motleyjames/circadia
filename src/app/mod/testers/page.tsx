@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { DeleteTesterNights } from "@/components/delete-tester-nights";
 import { OperatorChrome } from "@/components/operator-chrome";
 import { OperatorGate } from "@/components/operator-gate";
 import { useOperatorInbox } from "@/context/operator-inbox";
@@ -12,7 +13,8 @@ import { cn } from "@/lib/utils";
 const TABLE_COLS = "grid grid-cols-[minmax(0,1fr)_160px_120px_140px_120px] gap-6";
 
 export default function AllTestersPage() {
-  const { key, error, data, book, setBook, loading, booted, open, refresh } = useOperatorInbox();
+  const { key, error, data, book, setBook, loading, booted, open, refresh, deleteTesterNights } =
+    useOperatorInbox();
 
   function persistBook(next: OperatorInvite[]) {
     setBook(next);
@@ -82,6 +84,7 @@ export default function AllTestersPage() {
                       Restore
                     </button>
                   ) : null}
+                  <DeleteTesterNights participantId={row.participantId} onDelete={deleteTesterNights} />
                 </div>
               </div>
             ))

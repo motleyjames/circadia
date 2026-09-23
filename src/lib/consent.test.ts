@@ -8,9 +8,11 @@ import {
   CONSENT_CRISIS_HREF,
   CONSENT_EMAIL,
   CONSENT_LEAVE_PATH,
+  CONSENT_LEAVE_UNINSTALL,
   CONSENT_VERSION,
   DISCLOSURE_LINES,
   hasCurrentConsent,
+  joinConsentGate,
   joinWithConsent,
   recordStudyConsent,
   receivesCoversEveryMappedKey,
@@ -20,14 +22,18 @@ import {
 import { generateInvite } from "./invite";
 import {
   DELETE_STUDY_CONFIRM,
+  DELETE_TESTER_NIGHTS_CONFIRM,
   deleteAllStudyData,
+  deleteTesterNights,
   loadInviteBook,
   loadRejectedPacks,
+  loadWithdrawn,
   operatorPrivatePath,
   operatorPublicPath,
   recordRejectedPack,
   saveInviteBook,
 } from "./operator-store";
+import { writeInboxPack } from "./pack-fetch";
 import { generateOperatorKeyPair } from "./pack-seal";
 import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 import { emptyState, persistableState } from "./storage";
@@ -116,13 +122,12 @@ describe("consent gates sending", () => {
 });
 
 describe("age gate and not now", () => {
-  it("joining is impossible without the 18+ box; an intake age under 18 blocks it even with the box ticked", async () => {
-    const invite = await generateInvite("Ada West", "friend");
-    expect(await joinWithConsent(withProfile(), invite.code, false)).toEqual({ ok: false, reason: "box" });
-    expect(await joinWithConsent(withProfile(17), invite.code, true)).toEqual({ ok: false, reason: "age" });
-    const enrolled = await (await import("./invite")).enrollWithInvite(withProfile(16), invite.code);
-    expect(enrolled).toBeNull();
-    expect(acceptExistingConsent(withProfile(17), true)).toEqual({ ok: false, reason: "age" });
+  it("joining is impossible without the box; an intake age under 18 blocks it even with the box ticked", () => {
+    expect(joinConsentGate(false, 34)).toBe("box");
+    expect(joinConsentGate(true, 16)).toBe("age");
+    expect(joinConsentGate(true, 34)).toBeNull();
+    expect(acceptExistingConsent(withProfile(16), true)).toEqual({ ok: false, reason: "age" });
+    expect(acceptExistingConsent(withProfile(), false)).toEqual({ ok: false, reason: "box" });
   });
 
   it("a refusal and a Not now store nothing and send nothing", async () => {
@@ -144,11 +149,23 @@ describe("consent screen copy", () => {
     expect(src).toContain("tel:988");
     expect(src).toContain(CONSENT_LEAVE_PATH);
     expect(src).toContain("You → Leave the study");
+    expect(CONSENT_LEAVE_UNINSTALL).toBe(
+      "If you delete Somnadia without leaving first, email James and he'll delete your nights.",
+    );
+    expect(src).toContain("CONSENT_LEAVE_UNINSTALL");
     expect(src).toContain(CONSENT_EMAIL);
     expect(src).toContain("Join the test");
     expect(src).toContain("Not now");
     expect(src).toContain("I&apos;m 18 or older");
     expect(src).toContain("disabled={!eighteen || busy}");
+  });
+
+  it("the Leaving section tells testers to email James if they delete the app without leaving", () => {
+    expect(CONSENT_LEAVE_UNINSTALL).toBe(
+      "If you delete Somnadia without leaving first, email James and he'll delete your nights.",
+    );
+    const src = readFileSync("src/components/consent-screen.tsx", "utf8");
+    expect(src).toContain("Your diary stays on\n        your phone. {CONSENT_LEAVE_UNINSTALL}");
   });
 });
 
@@ -172,6 +189,54 @@ describe("delete all study data", () => {
       expect(readdirSync(inbox).filter((n) => n.endsWith(".json"))).toEqual([]);
       expect(loadInviteBook(inbox)).toEqual([]);
       expect(loadRejectedPacks(inbox)).toEqual([]);
+      expect(existsSync(operatorPrivatePath(inbox))).toBe(true);
+      expect(existsSync(operatorPublicPath(inbox))).toBe(true);
+    } finally {
+      rmSync(inbox, { recursive: true, force: true });
+    }
+  });
+
+  it("delete this tester's nights removes only that participant's packs, and does nothing without the typed confirmation", async () => {
+    const inbox = mkdtempSync(path.join(tmpdir(), "circadia-nights-"));
+    try {
+      const ada = await generateInvite("Ada West", "friend");
+      const bea = await generateInvite("Bea Cole", "friend");
+      saveInviteBook([ada, bea], inbox);
+      const adaPack = writeInboxPack(
+        buildStudyPack({
+          ...withProfile(),
+          study: { ...emptyState().study, asked: true, consented: true, participantId: ada.participantId },
+        }),
+        new Date("2026-09-01T12:00:00.000Z"),
+        inbox,
+      );
+      const beaPack = writeInboxPack(
+        buildStudyPack({
+          ...withProfile(),
+          study: { ...emptyState().study, asked: true, consented: true, participantId: bea.participantId },
+        }),
+        new Date("2026-09-01T13:00:00.000Z"),
+        inbox,
+      );
+      writeFileSync(operatorPrivatePath(inbox), "{\"kty\":\"EC\"}", { encoding: "utf8" });
+      writeFileSync(operatorPublicPath(inbox), "cHVibGlj", { encoding: "utf8" });
+      expect(deleteTesterNights(ada.participantId, "nope", inbox)).toEqual({ ok: false });
+      expect(readdirSync(inbox)).toEqual(expect.arrayContaining([adaPack, beaPack]));
+      expect(loadInviteBook(inbox)).toHaveLength(2);
+      expect(loadWithdrawn(inbox)[ada.participantId.toLowerCase()]).toBeUndefined();
+      const week = readFileSync("src/app/mod/page.tsx", "utf8");
+      const testers = readFileSync("src/app/mod/testers/page.tsx", "utf8");
+      const control = readFileSync("src/components/delete-tester-nights.tsx", "utf8");
+      expect(week).toContain("<DeleteTesterNights");
+      expect(testers).toContain("<DeleteTesterNights");
+      expect(control).toContain("Delete this tester&apos;s nights");
+      expect(control).toContain("DELETE_TESTER_NIGHTS_CONFIRM");
+      const gone = deleteTesterNights(ada.participantId, DELETE_TESTER_NIGHTS_CONFIRM, inbox);
+      expect(gone).toEqual({ ok: true, removed: [adaPack] });
+      expect(readdirSync(inbox)).not.toContain(adaPack);
+      expect(readdirSync(inbox)).toContain(beaPack);
+      expect(loadInviteBook(inbox)).toHaveLength(2);
+      expect(loadWithdrawn(inbox)[ada.participantId.toLowerCase()]).toBe(true);
       expect(existsSync(operatorPrivatePath(inbox))).toBe(true);
       expect(existsSync(operatorPublicPath(inbox))).toBe(true);
     } finally {

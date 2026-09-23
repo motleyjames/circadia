@@ -14,6 +14,8 @@ export const CONSENT_VERSION = 1;
 
 export const CONSENT_EMAIL = "motleyjames06@gmail.com";
 export const CONSENT_LEAVE_PATH = "You → Leave the study";
+export const CONSENT_LEAVE_UNINSTALL =
+  "If you delete Somnadia without leaving first, email James and he'll delete your nights.";
 export const AGE_REFUSAL =
   "Somnadia's test is for adults. You can still keep your diary for yourself.";
 
@@ -162,14 +164,24 @@ export function intakeAgeBlocksJoin(age: number | null | undefined): boolean {
 
 export type JoinConsentFail = "box" | "age" | "invite";
 
+/** The 18+ box and intake age, before any enroll. The button's disabled state is not this gate. */
+export function joinConsentGate(
+  eighteen: boolean,
+  age: number | null | undefined,
+): JoinConsentFail | null {
+  if (!eighteen) return "box";
+  if (intakeAgeBlocksJoin(age)) return "age";
+  return null;
+}
+
 export async function joinWithConsent(
   state: CircadiaState,
   code: string,
   eighteen: boolean,
   now = new Date(),
 ): Promise<{ ok: true; state: CircadiaState } | { ok: false; reason: JoinConsentFail }> {
-  if (!eighteen) return { ok: false, reason: "box" };
-  if (intakeAgeBlocksJoin(state.profile?.age)) return { ok: false, reason: "age" };
+  const blocked = joinConsentGate(eighteen, state.profile?.age);
+  if (blocked) return { ok: false, reason: blocked };
   const enrolled = await enrollWithInvite(state, code, now);
   if (!enrolled) return { ok: false, reason: "invite" };
   return { ok: true, state: { ...enrolled, study: recordStudyConsent(enrolled.study, now) } };
@@ -180,8 +192,8 @@ export function acceptExistingConsent(
   eighteen: boolean,
   now = new Date(),
 ): { ok: true; state: CircadiaState } | { ok: false; reason: JoinConsentFail } {
-  if (!eighteen) return { ok: false, reason: "box" };
-  if (intakeAgeBlocksJoin(state.profile?.age)) return { ok: false, reason: "age" };
+  const blocked = joinConsentGate(eighteen, state.profile?.age);
+  if (blocked) return { ok: false, reason: blocked };
   if (!state.study.participantId) return { ok: false, reason: "invite" };
   return { ok: true, state: { ...state, study: recordStudyConsent(state.study, now) } };
 }
