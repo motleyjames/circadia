@@ -1636,5 +1636,68 @@
     "replace": "",
     "testFile": "src/lib/observation.test.ts",
     "testName": "is true for percentages, durations, decimals, clocks and countdowns"
+  },
+  {
+    "id": "consult-baseline-drops-observing-branch",
+    "why": "Without the observing branch, Consult still recites last night during a baseline.",
+    "file": "src/lib/chat.ts",
+    "find": "  if (observation?.observing) {\n    return answerDuringBaseline(q, lower, { profile }, observation.solo);\n  }\n",
+    "replace": "",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "returns Closed while observing and the diary answer once discharged"
+  },
+  {
+    "id": "consult-baseline-safety-after-observing",
+    "why": "Safety must run first. After the observing branch, a drowsy driver gets a Hold instead of stop driving.",
+    "file": "src/lib/chat.ts",
+    "find": "  const urgent = safetyTriage(lower, profile);\n  if (urgent) return urgent;\n  if (observation?.observing) {\n    return answerDuringBaseline(q, lower, { profile }, observation.solo);\n  }\n",
+    "replace": "  if (observation?.observing) {\n    return answerDuringBaseline(q, lower, { profile }, observation.solo);\n  }\n  const urgent = safetyTriage(lower, profile);\n  if (urgent) return urgent;\n",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "I fell asleep at the wheel is the drowsy-driving safety reply, byte for byte"
+  },
+  {
+    "id": "consult-baseline-closed-uses-diary",
+    "why": "Closed must not call the diary builders. Routing last night back to them shows clocks during a baseline.",
+    "file": "src/lib/consult-baseline.ts",
+    "find": "  if (isClosedTopic(q, lower)) {\n    return { kind: \"closed\", reply: closedReply(solo) };\n  }\n",
+    "replace": "",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "walk me through last night, how did I sleep, my week, how am I doing, what's my efficiency → Closed"
+  },
+  {
+    "id": "consult-baseline-onset-uses-old-reply",
+    "why": "The old onset reply tells people to get up after twenty minutes, which coaches the baseline.",
+    "file": "src/lib/consult-baseline.ts",
+    "find": "    return { kind: \"hold\", reply: holdOnset(solo) };\n",
+    "replace": "    return { kind: \"hold\", reply: { text: \"Still awake about 20 minutes: get up. That beats a sleeping pill at lights-out.\", citations: [\"sleep-pressure\"] } };\n",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "every corpus row stays free of golden tokens and coaching, except safety and library for coaching"
+  },
+  {
+    "id": "consult-baseline-replyfor-not-observing",
+    "why": "replyFor must pass the live observation. Hard-coding false leaves evening coaching on the phone during a baseline.",
+    "file": "src/context/circadia-store.tsx",
+    "find": "  return answerQuestion(text, state.profile, state.reports, state.chat, consultObservation(state, now));\n",
+    "replace": "  return answerQuestion(text, state.profile, state.reports, state.chat, { observing: false, solo: false });\n",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "returns Closed while observing and the diary answer once discharged"
+  },
+  {
+    "id": "consult-baseline-starters-stay-clinic",
+    "why": "Clinic starters invite a last-night recap during the baseline.",
+    "file": "src/components/chat-bar.tsx",
+    "find": "  const starters = observing ? BASELINE_STARTERS : CLINIC_STARTERS;\n",
+    "replace": "  const starters = CLINIC_STARTERS;\n",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "while observing shows baseline starters and hides the diary intro"
+  },
+  {
+    "id": "consult-baseline-alcohol-experiment",
+    "why": "Two dry nights is a tonight-plan. Restoring it coaches the sleep being measured.",
+    "file": "src/lib/consult-baseline.ts",
+    "find": "        text: `Even one or two drinks can steal dream sleep. Heavier drinks make you drowsy going in, then shred the second half — more wake-ups, less dreaming. “Spins” means the dose was already past useful sleep. ${USUAL}`,\n",
+    "replace": "        text: `Even one or two drinks can steal dream sleep. Heavier drinks make you drowsy going in, then shred the second half — more wake-ups, less dreaming. “Spins” means the dose was already past useful sleep. If we run one experiment: two dry nights, compare how you rate the morning. That beats a new bottle. ${USUAL}`,\n",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "every corpus row stays free of golden tokens and coaching, except safety and library for coaching"
   }
 ]

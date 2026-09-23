@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { DiaryLink } from "@/components/diary-tab-link";
 import { CrisisLine } from "@/components/crisis-line";
-import { useCircadia } from "@/context/circadia-store";
-import { CLINIC_STARTERS } from "@/lib/chat";
+import { consultObservation, useCircadia } from "@/context/circadia-store";
+import { BASELINE_STARTERS, CLINIC_STARTERS } from "@/lib/chat";
+import { useWallClock } from "@/lib/wall-clock";
 import { hapticLight } from "@/lib/haptics";
 import { PRODUCT_NAME } from "@/lib/product";
 import {
@@ -153,6 +154,9 @@ export function ChatBar({
   onClose?: () => void;
 }) {
   const { state, sendChat, newConsult, openConsult, deleteConsult } = useCircadia();
+  const now = useWallClock();
+  const { observing } = consultObservation(state, now);
+  const starters = observing ? BASELINE_STARTERS : CLINIC_STARTERS;
   const [pane, setPane] = useState<"desk" | "files">("desk");
   const [draft, setDraft] = useState("");
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
@@ -242,11 +246,12 @@ export function ChatBar({
       {showStarters ? (
         <div>
           <p className="max-w-[36ch] text-[13px] leading-[1.55] text-zinc-400">
-            Ask the actual problem. I answer from your diary and the library. If I do not have a
-            note, I say so — I will not invent a diagnosis.
+            {observing
+              ? "Ask about sleep and I answer from the library. Your own nights stay closed until night 14, so nothing here changes the baseline."
+              : "Ask the actual problem. I answer from your diary and the library. If I do not have a note, I say so — I will not invent a diagnosis."}
           </p>
           <ul className="mt-6 space-y-1">
-            {CLINIC_STARTERS.map((starter) => (
+            {starters.map((starter) => (
               <li key={starter.q}>
                 <button
                   type="button"
@@ -306,7 +311,11 @@ export function ChatBar({
             ref={inputRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Falling asleep, 3 a.m., a bottle on the aisle…"
+            placeholder={
+              observing
+                ? "Melatonin, alcohol, why fourteen nights…"
+                : "Falling asleep, 3 a.m., a bottle on the aisle…"
+            }
             aria-label={`Ask ${PRODUCT_NAME}`}
             className={cn(
               "h-11 min-w-0 flex-1 rounded-full border border-white/12 bg-white/[0.06] px-4 text-zinc-100 outline-none placeholder:text-zinc-400 focus:border-sky-300/40",
@@ -322,7 +331,9 @@ export function ChatBar({
           </button>
         </form>
         <p className="mt-2 text-[10px] leading-relaxed text-zinc-400">
-          Diary plus the library. Not a prescription.
+          {observing
+            ? "The library, not your diary, until night 14. Not a prescription."
+            : "Diary plus the library. Not a prescription."}
         </p>
       </div>
     );
@@ -363,7 +374,9 @@ export function ChatBar({
       ? "Filed by day. Open one to continue."
       : continuingLabel ??
         (empty
-          ? "Silence when the note does not exist."
+          ? observing
+            ? "The library, not your diary, until night 14."
+            : "Silence when the note does not exist."
           : "Ranked answers. Named sources. Silence when the note does not exist.");
 
   if (rail) {

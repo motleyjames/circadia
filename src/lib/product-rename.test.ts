@@ -16,6 +16,7 @@ const CIRCADIAN_FILES = [
   "src/lib/advisor.ts",
   "src/lib/morning-reading.ts",
   "src/lib/chat.ts",
+  "src/lib/consult-routes.ts",
   "src/lib/recommendations.ts",
   "src/lib/chat-corpus.ts",
   "src/lib/diary-consult.ts",
