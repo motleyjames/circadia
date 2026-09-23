@@ -35,6 +35,7 @@ const DISPLAY_FILES = [
   "src/components/operator-gate.tsx",
   "src/components/sidebar-nav.tsx",
   "src/components/fault-screen.tsx",
+  "src/components/consent-screen.tsx",
   "src/lib/console-model.ts",
   "src/lib/login.ts",
   "src/lib/notify-device.ts",

@@ -26,6 +26,7 @@ type OperatorInboxValue = {
   setBook: (next: OperatorInvite[]) => void;
   open: (secret: string) => Promise<void>;
   refresh: () => void;
+  eraseStudyData: (confirmation: string) => Promise<true | string>;
 };
 
 const OperatorInboxContext = createContext<OperatorInboxValue | null>(null);
@@ -40,6 +41,7 @@ const NOOP: OperatorInboxValue = {
   setBook: () => {},
   open: async () => {},
   refresh: () => {},
+  eraseStudyData: async () => "Not signed in.",
 };
 
 async function readDisk(secret: string): Promise<
@@ -127,6 +129,27 @@ export function OperatorInboxProvider({ children }: { children: ReactNode }) {
     [applyDisk],
   );
 
+  const eraseStudyData = useCallback(
+    async (confirmation: string) => {
+      if (!key) return "Not signed in.";
+      try {
+        const res = await fetch("/api/moderator/erase", {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-circadia-mod": key },
+          body: JSON.stringify({ confirmation }),
+        });
+        const body = (await res.json()) as { ok?: boolean; error?: string };
+        if (!res.ok || !body.ok) return body.error ?? "Could not delete study data.";
+        setBook([]);
+        await applyDisk(key, false);
+        return true;
+      } catch {
+        return "Could not delete study data.";
+      }
+    },
+    [applyDisk, key],
+  );
+
   const refresh = useCallback(() => {
     if (!key) return;
     void (async () => {
@@ -155,7 +178,7 @@ export function OperatorInboxProvider({ children }: { children: ReactNode }) {
 
   return (
     <OperatorInboxContext.Provider
-      value={{ key, error, loading, booted, data, book, setBook, open, refresh }}
+      value={{ key, error, loading, booted, data, book, setBook, open, refresh, eraseStudyData }}
     >
       {children}
     </OperatorInboxContext.Provider>

@@ -156,6 +156,8 @@ export const emptyStudy = (): StudyState => ({
   sendPending: false,
   withdrawnAt: null,
   lastSentPackHash: null,
+  consentVersion: null,
+  consentedAt: null,
 });
 
 export const emptyState = (): CircadiaState => ({
@@ -1456,6 +1458,8 @@ function coerceStudy(value: unknown): StudyState {
     sendPending: s.sendPending === true,
     withdrawnAt: typeof s.withdrawnAt === "string" && s.withdrawnAt ? s.withdrawnAt : null,
     lastSentPackHash: typeof s.lastSentPackHash === "string" && s.lastSentPackHash ? s.lastSentPackHash : null,
+    consentVersion: typeof s.consentVersion === "number" && Number.isInteger(s.consentVersion) ? s.consentVersion : null,
+    consentedAt: typeof s.consentedAt === "string" && s.consentedAt ? s.consentedAt : null,
   };
 }
 

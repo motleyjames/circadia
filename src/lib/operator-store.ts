@@ -1,7 +1,10 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { DELETE_STUDY_CONFIRM, typedWordMatches } from "@/lib/confirm-word";
 import { readInviteBook, type OperatorInvite } from "@/lib/invite";
 import { studyInboxDir } from "@/lib/study-inbox";
+
+export { DELETE_STUDY_CONFIRM };
 
 export const OPERATOR_DIR_NAME = ".operator";
 export const INVITE_BOOK_FILE = "invite-book.json";
@@ -137,6 +140,64 @@ export function loadWithdrawn(inbox = studyInboxDir()): Record<string, boolean> 
 export function saveWithdrawn(rows: Record<string, boolean>, inbox = studyInboxDir()): void {
   ensureOperatorDir(inbox);
   writeFileSync(withdrawnPath(inbox), JSON.stringify(rows, null, 2), { encoding: "utf8", mode: 0o600 });
+}
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function deleteInboxPacksFor(participantId: string, inbox = studyInboxDir()): string[] {
+  const id = participantId.trim().toLowerCase();
+  if (!UUID_RE.test(id)) return [];
+  const prefix = `study-${id.slice(0, 8)}-`;
+  let names: string[] = [];
+  try {
+    names = readdirSync(inbox);
+  } catch {
+    return [];
+  }
+  const removed: string[] = [];
+  for (const name of names) {
+    if (!name.endsWith(".json") || name.startsWith(".")) continue;
+    const file = path.join(inbox, name);
+    let match = name.startsWith(prefix);
+    if (!match) {
+      try {
+        const raw = JSON.parse(readFileSync(file, "utf8")) as { participantId?: unknown };
+        match = typeof raw.participantId === "string" && raw.participantId.toLowerCase() === id;
+      } catch {
+        match = false;
+      }
+    }
+    if (!match) continue;
+    unlinkSync(file);
+    removed.push(name);
+  }
+  return removed;
+}
+
+export function deleteAllStudyData(
+  confirmation: string,
+  inbox = studyInboxDir(),
+): { ok: true } | { ok: false } {
+  if (!typedWordMatches(confirmation, DELETE_STUDY_CONFIRM)) return { ok: false };
+  let names: string[] = [];
+  try {
+    names = readdirSync(inbox);
+  } catch {
+    names = [];
+  }
+  for (const name of names) {
+    if (!name.endsWith(".json")) continue;
+    unlinkSync(path.join(inbox, name));
+  }
+  for (const file of [rejectLogPath(inbox), inviteBookPath(inbox), withdrawnPath(inbox), fetchEtagPath(inbox)]) {
+    try {
+      unlinkSync(file);
+    } catch {
+      /* already gone */
+    }
+  }
+  return { ok: true };
 }
 
 export function recordRejectedPack(

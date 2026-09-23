@@ -160,6 +160,9 @@ export type StudyState = {
   withdrawnAt?: string | null;
   /** SHA-256 of the last payload the Worker accepted. Vault only. */
   lastSentPackHash?: string | null;
+  /** Promises this device accepted. Vault only. Never a pack field. */
+  consentVersion?: number | null;
+  consentedAt?: string | null;
 };
 
 export type CircadiaState = {

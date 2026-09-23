@@ -1018,12 +1018,12 @@
   },
   {
     "id": "fetch-deletes-on-withdrawal",
-    "why": "Withdrawal must not delete stored nights. A mark that only accumulates went stale that way; deleting them is worse.",
+    "why": "James decided leaving deletes. The old test encoded delete-nothing while that was open. Skipping the delete leaves a tester's nights on James's Mac after they leave.",
     "file": "src/lib/pack-fetch.ts",
-    "find": "    if (opened.kind === \"withdrawal\") {\n      withdrawn[row.participantId] = true;\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
-    "replace": "    if (opened.kind === \"withdrawal\") {\n      withdrawn[row.participantId] = true;\n      rejects.push({ reason: \"Withdrawn.\", arrivedAt: now.toISOString(), file: `fetch:${row.participantId}` });\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
+    "find": "    if (opened.kind === \"withdrawal\") {\n      withdrawn[row.participantId] = true;\n      deleteInboxPacksFor(row.participantId, inbox);\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
+    "replace": "    if (opened.kind === \"withdrawal\") {\n      withdrawn[row.participantId] = true;\n      if (row.etag) nextEtags[row.workerId] = row.etag;\n      continue;\n    }\n",
     "testFile": "src/lib/pack-fetch.test.ts",
-    "testName": "a withdrawal marks the tester withdrawn, deletes nothing, and never reaches the reject log"
+    "testName": "a withdrawal deletes that tester's packs and only theirs"
   },
   {
     "id": "fetch-writes-while-unreachable",
@@ -1321,5 +1321,68 @@
     "replace": "  require(\"node:fs\").rmSync(\"/Applications/Circadia.app\", { recursive: true, force: true });\n  console.log(\"Circadia.app and Circadia Operator.app are still installed if they were.\");\n",
     "testFile": "src/lib/product-rename.test.ts",
     "testName": "put-on-dock does not remove or move Circadia.app"
+  },
+  {
+    "id": "consent-pack-key-unmapped",
+    "why": "A pack field without a disclosure line means testers were not told what James receives.",
+    "file": "src/lib/study.ts",
+    "find": "export const TOP_KEYS = new Set([\n  \"schema\",\n",
+    "replace": "export const TOP_KEYS = new Set([\n  \"secretField\",\n  \"schema\",\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "every pack key has a disclosure line"
+  },
+  {
+    "id": "consent-sends-without-version",
+    "why": "A pack must not leave without the current consent version, including James's own diary.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "  if (!withdrawn && !hasCurrentConsent(study)) return { status: \"skipped\" };\n",
+    "replace": "  if (false && !withdrawn && !hasCurrentConsent(study)) return { status: \"skipped\" };\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "no pack is sealed or sent without consent at CONSENT_VERSION"
+  },
+  {
+    "id": "consent-record-enters-pack",
+    "why": "Consent is a device record. Putting it in a pack sends a promise that must stay on the phone.",
+    "file": "src/lib/study.ts",
+    "find": "  if (state.episode) {\n    pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);\n  }\n",
+    "replace": "  if (state.episode) {\n    pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);\n  }\n  (pack as { consentVersion?: number }).consentVersion = state.study.consentVersion ?? 0;\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "the consent record never enters a pack"
+  },
+  {
+    "id": "consent-joins-without-gate",
+    "why": "Joining without the 18+ box, or with an intake age under 18, records a child.",
+    "file": "src/lib/consent.ts",
+    "find": "  if (!eighteen) return { ok: false, reason: \"box\" };\n  if (intakeAgeBlocksJoin(state.profile?.age)) return { ok: false, reason: \"age\" };\n  const enrolled = await enrollWithInvite(state, code, now);\n",
+    "replace": "  const enrolled = await enrollWithInvite(state, code, now);\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "joining is impossible without the 18+ box; an intake age under 18 blocks it even with the box ticked"
+  },
+  {
+    "id": "consent-refusal-stores",
+    "why": "A refusal must store nothing. Returning ok records a child who was turned away.",
+    "file": "src/lib/consent.ts",
+    "find": "  if (intakeAgeBlocksJoin(state.profile?.age)) return { ok: false, reason: \"age\" };\n  const enrolled = await enrollWithInvite(state, code, now);\n",
+    "replace": "  if (intakeAgeBlocksJoin(state.profile?.age)) return { ok: true, state };\n  const enrolled = await enrollWithInvite(state, code, now);\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "a refusal and a Not now store nothing and send nothing"
+  },
+  {
+    "id": "consent-erase-skips-confirm",
+    "why": "Delete-all without the typed confirmation would wipe the book on a misclick.",
+    "file": "src/lib/operator-store.ts",
+    "find": "  if (!typedWordMatches(confirmation, DELETE_STUDY_CONFIRM)) return { ok: false };\n",
+    "replace": "  if (false && !typedWordMatches(confirmation, DELETE_STUDY_CONFIRM)) return { ok: false };\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "delete-all removes packs, rejects and the book, keeps the key pair, and does nothing without the typed confirmation"
+  },
+  {
+    "id": "consent-screen-drops-988",
+    "why": "The consent screen must keep the 988 tel link. Dropping it hides the crisis number.",
+    "file": "src/components/consent-screen.tsx",
+    "find": "          href=\"tel:988\"\n",
+    "replace": "          href=\"https://988lifeline.org\"\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "the consent screen contains the 988 tel link and the leave path, verbatim"
   }
 ]

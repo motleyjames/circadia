@@ -653,28 +653,25 @@ describe("console-model", () => {
     ]);
   });
 
-  it("a withdrawal marks the tester withdrawn, deletes nothing, and never reaches the reject log", () => {
-    const row = arrival(ALEX, "2026-09-21T10-00-00-000Z");
+  it("a withdrawal deletes that tester's packs and only theirs", () => {
+    // James decided leaving deletes. The old console test encoded delete-nothing
+    // while that was open. After a withdrawal fetch, arrivals are gone; the book
+    // row stays, withdrawn, with no nights.
+    const blake = arrival(BLAKE, "2026-09-21T11-00-00-000Z");
     const view = buildConsoleModel({
-      arrivals: [row],
-      book: [bookEntry(ALEX, "Alex Q.")],
+      arrivals: [blake],
+      book: [bookEntry(ALEX, "Alex Q."), bookEntry(BLAKE, "Blake Q.")],
       rejects: [],
       now: NOW,
       withdrawn: [ALEX],
     });
-    expect(view.weekTesters).toEqual([]);
-    expect(view.health).toBeNull();
-    expect(view.allTesters[0]?.state).toBe("Withdrawn");
-    expect(view.allTesters[0]?.nightCount).toBeGreaterThan(0);
-    const later = buildConsoleModel({
-      arrivals: [row],
-      book: [bookEntry(ALEX, "Alex Q.")],
-      rejects: [],
-      now: NOW,
-      withdrawn: [],
-    });
-    expect(later.weekTesters).toHaveLength(1);
-    expect(later.allTesters[0]?.state).not.toBe("Withdrawn");
+    expect(view.weekTesters.map((row) => row.participantId)).toEqual([BLAKE]);
+    const left = view.allTesters.find((row) => row.participantId === ALEX);
+    expect(left?.state).toBe("Withdrawn");
+    expect(left?.nightCount).toBe(0);
+    const stayed = view.allTesters.find((row) => row.participantId === BLAKE);
+    expect(stayed?.state).not.toBe("Withdrawn");
+    expect(stayed?.nightCount).toBeGreaterThan(0);
   });
 
   it("an unreachable Worker changes nothing already stored", () => {

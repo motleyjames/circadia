@@ -243,6 +243,7 @@ export async function enrollWithInvite(
   const v1 = v2 ? null : normalizeInviteCode(code);
   if (!v2 && !v1) return null;
   if (state.episode?.clinicianId) return null;
+  if (typeof state.profile?.age === "number" && state.profile.age < 18) return null;
   const participantId = await parseInviteCode(code);
   if (!participantId) return null;
   const episode = state.episode ?? createEpisode({ clinicianId: null, enrolledAt: now.toISOString() });

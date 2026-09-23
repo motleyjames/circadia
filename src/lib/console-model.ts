@@ -260,6 +260,13 @@ export function buildConsoleModel(input: {
   for (const [participantId, rows] of byPerson) {
     testers.push(stitchTester(participantId, rows, input.book, input.now, withdrawn.has(participantId)));
   }
+  const seen = new Set(testers.map((row) => row.participantId.toLowerCase()));
+  for (const invite of input.book) {
+    const id = invite.participantId.toLowerCase();
+    if (!withdrawn.has(id) || seen.has(id)) continue;
+    testers.push(withdrawnBookTester(invite));
+    seen.add(id);
+  }
 
   const weekTesters = testers.filter((row) => !row.dismissed && !row.withdrawn);
   const buckets: Record<ConsoleSectionId, ConsoleTester[]> = {
@@ -308,6 +315,32 @@ export function buildConsoleModel(input: {
     health,
     attentionCount: buckets.safety.length + buckets["not-filing"].length,
     empty: weekTesters.length === 0,
+  };
+}
+
+function withdrawnBookTester(invite: OperatorInvite): ConsoleTester {
+  const inBook = Boolean(invite.name) && CONSOLE_NAME_SOURCE === "invite-book";
+  return {
+    participantId: invite.participantId,
+    name: inBook ? invite.name : null,
+    inBook,
+    dismissed: invite.dismissed,
+    withdrawn: true,
+    cohort: inBook ? invite.cohort : null,
+    cohortLabel: cohortLabel(inBook ? invite.cohort : null, inBook),
+    section: "not-enrolled",
+    nightsElapsed: null,
+    nightsFiled: 0,
+    packNightCount: 0,
+    completion: null,
+    progressLabel: progressLabel(null, 0),
+    filedLabel: filedLabel(null, 0, 0),
+    sleepEfficiencyPct: null,
+    slots: [],
+    flags: [],
+    reason: "Left the study.",
+    lastSync: "—",
+    action: null,
   };
 }
 

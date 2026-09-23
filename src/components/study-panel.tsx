@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useCircadia } from "@/context/circadia-store";
+import { ConsentScreen } from "@/components/consent-screen";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { normalizeInviteCode, normalizeInviteCodeV2 } from "@/lib/invite";
 import { studyDeliveryLine, studyJoinNotice } from "@/lib/pack-deliver";
 import { isPhoneNative } from "@/lib/phone-native";
 import { operatorPublicFingerprint } from "@/lib/operator-public";
@@ -15,12 +17,24 @@ export function StudyPanel() {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
   const phone = isPhoneNative();
 
   useEffect(() => {
     void operatorPublicFingerprint().then(setFingerprint);
   }, []);
+
+  if (pendingCode) {
+    return (
+      <ConsentScreen
+        inviteCode={pendingCode}
+        onNotNow={() => {
+          setPendingCode(null);
+        }}
+      />
+    );
+  }
 
   return (
     <section className="rounded-3xl border border-white/[0.08] bg-white/[0.035] p-5 sm:p-6">
@@ -53,9 +67,14 @@ export function StudyPanel() {
             variant="outline"
             className="mt-3 h-11 rounded-full border-white/15 px-4 text-[15px]"
             onClick={() => {
-              void enrollSolo(inviteCode).then((ok) => {
-                setInviteError(ok ? null : "That is not an invite.");
-              });
+              const code = inviteCode.trim();
+              if (!normalizeInviteCodeV2(code) && !normalizeInviteCode(code)) {
+                setInviteError("That is not an invite.");
+                return;
+              }
+              void enrollSolo;
+              setInviteError(null);
+              setPendingCode(code);
             }}
           >
             Start the shakedown
