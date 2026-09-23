@@ -4,11 +4,41 @@ import { readDream } from "@/lib/dreams";
 import { flagMedications, weekBreakdown } from "@/lib/metrics";
 import { buildRecommendations } from "@/lib/recommendations";
 import { extraConsult } from "@/lib/consult-extra";
+import { answerDuringBaseline, BASELINE_STARTERS, BASELINE_WITHHOLD } from "@/lib/consult-baseline";
 import { answerDiaryQuestion } from "@/lib/diary-consult";
 import { resolveQuestion } from "@/lib/chat-history";
 import { safetyTriage } from "@/lib/safety-triage";
 import { matchResearch } from "@/lib/research";
 import { formatClock, formatDuration, newId, overnightDuration, sleepNeedHours } from "@/lib/time";
+import {
+  TOPIC_ALCOHOL,
+  TOPIC_ALCOHOL_NOT,
+  TOPIC_CAFFEINE,
+  TOPIC_DREAM,
+  TOPIC_DREAM_EXCLUDE,
+  TOPIC_EXERCISE,
+  TOPIC_HOW_DOING,
+  TOPIC_MAGNESIUM,
+  TOPIC_MEDS,
+  TOPIC_MELATONIN,
+  TOPIC_MELATONIN_DOSE,
+  TOPIC_MELATONIN_WHEN,
+  TOPIC_NAMED_MEDS,
+  TOPIC_NAP,
+  TOPIC_NAP_NOT,
+  TOPIC_ONSET,
+  TOPIC_OTC,
+  TOPIC_OTC_GEL,
+  TOPIC_OTC_NIGHTLY,
+  TOPIC_RX,
+  TOPIC_SCHEDULE,
+  TOPIC_SCREENS,
+  TOPIC_SLEEP_NEED,
+  TOPIC_SNORING,
+  TOPIC_THC,
+  TOPIC_WAKING,
+  TOPIC_WIND_DOWN,
+} from "@/lib/consult-routes";
 
 /**
  * The one thing the engine says when it does not know.
@@ -21,7 +51,10 @@ export const WITHHOLD_REPLY =
   "I don’t have a note I trust on that, and I would rather say so than make something up. If it is keeping you awake tonight it is still worth raising with a doctor — silence from me is not the same as it being nothing. Things I can go properly deep on: falling asleep, 3 a.m. wakings, a mind that will not stop, alcohol, caffeine, melatonin, Unisom-type sleep aids, screens, weekends and sleeping in, or any medication on your list.";
 
 export function isWithhold(reply: { text: string; citations: string[] }): boolean {
-  return reply.citations.length === 0 && reply.text === WITHHOLD_REPLY;
+  return (
+    reply.citations.length === 0 &&
+    (reply.text === WITHHOLD_REPLY || reply.text === BASELINE_WITHHOLD)
+  );
 }
 
 export type ChatReply = {
@@ -37,6 +70,8 @@ export const CLINIC_STARTERS = [
   { q: "Is melatonin a sleeping pill?", hint: "It is a clock signal. Clinics do not treat it as one." },
   { q: "What does alcohol do to the night?", hint: "Drowsy going in. Broken in the second half." },
 ] as const;
+
+export { BASELINE_STARTERS };
 
 type Consult = {
   profile: Profile;
@@ -92,7 +127,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
   const meds = flagMedications(profile.medications);
   const diary = lastNight(latest, units);
 
-  if (/dream|nightmare|meaning/.test(lower) && !/doxylamine|unisom|melatonin/.test(lower)) {
+  if (TOPIC_DREAM.test(lower) && !TOPIC_DREAM_EXCLUDE.test(lower)) {
     const lastDream = [...reports].reverse().find((r) => r.dream?.text);
     if (lastDream?.dream) {
       const read = readDream(lastDream.dream.text, lastDream, profile);
@@ -108,7 +143,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
   if (extra) return extra;
 
   if (
-    /ambien|zolpidem|lunesta|trazodone|hydroxyzine|atarax|sonata|restoril|silenor|belsomra|suvorexant|dayvigo|lemborexant|quviviq|daridorexant|\borexin\b|\bdoras?\b/.test(
+    TOPIC_RX.test(
       lower,
     )
   ) {
@@ -119,14 +154,14 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
   }
 
   if (
-    /unisom|benadryl|zzzquil|zzquil|doxylamine|diphenhydramine|nyquil|nytol|tylenol pm|advil pm/.test(
+    TOPIC_OTC.test(
       lower,
     )
   ) {
-    const gel = /gel|sleepgel|dipheng/.test(lower)
+    const gel = TOPIC_OTC_GEL.test(lower)
       ? " The gels are usually diphenhydramine, not doxylamine. Same family: drowsy, foggy next day, not a nightly plan."
       : "";
-    const nightly = /every night|habit|long term|daily|each night/.test(lower)
+    const nightly = TOPIC_OTC_NIGHTLY.test(lower)
       ? " Taking it every night is the thing clinics do not want."
       : "";
     return {
@@ -135,25 +170,25 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/\b(thc|cbd|cannabis|weed|marijuana|edibles?|gummies)\b/.test(lower)) {
+  if (TOPIC_THC.test(lower)) {
     return {
       text: "THC can make you sleepy, then steal dream sleep (REM). A recent lab night in people who already have insomnia found less total sleep and less REM, not more. Coming off it at 3 a.m. can feel restless and vivid — same family as alcohol, not identical. CBD evidence is still mixed. I will not tell you to start or stop cannabis. If you use it most nights, say so — I will treat it as part of the picture, not as a treatment.",
       citations: ["cannabis-sleep"],
     };
   }
 
-  if (/\b(adderall|vyvanse|ritalin|concerta|wellbutrin|ssri|zoloft|lexapro|medication|prescription med)\b/.test(lower)) {
+  if (TOPIC_NAMED_MEDS.test(lower)) {
     const named = meds.length
       ? meds.map((m) => `${m.name}: ${m.note}`).join(" ")
       : "I only comment on names you listed in You. I will never tell you to stop a prescribed drug.";
     return { text: named, citations: ["medications"] };
   }
 
-  if (/melatonin/.test(lower)) {
-    const when = /when|how long before|what time/.test(lower)
+  if (TOPIC_MELATONIN.test(lower)) {
+    const when = TOPIC_MELATONIN_WHEN.test(lower)
       ? " Timing people discuss with a clinician is often 1–3 hours before desired sleep, not at lights-out."
       : "";
-    const howMuch = /how much|dose|mg\b|milligram/.test(lower)
+    const howMuch = TOPIC_MELATONIN_DOSE.test(lower)
       ? " The clock-tool discussion is often 0.3–1 mg — not 10 mg. Worth knowing: these are sold as supplements, not medicines, so what is in the bottle is often not what is on the label, and 0.3 mg is genuinely hard to buy."
       : "";
     const rec = recs.ready ? recs.supplements.find((s) => s.id === "melatonin" || s.id === "none") : undefined;
@@ -163,7 +198,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     return { text: [diary, plan, howMuch, when].filter(Boolean).join(" "), citations: ["melatonin"] };
   }
 
-  if (/magnesium/.test(lower)) {
+  if (TOPIC_MAGNESIUM.test(lower)) {
     const rec = recs.ready ? recs.supplements.find((s) => s.id === "magnesium" || s.id === "none") : undefined;
     const plan = recs.ready
       ? rec?.body
@@ -174,14 +209,14 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
   const diaryAsk = answerDiaryQuestion(q, profile, reports);
   if (diaryAsk) return diaryAsk;
 
-  if (/caffeine|coffee|espresso|energy drink/.test(lower)) {
+  if (TOPIC_CAFFEINE.test(lower)) {
     return {
       text: `${meds.length ? `You listed ${meds.map((m) => m.name).join(", ")} — late caffeine on top of a stimulant is a common way to show up as “I can’t sleep.” ` : ""}Caffeine blocks the chemical that builds up while you are awake and tells you it is time to sleep. It hangs around about 5–6 hours for most people. A 3 pm coffee can still be working at 9 pm. If falling asleep is the problem, last caffeine by early afternoon.`,
       citations: ["caffeine"],
     };
   }
 
-  if (/alcohol|drink|drunk|spins|hangover|\b(beer|wine|vodka|shots?|tequila|whiskey)\b/.test(lower) && !/coffee|caffeine|water/.test(lower)) {
+  if (TOPIC_ALCOHOL.test(lower) && !TOPIC_ALCOHOL_NOT.test(lower)) {
     const n = week.alcoholNights;
     const chart = reports.length
       ? `On your diary: drinks on ${n} of ${reports.length} nights.`
@@ -192,7 +227,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/screen|phone|blue light|blue-light|scroll|night mode/.test(lower)) {
+  if (TOPIC_SCREENS.test(lower)) {
     const avg = reports.length ? ` Your average screens-off window is about ${Math.round(week.meanScreenOffMinutes)} min.` : "";
     return {
       text: `Bright evening light can delay the “it is night” signal. The bigger problem is usually the content — unfinished work and feeds keep the brain on.${avg} Dim the room, get off the phone for an hour, and get morning outdoor light. That pair trains the clock.`,
@@ -200,7 +235,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/nap|sleep in|sleeping in|catch up|weekend|slept until|sleep till/.test(lower) && !/lie awake|lying awake|fall asleep/.test(lower)) {
+  if (TOPIC_NAP.test(lower) && !TOPIC_NAP_NOT.test(lower)) {
     return {
       text: `Sleeping until noon after a short night feels kind and pushes tonight later — like a tiny time-zone shift. Protect your wake time (${formatClock(profile.targetWake, units)}) even after a rough night. Catch-up: a ~20 minute nap before mid-afternoon, or go to bed earlier only once you are actually sleepy. Exception: if you might drive or cannot stay awake, sleep is safety. That severity belongs with a doctor.`,
       citations: ["naps", "circadian-anchor"],
@@ -208,7 +243,7 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
   }
 
   if (
-    /3 ?a\.?m\b|at 3\b|3:00|middle of the night|wake up at night|waking up|\bwaking\b|stay asleep|staying asleep|maintenance/.test(
+    TOPIC_WAKING.test(
       lower,
     )
   ) {
@@ -218,14 +253,14 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/can'?t fall|cannot fall|can'?t sleep|cannot sleep|\binsomnia\b|fall asleep|falling asleep|onset|wired|mind racing|lie awake|lying awake/.test(lower)) {
+  if (TOPIC_ONSET.test(lower)) {
     return {
       text: `${diary ? `${diary} ` : ""}Trouble falling asleep is usually “not sleepy enough yet” plus a bed that has been used for thinking. Do not get in to try. Dim lights, off screens, wind-down here. Get in when you are actually sleepy. Still awake about 20 minutes: get up. That beats a sleeping pill at lights-out.`,
       citations: ["sleep-pressure", "wind-down"],
     };
   }
 
-  if (/how much sleep|how many hours|sleep need|enough sleep|[6-9] hours|eight hours|seven hours|do i need \d/.test(lower)) {
+  if (TOPIC_SLEEP_NEED.test(lower)) {
     const need = sleepNeedHours(profile.age);
     const mean = reports.length ? ` Your average on the chart is ${formatDuration(week.meanDurationMinutes)}.` : "";
     return {
@@ -234,42 +269,42 @@ function answerQuestionWithProfile(q: string, consult: Consult): ChatReply {
     };
   }
 
-  if (/exercise|work out|workout|\bgym\b|sedentary|hiit/.test(lower)) {
+  if (TOPIC_EXERCISE.test(lower)) {
     return {
       text: `You marked activity as ${profile.activity}. Moving during the day usually helps sleep. A hard workout in the last hour can delay it for some people. Walk and morning light first. Do not make the first experiment 10 pm HIIT.`,
       citations: ["activity"],
     };
   }
 
-  if (/snor\w*|apnea|apnoea|gasp\w*|cpap|airway|\bosa\b|deviated septum|morning headache/.test(lower)) {
+  if (TOPIC_SNORING.test(lower)) {
     return {
       text: `I cannot hear you sleep. Unrefreshing sleep, snoring, gasping, or high body weight is an airway checklist for a clinician — not a magnesium problem. Insomnia tools will not fix sleep apnea. If that list fits, ask for a proper evaluation.`,
       citations: ["bmi-osa"],
     };
   }
 
-  if (/\b(meds?|medication)s?\b/.test(lower)) {
+  if (TOPIC_MEDS.test(lower)) {
     const named = meds.length
       ? meds.map((m) => `${m.name}: ${m.note}`).join(" ")
       : "I only comment on names you listed in You. I will never tell you to stop a prescribed drug.";
     return { text: named, citations: ["medications"] };
   }
 
-  if (/breathe|478|4-7-8|meditat|noise|brown|wind-down|wind down|calm/.test(lower)) {
+  if (TOPIC_WIND_DOWN.test(lower)) {
     return {
       text: `A racing mind at bedtime keeps insomnia going. Slow breathing, muscle release, and boring noise lower that. They are not magic frequencies. Use one session tonight, then tell the morning interview if it helped — your response beats a population average.`,
       citations: ["wind-down"],
     };
   }
 
-  if (/schedule|wake time|bedtime|circadian|tonight|clock/.test(lower)) {
+  if (TOPIC_SCHEDULE.test(lower)) {
     return {
       text: `The clock in your brain is set mainly by light. Defend ${formatClock(profile.targetWake, units)}, then get outdoor light within an hour of getting up. Screens down an hour before ${formatClock(profile.targetSleep, units)}. The clock cannot learn a moving target.`,
       citations: ["circadian-anchor"],
     };
   }
 
-  if (/how.*(doing|sleeping)|am i ok|is my sleep|tips|advice|what should i do|plan|impression/.test(lower)) {
+  if (TOPIC_HOW_DOING.test(lower)) {
     const top = notes.filter((n) => n.kind === "alert" || n.kind === "lever" || n.kind === "steady").slice(0, 2);
     const plan = top.map((n) => n.body).join(" ");
     return {
@@ -291,10 +326,16 @@ export function answerQuestion(
   profile: Profile | null,
   reports: MorningReport[],
   history: ChatMessage[] = [],
+  observation?: { observing: boolean; solo: boolean },
 ): ChatReply {
   const raw = question.trim();
   if (!raw) {
-    return { text: "What is the actual problem tonight — falling asleep, waking, or tomorrow’s clock?", citations: [] };
+    return {
+      text: observation?.observing
+        ? "What would you like to know?"
+        : "What is the actual problem tonight — falling asleep, waking, or tomorrow’s clock?",
+      citations: [],
+    };
   }
 
   if (!profile) {
@@ -305,6 +346,12 @@ export function answerQuestion(
   }
 
   const q = resolveQuestion(raw, history);
+  const lower = q.toLowerCase();
+  const urgent = safetyTriage(lower, profile);
+  if (urgent) return urgent;
+  if (observation?.observing) {
+    return answerDuringBaseline(q, lower, { profile }, observation.solo);
+  }
   const sorted = [...reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate));
   return answerQuestionWithProfile(q, {
     profile,

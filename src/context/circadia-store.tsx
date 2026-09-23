@@ -10,7 +10,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { answerQuestion, makeChatMessage } from "@/lib/chat";
+import { answerQuestion, makeChatMessage, type ChatReply } from "@/lib/chat";
 import { isObserving } from "@/lib/observation";
 import { threadFromLive, upsertConsult } from "@/lib/consult-threads";
 import { sampleWeekState } from "@/lib/demo";
@@ -396,6 +396,20 @@ export function CircadiaPreviewTree({
   return <CircadiaContext.Provider value={{ ...NOOP_VALUE, state }}>{children}</CircadiaContext.Provider>;
 }
 
+export function consultObservation(
+  state: CircadiaState,
+  now: Date,
+): { observing: boolean; solo: boolean } {
+  return {
+    observing: isObserving(state.episode, state.reports, now),
+    solo: state.episode?.clinicianId === null,
+  };
+}
+
+export function replyFor(state: CircadiaState, text: string, now: Date): ChatReply {
+  return answerQuestion(text, state.profile, state.reports, state.chat, consultObservation(state, now));
+}
+
 /** Inputs the notification planner re-runs on. Pure so a test can watch it move. */
 export function notifyKeyFor(state: CircadiaState): string {
   if (!state.profile) return "";
@@ -610,7 +624,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     if (!trimmed) return;
     patch((prev) => {
       const you = makeChatMessage("you", trimmed);
-      const reply = answerQuestion(trimmed, prev.profile, prev.reports, prev.chat);
+      const reply = replyFor(prev, trimmed, new Date());
       const circadia = makeChatMessage("circadia", reply.text, reply.citations);
       const messages = [...prev.chat, you, circadia].slice(-200);
       const id = prev.activeConsultId ?? newId();

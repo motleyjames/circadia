@@ -44,10 +44,10 @@ type DiaryAsk =
   | { kind: "week" }
   | { kind: "missing"; label: string };
 
-const DEEP =
+export const DEEP =
   /break\s*downs?|walk me through|how (did|was|is) (my )?sleep|how did i sleep|deeper (look|read|note|breakdown)|my (sleep|mornings?|nights?|diary|chart)|that night|that morning|these mornings|on the chart/;
-const LAST = /last night|last morning|yesterday morning|yesterday|this morning|the latest morning/;
-const WEEK = /this week|my week|\bthe week\b|weekly|these (last )?(seven|7) nights/;
+export const LAST = /last night|last morning|yesterday morning|yesterday|this morning|the latest morning/;
+export const WEEK = /this week|my week|\bthe week\b|weekly|these (last )?(seven|7) nights/;
 
 function pad2(n: number): string {
   return String(n).padStart(2, "0");
