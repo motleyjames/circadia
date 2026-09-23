@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { recordStudyConsent } from "./consent";
 import { createEpisode } from "./episode";
 import {
   deriveInviteParticipantIdV2,
@@ -52,6 +53,10 @@ function withProfile(extra?: Partial<CircadiaState>): CircadiaState {
   return { ...emptyState(), profile, ...extra };
 }
 
+function consented(state: CircadiaState): CircadiaState {
+  return { ...state, study: recordStudyConsent(state.study, new Date("2026-09-22T12:00:00.000Z")) };
+}
+
 function http(handler: (req: PackHttpRequest, n: number) => PackHttpResponse): {
   calls: PackHttpRequest[];
   impl: PackHttp;
@@ -101,7 +106,7 @@ describe("pack deliver", () => {
       wire.push(`${req.url}\n${JSON.stringify(req.headers)}\n${req.data ?? ""}`);
       return { status: 201, headers: { etag: '"e1"' }, data: "" };
     });
-    await deliverPhonePack({ state: joined!, operatorPublicRaw: keys.publicRaw, http: mock.impl });
+    await deliverPhonePack({ state: consented(joined!), operatorPublicRaw: keys.publicRaw, http: mock.impl });
     const onWire = wire.join("\n");
     expect(onWire).not.toContain(invite.code);
     expect(onWire).not.toContain(joined!.study.inviteNormalized);
@@ -134,7 +139,7 @@ describe("pack deliver", () => {
       throw new Error("Worker must not be called");
     });
     const result = await deliverPhonePack({
-      state: joined!,
+      state: consented(joined!),
       operatorPublicRaw: keys.publicRaw,
       http: mock.impl,
     });
@@ -254,7 +259,7 @@ describe("pack deliver", () => {
       return { status: 201, headers: { etag: '"e1"' }, data: "" };
     });
     const result = await deliverPhonePack({
-      state: joined!,
+      state: consented(joined!),
       operatorPublicRaw: keys.publicRaw,
       http: mock.impl,
     });
@@ -264,7 +269,7 @@ describe("pack deliver", () => {
   it("joining sends once, without waiting for a morning", async () => {
     const keys = await generateOperatorKeyPair();
     const invite = await generateInvite("Ada West", "friend");
-    const joined = await enrollWithInvite(withProfile(), invite.code);
+    const joined = consented((await enrollWithInvite(withProfile(), invite.code))!);
     expect(joined?.reports).toHaveLength(0);
     const mock = http(() => ({ status: 201, headers: { etag: '"e1"' }, data: "" }));
     const result = await deliverPhonePack({
@@ -282,7 +287,7 @@ describe("pack deliver", () => {
   it("opening the app with a changed pack sends it; with an unchanged pack, sends nothing", async () => {
     const keys = await generateOperatorKeyPair();
     const invite = await generateInvite("Ada West", "friend");
-    const joined = await enrollWithInvite(withProfile(), invite.code);
+    const joined = consented((await enrollWithInvite(withProfile(), invite.code))!);
     const firstHttp = http(() => ({ status: 201, headers: { etag: '"e1"' }, data: "" }));
     const first = await deliverPhonePack({
       state: joined!,
@@ -323,7 +328,7 @@ describe("pack deliver", () => {
   it("after a failed send, the next open sends again", async () => {
     const keys = await generateOperatorKeyPair();
     const invite = await generateInvite("Ada West", "friend");
-    const joined = await enrollWithInvite(withProfile(), invite.code);
+    const joined = consented((await enrollWithInvite(withProfile(), invite.code))!);
     const failHttp = http(() => ({ status: 500, headers: {}, data: "" }));
     const failed = await deliverPhonePack({
       state: joined!,

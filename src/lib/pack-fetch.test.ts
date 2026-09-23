@@ -89,36 +89,33 @@ describe("pack fetch", () => {
     }
   });
 
-  it("a withdrawal marks the tester withdrawn, deletes nothing, and never reaches the reject log", async () => {
+  it("a withdrawal deletes that tester's packs and only theirs", async () => {
+    // James decided leaving deletes. The old test encoded delete-nothing while
+    // that decision was open. This replacement is the leave-deletes invariant.
     const inbox = mkdtempSync(path.join(tmpdir(), "circadia-fetch-wd-"));
     try {
-      const invite = await generateInvite("Ada West", "friend");
+      const leaving = await generateInvite("Ada West", "friend");
+      const staying = await generateInvite("Blake Q.", "friend");
       const keys = await generateOperatorKeyPair();
-      const pack = packFor(invite.participantId);
-      const kept = writeInboxPack(pack, new Date("2026-09-01T12:00:00.000Z"), inbox);
-      const envelope = await sealPayload({ withdrawn: true }, keys.publicRaw, invite.participantId);
+      const leftPack = writeInboxPack(packFor(leaving.participantId), new Date("2026-09-01T12:00:00.000Z"), inbox);
+      const kept = writeInboxPack(packFor(staying.participantId), new Date("2026-09-01T13:00:00.000Z"), inbox);
+      const envelope = await sealPayload({ withdrawn: true }, keys.publicRaw, leaving.participantId);
+      const leaveLoc = await derivePackLocation(normalizeInviteCodeV2(leaving.code)!);
       const first = await fetchBookPacks({
-        book: [invite],
+        book: [leaving, staying],
         privateKey: keys.privateKey,
         inbox,
-        fetchImpl: async () => jsonResponse(envelope, 200, { etag: '"w1"' }),
+        fetchImpl: async (url) => {
+          if (String(url).includes(leaveLoc.workerId)) return jsonResponse(envelope, 200, { etag: '"w1"' });
+          return new Response(null, { status: 404 });
+        },
       });
-      expect(first.withdrawn[invite.participantId.toLowerCase()]).toBe(true);
+      expect(first.withdrawn[leaving.participantId.toLowerCase()]).toBe(true);
+      expect(readdirSync(inbox)).not.toContain(leftPack);
       expect(readdirSync(inbox)).toContain(kept);
       expect(first.rejects).toEqual([]);
       expect(loadRejectedPacks(inbox)).toEqual([]);
-      expect(loadWithdrawn(inbox)[invite.participantId.toLowerCase()]).toBe(true);
-
-      const later = await sealPayload(pack, keys.publicRaw, invite.participantId);
-      const second = await fetchBookPacks({
-        book: [invite],
-        privateKey: keys.privateKey,
-        inbox,
-        fetchImpl: async () => jsonResponse(later, 200, { etag: '"p2"' }),
-      });
-      expect(second.withdrawn[invite.participantId.toLowerCase()]).toBe(false);
-      expect(second.written.length).toBe(1);
-      expect(readdirSync(inbox)).toContain(kept);
+      expect(loadWithdrawn(inbox)[leaving.participantId.toLowerCase()]).toBe(true);
     } finally {
       rmSync(inbox, { recursive: true, force: true });
     }

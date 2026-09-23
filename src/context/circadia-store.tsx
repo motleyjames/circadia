@@ -43,6 +43,7 @@ import {
   bootVaultFromDisk,
 } from "@/lib/storage";
 import { isPhoneNative } from "@/lib/phone-native";
+import { acceptExistingConsent, hasCurrentConsent, joinWithConsent } from "@/lib/consent";
 import { enrollWithInvite, flagNightAt, recordDisclosureFlags } from "@/lib/invite";
 import { applyDelivery, deliverPhonePack } from "@/lib/pack-deliver";
 import { capacitorPackHttp } from "@/lib/pack-http";
@@ -198,7 +199,7 @@ function markBlocked() {
 
 async function transmitRoster() {
   const current = snapshot();
-  if (!current.study.consented || !current.study.participantId || !current.profile) return;
+  if (!hasCurrentConsent(current.study) || !current.study.consented || !current.study.participantId || !current.profile) return;
   try {
     const payload = buildRoster(current);
     if (assertSendable(payload, current).length) {
@@ -263,7 +264,7 @@ async function transmitStudy() {
     return;
   }
   const current = snapshot();
-  if (!current.study.consented || !current.study.participantId) return;
+  if (!hasCurrentConsent(current.study) || !current.study.consented || !current.study.participantId) return;
   try {
     const pack = buildStudyPack(current);
     if (assertSendable(pack, current).length) {
@@ -283,7 +284,7 @@ async function transmitStudy() {
 
 async function transmitFault(message: string, extra?: { stack?: string | null; href?: string | null }) {
   const current = snapshot();
-  if (!current.study.consented || !current.study.participantId) return;
+  if (!hasCurrentConsent(current.study) || !current.study.consented || !current.study.participantId) return;
   try {
     const payload = buildFault(current, message, extra);
     if (assertSendable(payload, current).length) {
@@ -331,6 +332,8 @@ type CircadiaContextValue = {
   resetAll: () => void;
   joinStudy: () => void;
   enrollSolo: (code: string) => Promise<boolean>;
+  joinStudyWithConsent: (code: string, eighteen: boolean) => Promise<true | "box" | "age" | "invite">;
+  acceptStudyConsent: (eighteen: boolean) => true | "box" | "age" | "invite";
   declineStudy: () => void;
   leaveStudy: () => void;
   sendStudyNow: () => Promise<void>;
@@ -369,6 +372,8 @@ const NOOP_VALUE: CircadiaContextValue = {
   resetAll: noop,
   joinStudy: noop,
   enrollSolo: async () => false,
+  joinStudyWithConsent: async () => "invite",
+  acceptStudyConsent: () => "invite",
   declineStudy: noop,
   leaveStudy: noop,
   sendStudyNow: async () => undefined,
@@ -467,16 +472,16 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return installFaultReporter((message, extra) => {
       void transmitFault(message, extra);
-    }, () => snapshot().study.consented);
+    }, () => hasCurrentConsent(snapshot().study) && snapshot().study.consented);
   }, []);
 
   useEffect(() => {
     if (!ready || rosterCatchUp.current) return;
-    if (state.study.consented && !state.study.rosterSentAt && state.profile) {
+    if (hasCurrentConsent(state.study) && state.study.consented && !state.study.rosterSentAt && state.profile) {
       rosterCatchUp.current = true;
       void transmitRoster();
     }
-  }, [ready, state.study.consented, state.study.rosterSentAt, state.profile]);
+  }, [ready, state.study.consented, state.study.consentVersion, state.study.rosterSentAt, state.profile]);
 
   useEffect(() => {
     if (!ready || !isPhoneNative()) return;
@@ -507,7 +512,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       prev.profile?.heightCm !== profile.heightCm ||
       prev.profile?.weightKg !== profile.weightKg;
     patch((s) => ({ ...s, profile }));
-    if (prev.study.consented && (contactChanged || !prev.study.rosterSentAt)) {
+    if (hasCurrentConsent(prev.study) && prev.study.consented && (contactChanged || !prev.study.rosterSentAt)) {
       void transmitRoster();
     }
   }, []);
@@ -515,7 +520,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
   const addReport = useCallback((report: Omit<MorningReport, "id" | "createdAt">) => {
     let shouldSend = false;
     patch((prev) => {
-      shouldSend = Boolean(prev.study.consented && !prev.demoWeek);
+      shouldSend = Boolean(hasCurrentConsent(prev.study) && prev.study.consented && !prev.demoWeek);
       const today = todayIsoDate();
       const existing = reportForMorning(prev.reports, report.morningDate);
       const full: MorningReport = {
@@ -725,39 +730,38 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
     // Re-consent only. A first join without an invite would mint an id Operator
     // never issued. Shakedown episodes start in enrollSolo.
     if (!snapshot().study.participantId) return;
-    patch((prev) => {
-      if (!prev.study.participantId) return prev;
-      return {
-        ...prev,
-        study: {
-          ...prev.study,
-          asked: true,
-          consented: true,
-          lastError: null,
-          rosterSentAt: null,
-          withdrawnAt: null,
-          sendPending: prev.study.inviteVersion === 2,
-        },
-      };
-    });
-    if (isPhoneNative()) {
-      void flushPhoneDelivery();
-      return;
-    }
-    void transmitRoster();
-    if (snapshot().reports.length) void transmitStudy();
   }, []);
 
   const enrollSolo = useCallback(async (code: string) => {
     const next = await enrollWithInvite(snapshot(), code);
     if (!next) return false;
     patch(() => next);
+    return true;
+  }, []);
+
+  const joinStudyWithConsent = useCallback(async (code: string, eighteen: boolean) => {
+    const result = await joinWithConsent(snapshot(), code, eighteen);
+    if (!result.ok) return result.reason;
+    patch(() => result.state);
     if (isPhoneNative()) {
       void flushPhoneDelivery();
       return true;
     }
     void transmitRoster();
-    if (next.reports.length) void transmitStudy();
+    if (result.state.reports.length) void transmitStudy();
+    return true;
+  }, []);
+
+  const acceptStudyConsent = useCallback((eighteen: boolean) => {
+    const result = acceptExistingConsent(snapshot(), eighteen);
+    if (!result.ok) return result.reason;
+    patch(() => result.state);
+    if (isPhoneNative()) {
+      void flushPhoneDelivery();
+      return true;
+    }
+    void transmitRoster();
+    if (snapshot().reports.length) void transmitStudy();
     return true;
   }, []);
 
@@ -825,6 +829,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       resetAll,
       joinStudy,
       enrollSolo,
+      joinStudyWithConsent,
+      acceptStudyConsent,
       declineStudy,
       leaveStudy,
       sendStudyNow,
@@ -857,6 +863,8 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
       resetAll,
       joinStudy,
       enrollSolo,
+      joinStudyWithConsent,
+      acceptStudyConsent,
       declineStudy,
       leaveStudy,
       sendStudyNow,

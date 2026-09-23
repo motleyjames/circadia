@@ -88,6 +88,7 @@ describe("hydrateState", () => {
     expect(state.study.consented).toBe(true);
     expect(state.study.participantId).toBe("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee");
     expect(state.study.rosterSentAt).toBeNull();
+    expect(state.study.consentVersion).toBeNull();
   });
 
   it("keeps email and phone on the local file and splits a display name", () => {

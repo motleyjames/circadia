@@ -337,7 +337,7 @@ export function assertSendable(payload: unknown, state: CircadiaState): string[]
 
 export type ValidateResult = { ok: true; value: StudyPack } | { ok: false; error: string };
 
-const TOP_KEYS = new Set([
+export const TOP_KEYS = new Set([
   "schema",
   "participantId",
   "appVersion",
@@ -351,7 +351,7 @@ const TOP_KEYS = new Set([
   "safetyFlags",
 ]);
 
-const PROFILE_KEYS = new Set([
+export const PROFILE_KEYS = new Set([
   "ageBand",
   "sex",
   "struggles",
@@ -363,7 +363,7 @@ const PROFILE_KEYS = new Set([
   "targetWake",
 ]);
 
-const NIGHT_KEYS = new Set([
+export const NIGHT_KEYS = new Set([
   "nightIndex",
   "fellAsleepAt",
   "wokeAt",
@@ -388,6 +388,10 @@ const NIGHT_KEYS = new Set([
   "filedLate",
   "episodeNight",
 ]);
+
+export const SESSION_KEYS = new Set(["meditation", "soundscape", "completed"]);
+export const CHAT_KEYS = new Set(["turns", "topics"]);
+export const FLAG_KEYS = new Set(["category", "episodeNight"]);
 
 const AWAKENING_COUNTS = new Set<AwakeningCount>([0, 1, 2, 3, 4]);
 const NAP_MINUTES = new Set<NapMinutes>([0, 20, 45, 90]);
@@ -533,7 +537,7 @@ export function validateStudyPack(raw: unknown): ValidateResult {
     return { ok: false, error: "Invalid sessions." };
   }
   const sessions = p.sessions as Record<string, unknown>;
-  if (extraKeys(sessions, new Set(["meditation", "soundscape", "completed"])).length) {
+  if (extraKeys(sessions, SESSION_KEYS).length) {
     return { ok: false, error: "Unknown sessions field." };
   }
   if (
@@ -548,7 +552,7 @@ export function validateStudyPack(raw: unknown): ValidateResult {
     return { ok: false, error: "Invalid chat summary." };
   }
   const chat = p.chat as Record<string, unknown>;
-  if (extraKeys(chat, new Set(["turns", "topics"])).length) return { ok: false, error: "Unknown chat field." };
+  if (extraKeys(chat, CHAT_KEYS).length) return { ok: false, error: "Unknown chat field." };
   if (typeof chat.turns !== "number" || chat.turns < 0 || chat.turns > 500) {
     return { ok: false, error: "Invalid chat turns." };
   }
@@ -564,7 +568,7 @@ export function validateStudyPack(raw: unknown): ValidateResult {
       if (!row || typeof row !== "object" || Array.isArray(row)) {
         return { ok: false, error: "Invalid safetyFlags." };
       }
-      const flagExtra = extraKeys(row, new Set(["category", "episodeNight"]));
+      const flagExtra = extraKeys(row, FLAG_KEYS);
       if (flagExtra.length) return { ok: false, error: `Unknown safety flag field: ${flagExtra[0]}` };
       const f = row as Record<string, unknown>;
       if (!isPackSafetyCategory(f.category)) return { ok: false, error: "Invalid safetyFlags." };

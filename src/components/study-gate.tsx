@@ -1,14 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { ConsentScreen } from "@/components/consent-screen";
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
 import { hapticLight } from "@/lib/haptics";
+import { normalizeInviteCode, normalizeInviteCodeV2 } from "@/lib/invite";
 
-export function StudyGate() {
-  const { enrollSolo, declineStudy } = useCircadia();
+export function StudyGate({ onNotNow }: { onNotNow: () => void }) {
+  const { enrollSolo } = useCircadia();
   const [inviteCode, setInviteCode] = useState("");
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
+
+  if (pendingCode) {
+    return <ConsentScreen inviteCode={pendingCode} onNotNow={onNotNow} />;
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pt-[max(4rem,env(safe-area-inset-top))] pb-[max(2.5rem,env(safe-area-inset-bottom))]">
@@ -52,9 +59,13 @@ export function StudyGate() {
           type="button"
           onClick={() => {
             void hapticLight();
-            void enrollSolo(inviteCode).then((ok) => {
-              setInviteError(ok ? null : "That is not an invite.");
-            });
+            const code = inviteCode.trim();
+            if (!normalizeInviteCodeV2(code) && !normalizeInviteCode(code)) {
+              setInviteError("That is not an invite.");
+              return;
+            }
+            void enrollSolo;
+            setPendingCode(code);
           }}
           className="h-14 rounded-full btn-primary text-[17px] font-semibold"
         >
@@ -65,7 +76,7 @@ export function StudyGate() {
           type="button"
           onClick={() => {
             void hapticLight();
-            declineStudy();
+            onNotNow();
           }}
           className="h-14 rounded-full border border-white/12 text-[17px] font-medium text-zinc-200"
         >

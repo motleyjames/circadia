@@ -4,6 +4,7 @@ import { putSealedPack } from "@/lib/pack-send";
 import { packAssociatedData, sealPayload } from "@/lib/pack-seal";
 import type { PackHttp } from "@/lib/pack-http";
 import { sha256 } from "@/lib/password";
+import { hasCurrentConsent } from "@/lib/consent";
 import { assertSendable, buildStudyPack } from "@/lib/study";
 import { todayIsoDate } from "@/lib/time";
 import type { CircadiaState, StudyState } from "@/lib/types";
@@ -84,6 +85,7 @@ export async function deliverPhonePack(input: {
 
   const withdrawn = Boolean(study.withdrawnAt);
   if (!withdrawn && !study.consented) return { status: "skipped" };
+  if (!withdrawn && !hasCurrentConsent(study)) return { status: "skipped" };
   if (!withdrawn && !input.state.profile) {
     return { status: "failed", error: "No profile." };
   }

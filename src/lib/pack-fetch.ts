@@ -6,6 +6,7 @@ import { inviteCodeVersion, normalizeInviteCodeV2, type OperatorInvite } from "@
 import { openEnvelope } from "@/lib/pack-seal";
 import { derivePackLocation } from "@/lib/pack-derive";
 import {
+  deleteInboxPacksFor,
   loadFetchEtags,
   loadWithdrawn,
   saveFetchEtags,
@@ -148,6 +149,7 @@ export async function fetchBookPacks(input: {
     }
     if (opened.kind === "withdrawal") {
       withdrawn[row.participantId] = true;
+      deleteInboxPacksFor(row.participantId, inbox);
       if (row.etag) nextEtags[row.workerId] = row.etag;
       continue;
     }

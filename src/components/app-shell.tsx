@@ -14,7 +14,9 @@ import { Mark } from "@/components/mark";
 import { NativeChrome } from "@/components/native-chrome";
 import { Onboarding } from "@/components/onboarding";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { ConsentScreen } from "@/components/consent-screen";
 import { StudyGate } from "@/components/study-gate";
+import { hasCurrentConsent } from "@/lib/consent";
 import {
   OPEN_COVER_MS,
   OPEN_HOLD_MS,
@@ -144,6 +146,8 @@ function ShellInner() {
   const [surfaceReady, setSurfaceReady] = useState(() => isOpenHoldConsumed());
   const [appPainted, setAppPainted] = useState(() => isOpenHoldConsumed());
   const [arriving, setArriving] = useState(false);
+  const [gateSkipped, setGateSkipped] = useState(false);
+  const [consentDeferred, setConsentDeferred] = useState(false);
   const identityUpAt = useRef(0);
   const consultOpen = consultPath === pathname;
   void diaryShellPhase({
@@ -153,7 +157,14 @@ function ShellInner() {
     holdConsumed,
   });
   const signedIn = Boolean(session);
-  const appChrome = Boolean(signedIn && state.profile?.onboardingComplete && state.study.asked);
+  const enrolledNeedsConsent = Boolean(
+    state.study.participantId &&
+      state.study.consented &&
+      !state.study.withdrawnAt &&
+      !hasCurrentConsent(state.study),
+  );
+  const pastGate = Boolean(state.study.asked || hasCurrentConsent(state.study) || gateSkipped || consentDeferred);
+  const appChrome = Boolean(signedIn && state.profile?.onboardingComplete && pastGate);
 
   useLayoutEffect(() => {
     if (!skipWebOpenCover()) return;
@@ -259,8 +270,10 @@ function ShellInner() {
       destination = <AuthGate />;
     } else if (!state.profile?.onboardingComplete) {
       destination = <Onboarding />;
-    } else if (!state.study.asked) {
-      destination = <StudyGate />;
+    } else if (enrolledNeedsConsent && !consentDeferred) {
+      destination = <ConsentScreen onNotNow={() => setConsentDeferred(true)} />;
+    } else if (!state.study.asked && !gateSkipped) {
+      destination = <StudyGate onNotNow={() => setGateSkipped(true)} />;
     } else {
       destination = (
         <>
