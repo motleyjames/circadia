@@ -1405,11 +1405,29 @@
   },
   {
     "id": "consent-leave-drops-uninstall",
-    "why": "Testers who delete the app without leaving were promised a way to reach James. Dropping the sentence hides it.",
+    "why": "Testers who delete the app without leaving were promised a way to reach Somnadia. Dropping the sentence hides it.",
     "file": "src/lib/consent.ts",
-    "find": "export const CONSENT_LEAVE_UNINSTALL =\n  \"If you delete Somnadia without leaving first, email James and he'll delete your nights.\";\n",
+    "find": "export const CONSENT_LEAVE_UNINSTALL =\n  \"If you delete Somnadia without leaving first, email hello@somnadia.com and your nights will be deleted.\";\n",
     "replace": "export const CONSENT_LEAVE_UNINSTALL = \"\";\n",
     "testFile": "src/lib/consent.test.ts",
-    "testName": "the Leaving section tells testers to email James if they delete the app without leaving"
+    "testName": "the Leaving section tells testers to email if they delete the app without leaving"
+  },
+  {
+    "id": "consent-names-james-twice",
+    "why": "James is named once, as the person who runs the test. A disclosure line that names him appears on the screen a tester reads.",
+    "file": "src/lib/consent.ts",
+    "find": "  participantId: \"which invite code you joined with.\",\n",
+    "replace": "  participantId: \"a number that marks the answers as yours, from the invite James gave you\",\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "James is named once on the consent screen"
+  },
+  {
+    "id": "consent-version-stays-1",
+    "why": "Anyone who accepted version 1 must read the new words before the next send. Leaving the version at 1 lets James send without seeing them.",
+    "file": "src/lib/consent.ts",
+    "find": "export const CONSENT_VERSION = 2;\n",
+    "replace": "export const CONSENT_VERSION = 1;\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "no pack is sealed or sent without consent at CONSENT_VERSION"
   }
 ]

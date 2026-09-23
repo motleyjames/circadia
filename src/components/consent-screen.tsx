@@ -61,11 +61,12 @@ export function ConsentScreen({
         Before you join
       </h1>
       <p className="mt-5 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        You&apos;re joining a 14-night test of Somnadia, run by James Motley. Each morning you&apos;ll
-        answer a few questions about last night. It takes about two minutes.
+        You&apos;re joining a 14-night test of Somnadia. Each morning you&apos;ll answer a few
+        questions about last night. It takes about two minutes. The test is run by James Motley,
+        who builds Somnadia.
       </p>
       <h2 className="mt-8 text-[13px] font-semibold tracking-[0.04em] text-zinc-200 uppercase">
-        What James receives
+        What Somnadia receives
       </h2>
       <ul className="mt-3 max-w-[42ch] list-disc space-y-2 pl-5 text-[15px] leading-relaxed text-zinc-400">
         {receives.map((line) => (
@@ -73,36 +74,36 @@ export function ConsentScreen({
         ))}
       </ul>
       <h2 className="mt-8 text-[13px] font-semibold tracking-[0.04em] text-zinc-200 uppercase">
-        What James never receives
+        What Somnadia never receives
       </h2>
       <p className="mt-3 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
         Your name, email or phone number. Dates. Anything you type in your own words. Anything you
         tell Somnadia about being in crisis.
       </p>
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        James knows which answers are yours, because he gave you your invite. He keeps your name on
-        his own computer, never in what your phone sends.
+        Your answers are linked to you only through your invite code. The list that matches codes to
+        names stays on one computer and never travels with your answers.
       </p>
       <h2 className="mt-8 text-[13px] font-semibold tracking-[0.04em] text-zinc-200 uppercase">
         How it travels
       </h2>
       <p className="mt-3 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        Each morning is locked on your phone so only James&apos;s computer can open it. It passes
+        Each morning is locked on your phone so only Somnadia&apos;s computer can open it. It passes
         through a storage service, Cloudflare, that cannot read it.
       </p>
       <h2 className="mt-8 text-[13px] font-semibold tracking-[0.04em] text-zinc-200 uppercase">
         Leaving
       </h2>
       <p className="mt-3 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        You can leave any time, under You → Leave the study. Your nights are deleted from James&apos;s
-        computer the next time it checks for updates, usually within minutes. Your diary stays on
-        your phone. {CONSENT_LEAVE_UNINSTALL}
+        You can leave any time, under You → Leave the study. Your nights are deleted from
+        Somnadia&apos;s records the next time its computer checks in, usually within minutes. Your
+        diary stays on your phone. {CONSENT_LEAVE_UNINSTALL}
       </p>
       <h2 className="mt-8 text-[13px] font-semibold tracking-[0.04em] text-zinc-200 uppercase">
         When the test ends
       </h2>
       <p className="mt-3 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        James deletes everyone&apos;s study data within 30 days.
+        All test data is deleted within 30 days.
       </p>
       <h2 className="mt-8 text-[13px] font-semibold tracking-[0.04em] text-zinc-200 uppercase">
         Safety
@@ -118,7 +119,7 @@ export function ConsentScreen({
         in the US, or your local emergency number.
       </p>
       <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
-        Questions? Email James at motleyjames06@gmail.com.
+        Questions? Email hello@somnadia.com.
       </p>
       <label className="mt-8 flex min-h-11 cursor-pointer items-center gap-3 text-[15px] text-zinc-200">
         <input

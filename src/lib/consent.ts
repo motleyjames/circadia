@@ -10,19 +10,19 @@ import {
 } from "@/lib/study";
 import type { CircadiaState, StudyState } from "@/lib/types";
 
-export const CONSENT_VERSION = 1;
+export const CONSENT_VERSION = 2;
 
-export const CONSENT_EMAIL = "motleyjames06@gmail.com";
+export const CONSENT_EMAIL = "hello@somnadia.com";
 export const CONSENT_LEAVE_PATH = "You → Leave the study";
 export const CONSENT_LEAVE_UNINSTALL =
-  "If you delete Somnadia without leaving first, email James and he'll delete your nights.";
+  "If you delete Somnadia without leaving first, email hello@somnadia.com and your nights will be deleted.";
 export const AGE_REFUSAL =
   "Somnadia's test is for adults. You can still keep your diary for yourself.";
 
 /** One line per pack key. Adding a pack field without a line fails the suite. */
 export const DISCLOSURE_LINES: Record<string, string> = {
   schema: "that this is a study pack",
-  participantId: "a number that marks the answers as yours, from the invite James gave you",
+  participantId: "which invite code you joined with.",
   appVersion: "which version of Somnadia you used",
   surface: "that you used this app",
   demoWeek: "whether this was a practice week",
@@ -109,7 +109,7 @@ export function unmappedPackKeys(): string[] {
   return missing;
 }
 
-/** Sentences a tester reads under "What James receives." */
+/** Sentences a tester reads under "What Somnadia receives." */
 export function whatJamesReceives(): string[] {
   return [
     `${cap(DISCLOSURE_LINES.ageBand)}, ${DISCLOSURE_LINES.sex}, ${DISCLOSURE_LINES.struggles}, ${DISCLOSURE_LINES.activity}, and ${DISCLOSURE_LINES.bmiBand}.`,
