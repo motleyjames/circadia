@@ -36,3 +36,8 @@ _Checked against the source and found not to apply._
 Reading the source settles this. Read src/app/api/fold-inbox/route.ts. The POST handler gracefully handles missing or invalid fields by treating any payload where `source` is not exactly `"inbox"` (including missing, null, or malformed bodies) as a non-consuming no-op response rather than an error. Cited src/app/api/fold-inbox/route.ts:75: `if (source !== "inbox") {`
 
 `probe: read_code__incoming_payload_validation_9614`
+
+**Decisions (James, Sep 22)**
+- d_1_0 declined: the ceiling applies to sleep latency and time awake in the night, not total sleep. Values above three hours are stored as 180 with a floor flag, and efficiency is marked as an upper bound.
+- d_1_2 declined: there is no SQLite. The diary is an encrypted JSON vault, and old nights keep their fields by design.
+- d_1_3 declined: packs are not queued. The phone rebuilds each pack from the diary at send time, so the first send after an update uses the new format.
