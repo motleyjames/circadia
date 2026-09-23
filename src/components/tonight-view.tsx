@@ -42,7 +42,7 @@ export function TonightView() {
             <h1 className="font-heading text-center text-[2.4rem] leading-[1.05] tracking-tight text-zinc-50">
               {copy.heading}
             </h1>
-            <p className="mt-3 text-center text-[12px] text-zinc-500">{lastFiledLine(state.reports)}</p>
+            <p className="mt-3 text-center text-[12px] text-zinc-500">{lastFiledLine(state.reports, now)}</p>
             <p className="mt-5 max-w-[34ch] text-center text-[15px] leading-relaxed text-zinc-400">
               {copy.line}
             </p>

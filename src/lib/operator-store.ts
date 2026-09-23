@@ -18,6 +18,7 @@ export type RejectedPack = {
   reason: string;
   arrivedAt: string;
   file?: string;
+  status?: number;
 };
 
 export function operatorStoreDir(inbox = studyInboxDir()): string {
@@ -75,6 +76,7 @@ function coerceRejected(value: unknown): RejectedPack[] {
     if (typeof r.arrivedAt !== "string" || !r.arrivedAt.trim()) continue;
     const next: RejectedPack = { reason: r.reason.trim().slice(0, 500), arrivedAt: r.arrivedAt };
     if (typeof r.file === "string" && r.file) next.file = r.file;
+    if (typeof r.status === "number" && Number.isFinite(r.status)) next.status = r.status;
     out.push(next);
   }
   return out;
@@ -215,7 +217,7 @@ export function deleteAllStudyData(
 }
 
 export function recordRejectedPack(
-  entry: { reason: string; arrivedAt?: string; file?: string },
+  entry: { reason: string; arrivedAt?: string; file?: string; status?: number },
   inbox = studyInboxDir(),
 ): RejectedPack {
   const next: RejectedPack = {
@@ -223,6 +225,7 @@ export function recordRejectedPack(
     arrivedAt: entry.arrivedAt?.trim() || new Date().toISOString(),
   };
   if (entry.file) next.file = entry.file;
+  if (typeof entry.status === "number" && Number.isFinite(entry.status)) next.status = entry.status;
   const existing = loadRejectedPacks(inbox);
   if (next.file) {
     const prior = existing.find((row) => row.file === next.file);

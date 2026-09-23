@@ -8,8 +8,10 @@ import {
   BASELINE_WHY,
   baselineAfterReply,
   baselineChangeReply,
+  helpAfterReply,
 } from "@/lib/consult-baseline";
 import { CONSENT_EMAIL } from "@/lib/consent";
+import { inTheTest } from "@/lib/in-the-test";
 import { useCircadia } from "@/context/circadia-store";
 
 const HELP_WRONG =
@@ -19,6 +21,7 @@ export function HelpView() {
   const { state } = useCircadia();
   const solo = state.episode?.clinicianId === null;
   const [showConsent, setShowConsent] = useState(false);
+  const afterNight14 = inTheTest(state) ? helpAfterReply(solo) : baselineAfterReply(solo);
 
   return (
     <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-24 md:px-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
@@ -31,7 +34,7 @@ export function HelpView() {
           </h2>
           <HelpItem title="Why fourteen nights" body={BASELINE_WHY} />
           <HelpItem title="Why not check the clock" body={BASELINE_CLOCK} />
-          <HelpItem title="What happens after night 14" body={baselineAfterReply(solo)} />
+          <HelpItem title="What happens after night 14" body={afterNight14} />
           <HelpItem title="Missed a morning" body={BASELINE_MISSED} />
           <HelpItem title="Should I change anything" body={baselineChangeReply(solo)} />
         </section>

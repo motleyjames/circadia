@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from "react";
-import { DEFAULT_MOD_KEY } from "@/lib/mod-key-shared";
 import { OPERATOR_PRODUCT_NAME } from "@/lib/product";
 
 export function OperatorGate({
@@ -26,9 +25,10 @@ export function OperatorGate({
         {OPERATOR_PRODUCT_NAME}
       </h1>
       <p className="mt-4 text-[15px] leading-relaxed text-op-body">
-        This is the console, not the diary. Local default is{" "}
-        <span className="text-op-ink">{DEFAULT_MOD_KEY}</span> until you set{" "}
-        <span className="text-op-ink">CIRCADIA_MOD_KEY</span>.
+        This is the console, not the diary.
+        {!process.env.CIRCADIA_MOD_KEY?.trim()
+          ? " Set a passphrase before anyone else uses this computer."
+          : null}
       </p>
       <form className="mt-8" onSubmit={submit}>
         <label htmlFor="operator-key" className="text-[14px] font-semibold text-op-ink">

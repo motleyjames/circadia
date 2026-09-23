@@ -285,7 +285,7 @@ describe("rendered TonightView", () => {
     });
     const html = renderTonight(state);
     const text = visibleText(html);
-    expect(text).toContain("Your baseline is almost done");
+    expect(text).toContain("The test is almost done");
     expect(text).not.toContain("Night 15");
   });
 
@@ -319,16 +319,16 @@ describe("rendered TonightView", () => {
     );
     const text = visibleText(html);
     expect(text).toContain("Night 14 of 14");
-    expect(text).not.toContain("Your baseline is almost done");
+    expect(text).not.toContain("The test is almost done");
   });
 
-  it("at 18:00 on that same day, still unfiled, shows Your baseline is almost done", async () => {
+  it("at 18:00 on that same day, still unfiled, shows The test is almost done", async () => {
     const html = await renderTonightAt(
       diary({ episode: episode({ state: "enrolled" }) }),
       new Date(2026, 9, 4, 18, 0, 0),
     );
     const text = visibleText(html);
-    expect(text).toContain("Your baseline is almost done");
+    expect(text).toContain("The test is almost done");
     expect(text).toContain("One morning left to file.");
     expect(text).not.toContain("Night 15");
   });
@@ -351,7 +351,7 @@ describe("rendered InsightsView", () => {
     });
     const html = renderNotes(state);
     const text = visibleText(html);
-    expect(text).toContain("Your notes open after night 14.");
+    expect(text).toContain("Your diary opens after night 14.");
     expect(hasSleepFigure(text)).toBe(false);
     expect(text).not.toContain("The numbers");
     expect(text).not.toContain("Your nights");
@@ -394,7 +394,7 @@ describe("notifyKeyFor", () => {
 describe("rendered YouView reminders", () => {
   it("while observing names only the morning reminder", () => {
     const text = visibleText(renderYou(observingState()));
-    expect(text).toContain("One reminder each morning while your baseline runs. Nothing in the evening.");
+    expect(text).toContain("One reminder each morning during the test. Nothing in the evening.");
     expect(text).not.toContain("A heads-up an hour before wind-down");
   });
 
@@ -403,7 +403,7 @@ describe("rendered YouView reminders", () => {
     expect(text).toContain(
       "A heads-up an hour before wind-down, the wind-down cue itself, a nudge at wake time, and the week when it is in.",
     );
-    expect(text).not.toContain("One reminder each morning while your baseline runs");
+    expect(text).not.toContain("One reminder each morning during the test");
   });
 });
 

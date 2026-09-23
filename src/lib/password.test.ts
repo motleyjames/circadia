@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CROCKFORD_ALPHABET,
   PASSWORD_MIN,
+  signupPasswordHint,
   PBKDF2_ITERATIONS,
   PBKDF2_ITERATIONS_V3,
   RECOVERY_CODE_CHARS,
@@ -65,6 +66,12 @@ describe("password rules", () => {
     expect(passwordIssue("short")).toMatch(String(PASSWORD_MIN));
     expect(passwordIssue("a".repeat(PASSWORD_MIN), "different")).toMatch(/match/);
     expect(passwordIssue("a".repeat(PASSWORD_MIN), "a".repeat(PASSWORD_MIN))).toBeNull();
+    expect(signupPasswordHint()).toBe(
+      `At least ${PASSWORD_MIN} characters. Somnadia will not email or text you.`,
+    );
+    expect(signupPasswordHint()).toContain(String(PASSWORD_MIN));
+    expect(signupPasswordHint()).not.toMatch(/At least 8 /);
+    expect(readFileSync("src/components/auth-gate.tsx", "utf8")).toContain("signupPasswordHint()");
   });
 });
 

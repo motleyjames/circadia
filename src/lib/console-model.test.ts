@@ -8,7 +8,9 @@ import {
   dismissOrphan,
   invitePrivacySentence,
   inviteSendBody,
+  INVITE_EMAIL_SUBJECT,
   mailtoHref,
+  TESTFLIGHT_URL,
   nameOrphan,
   ratioPercent,
   restoreOrphan,
@@ -633,6 +635,24 @@ describe("console-model", () => {
     expect(view.health).toBeNull();
   });
 
+  it("a 401 from the Worker is a reach problem, not a refused pack", () => {
+    const view = model(
+      [],
+      [],
+      [
+        {
+          reason: "Couldn't reach the pack store (HTTP 401). Nothing was lost.",
+          arrivedAt: fileFor(ALEX, "2026-08-28T14-17-56-582Z"),
+          status: 401,
+        },
+      ],
+    );
+    expect(view.health).toHaveLength(1);
+    expect(view.health?.[0]?.kind).toBe("unreachable");
+    expect(view.health?.[0]?.message).toBe("Couldn't reach the pack store (HTTP 401). Nothing was lost.");
+    expect(view.health?.[0]?.message).not.toMatch(/refused/i);
+  });
+
   it("rejects sharing a reason render as one line with a count and date range", () => {
     const view = model(
       [],
@@ -697,10 +717,19 @@ describe("console-model", () => {
     expect(page).toContain("Copy");
     expect(page).toContain("SendInviteCode");
     expect(inviteSendBody("A10B-C3D4")).toBe(
-      "Your Somnadia code is A10B-C3D4. Enter it when the app asks for one. It is yours alone — please don't share it.",
+      "You're invited to test Somnadia, a 14-night sleep diary. When the app asks, enter your code: A10B-C3D4. It's yours alone — please don't share it.",
+    );
+    expect(TESTFLIGHT_URL).toBe("");
+    expect(INVITE_EMAIL_SUBJECT).toBe("Your Somnadia invite");
+    expect(inviteSendBody("A10B-C3D4")).not.toContain("Install:");
+    expect(inviteSendBody("A10B-C3D4", "https://testflight.apple.com/x")).toContain(
+      "Install: https://testflight.apple.com/x.",
     );
     expect(smsHref("+1 (555) 010-0101", inviteSendBody("A10B-C3D4"))).toContain("sms:+15550100101?body=");
-    expect(mailtoHref("ada@example.com", inviteSendBody("A10B-C3D4"))).toContain("mailto:ada@example.com?body=");
+    expect(mailtoHref("ada@example.com", inviteSendBody("A10B-C3D4"))).toContain("mailto:ada@example.com?subject=");
+    expect(mailtoHref("ada@example.com", inviteSendBody("A10B-C3D4"))).toContain(
+      encodeURIComponent("Your Somnadia invite"),
+    );
   });
 
   it("James's case through the console model: slot 0 filled, slots 1–13 empty, section In baseline", () => {

@@ -22,6 +22,8 @@ import { CircadiaPreviewTree } from "@/context/circadia-store";
 import {
   BASELINE_AFTER_CLINIC,
   BASELINE_AFTER_SOLO,
+  HELP_AFTER_CLINIC,
+  HELP_AFTER_SOLO,
   BASELINE_CLOCK,
   BASELINE_MISSED,
   BASELINE_WHY,
@@ -125,6 +127,7 @@ function stabilizeYou(html: string): string {
   return html
     .replaceAll("0.20.0", "APP_VERSION")
     .replaceAll("0.21.0", "APP_VERSION")
+    .replaceAll("0.22.0", "APP_VERSION")
     .replaceAll("&#x27;", "'")
     .replaceAll("&apos;", "'")
     .replaceAll("&quot;", '"')
@@ -141,6 +144,8 @@ function stripKnownSafety(text: string): string {
     .replaceAll(BASELINE_MISSED, "")
     .replaceAll(BASELINE_AFTER_SOLO, "")
     .replaceAll(BASELINE_AFTER_CLINIC, "")
+    .replaceAll(HELP_AFTER_SOLO, "")
+    .replaceAll(HELP_AFTER_CLINIC, "")
     .replaceAll(baselineChangeReply(false), "")
     .replaceAll(baselineChangeReply(true), "");
 }
@@ -267,7 +272,7 @@ describe("C2 Today", () => {
     const text = visibleText(html);
     expect(text).toContain("Night 7 of 14");
     expect(text).toContain("Nothing to change tonight. Sleep the way you usually do.");
-    expect(text).toContain("Last filed: Saturday");
+    expect(text).toContain("Last filed: this morning");
     expect(text).not.toContain("Fill in this morning's diary");
   });
 
@@ -277,7 +282,7 @@ describe("C2 Today", () => {
       new Date(2026, 9, 4, 18, 0, 0),
     );
     const text = visibleText(html);
-    expect(text).toContain("Your baseline is almost done");
+    expect(text).toContain("The test is almost done");
     expect(text).toContain("One morning left to file.");
     expect(text).not.toContain("Night 15");
   });
@@ -295,8 +300,12 @@ describe("C2 Today", () => {
 describe("C3 Record", () => {
   it("during observation keeps the closed notes text", () => {
     const text = visibleText(render(observingState({ reports: [night("2026-09-22")] }), createElement(InsightsView)));
-    expect(text).toContain("Your notes open after night 14.");
-    expect(text).not.toContain("Your diary");
+    expect(text).toContain("Record");
+    expect(text).toContain("Your diary opens after night 14.");
+    expect(text).toContain(
+      "Until then, Somnadia keeps your diary without showing you numbers, so the test sees your usual sleep.",
+    );
+    expect(text).not.toContain("Notes");
     expect(hasSleepFigure(text)).toBe(false);
   });
 
@@ -335,7 +344,8 @@ describe("C4 Help", () => {
     expect(text).toContain("About this diary");
     expect(text).toContain(BASELINE_WHY);
     expect(text).toContain(BASELINE_CLOCK);
-    expect(text).toContain(BASELINE_AFTER_CLINIC);
+    expect(text).toContain(HELP_AFTER_CLINIC);
+    expect(text).not.toContain(BASELINE_AFTER_CLINIC);
     expect(text).toContain(BASELINE_MISSED);
     expect(text).toContain(baselineChangeReply(false));
     expect(text).toContain("What's shared");
@@ -355,7 +365,7 @@ describe("C5 You in a test", () => {
     expect(text).toContain("Account");
     expect(text).toContain("First name");
     expect(text).toContain("Reminders");
-    expect(text).toContain("One reminder each morning while your baseline runs");
+    expect(text).toContain("One reminder each morning during the test");
     expect(text).toContain("In the test");
     expect(text).toContain("Leave the test");
     expect(text).toContain("bedtime");
@@ -389,7 +399,9 @@ describe("vocabulary guard", () => {
       }
       expect(you).not.toMatch(VOCAB);
       expect(
-        hasSleepFigure(you.replace(/\b\d{1,2}:\d{2}\b/g, "").replaceAll("0.21.0", "").replaceAll("0.20.0", "")),
+        hasSleepFigure(
+          you.replace(/\b\d{1,2}:\d{2}\b/g, "").replaceAll("0.22.0", "").replaceAll("0.21.0", "").replaceAll("0.20.0", ""),
+        ),
       ).toBe(false);
       const record = stripKnownSafety(visibleText(render(state, createElement(InsightsView))));
       expect(record).not.toMatch(VOCAB);

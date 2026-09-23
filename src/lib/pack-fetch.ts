@@ -35,6 +35,13 @@ type FetchedObject = {
   body: string;
 };
 
+export function workerRejectReason(status: number): string {
+  if (status === 401 || status === 403) {
+    return `Couldn't reach the pack store (HTTP ${status}). Nothing was lost.`;
+  }
+  return "Worker refused the pack.";
+}
+
 function stampOf(value: Date): string {
   return value.toISOString().replace(/[:.]/g, "-");
 }
@@ -116,9 +123,10 @@ export async function fetchBookPacks(input: {
     if (row.status === 404) continue;
     if (row.status !== 200) {
       rejects.push({
-        reason: "Worker refused the pack.",
+        reason: workerRejectReason(row.status),
         arrivedAt: now.toISOString(),
         file: `fetch:${row.participantId}`,
+        status: row.status,
       });
       continue;
     }

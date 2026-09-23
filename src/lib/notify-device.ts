@@ -69,6 +69,12 @@ export async function hasNotificationPermission(): Promise<boolean> {
  */
 export type NotificationPermission = "granted" | "denied" | "prompt" | "unavailable";
 
+export function remindersUnavailableHint(inMacApp: boolean): string {
+  return inMacApp
+    ? "Reminders come from the phone app."
+    : "Reminders need the installed app. In a browser tab there is nothing to schedule them with.";
+}
+
 export async function notificationPermission(): Promise<NotificationPermission> {
   if (!canNotify()) return "unavailable";
   try {
@@ -203,7 +209,7 @@ export async function confirmNotificationsOnce(
           id: TEST_PING_ID,
           title: "Reminders are on",
           body: observing
-            ? "Reminders are on. One each morning while your baseline runs, nothing in the evening."
+            ? "Reminders are on. One each morning during the test, nothing in the evening."
             : `First one lands at ${screensDownAt}, an hour before your asleep-by. Nothing will arrive between then and the morning.`,
           schedule: { at: new Date(Date.now() + 4000), allowWhileIdle: true },
         },

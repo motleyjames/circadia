@@ -93,7 +93,16 @@ export const BASELINE_MISSED =
   "That is fine. You can file the last few mornings from memory on the morning screen; they are marked late so nobody mistakes them for same-morning answers. If you cannot remember a night, leave it — a gap is more honest than a guess.";
 
 export function baselineChangeReply(solo: boolean): string {
-  return `Nothing needs to change for these two weeks. For these two weeks the most useful thing you can do is sleep the way you usually do and fill in the mornings honestly, the bad ones included. There is no score to improve and no way to fail this. ${wait(solo)}`;
+  return `Nothing needs to change. For these two weeks, the most useful thing you can do is sleep the way you usually do and fill in the mornings honestly, the bad ones included. There is no score to improve and no way to fail this. ${wait(solo)}`;
+}
+
+export const HELP_AFTER_SOLO =
+  "Your record opens and you can see all fourteen nights. That's the end of the test. Thank you.";
+
+export const HELP_AFTER_CLINIC = "Your record opens, and your clinician reads the same diary.";
+
+export function helpAfterReply(solo: boolean): string {
+  return solo ? HELP_AFTER_SOLO : HELP_AFTER_CLINIC;
 }
 
 export function baselineAfterReply(solo: boolean): string {
@@ -323,7 +332,7 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return {
       kind: "explain",
       reply: {
-        text: `Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep, and they work less the more often you take them. Two things worth knowing. Doxylamine especially is still in you the next morning — do not drive until you know how it hits you. And the “PM” products are a sedating antihistamine plus a painkiller: Tylenol PM has acetaminophen in it, Advil PM has ibuprofen. If you already take those in the daytime you can double up without meaning to, so check the label. Sleep clinics do not use these as a nightly plan. Fine as a rare backup. Do not mix with alcohol. If you are older or already take drowsy meds, ask a pharmacist first. I will not tell you to start them.${gel}${nightly} If you already use one, keep your usual habit for these two weeks and tick it in the morning. Starting one now would change the baseline.`,
+        text: `Unisom is an old allergy medicine sold as a sleep aid. SleepTabs are usually doxylamine; some gels, ZzzQuil, Tylenol PM, and Benadryl use diphenhydramine. They can knock you out for a night. That is not the same as good sleep, and they work less the more often you take them. Two things worth knowing. Doxylamine especially is still in you the next morning — do not drive until you know how it hits you. And the “PM” products are a sedating antihistamine plus a painkiller: Tylenol PM has acetaminophen in it, Advil PM has ibuprofen. If you already take those in the daytime you can double up without meaning to, so check the label. Sleep clinics do not use these as a nightly plan. Fine as a rare backup. Do not mix with alcohol. If you are older or already take drowsy meds, ask a pharmacist first. I will not tell you to start them.${gel}${nightly} If you already use one, keep your usual habit for these two weeks and tick it in the morning. Starting one now would change the test.`,
         citations: ["otc-antihistamines"],
       },
     };
@@ -332,7 +341,7 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return {
       kind: "explain",
       reply: {
-        text: "THC can make you sleepy, then steal dream sleep (REM). A recent lab night in people who already have insomnia found less total sleep and less REM, not more. Coming off it at 3 a.m. can feel restless and vivid — same family as alcohol, not identical. CBD evidence is still mixed. I will not tell you to start or stop cannabis. If you use it most nights, say so — I will treat it as part of the picture, not as a treatment. If you already use one, keep your usual habit for these two weeks and note it in the morning. Starting one now would change the baseline.",
+        text: "THC can make you sleepy, then steal dream sleep (REM). A recent lab night in people who already have insomnia found less total sleep and less REM, not more. Coming off it at 3 a.m. can feel restless and vivid — same family as alcohol, not identical. CBD evidence is still mixed. I will not tell you to start or stop cannabis. If you use it most nights, say so — I will treat it as part of the picture, not as a treatment. If you already use one, keep your usual habit for these two weeks and note it in the morning. Starting one now would change the test.",
         citations: ["cannabis-sleep"],
       },
     };
@@ -344,7 +353,7 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return {
       kind: "explain",
       reply: {
-        text: "Melatonin is a clock signal, not a sleeping pill — clinics do not treat it as one. It is sold as a supplement, so what is in the bottle is often not what is on the label. Starting something new now would change the baseline, so if you are curious, raise it after night 14.",
+        text: "Melatonin is a clock signal, not a sleeping pill — clinics do not treat it as one. It is sold as a supplement, so what is in the bottle is often not what is on the label. Starting something new now would change the test, so if you are curious, raise it after night 14.",
         citations: ["melatonin"],
       },
     };

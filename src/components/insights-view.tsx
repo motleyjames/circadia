@@ -108,11 +108,11 @@ export function InsightsView() {
     const nights = state.episode?.baselineNights ?? 14;
     return (
       <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
-        <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Notes</p>
-        <h1 className="font-heading mt-1 text-3xl text-zinc-50">{`Your notes open after night ${nights}.`}</h1>
+        <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Record</p>
+        <h1 className="font-heading mt-1 text-3xl text-zinc-50">{`Your diary opens after night ${nights}.`}</h1>
         <p className="mt-3 max-w-[46ch] text-[15px] leading-relaxed text-zinc-400">
-          Until then, Somnadia keeps your diary without showing you numbers, so your baseline stays
-          yours.
+          Until then, Somnadia keeps your diary without showing you numbers, so the test sees your
+          usual sleep.
         </p>
       </div>
     );

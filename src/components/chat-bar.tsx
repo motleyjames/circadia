@@ -247,7 +247,7 @@ export function ChatBar({
         <div>
           <p className="max-w-[36ch] text-[13px] leading-[1.55] text-zinc-400">
             {observing
-              ? "Ask about sleep and I answer from the library. Your own nights stay closed until night 14, so nothing here changes the baseline."
+              ? "Ask about sleep and I answer from the library. Your own nights stay closed until night 14, so nothing here changes during the test."
               : "Ask the actual problem. I answer from your diary and the library. If I do not have a note, I say so — I will not invent a diagnosis."}
           </p>
           <ul className="mt-6 space-y-1">

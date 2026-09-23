@@ -6,6 +6,10 @@
 export const PASSWORD_MIN = 10;
 export const PASSWORD_MAX = 128;
 
+export function signupPasswordHint(): string {
+  return `At least ${PASSWORD_MIN} characters. Somnadia will not email or text you.`;
+}
+
 /** Legacy work factor. Still read, never written. */
 export const PBKDF2_ITERATIONS = 100_000;
 
