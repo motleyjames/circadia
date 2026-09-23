@@ -53,11 +53,10 @@ export function StudyPanel() {
       {!study.consented ? (
         <>
           <h2 className="font-heading mt-1 text-[1.35rem] leading-tight text-zinc-50">
-            Diary stays on this device
+            Not in a test
           </h2>
           <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-500">
-            An invite starts the shakedown. Nights, roster, and app faults then leave on their own.
-            Dreams and chat do not.
+            Everything stays on this device. If you were sent an invite code, you can join here.
           </p>
           <label className="mt-5 block text-[12px] text-zinc-500">
             Invite code

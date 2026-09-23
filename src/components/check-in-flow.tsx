@@ -25,9 +25,13 @@ import {
   WASO_QUESTION,
   afterFileHeadline,
   afterFileNote,
+  morningDraftHoldsAnswer,
+  showOtherSomnadiaHint,
   type MorningContext,
   type MorningContextChip,
 } from "@/lib/morning-diary";
+import { inTheTest } from "@/lib/in-the-test";
+import { isPhoneNative } from "@/lib/phone-native";
 import { clocksInOrder, usualNightClocks, type NightClocks } from "@/lib/night-clocks";
 import type {
   AwakeningCount,
@@ -144,9 +148,17 @@ function MorningInterview({
     supplementKind: stored?.supplementKind,
   }));
   const [followUp, setFollowUp] = useState<MorningContextChip | null>(null);
-  const pickingUp = Boolean(stored && (stored.step > 0 || stored.rating !== undefined || stored.inBedAt));
+  const hasDraft = morningDraftHoldsAnswer(stored);
+  const [resumeStep] = useState(stored?.step ?? 0);
+  const pickingUp = hasDraft && step === resumeStep;
   const units = state.profile?.units ?? "imperial";
   const current = STEPS[Math.min(step, STEPS.length - 1)];
+  const showFoldHint = showOtherSomnadiaHint({
+    filedLate,
+    phone: isPhoneNative(),
+    inTest: inTheTest(state),
+    lockedCopyExists: process.env.NEXT_PUBLIC_CIRCADIA_PHONE_PACK === "1",
+  });
 
   useEffect(() => {
     if (closed.current) return;
@@ -214,9 +226,9 @@ function MorningInterview({
 
   return (
     <div className="phone-page-y flex min-h-0 flex-1 flex-col px-5 md:pt-[max(2rem,env(safe-area-inset-top))]">
-      <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">
-        {filedLate ? "Missed morning" : "Your night"}
-      </p>
+      {filedLate ? (
+        <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Missed morning</p>
+      ) : null}
       <h1 className="font-heading mt-1 text-2xl text-zinc-50">
         {filedLate ? "From memory. Marked as late so the grid can tell." : "Your night."}
       </h1>
@@ -226,8 +238,8 @@ function MorningInterview({
       {pickingUp ? (
         <p className="mt-3 text-[13px] leading-relaxed text-sky-200/90">Picking up where you left off.</p>
       ) : null}
-      {!filedLate ? <MissedMornings dates={missedDates} onPick={onPickMissed} /> : null}
-      {!filedLate && state.reports.length === 0 ? (
+      {!filedLate && step === 0 ? <MissedMornings dates={missedDates} onPick={onPickMissed} /> : null}
+      {showFoldHint ? (
         <p className="mt-3 max-w-[44ch] text-[12px] leading-relaxed text-zinc-500">
           Already filed on the other Somnadia?{" "}
           <DiaryLink href="/you" className="text-zinc-300">
@@ -404,7 +416,7 @@ function MorningInterview({
         <button
           type="button"
           className="rounded-full px-4 py-2 text-[17px] text-sky-300 disabled:opacity-30"
-          disabled={step === 0 && !onCancel && !pickingUp}
+          disabled={step === 0 && !onCancel && !hasDraft}
           onClick={() => {
             void hapticSelect();
             if (step === 0 && onCancel) {
@@ -417,7 +429,7 @@ function MorningInterview({
         >
           {step === 0 && onCancel ? "Cancel" : "Back"}
         </button>
-        {pickingUp ? (
+        {hasDraft ? (
           <button
             type="button"
             className="rounded-full px-4 py-2 text-[15px] text-zinc-400"

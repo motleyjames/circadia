@@ -25,6 +25,7 @@ export type ConsoleReject = {
   reason: string;
   arrivedAt: string;
   file?: string;
+  status?: number;
 };
 
 export type SlotKind = "bar" | "outline" | "dashed" | "empty";
@@ -182,8 +183,12 @@ export function invitePrivacySentence(name: string): string {
   return `Send this to ${firstNameOf(name)}. ${INVITE_PRIVACY_TAIL}`;
 }
 
-export function inviteSendBody(code: string): string {
-  return `Your ${PRODUCT_NAME} code is ${code}. Enter it when the app asks for one. It is yours alone — please don't share it.`;
+export const TESTFLIGHT_URL = "";
+export const INVITE_EMAIL_SUBJECT = `Your ${PRODUCT_NAME} invite`;
+
+export function inviteSendBody(code: string, installUrl = TESTFLIGHT_URL): string {
+  const install = installUrl ? ` Install: ${installUrl}.` : "";
+  return `You're invited to test ${PRODUCT_NAME}, a 14-night sleep diary.${install} When the app asks, enter your code: ${code}. It's yours alone — please don't share it.`;
 }
 
 export function smsHref(to: string, body: string): string {
@@ -191,8 +196,8 @@ export function smsHref(to: string, body: string): string {
   return `sms:${number}?body=${encodeURIComponent(body)}`;
 }
 
-export function mailtoHref(to: string, body: string): string {
-  return `mailto:${to.trim()}?body=${encodeURIComponent(body)}`;
+export function mailtoHref(to: string, body: string, subject = INVITE_EMAIL_SUBJECT): string {
+  return `mailto:${to.trim()}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 export function cohortLabel(cohort: Cohort | null, inBook: boolean): string {
@@ -648,6 +653,17 @@ function dataHealth(
   }
   for (const [reason, rows] of byReason) {
     const ordered = [...rows].sort((a, b) => rejectInstant(a) - rejectInstant(b));
+    if (reason.startsWith("Couldn't reach the pack store")) {
+      items.push({
+        kind: "unreachable",
+        message: reason,
+        detail: null,
+        files: ordered.map((row) => row.file ?? row.arrivedAt),
+        participantId: null,
+        actions: [],
+      });
+      continue;
+    }
     const first = whenLabel(ordered[0]!.arrivedAt, now);
     const lastStamp = ordered.at(-1)!.arrivedAt;
     const last = rejectInstant(ordered.at(-1)!) !== rejectInstant(ordered[0]!) ? whenLabel(lastStamp, now) : null;

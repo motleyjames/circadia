@@ -222,6 +222,23 @@ describe("pre-change hashes still match outside a baseline", () => {
     expect(hashCorpus(fixtureProfile, fixtureReports)).toBe(DIARY_HASH);
     expect(hashCorpus(fixtureProfile, fixtureReports, { observing: false, solo: false })).toBe(DIARY_HASH);
   });
+
+  it("B13 consumer hashes stay put except the change-anything reply is allowed to move", () => {
+    const oldEmpty = "1cf4f2961b755ce22e4b2a4cb6810820b173de0f2af2436023252bf9ff57537f";
+    const oldDiary = "d60fd30ee5c05da25b09d2e4b553290c1069c2e28dc78e8278fb3666affae619";
+    const newEmpty = hashCorpus(corpusProfile, []);
+    const newDiary = hashCorpus(fixtureProfile, fixtureReports);
+    expect({ oldEmpty, newEmpty, oldDiary, newDiary }).toEqual({
+      oldEmpty,
+      newEmpty: oldEmpty,
+      oldDiary,
+      newDiary: oldDiary,
+    });
+    expect(EMPTY_HASH).toBe(oldEmpty);
+    expect(DIARY_HASH).toBe(oldDiary);
+    const change = answerQuestion("should I change anything?", fixtureProfile, fixtureReports);
+    expect(change.text).not.toContain("Nothing needs to change for these two weeks.");
+  });
 });
 
 describe("no personal figures or coaching while observing", () => {
@@ -370,7 +387,7 @@ describe("routing", () => {
       observing: true,
       solo: false,
     });
-    expect(change.text).toContain("Nothing needs to change for these two weeks.");
+    expect(change.text).toContain("Nothing needs to change. For these two weeks, the most useful thing you can do is");
     expect(change.text).toContain("There is no score to improve");
     expect(change.text).toContain(WAIT_CLINIC);
   });
@@ -391,7 +408,7 @@ describe("routing", () => {
     const q = "should I change anything?";
     expect(baselineKind(q, q.toLowerCase(), consult, false)).toBe("baseline");
     expect(answerDuringBaseline(q, q.toLowerCase(), consult, false).text).toContain(
-      "Nothing needs to change for these two weeks.",
+      "Nothing needs to change. For these two weeks, the most useful thing you can do is",
     );
   });
 

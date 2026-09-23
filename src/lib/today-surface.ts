@@ -22,10 +22,18 @@ export function weekdayOfMorning(iso: string): string {
   return WEEKDAY_FULL[new Date(y, m - 1, d).getDay()]!;
 }
 
-export function lastFiledLine(reports: MorningReport[]): string {
+export function lastFiledWhen(morningDate: string, now: Date): string {
+  const today = todayIsoDate(now);
+  const yesterday = todayIsoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1));
+  if (morningDate === today) return "this morning";
+  if (morningDate === yesterday) return "yesterday";
+  return weekdayOfMorning(morningDate);
+}
+
+export function lastFiledLine(reports: MorningReport[], now: Date): string {
   if (reports.length === 0) return "No mornings yet";
   const latest = reports.reduce((a, b) => (a.morningDate >= b.morningDate ? a : b));
-  return `Last filed: ${weekdayOfMorning(latest.morningDate)}`;
+  return `Last filed: ${lastFiledWhen(latest.morningDate, now)}`;
 }
 
 export function isTestComplete(state: CircadiaState, now: Date): boolean {
@@ -68,7 +76,7 @@ export function todayCopy(state: CircadiaState, now: Date): TodayCopy {
   const almostDone = night !== null && night > baselineNights;
   if (almostDone) {
     return {
-      heading: "Your baseline is almost done",
+      heading: "The test is almost done",
       line: "One morning left to file.",
       actionHref: filedToday ? null : "/check-in",
       actionLabel: filedToday ? null : "Fill in this morning's diary",

@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ChevronRight } from "lucide-react";
+import { HelpView } from "@/components/help-view";
 import { useCircadia } from "@/context/circadia-store";
-import { isObserving } from "@/lib/observation";
-import { useWallClock } from "@/lib/wall-clock";
+import { navigateDiary } from "@/lib/diary-route";
+import { inTheTest } from "@/lib/in-the-test";
 import { Textarea } from "@/components/ui/textarea";
 import { MorningReadingCard } from "@/components/morning-reading";
 import { morningReadingHistory, orderLibraryArticles } from "@/lib/morning-reading";
@@ -33,8 +34,7 @@ function useHashId(): string {
 
 export function LibraryView() {
   const { state, setResearchNotes } = useCircadia();
-  const now = useWallClock();
-  const observing = isObserving(state.episode, state.reports, now);
+  const testing = inTheTest(state);
   const hash = useHashId();
   const history = useMemo(
     () =>
@@ -78,6 +78,12 @@ export function LibraryView() {
     });
   }, [hashedId]);
 
+  useEffect(() => {
+    if (testing) navigateDiary("/help");
+  }, [testing]);
+
+  if (testing) return <HelpView />;
+
   return (
     <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Library</p>
@@ -88,7 +94,7 @@ export function LibraryView() {
         if another still-justified note is waiting.
       </p>
 
-      {reading && !observing ? (
+      {reading ? (
         <MorningReadingCard
           reading={reading}
           kicker="Why this one, today"

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { generateInvite, normalizeInviteCodeV2 } from "./invite";
 import { loadRejectedPacks, loadWithdrawn } from "./operator-store";
 import { derivePackLocation } from "./pack-derive";
-import { fetchBookPacks, writeInboxPack } from "./pack-fetch";
+import { fetchBookPacks, workerRejectReason, writeInboxPack } from "./pack-fetch";
 import { generateOperatorKeyPair, sealPayload } from "./pack-seal";
 import { DEFAULT_SCHEDULED_DAYS } from "./schedule";
 import { emptyState } from "./storage";
@@ -141,6 +141,34 @@ describe("pack fetch", () => {
       expect(result.written).toEqual([]);
       expect(readdirSync(inbox).sort()).toEqual(before);
       expect(readdirSync(inbox)).toContain(kept);
+    } finally {
+      rmSync(inbox, { recursive: true, force: true });
+    }
+  });
+
+  it("records the HTTP status and names 401 and 403 as a reach problem", async () => {
+    expect(workerRejectReason(401)).toBe("Couldn't reach the pack store (HTTP 401). Nothing was lost.");
+    expect(workerRejectReason(403)).toBe("Couldn't reach the pack store (HTTP 403). Nothing was lost.");
+    expect(workerRejectReason(409)).toBe("Worker refused the pack.");
+    const inbox = mkdtempSync(path.join(tmpdir(), "circadia-fetch-401-"));
+    try {
+      const invite = await generateInvite("Ada West", "friend");
+      const keys = await generateOperatorKeyPair();
+      const result = await fetchBookPacks({
+        book: [invite],
+        privateKey: keys.privateKey,
+        inbox,
+        fetchImpl: async () => new Response(null, { status: 401 }),
+      });
+      expect(result.unreachable).toBe(false);
+      expect(result.written).toEqual([]);
+      expect(result.rejects).toEqual([
+        expect.objectContaining({
+          status: 401,
+          reason: "Couldn't reach the pack store (HTTP 401). Nothing was lost.",
+          file: `fetch:${invite.participantId}`,
+        }),
+      ]);
     } finally {
       rmSync(inbox, { recursive: true, force: true });
     }

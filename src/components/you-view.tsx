@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   notificationPermission,
+  remindersUnavailableHint,
   requestNotificationPermission,
   sendTestNotification,
   type NotificationPermission,
@@ -1113,7 +1114,7 @@ function NotificationSetting({
         label="Reminders"
         hint={
           observing
-            ? "One reminder each morning while your baseline runs. Nothing in the evening."
+            ? "One reminder each morning during the test. Nothing in the evening."
             : "A heads-up an hour before wind-down, the wind-down cue itself, a nudge at wake time, and the week when it is in."
         }
       >
@@ -1147,8 +1148,7 @@ function NotificationSetting({
 
       {unavailable ? (
         <p className="mt-2 text-[13px] leading-relaxed text-zinc-400">
-          Reminders need the installed app. In a browser tab there is nothing to schedule
-          them with.
+          {remindersUnavailableHint(typeof window !== "undefined" && Boolean(window.circadiaDesktop?.native))}
         </p>
       ) : null}
 

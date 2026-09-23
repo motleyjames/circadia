@@ -349,7 +349,7 @@ describe("delete all study data", () => {
       const week = readFileSync("src/app/mod/page.tsx", "utf8");
       const testers = readFileSync("src/app/mod/testers/page.tsx", "utf8");
       const control = readFileSync("src/components/delete-tester-nights.tsx", "utf8");
-      expect(week).toContain("<DeleteTesterNights");
+      expect(week).not.toContain("<DeleteTesterNights");
       expect(testers).toContain("<DeleteTesterNights");
       expect(control).toContain("Delete this tester&apos;s nights");
       expect(control).toContain("DELETE_TESTER_NIGHTS_CONFIRM");

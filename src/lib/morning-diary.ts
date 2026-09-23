@@ -2,6 +2,7 @@ import { DURATION_FLOOR_MINUTES, SENT_DURATION_MINUTES } from "@/lib/pack-keys";
 import type {
   AwakeningCount,
   LatencyBucket,
+  MorningDraft,
   MorningReport,
   NapMinutes,
   NightWakingDuration,
@@ -19,14 +20,14 @@ export const WASO_QUESTION = "In total, how long were you awake?";
 export const RATING_QUESTION = "How would you rate your sleep?";
 export const CONTEXT_QUESTION = "Anything different yesterday?";
 export const AFTER_FILE_MORNING = "Morning recorded.";
-export const AFTER_FILE_HALFWAY = "Halfway through your baseline.";
-export const AFTER_FILE_COMPLETE = "Your baseline is complete. Thank you.";
+export const AFTER_FILE_HALFWAY = "Halfway through the test.";
+export const AFTER_FILE_COMPLETE = "The test is complete. Thank you.";
 
 export const DURATION_CHIPS: { value: (typeof SENT_DURATION_MINUTES)[number]; label: string }[] = [
   { value: 5, label: "Under 10 min" },
-  { value: 10, label: "10" },
-  { value: 20, label: "20" },
-  { value: 30, label: "30" },
+  { value: 10, label: "10 min" },
+  { value: 20, label: "20 min" },
+  { value: 30, label: "30 min" },
   { value: 45, label: "45 min" },
   { value: 60, label: "1 h" },
   { value: 90, label: "1½ h" },
@@ -84,6 +85,35 @@ export type MorningContext = {
 
 export function emptyMorningContext(): MorningContext {
   return { drank: false, usedSupplement: false };
+}
+
+/** Clocks auto-save on the first screen. They are not an answer. */
+export function morningDraftHoldsAnswer(draft: MorningDraft | null | undefined): boolean {
+  if (!draft) return false;
+  if (draft.step > 0) return true;
+  if (draft.sleepLatencyMinutes !== undefined) return true;
+  if (draft.awakeningCount !== undefined) return true;
+  if (draft.nightWakingMinutes !== undefined) return true;
+  if (draft.rating !== undefined) return true;
+  if (draft.napMinutes !== undefined) return true;
+  if (draft.drank) return true;
+  if (draft.drinkCount !== undefined) return true;
+  if (draft.caffeineAfter2pm !== undefined) return true;
+  if (draft.usedSupplement) return true;
+  if (draft.supplementKind) return true;
+  return false;
+}
+
+/** Fold hint: Mac/browser always; phone only with a locked copy; never a tester's phone. */
+export function showOtherSomnadiaHint(input: {
+  filedLate: boolean;
+  phone: boolean;
+  inTest: boolean;
+  lockedCopyExists: boolean;
+}): boolean {
+  if (input.filedLate) return false;
+  if (input.phone && input.inTest) return false;
+  return input.lockedCopyExists || !input.phone;
 }
 
 export function durationIsFloor(minutes: number): boolean {

@@ -8,6 +8,7 @@ import { Mark } from "@/components/mark";
 import { Input } from "@/components/ui/input";
 import { useCircadia } from "@/context/circadia-store";
 import { AUTH_ERRORS, defaultAuthMode, defaultContactField, identitiesFromVaultKeys } from "@/lib/login";
+import { signupPasswordHint } from "@/lib/password";
 import { fetchPackedDiary, packedDiaryStatus, readInlinePackedDiary } from "@/lib/packed-diary";
 import { isPhoneNative } from "@/lib/phone-native";
 import { isVaultEmpty, listDiaryLogins } from "@/lib/storage";
@@ -250,7 +251,7 @@ function DesktopAuthGate() {
             {mode === "signup"
               ? orphan
                 ? "This does not start you over. It attaches a login to the diary already here."
-                : "At least 8 characters. Somnadia will not email or text you."
+                : signupPasswordHint()
               : mode === "recover"
                 ? "The recovery code is checked on this device. It is still valid after you use it. Somnadia cannot email another."
                 : "Somnadia cannot email a reset. If you saved a recovery code, you can use it instead."}

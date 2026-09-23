@@ -77,7 +77,9 @@ export function Onboarding() {
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pickingUp = Boolean(stored && stored.step > 0);
+  const [resumeStep] = useState(stored?.step ?? 0);
+  const hasDraft = Boolean(stored && (stored.step > 0 || Boolean(stored.age) || Boolean(stored.sleepTime)));
+  const pickingUp = hasDraft && step === resumeStep;
 
   const ageNum = Number(age);
   const ageOk = age.trim() !== "" && Number.isFinite(ageNum) && ageNum >= 13 && ageNum <= 90;
@@ -338,7 +340,7 @@ export function Onboarding() {
             Back
           </button>
         ) : null}
-        {pickingUp ? (
+        {hasDraft ? (
           <button
             type="button"
             onClick={() => {

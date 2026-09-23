@@ -1738,12 +1738,12 @@
   },
   {
     "id": "a5-library-pins-morning-reading",
-    "why": "The morning-reading card recites last night during observation.",
+    "why": "The morning-reading card recites last night during observation. In a test, /library must not render the shelf.",
     "file": "src/components/library-view.tsx",
-    "find": "      {reading && !observing ? (\n",
-    "replace": "      {reading ? (\n",
-    "testFile": "src/lib/walkthrough.test.ts",
-    "testName": "does not render Why this one, today while observing"
+    "find": "  if (testing) return <HelpView />;\n",
+    "replace": "  if (false && testing) return <HelpView />;\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "renders Help, not the shelf"
   },
   {
     "id": "a6-consult-history-stays-open",
@@ -1852,5 +1852,140 @@
     "replace": "            For falling asleep. For staying asleep. For a clock that holds.\n",
     "testFile": "src/lib/clinical-diary.test.ts",
     "testName": "brand line is The sleep diary your clinician reads"
+  },
+  {
+    "id": "b1-signup-hint-hardcodes-eight",
+    "why": "The sign-up hint must follow PASSWORD_MIN. Hardcoding 8 lets an 8-character password fail with a 10-character error.",
+    "file": "src/lib/password.ts",
+    "find": "  return `At least ${PASSWORD_MIN} characters. Somnadia will not email or text you.`;\n",
+    "replace": "  return `At least 8 characters. Somnadia will not email or text you.`;\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "derives the visible hint from PASSWORD_MIN"
+  },
+  {
+    "id": "b3-picking-up-on-every-step",
+    "why": "The resume line must appear once, on the first screen after a resume, and only when the draft holds an answer.",
+    "file": "src/components/check-in-flow.tsx",
+    "find": "  const pickingUp = hasDraft && step === resumeStep;\n",
+    "replace": "  const pickingUp = Boolean(stored);\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "shows once on the first resumed screen, and only when the draft holds an answer"
+  },
+  {
+    "id": "b4-duration-chip-drops-min",
+    "why": "Duration chips must use one style. A bare 10 next to 45 min is the clutter this pass removes.",
+    "file": "src/lib/morning-diary.ts",
+    "find": "  { value: 10, label: \"10 min\" },\n",
+    "replace": "  { value: 10, label: \"10\" },\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "keeps one Your night header and one duration-chip style"
+  },
+  {
+    "id": "b5-invite-body-old-copy",
+    "why": "The invite a tester receives is the first ten minutes. The old code-only sentence is not that letter.",
+    "file": "src/lib/console-model.ts",
+    "find": "  return `You're invited to test ${PRODUCT_NAME}, a 14-night sleep diary.${install} When the app asks, enter your code: ${code}. It's yours alone — please don't share it.`;\n",
+    "replace": "  return `Your ${PRODUCT_NAME} code is ${code}. Enter it when the app asks for one. It is yours alone — please don't share it.`;\n",
+    "testFile": "src/lib/console-model.test.ts",
+    "testName": "every invite's code is present in the rendered book"
+  },
+  {
+    "id": "b6-operator-prints-default-key",
+    "why": "The Operator login must not print circadia-local. Showing the default passphrase is the thing this pass closes.",
+    "file": "src/components/operator-gate.tsx",
+    "find": "        {!process.env.CIRCADIA_MOD_KEY?.trim()\n          ? \" Set a passphrase before anyone else uses this computer.\"\n          : null}\n",
+    "replace": "        {\" Local default is circadia-local.\"}\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "does not print the default passphrase"
+  },
+  {
+    "id": "b7-week-table-keeps-delete",
+    "why": "Delete this tester's nights on This week is a destructive action on the triage view.",
+    "file": "src/app/mod/page.tsx",
+    "find": "import { OperatorChrome } from \"@/components/operator-chrome\";\n",
+    "replace": "import { DeleteTesterNights } from \"@/components/delete-tester-nights\";\nimport { OperatorChrome } from \"@/components/operator-chrome\";\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "keeps delete on All testers and drops it from This week"
+  },
+  {
+    "id": "b8-401-still-says-refused",
+    "why": "A 401 from the Worker is a reach problem. Calling it a refused pack reads as a bad pack.",
+    "file": "src/lib/pack-fetch.ts",
+    "find": "  if (status === 401 || status === 403) {\n    return `Couldn't reach the pack store (HTTP ${status}). Nothing was lost.`;\n  }\n",
+    "replace": "  if (false && (status === 401 || status === 403)) {\n    return `Couldn't reach the pack store (HTTP ${status}). Nothing was lost.`;\n  }\n",
+    "testFile": "src/lib/pack-fetch.test.ts",
+    "testName": "records the HTTP status and names 401 and 403 as a reach problem"
+  },
+  {
+    "id": "b9-study-still-says-shakedown",
+    "why": "Someone not in the test still reading shakedown is the copy Readiness A left behind.",
+    "file": "src/components/study-panel.tsx",
+    "find": "            Not in a test\n",
+    "replace": "            Diary stays on this device\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "says Not in a test and keeps the join control"
+  },
+  {
+    "id": "b10-library-skips-in-the-test",
+    "why": "A tester who reaches /library directly must land on Help. The shelf is a consumer surface.",
+    "file": "src/components/library-view.tsx",
+    "find": "  if (testing) return <HelpView />;\n",
+    "replace": "  if (false && testing) return <HelpView />;\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "renders Help, not the shelf"
+  },
+  {
+    "id": "b11-record-still-says-notes",
+    "why": "While observing in a test, Record must not say Notes.",
+    "file": "src/components/insights-view.tsx",
+    "find": "        <p className=\"text-[11px] tracking-[0.28em] text-sky-300/80 uppercase\">Record</p>\n        <h1 className=\"font-heading mt-1 text-3xl text-zinc-50\">{`Your diary opens after night ${nights}.`}</h1>\n",
+    "replace": "        <p className=\"text-[11px] tracking-[0.28em] text-sky-300/80 uppercase\">Notes</p>\n        <h1 className=\"font-heading mt-1 text-3xl text-zinc-50\">{`Your notes open after night ${nights}.`}</h1>\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "during observation keeps the closed notes text"
+  },
+  {
+    "id": "b12-help-after-14-uses-notes",
+    "why": "In a test, Help must not say Notes open after night 14. Testers stay in the clinical app.",
+    "file": "src/components/help-view.tsx",
+    "find": "  const afterNight14 = inTheTest(state) ? helpAfterReply(solo) : baselineAfterReply(solo);\n",
+    "replace": "  const afterNight14 = baselineAfterReply(solo);\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "renders the imported baseline answers, consent link, leave, safety, and contact"
+  },
+  {
+    "id": "b13-change-reply-repeats",
+    "why": "Should I change anything opened by repeating For these two weeks.",
+    "file": "src/lib/consult-baseline.ts",
+    "find": "  return `Nothing needs to change. For these two weeks, the most useful thing you can do is sleep the way you usually do and fill in the mornings honestly, the bad ones included. There is no score to improve and no way to fail this. ${wait(solo)}`;\n",
+    "replace": "  return `Nothing needs to change for these two weeks. For these two weeks the most useful thing you can do is sleep the way you usually do and fill in the mornings honestly, the bad ones included. There is no score to improve and no way to fail this. ${wait(solo)}`;\n",
+    "testFile": "src/lib/consult-baseline.test.ts",
+    "testName": "should I change anything? → the baseline reply"
+  },
+  {
+    "id": "b14-last-filed-always-weekday",
+    "why": "Last filed must say this morning or yesterday when that is the day, not the weekday.",
+    "file": "src/lib/today-surface.ts",
+    "find": "  if (morningDate === today) return \"this morning\";\n  if (morningDate === yesterday) return \"yesterday\";\n  return weekdayOfMorning(morningDate);\n",
+    "replace": "  return weekdayOfMorning(morningDate);\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "uses this morning, yesterday, or the weekday"
+  },
+  {
+    "id": "b15-mac-reminders-say-browser",
+    "why": "Inside the Mac app, reminders must not mention a browser tab.",
+    "file": "src/lib/notify-device.ts",
+    "find": "  return inMacApp\n    ? \"Reminders come from the phone app.\"\n    : \"Reminders need the installed app. In a browser tab there is nothing to schedule them with.\";\n",
+    "replace": "  return \"Reminders need the installed app. In a browser tab there is nothing to schedule them with.\";\n",
+    "testFile": "src/lib/first-ten.test.ts",
+    "testName": "names the phone app inside the Mac app"
+  },
+  {
+    "id": "b16-you-still-says-baseline",
+    "why": "Tester-facing copy must not say baseline. The reminders hint is the one they read first.",
+    "file": "src/components/you-view.tsx",
+    "find": "            ? \"One reminder each morning during the test. Nothing in the evening.\"\n",
+    "replace": "            ? \"One reminder each morning while your baseline runs. Nothing in the evening.\"\n",
+    "testFile": "src/lib/clinical-diary.test.ts",
+    "testName": "keeps account, morning reminders, the test, usual times, privacy and about"
   }
 ]
