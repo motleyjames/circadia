@@ -37,6 +37,7 @@ import {
 import type { ActivityLevel, Profile, Units } from "@/lib/types";
 import { SLEEP_TARGET_OPTIONS, WAKE_TARGET_OPTIONS } from "@/lib/windows";
 import { ScheduledDaysPicker } from "@/components/scheduled-days-picker";
+import { isObserving } from "@/lib/observation";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -176,6 +177,7 @@ export function YouView() {
 
             <NotificationSetting
               enabled={profile.notificationsEnabled}
+              observing={isObserving(state.episode, state.reports, new Date())}
               onChange={(notificationsEnabled) => persist({ notificationsEnabled })}
             />
           </Panel>
@@ -871,9 +873,11 @@ function Chips({
  */
 function NotificationSetting({
   enabled,
+  observing,
   onChange,
 }: {
   enabled: boolean;
+  observing: boolean;
   onChange: (next: boolean) => void;
 }) {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
@@ -896,7 +900,11 @@ function NotificationSetting({
     <>
       <SettingRow
         label="Reminders"
-        hint="A heads-up an hour before wind-down, the wind-down cue itself, a nudge at wake time, and the week when it is in."
+        hint={
+          observing
+            ? "One reminder each morning while your baseline runs. Nothing in the evening."
+            : "A heads-up an hour before wind-down, the wind-down cue itself, a nudge at wake time, and the week when it is in."
+        }
       >
         <Switch
           checked={enabled && !blocked}

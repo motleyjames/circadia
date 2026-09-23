@@ -18,6 +18,7 @@ import {
   screenOffClock,
   secondsUntilClock,
 } from "@/lib/time";
+import { isObserving, tonightNight } from "@/lib/observation";
 import { useWallClock } from "@/lib/wall-clock";
 
 const ORB_C = 2 * Math.PI * 46;
@@ -30,6 +31,47 @@ export function TonightView() {
   const page = morningPageStatus(state.reports, now, profile?.targetWake);
 
   if (!profile) return null;
+
+  const observing = isObserving(state.episode, state.reports, now);
+  const night = tonightNight(state.episode, state.reports, now);
+  if (observing) {
+    const baselineNights = state.episode?.baselineNights ?? 14;
+    const almostDone = night !== null && night > baselineNights;
+    const solo = state.episode?.clinicianId === null;
+    return (
+      <div className="phone-page-y flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-[max(0.5rem,env(safe-area-inset-top))] pb-10">
+        <div className="mx-auto flex w-full max-w-[22rem] flex-1 flex-col sm:max-w-[26rem] lg:max-w-[28rem]">
+          <section className="flex min-h-full flex-1 flex-col items-center justify-center">
+            <h1 className="font-heading text-center text-[2.4rem] leading-[1.05] tracking-tight text-zinc-50">
+              {almostDone ? "Your baseline is almost done" : `Night ${night} of ${baselineNights}`}
+            </h1>
+            <p className="mt-5 max-w-[34ch] text-center text-[15px] leading-relaxed text-zinc-400">
+              {almostDone
+                ? "One morning left to file."
+                : solo
+                  ? "Nothing to change tonight. Sleep the way you usually do — that's what this test needs to see."
+                  : "Nothing to change tonight. Sleep the way you usually do — that's what your clinician needs to see."}
+            </p>
+            {page === "filed" || page === "unfiled-open" || page === "unfiled-late" ? (
+              <DiaryLink
+                href="/check-in"
+                className="mt-8 inline-flex min-h-11 items-center justify-center rounded-full px-6 text-[15px] text-zinc-100 ring-1 ring-white/14"
+              >
+                {page === "filed"
+                  ? "Open this morning's page"
+                  : page === "unfiled-open"
+                    ? "Start the morning interview"
+                    : "File this morning"}
+              </DiaryLink>
+            ) : null}
+          </section>
+          <div className="mt-10 w-full shrink-0">
+            <WindDown />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const offClock = screenOffClock(profile.targetSleep);
   const screensDown = shouldBeOffScreens(profile.targetSleep, now);

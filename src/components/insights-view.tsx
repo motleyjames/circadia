@@ -26,6 +26,8 @@ import {
   type WeekGeometry,
 } from "@/lib/sleep-metrics";
 import { standingOn, weekSentence } from "@/lib/week-sentence";
+import { isObserving } from "@/lib/observation";
+import { useWallClock } from "@/lib/wall-clock";
 
 /** The note taxonomy is internal. Users were reading raw "LEVER" and "STEADY". */
 const NOTE_KIND_LABEL: Record<string, string> = {
@@ -52,46 +54,67 @@ export function InsightsView() {
   const { state, loadSampleWeek } = useCircadia();
   const [sampleOpen, setSampleOpen] = useState(false);
   const profile = state.profile;
+  const now = useWallClock();
+  const observing = isObserving(state.episode, state.reports, now);
 
-  const windowReports = useMemo(() => lastSevenReports(state.reports), [state.reports]);
+  const windowReports = useMemo(
+    () => (observing ? [] : lastSevenReports(state.reports)),
+    [observing, state.reports],
+  );
   const priorReports = useMemo(
-    () => state.reports.slice(0, Math.max(0, state.reports.length - WEEK)).slice(-WEEK),
-    [state.reports],
+    () =>
+      observing
+        ? []
+        : state.reports.slice(0, Math.max(0, state.reports.length - WEEK)).slice(-WEEK),
+    [observing, state.reports],
   );
 
-  const scored = useMemo(() => scoreNights(windowReports), [windowReports]);
-  const week = useMemo(() => weekGeometry(windowReports), [windowReports]);
+  const scored = useMemo(() => (observing ? [] : scoreNights(windowReports)), [observing, windowReports]);
+  const week = useMemo(() => (observing ? null : weekGeometry(windowReports)), [observing, windowReports]);
   const deltas = useMemo(
-    () => weekDeltas(week, weekGeometry(priorReports)),
-    [week, priorReports],
+    () => (observing ? null : weekDeltas(week, weekGeometry(priorReports))),
+    [observing, week, priorReports],
   );
-  const split = useMemo(() => bestAndWorst(scored), [scored]);
+  const split = useMemo(() => (observing ? null : bestAndWorst(scored)), [observing, scored]);
   // A night that crosses the chart's 3pm boundary — a nap logged as a night — has
   // real numbers but cannot be drawn in order. Ask before rendering the section, so
   // the heading is never left over an empty frame.
-  const plottable = useMemo(() => scored.filter(isPlottable), [scored]);
+  const plottable = useMemo(() => (observing ? [] : scored.filter(isPlottable)), [observing, scored]);
 
   const jetLag = useMemo(
     () =>
-      profile
-        ? socialJetLagCopyFromReports(state.reports, profile.scheduledDays, new Date())
-        : null,
-    [profile, state.reports],
+      observing || !profile
+        ? null
+        : socialJetLagCopyFromReports(state.reports, profile.scheduledDays, now),
+    [observing, profile, state.reports, now],
   );
   const notes = useMemo(
-    () => (profile ? buildSleepNotes(profile, state.reports) : []),
-    [profile, state.reports],
+    () => (observing || !profile ? [] : buildSleepNotes(profile, state.reports)),
+    [observing, profile, state.reports],
   );
   const review = useMemo(
-    () => (profile ? buildWeekReview(profile, state.reports) : null),
-    [profile, state.reports],
+    () => (observing || !profile ? null : buildWeekReview(profile, state.reports)),
+    [observing, profile, state.reports],
   );
   const reading = useMemo(
-    () => (profile ? suggestMorningReadingForLogs(profile, state.reports) : null),
-    [profile, state.reports],
+    () => (observing || !profile ? null : suggestMorningReadingForLogs(profile, state.reports)),
+    [observing, profile, state.reports],
   );
 
   if (!profile) return null;
+  if (observing) {
+    const nights = state.episode?.baselineNights ?? 14;
+    return (
+      <div className="phone-page-y min-h-0 flex-1 overflow-y-auto px-5 pb-8 md:pt-[max(2rem,env(safe-area-inset-top))]">
+        <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Notes</p>
+        <h1 className="font-heading mt-1 text-3xl text-zinc-50">{`Your notes open after night ${nights}.`}</h1>
+        <p className="mt-3 max-w-[46ch] text-[15px] leading-relaxed text-zinc-400">
+          Until then, Somnadia keeps your diary without showing you numbers, so your baseline stays
+          yours.
+        </p>
+      </div>
+    );
+  }
   const units = profile.units;
   const empty = state.reports.length === 0;
   const dreamReports = state.reports.filter((r) => r.dream?.text);

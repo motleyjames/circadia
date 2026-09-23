@@ -176,7 +176,10 @@ export function markReminderOffered(): void {
  * confirmation, not an announcement, and an app that greets you at every update is
  * the kind of thing this whole module is written to avoid being.
  */
-export async function confirmNotificationsOnce(screensDownAt: string): Promise<boolean> {
+export async function confirmNotificationsOnce(
+  screensDownAt: string,
+  observing = false,
+): Promise<boolean> {
   if (!canNotify()) return false;
   try {
     if (window.localStorage.getItem(CONFIRMED_KEY)) return false;
@@ -199,7 +202,9 @@ export async function confirmNotificationsOnce(screensDownAt: string): Promise<b
         {
           id: TEST_PING_ID,
           title: "Reminders are on",
-          body: `First one lands at ${screensDownAt}, an hour before your asleep-by. Nothing will arrive between then and the morning.`,
+          body: observing
+            ? "Reminders are on. One each morning while your baseline runs, nothing in the evening."
+            : `First one lands at ${screensDownAt}, an hour before your asleep-by. Nothing will arrive between then and the morning.`,
           schedule: { at: new Date(Date.now() + 4000), allowWhileIdle: true },
         },
       ],

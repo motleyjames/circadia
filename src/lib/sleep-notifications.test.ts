@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { createEpisode } from "@/lib/episode";
+import { morningInBaseline, nightDayInBaseline } from "@/lib/observation";
 import {
+  BASELINE_MORNING_DELAY_MINUTES,
   HORIZON_DAYS,
   MORNING_DELAY_MINUTES,
   WEEKLY_MIN_NIGHTS,
@@ -512,3 +515,82 @@ describe("the evening pair", () => {
     expect(pings.filter((p) => p.kind === "weekly")).toHaveLength(1);
   });
 });
+
+describe("baseline observation planning", () => {
+  const enrolled = new Date(2026, 8, 20, 22, 0, 0);
+  const baselineEpisode = createEpisode({
+    clinicianId: "doc-1",
+    enrolledAt: enrolled.toISOString(),
+    baselineNights: 14,
+  });
+
+  it("a plan made on night 1 has no evening pings on baseline days and 07:30 Last night mornings", () => {
+    const now = new Date(2026, 8, 20, 9, 0, 0);
+    const pings = planNotifications(
+      { profile: profile(), reports: [], episode: baselineEpisode },
+      now,
+    );
+    for (const ping of pings) {
+      if (ping.kind === "wind-down" || ping.kind === "screens-down" || ping.kind === "weekly") {
+        expect(nightDayInBaseline(baselineEpisode, ping.at), ping.kind).toBe(false);
+      }
+      if (ping.kind === "morning" && morningInBaseline(baselineEpisode, ping.at)) {
+        expect(ping.at.getHours()).toBe(7);
+        expect(ping.at.getMinutes()).toBe(BASELINE_MORNING_DELAY_MINUTES);
+        expect(ping.title).toBe("Last night");
+      }
+    }
+    expect(pings.some((p) => p.kind === "morning" && p.title === "Last night")).toBe(true);
+    expect(BASELINE_MORNING_DELAY_MINUTES).toBe(30);
+  });
+
+  it("a plan made on night 11 keeps baseline mornings through night 14 and today's style from night 15", () => {
+    const now = new Date(2026, 8, 30, 9, 0, 0);
+    const pings = planNotifications(
+      { profile: profile(), reports: sevenNights(), episode: baselineEpisode },
+      now,
+    );
+    for (const ping of pings) {
+      if (nightDayInBaseline(baselineEpisode, ping.at)) {
+        expect(ping.kind).not.toBe("wind-down");
+        expect(ping.kind).not.toBe("screens-down");
+        expect(ping.kind).not.toBe("weekly");
+      }
+      if (ping.kind === "morning" && morningInBaseline(baselineEpisode, ping.at)) {
+        expect(ping.at.getHours()).toBe(7);
+        expect(ping.at.getMinutes()).toBe(30);
+        expect(ping.title).toBe("Last night");
+      }
+      if (ping.kind === "morning" && !morningInBaseline(baselineEpisode, ping.at)) {
+        expect(ping.at.getMinutes()).toBe(MORNING_DELAY_MINUTES);
+        expect(ping.title).toBe("Morning");
+      }
+    }
+    expect(pings.some((p) => p.kind === "screens-down" && !nightDayInBaseline(baselineEpisode, p.at))).toBe(
+      true,
+    );
+    expect(pings.some((p) => p.kind === "morning" && p.title === "Morning")).toBe(true);
+  });
+
+  it("with episode missing or null matches today's output for the existing fixtures", () => {
+    const input = { profile: profile(), reports: sevenNights() };
+    const today = planNotifications(input, WED_MORNING);
+    expect(planNotifications({ ...input, episode: null }, WED_MORNING)).toEqual(today);
+    expect(planNotifications({ ...input, episode: undefined }, WED_MORNING)).toEqual(today);
+    expect(today).toEqual(planNotifications({ profile: profile(), reports: sevenNights() }, WED_MORNING));
+  });
+
+  it("no baseline ping falls inside withinQuietHours", () => {
+    const now = new Date(2026, 8, 20, 9, 0, 0);
+    const pings = planNotifications(
+      { profile: profile(), reports: [], episode: baselineEpisode },
+      now,
+    );
+    expect(pings.length).toBeGreaterThan(0);
+    for (const ping of pings) {
+      const clock = `${String(ping.at.getHours()).padStart(2, "0")}:${String(ping.at.getMinutes()).padStart(2, "0")}`;
+      expect(withinQuietHours(clock, "23:00", "07:00"), `${ping.kind} ${clock}`).toBe(false);
+    }
+  });
+});
+
