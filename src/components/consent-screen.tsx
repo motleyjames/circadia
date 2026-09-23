@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
-import { AGE_REFUSAL, whatJamesReceives } from "@/lib/consent";
+import { AGE_REFUSAL, CONSENT_LEAVE_UNINSTALL, whatJamesReceives } from "@/lib/consent";
 import { hapticLight } from "@/lib/haptics";
 import { CRISIS_LIFELINE_NUMBER } from "@/lib/safety-copy";
 
@@ -96,7 +96,7 @@ export function ConsentScreen({
       <p className="mt-3 max-w-[42ch] text-[15px] leading-relaxed text-zinc-400">
         You can leave any time, under You → Leave the study. Your nights are deleted from James&apos;s
         computer the next time it checks for updates, usually within minutes. Your diary stays on
-        your phone.
+        your phone. {CONSENT_LEAVE_UNINSTALL}
       </p>
       <h2 className="mt-8 text-[13px] font-semibold tracking-[0.04em] text-zinc-200 uppercase">
         When the test ends

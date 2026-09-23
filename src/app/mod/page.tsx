@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronRight } from "lucide-react";
+import { DeleteTesterNights } from "@/components/delete-tester-nights";
 import { OperatorChrome } from "@/components/operator-chrome";
 import { OperatorGate } from "@/components/operator-gate";
 import { useOperatorInbox } from "@/context/operator-inbox";
@@ -49,7 +50,8 @@ const COHORTS: { id: Cohort; label: string }[] = [
 ];
 
 export default function ModeratorPage() {
-  const { key, error, data, book, setBook, loading, booted, open, refresh } = useOperatorInbox();
+  const { key, error, data, book, setBook, loading, booted, open, refresh, deleteTesterNights } =
+    useOperatorInbox();
   const [namingId, setNamingId] = useState<string | null>(null);
   const [whyOpen, setWhyOpen] = useState<number | null>(null);
 
@@ -237,6 +239,7 @@ export default function ModeratorPage() {
                       persistBook(nameOrphan(book, tester.participantId, name, cohort));
                       setNamingId(null);
                     }}
+                    onDeleteNights={deleteTesterNights}
                   />
                 ))}
               </div>
@@ -256,6 +259,7 @@ function TesterRow({
   onName,
   onCancelName,
   onSaveName,
+  onDeleteNights,
 }: {
   tester: ConsoleTester;
   nightPerson?: ModeratorNightPerson;
@@ -264,6 +268,7 @@ function TesterRow({
   onName: () => void;
   onCancelName: () => void;
   onSaveName: (name: string, cohort: Cohort) => void;
+  onDeleteNights: (participantId: string, confirmation: string) => Promise<true | string>;
 }) {
   const [open, setOpen] = useState(false);
   const histId = `tester-hist-${tester.participantId}`;
@@ -332,6 +337,7 @@ function TesterRow({
               Export diary
             </a>
           ) : null}
+          <DeleteTesterNights participantId={tester.participantId} onDelete={onDeleteNights} />
         </div>
         <div className="text-[14px] text-op-muted">{tester.lastSync}</div>
       </div>

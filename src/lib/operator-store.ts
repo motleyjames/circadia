@@ -1,10 +1,10 @@
 import { mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DELETE_STUDY_CONFIRM, typedWordMatches } from "@/lib/confirm-word";
+import { DELETE_STUDY_CONFIRM, DELETE_TESTER_NIGHTS_CONFIRM, typedWordMatches } from "@/lib/confirm-word";
+
+export { DELETE_STUDY_CONFIRM, DELETE_TESTER_NIGHTS_CONFIRM };
 import { readInviteBook, type OperatorInvite } from "@/lib/invite";
 import { studyInboxDir } from "@/lib/study-inbox";
-
-export { DELETE_STUDY_CONFIRM };
 
 export const OPERATOR_DIR_NAME = ".operator";
 export const INVITE_BOOK_FILE = "invite-book.json";
@@ -173,6 +173,20 @@ export function deleteInboxPacksFor(participantId: string, inbox = studyInboxDir
     removed.push(name);
   }
   return removed;
+}
+
+export function deleteTesterNights(
+  participantId: string,
+  confirmation: string,
+  inbox = studyInboxDir(),
+): { ok: true; removed: string[] } | { ok: false } {
+  if (!typedWordMatches(confirmation, DELETE_TESTER_NIGHTS_CONFIRM)) return { ok: false };
+  const id = participantId.trim().toLowerCase();
+  const removed = deleteInboxPacksFor(id, inbox);
+  const withdrawn = loadWithdrawn(inbox);
+  withdrawn[id] = true;
+  saveWithdrawn(withdrawn, inbox);
+  return { ok: true, removed };
 }
 
 export function deleteAllStudyData(

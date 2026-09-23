@@ -42,3 +42,8 @@ _Checked against the source and found not to apply._
 Reading the source settles this. Read src/components/consent-screen.tsx. The component only presents a checkbox attestation labeled 'I'm 18 or older' — no date of birth field is collected. Cited src/components/consent-screen.tsx:130: `I&apos;m 18 or older.`
 
 `probe: read_code__age_gate_mechanism_5256`
+
+**Decisions (James, Sep 22)**
+- d_1_1 fixed: leaving offline stores a pending withdrawal sent on next open; Operator gained "Delete this tester's nights" for testers who email; the consent tells testers who delete the app to email James.
+- d_1_2 declined: a withdrawal deletes every pack for that participant; no night is referenced across participants.
+- d_1_3 declined: no pack is sealed or sent without consent at CONSENT_VERSION, proven by consent-sends-without-version, so every pack that reaches Operator is itself evidence of consent.

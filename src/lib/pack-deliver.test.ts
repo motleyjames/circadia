@@ -224,12 +224,54 @@ describe("pack deliver", () => {
       throw new Error("v1 must not hit the Worker");
     });
     const result = await deliverPhonePack({
-      state: joined!,
+      state: consented(joined!),
       operatorPublicRaw: keys.publicRaw,
       http: mock.impl,
     });
     expect(result).toEqual({ status: "skipped" });
     expect(mock.calls).toHaveLength(0);
+  });
+
+  it("leaving while offline stores a pending withdrawal and sends it on the next open", async () => {
+    const store = readFileSync("src/context/circadia-store.tsx", "utf8");
+    expect(store).toContain("withdrawnAt: new Date().toISOString(),\n        sendPending: prev.study.inviteVersion === 2,");
+    expect(store).toContain("if (!ready || !isPhoneNative()) return;\n    void flushPhoneDelivery();");
+    expect(store).not.toContain("if (!state.study.sendPending) return;");
+    const keys = await generateOperatorKeyPair();
+    const invite = await generateInvite("Ada West", "friend");
+    const joined = await enrollWithInvite(withProfile(), invite.code);
+    const left: CircadiaState = {
+      ...joined!,
+      study: {
+        ...joined!.study,
+        consented: false,
+        withdrawnAt: "2026-09-22T12:00:00.000Z",
+        sendPending: true,
+      },
+    };
+    const failed = await deliverPhonePack({
+      state: left,
+      operatorPublicRaw: keys.publicRaw,
+      http: http(() => ({ status: 500, headers: {}, data: "" })).impl,
+    });
+    expect(failed.status).toBe("failed");
+    const pending = applyDelivery(left.study, failed);
+    expect(pending.withdrawnAt).toBe("2026-09-22T12:00:00.000Z");
+    expect(pending.sendPending).toBe(true);
+    const bodies: unknown[] = [];
+    const retryHttp = http((req) => {
+      bodies.push(JSON.parse(req.data ?? "{}"));
+      return { status: 201, headers: { etag: '"w1"' }, data: "" };
+    });
+    const retry = await deliverPhonePack({
+      state: { ...left, study: pending },
+      operatorPublicRaw: keys.publicRaw,
+      http: retryHttp.impl,
+    });
+    expect(retry.status).toBe("sent");
+    expect(retryHttp.calls).toHaveLength(1);
+    const opened = await openEnvelope(bodies[0], keys.privateKey, left.study.participantId!);
+    expect(opened).toEqual({ ok: true, kind: "withdrawal" });
   });
 
   it("after a v2 join, the pack's participant id equals the id in its associated data", async () => {

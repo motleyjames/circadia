@@ -1351,19 +1351,19 @@
   },
   {
     "id": "consent-joins-without-gate",
-    "why": "Joining without the 18+ box, or with an intake age under 18, records a child.",
+    "why": "Joining without the 18+ box, or with an intake age under 18, records a child. The test calls joinConsentGate directly so an enroll-time invite refusal cannot mask it.",
     "file": "src/lib/consent.ts",
-    "find": "  if (!eighteen) return { ok: false, reason: \"box\" };\n  if (intakeAgeBlocksJoin(state.profile?.age)) return { ok: false, reason: \"age\" };\n  const enrolled = await enrollWithInvite(state, code, now);\n",
-    "replace": "  const enrolled = await enrollWithInvite(state, code, now);\n",
+    "find": "  if (!eighteen) return \"box\";\n  if (intakeAgeBlocksJoin(age)) return \"age\";\n  return null;\n",
+    "replace": "  return null;\n",
     "testFile": "src/lib/consent.test.ts",
-    "testName": "joining is impossible without the 18+ box; an intake age under 18 blocks it even with the box ticked"
+    "testName": "joining is impossible without the box; an intake age under 18 blocks it even with the box ticked"
   },
   {
     "id": "consent-refusal-stores",
     "why": "A refusal must store nothing. Returning ok records a child who was turned away.",
     "file": "src/lib/consent.ts",
-    "find": "  if (intakeAgeBlocksJoin(state.profile?.age)) return { ok: false, reason: \"age\" };\n  const enrolled = await enrollWithInvite(state, code, now);\n",
-    "replace": "  if (intakeAgeBlocksJoin(state.profile?.age)) return { ok: true, state };\n  const enrolled = await enrollWithInvite(state, code, now);\n",
+    "find": "  const blocked = joinConsentGate(eighteen, state.profile?.age);\n  if (blocked) return { ok: false, reason: blocked };\n  const enrolled = await enrollWithInvite(state, code, now);\n",
+    "replace": "  const blocked = joinConsentGate(eighteen, state.profile?.age);\n  if (blocked === \"age\") return { ok: true, state };\n  if (blocked) return { ok: false, reason: blocked };\n  const enrolled = await enrollWithInvite(state, code, now);\n",
     "testFile": "src/lib/consent.test.ts",
     "testName": "a refusal and a Not now store nothing and send nothing"
   },
@@ -1384,5 +1384,32 @@
     "replace": "          href=\"https://988lifeline.org\"\n",
     "testFile": "src/lib/consent.test.ts",
     "testName": "the consent screen contains the 988 tel link and the leave path, verbatim"
+  },
+  {
+    "id": "phone-leave-offline-drops-pending",
+    "why": "A failed withdrawal send that clears withdrawnAt forgets the leave. The tester is offline and James still has their nights.",
+    "file": "src/lib/pack-deliver.ts",
+    "find": "      lastError: result.error,\n      sendPending: true,\n",
+    "replace": "      lastError: result.error,\n      sendPending: true,\n      withdrawnAt: null,\n",
+    "testFile": "src/lib/pack-deliver.test.ts",
+    "testName": "leaving while offline stores a pending withdrawal and sends it on the next open"
+  },
+  {
+    "id": "operator-delete-tester-skips-confirm",
+    "why": "Delete this tester's nights without the typed confirmation would wipe one person's packs on a misclick.",
+    "file": "src/lib/operator-store.ts",
+    "find": "  if (!typedWordMatches(confirmation, DELETE_TESTER_NIGHTS_CONFIRM)) return { ok: false };\n",
+    "replace": "  if (false && !typedWordMatches(confirmation, DELETE_TESTER_NIGHTS_CONFIRM)) return { ok: false };\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "delete this tester's nights removes only that participant's packs, and does nothing without the typed confirmation"
+  },
+  {
+    "id": "consent-leave-drops-uninstall",
+    "why": "Testers who delete the app without leaving were promised a way to reach James. Dropping the sentence hides it.",
+    "file": "src/lib/consent.ts",
+    "find": "export const CONSENT_LEAVE_UNINSTALL =\n  \"If you delete Somnadia without leaving first, email James and he'll delete your nights.\";\n",
+    "replace": "export const CONSENT_LEAVE_UNINSTALL = \"\";\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "the Leaving section tells testers to email James if they delete the app without leaving"
   }
 ]
