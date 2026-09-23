@@ -4,7 +4,7 @@ import { FLAG_KEYS, PROFILE_KEYS } from "@/lib/study";
 import { SENT_NIGHT_KEYS, SENT_TOP_KEYS } from "@/lib/pack-keys";
 import type { CircadiaState, StudyState } from "@/lib/types";
 
-export const CONSENT_VERSION = 3;
+export const CONSENT_VERSION = 4;
 
 export const CONSENT_EMAIL = "hello@somnadia.com";
 export const CONSENT_LEAVE_PATH = "You → Leave the study";
@@ -12,6 +12,89 @@ export const CONSENT_LEAVE_UNINSTALL =
   "If you delete Somnadia without leaving first, email hello@somnadia.com and your nights will be deleted.";
 export const AGE_REFUSAL =
   "Somnadia's test is for adults. You can still keep your diary for yourself.";
+export const CONSENT_NOW_RECEIVES_LESS = "Somnadia now receives less";
+
+export const DISCLOSURE_GROUP_HEADINGS = [
+  "About you",
+  "Each morning",
+  "How the test runs",
+  "Safety notes",
+] as const;
+
+export type DisclosureGroup = (typeof DISCLOSURE_GROUP_HEADINGS)[number];
+
+/** Every sent pack key belongs to exactly one of these four groups. */
+export const DISCLOSURE_GROUP_KEYS: Record<DisclosureGroup, readonly string[]> = {
+  "About you": [
+    "profile",
+    "ageBand",
+    "sex",
+    "struggles",
+    "activity",
+    "bmiBand",
+    "medicationClasses",
+    "supplementCount",
+    "targetSleep",
+    "targetWake",
+  ],
+  "Each morning": [
+    "nights",
+    "fellAsleepAt",
+    "wokeAt",
+    "durationMinutes",
+    "rating",
+    "drank",
+    "drinkCount",
+    "sleepLatencyMinutes",
+    "wokeInNight",
+    "nightWakingMinutes",
+    "usedSupplement",
+    "supplementKind",
+    "inBedAt",
+    "triedToSleepAt",
+    "outOfBedAt",
+    "awakeningCount",
+    "napMinutes",
+    "filedLate",
+    "caffeineAfter2pm",
+    "latencyFloor",
+    "wakingFloor",
+  ],
+  "How the test runs": [
+    "schema",
+    "participantId",
+    "appVersion",
+    "surface",
+    "demoWeek",
+    "nightsElapsed",
+    "nightIndex",
+    "episodeNight",
+    "morningSeconds",
+  ],
+  "Safety notes": ["safetyFlags", "category", "witnessed-apnea", "drowsy-driving"],
+};
+
+export const DISCLOSURE_GROUP_SUMMARIES: Record<DisclosureGroup, string> = {
+  "About you":
+    "a few facts, mostly as groups — like your age group and the sex you chose — never your name or exact measurements.",
+  "Each morning":
+    "your times, how long things took, how you rated the night, and anything different the day before.",
+  "How the test runs": "which night of the test it is, and how long each morning took.",
+  "Safety notes": "two kinds, only if they come up.",
+};
+
+/** Legacy keys testers used to send. One line names them for anyone who accepted before the trim. */
+export const STOPPED_SENDING_KEYS = [
+  "hadDream",
+  "spins",
+  "screenOffMinutes",
+  "windDownHelped",
+  "sessions",
+  "chat",
+] as const;
+
+/** Keys the visible list omitted through version 3. Anyone who accepted 3 must see these named. */
+export const LISTED_ADDED_KEYS = ["schema", "participantId", "surface"] as const;
 
 /** One line per pack key. Adding a pack field without a line fails the suite. */
 export const DISCLOSURE_LINES: Record<string, string> = {
@@ -72,15 +155,20 @@ export const DISCLOSURE_LINES: Record<string, string> = {
   "drowsy-driving": "that you said you drive while drowsy",
 };
 
-const HIDDEN_FROM_LIST = new Set([
-  "schema",
-  "participantId",
-  "surface",
-  "profile",
-  "nights",
-  "safetyFlags",
-  "category",
-]);
+/**
+ * Sent keys omitted from the visible list. A key may stay here only when
+ * HIDDEN_COVERED_BY names a visible line that already tells the tester
+ * that information is sent.
+ */
+export const HIDDEN_FROM_LIST = new Set(["profile", "nights", "safetyFlags", "category"]);
+
+/** Hidden sent key → visible DISCLOSURE_LINES key whose line covers it. */
+export const HIDDEN_COVERED_BY: Record<string, string> = {
+  profile: "ageBand",
+  nights: "fellAsleepAt",
+  safetyFlags: "witnessed-apnea",
+  category: "drowsy-driving",
+};
 
 export function packDisclosureKeys(): string[] {
   return [
@@ -103,24 +191,106 @@ export function unmappedPackKeys(): string[] {
   return missing;
 }
 
-/** Sentences a tester reads under "What Somnadia receives." */
-export function whatJamesReceives(): string[] {
-  return [
-    `${cap(DISCLOSURE_LINES.ageBand)}, ${DISCLOSURE_LINES.sex}, ${DISCLOSURE_LINES.struggles}, ${DISCLOSURE_LINES.activity}, and ${DISCLOSURE_LINES.bmiBand}.`,
-    `${cap(DISCLOSURE_LINES.medicationClasses)}, ${DISCLOSURE_LINES.supplementCount}, ${DISCLOSURE_LINES.targetSleep}, and ${DISCLOSURE_LINES.targetWake}.`,
-    `Each morning: ${DISCLOSURE_LINES.inBedAt}, ${DISCLOSURE_LINES.triedToSleepAt}, ${DISCLOSURE_LINES.fellAsleepAt}, ${DISCLOSURE_LINES.wokeAt}, and ${DISCLOSURE_LINES.outOfBedAt}; ${DISCLOSURE_LINES.durationMinutes}; ${DISCLOSURE_LINES.rating}; and ${DISCLOSURE_LINES.filedLate}.`,
-    `${cap(DISCLOSURE_LINES.drank)}, and ${DISCLOSURE_LINES.drinkCount}; ${DISCLOSURE_LINES.sleepLatencyMinutes}; and ${DISCLOSURE_LINES.latencyFloor}.`,
-    `${cap(DISCLOSURE_LINES.wokeInNight)}, ${DISCLOSURE_LINES.awakeningCount}, and ${DISCLOSURE_LINES.nightWakingMinutes}; ${DISCLOSURE_LINES.wakingFloor}; and ${DISCLOSURE_LINES.napMinutes}.`,
-    `${cap(DISCLOSURE_LINES.usedSupplement)}, and ${DISCLOSURE_LINES.supplementKind}; and ${DISCLOSURE_LINES.caffeineAfter2pm}.`,
-    `${cap(DISCLOSURE_LINES.nightIndex)}, and ${DISCLOSURE_LINES.episodeNight}.`,
-    `${cap(DISCLOSURE_LINES.morningSeconds)}.`,
-    `${cap(DISCLOSURE_LINES.appVersion)}, ${DISCLOSURE_LINES.nightsElapsed}, and ${DISCLOSURE_LINES.demoWeek}.`,
-    `If it comes up: ${DISCLOSURE_LINES["witnessed-apnea"]}, or ${DISCLOSURE_LINES["drowsy-driving"]}.`,
-  ];
+export function ungroupedDisclosureKeys(): string[] {
+  const assigned = new Set(Object.values(DISCLOSURE_GROUP_KEYS).flat());
+  const missing: string[] = [];
+  const seen = new Set<string>();
+  for (const key of packDisclosureKeys()) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (!assigned.has(key)) missing.push(key);
+  }
+  return missing;
 }
 
-function cap(line: string): string {
+export function keysInMultipleGroups(): string[] {
+  const counts = new Map<string, number>();
+  for (const keys of Object.values(DISCLOSURE_GROUP_KEYS)) {
+    for (const key of keys) {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  return [...counts].filter(([, n]) => n > 1).map(([key]) => key);
+}
+
+export function groupsMissingSummary(): string[] {
+  return DISCLOSURE_GROUP_HEADINGS.filter((heading) => !DISCLOSURE_GROUP_SUMMARIES[heading]?.trim());
+}
+
+export function disclosureGroupItems(heading: DisclosureGroup): { key: string; line: string }[] {
+  return DISCLOSURE_GROUP_KEYS[heading]
+    .filter((key) => !HIDDEN_FROM_LIST.has(key) && DISCLOSURE_LINES[key])
+    .map((key) => ({ key, line: DISCLOSURE_LINES[key]! }));
+}
+
+/** One line per visible mapped key, in group order. The full list testers can open. */
+export function whatJamesReceives(): string[] {
+  return DISCLOSURE_GROUP_HEADINGS.flatMap((heading) =>
+    disclosureGroupItems(heading).map((item) => item.line),
+  );
+}
+
+function joinDisclosureLines(keys: readonly string[], lead: string, lastWord: "and" | "or"): string {
+  const lines = keys
+    .map((key) => DISCLOSURE_LINES[key]?.replace(/\.+$/, ""))
+    .filter((line): line is string => Boolean(line));
+  if (lines.length === 0) return "";
+  if (lines.length === 1) return `${lead} ${lines[0]}.`;
+  return `${lead} ${lines.slice(0, -1).join(", ")}, ${lastWord} ${lines[lines.length - 1]}.`;
+}
+
+export function stoppedSendingLine(): string {
+  return joinDisclosureLines(STOPPED_SENDING_KEYS, "It no longer receives", "or");
+}
+
+export function addedToListLine(): string {
+  return joinDisclosureLines(LISTED_ADDED_KEYS, "The list now also names", "and");
+}
+
+export function isReturningConsentReader(study: Pick<StudyState, "consentVersion">): boolean {
+  return (
+    typeof study.consentVersion === "number" &&
+    Number.isFinite(study.consentVersion) &&
+    study.consentVersion < CONSENT_VERSION
+  );
+}
+
+/** Lines a returning reader sees before the rest. Version 3 names what was added, not only what stopped. */
+export function returningConsentLines(study: Pick<StudyState, "consentVersion">): string[] {
+  if (!isReturningConsentReader(study)) return [];
+  const version = study.consentVersion as number;
+  const lines: string[] = [];
+  if (version < 3) {
+    const stopped = stoppedSendingLine();
+    if (stopped) lines.push(stopped);
+  }
+  const added = addedToListLine();
+  if (added) lines.push(added);
+  return lines;
+}
+
+export function capDisclosureLine(line: string): string {
   return line.charAt(0).toUpperCase() + line.slice(1);
+}
+
+export function hiddenKeysMissingCover(): string[] {
+  const visible = new Set(whatJamesReceives());
+  const missing: string[] = [];
+  const seen = new Set<string>();
+  for (const key of packDisclosureKeys()) {
+    if (seen.has(key) || !HIDDEN_FROM_LIST.has(key)) continue;
+    seen.add(key);
+    const cover = HIDDEN_COVERED_BY[key];
+    const line = cover ? DISCLOSURE_LINES[cover] : undefined;
+    if (!cover || HIDDEN_FROM_LIST.has(cover) || !line || !visible.has(line)) missing.push(key);
+  }
+  for (const key of HIDDEN_FROM_LIST) {
+    if (!seen.has(key) && !missing.includes(key)) missing.push(key);
+  }
+  for (const key of Object.keys(HIDDEN_COVERED_BY)) {
+    if (!HIDDEN_FROM_LIST.has(key) && !missing.includes(key)) missing.push(key);
+  }
+  return missing;
 }
 
 export function receivesCoversEveryMappedKey(): string[] {

@@ -1434,7 +1434,7 @@
     "id": "consent-version-stays-1",
     "why": "Anyone who accepted version 1 must read the new words before the next send. Leaving the version at 1 lets James send without seeing them.",
     "file": "src/lib/consent.ts",
-    "find": "export const CONSENT_VERSION = 3;\n",
+    "find": "export const CONSENT_VERSION = 4;\n",
     "replace": "export const CONSENT_VERSION = 1;\n",
     "testFile": "src/lib/consent.test.ts",
     "testName": "no pack is sealed or sent without consent at CONSENT_VERSION"
@@ -1542,9 +1542,36 @@
     "id": "consent-version-stays-2",
     "why": "What testers agree to has changed. Anyone who accepted 2 must see the screen again.",
     "file": "src/lib/consent.ts",
-    "find": "export const CONSENT_VERSION = 3;\n",
+    "find": "export const CONSENT_VERSION = 4;\n",
     "replace": "export const CONSENT_VERSION = 2;\n",
     "testFile": "src/lib/diary-2.test.ts",
-    "testName": "CONSENT_VERSION is 3 and a person who accepted 2 sees the screen again"
+    "testName": "CONSENT_VERSION is 4 and a person who accepted 3 sees the screen again"
+  },
+  {
+    "id": "consent-version-stays-3",
+    "why": "Anyone who accepted 3 agreed to a list that omitted schema, participantId and surface. Leaving the version at 3 lets the next send go without those words.",
+    "file": "src/lib/consent.ts",
+    "find": "export const CONSENT_VERSION = 4;\n",
+    "replace": "export const CONSENT_VERSION = 3;\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "CONSENT_VERSION is 4 and a person who accepted 3 sees the screen again"
+  },
+  {
+    "id": "consent-group-drops-age-band",
+    "why": "Every sent key belongs to exactly one disclosure group. Dropping ageBand leaves a field testers send without a heading.",
+    "file": "src/lib/consent.ts",
+    "find": "    \"ageBand\",\n    \"sex\",\n",
+    "replace": "    \"sex\",\n",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "every sent key belongs to exactly one disclosure group"
+  },
+  {
+    "id": "consent-hidden-uncovered",
+    "why": "A hidden sent key with no covering visible line is a field testers send without being told.",
+    "file": "src/lib/consent.ts",
+    "find": "  profile: \"ageBand\",\n",
+    "replace": "",
+    "testFile": "src/lib/consent.test.ts",
+    "testName": "every hidden key names the visible line that covers it"
   }
 ]
