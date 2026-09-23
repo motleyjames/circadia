@@ -13,7 +13,7 @@ import {
 import { answerQuestion, makeChatMessage, type ChatReply } from "@/lib/chat";
 import { isObserving } from "@/lib/observation";
 import { threadFromLive, upsertConsult } from "@/lib/consult-threads";
-import { sampleWeekState } from "@/lib/demo";
+import { applySampleWeek } from "@/lib/demo";
 import { installFaultReporter } from "@/lib/fault-reporter";
 import {
   confirmNotificationsOnce,
@@ -679,7 +679,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loadSampleWeek = useCallback(() => {
-    patch((prev) => sampleWeekState(prev));
+    patch((prev) => applySampleWeek(prev));
   }, []);
 
   const signUp = useCallback(

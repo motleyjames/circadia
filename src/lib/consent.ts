@@ -4,7 +4,7 @@ import { FLAG_KEYS, PROFILE_KEYS } from "@/lib/study";
 import { SENT_NIGHT_KEYS, SENT_TOP_KEYS } from "@/lib/pack-keys";
 import type { CircadiaState, StudyState } from "@/lib/types";
 
-export const CONSENT_VERSION = 4;
+export const CONSENT_VERSION = 5;
 
 export const CONSENT_EMAIL = "hello@somnadia.com";
 export const CONSENT_LEAVE_PATH = "You → Leave the study";
@@ -13,6 +13,8 @@ export const CONSENT_LEAVE_UNINSTALL =
 export const AGE_REFUSAL =
   "Somnadia's test is for adults. You can still keep your diary for yourself.";
 export const CONSENT_NOW_RECEIVES_LESS = "Somnadia now receives less";
+export const CONSENT_FAULT_DISCLOSURE =
+  "If the app hits an error: the error message, where in the app's code it happened, which screen you were on, and when.";
 
 export const DISCLOSURE_GROUP_HEADINGS = [
   "About you",
@@ -76,7 +78,7 @@ export const DISCLOSURE_GROUP_KEYS: Record<DisclosureGroup, readonly string[]> =
 
 export const DISCLOSURE_GROUP_SUMMARIES: Record<DisclosureGroup, string> = {
   "About you":
-    "a few facts, mostly as groups — like your age group and the sex you chose — never your name or exact measurements.",
+    "a few facts, mostly as groups — like your age group, the sex you chose, and when you joined — never your name or exact measurements.",
   "Each morning":
     "your times, how long things took, how you rated the night, and anything different the day before.",
   "How the test runs": "which night of the test it is, and how long each morning took.",
@@ -116,8 +118,8 @@ export const DISCLOSURE_LINES: Record<string, string> = {
   bmiBand: "a body-size group, not your height or weight",
   medicationClasses: "the kinds of medication you listed, not the names",
   supplementCount: "how many supplements you listed",
-  targetSleep: "the time you aim to go to sleep",
-  targetWake: "the time you aim to wake",
+  targetSleep: "your usual bedtime",
+  targetWake: "your usual get-up time",
   nightIndex: "which morning this was, counted from the first one you filed",
   fellAsleepAt: "the time you fell asleep",
   wokeAt: "the time you woke",

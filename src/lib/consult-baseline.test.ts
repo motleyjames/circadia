@@ -370,8 +370,29 @@ describe("routing", () => {
       observing: true,
       solo: false,
     });
+    expect(change.text).toContain("Nothing needs to change for these two weeks.");
     expect(change.text).toContain("There is no score to improve");
     expect(change.text).toContain(WAIT_CLINIC);
+  });
+
+  it("I can't fall asleep, what should I do → onset Hold", () => {
+    const q = "I can't fall asleep, what should I do";
+    expect(baselineKind(q, q.toLowerCase(), consult, false)).toBe("hold");
+    expect(answerDuringBaseline(q, q.toLowerCase(), consult, false).text).toContain("unable to switch off");
+  });
+
+  it("I wake at 3, what can I do → waking Hold", () => {
+    const q = "I wake at 3, what can I do";
+    expect(baselineKind(q, q.toLowerCase(), consult, false)).toBe("hold");
+    expect(answerDuringBaseline(q, q.toLowerCase(), consult, false).text).toContain("Waking in the night");
+  });
+
+  it("should I change anything? → the baseline reply", () => {
+    const q = "should I change anything?";
+    expect(baselineKind(q, q.toLowerCase(), consult, false)).toBe("baseline");
+    expect(answerDuringBaseline(q, q.toLowerCase(), consult, false).text).toContain(
+      "Nothing needs to change for these two weeks.",
+    );
   });
 
   it("I fell asleep at the wheel is the drowsy-driving safety reply, byte for byte", () => {

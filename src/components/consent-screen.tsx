@@ -5,6 +5,7 @@ import { Mark } from "@/components/mark";
 import { useCircadia } from "@/context/circadia-store";
 import {
   AGE_REFUSAL,
+  CONSENT_FAULT_DISCLOSURE,
   CONSENT_LEAVE_UNINSTALL,
   CONSENT_NOW_RECEIVES_LESS,
   DISCLOSURE_GROUP_HEADINGS,
@@ -122,12 +123,13 @@ export function ConsentScreen({
             ))}
           </div>
         </details>
+        <p className={`mt-4 ${copy}`}>{CONSENT_FAULT_DISCLOSURE}</p>
         <h2 className="mt-8 text-[13px] font-semibold tracking-[0.04em] text-zinc-200 uppercase">
           What Somnadia never receives
         </h2>
         <p className={`mt-3 ${copy}`}>
-          Your name, email or phone number. Dates. Anything you type in your own words. Anything you
-          tell Somnadia about being in crisis.
+          Your name, email or phone number. The dates of your nights. Anything you type in your own
+          words. Anything you tell Somnadia about being in crisis.
         </p>
         <p className={`mt-4 ${copy}`}>
           Your answers are linked to you only through your invite code. The list that matches codes to

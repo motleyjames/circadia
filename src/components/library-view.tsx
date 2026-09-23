@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ChevronRight } from "lucide-react";
 import { useCircadia } from "@/context/circadia-store";
+import { isObserving } from "@/lib/observation";
+import { useWallClock } from "@/lib/wall-clock";
 import { Textarea } from "@/components/ui/textarea";
 import { MorningReadingCard } from "@/components/morning-reading";
 import { morningReadingHistory, orderLibraryArticles } from "@/lib/morning-reading";
@@ -31,6 +33,8 @@ function useHashId(): string {
 
 export function LibraryView() {
   const { state, setResearchNotes } = useCircadia();
+  const now = useWallClock();
+  const observing = isObserving(state.episode, state.reports, now);
   const hash = useHashId();
   const history = useMemo(
     () =>
@@ -84,7 +88,7 @@ export function LibraryView() {
         if another still-justified note is waiting.
       </p>
 
-      {reading ? (
+      {reading && !observing ? (
         <MorningReadingCard
           reading={reading}
           kicker="Why this one, today"

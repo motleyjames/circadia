@@ -172,14 +172,26 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
       },
     };
   }
-  if (TOPIC_BASELINE_CHANGE.test(lower)) {
+  const holdBeatsChange =
+    TOPIC_ONSET.test(lower) || TOPIC_WAKING.test(lower) || TOPIC_SCHEDULE.test(lower);
+  if (TOPIC_BASELINE_CHANGE.test(lower) && !holdBeatsChange) {
     return {
       kind: "baseline",
       reply: {
-        text: `No. For these two weeks the most useful thing you can do is sleep the way you usually do and fill in the mornings honestly, the bad ones included. There is no score to improve and no way to fail this. ${wait(solo)}`,
+        text: `Nothing needs to change for these two weeks. For these two weeks the most useful thing you can do is sleep the way you usually do and fill in the mornings honestly, the bad ones included. There is no score to improve and no way to fail this. ${wait(solo)}`,
         citations: [],
       },
     };
+  }
+
+  if (TOPIC_ONSET.test(lower)) {
+    return { kind: "hold", reply: holdOnset(solo) };
+  }
+  if (TOPIC_WAKING.test(lower)) {
+    return { kind: "hold", reply: holdWaking(solo) };
+  }
+  if (TOPIC_SCHEDULE.test(lower)) {
+    return { kind: "hold", reply: holdSchedule(solo, false) };
   }
 
   if (isClosedTopic(q, lower)) {
@@ -359,12 +371,6 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
   if (TOPIC_NAP.test(lower) && !TOPIC_NAP_NOT.test(lower)) {
     return { kind: "hold", reply: holdSchedule(solo, false) };
   }
-  if (TOPIC_WAKING.test(lower)) {
-    return { kind: "hold", reply: holdWaking(solo) };
-  }
-  if (TOPIC_ONSET.test(lower)) {
-    return { kind: "hold", reply: holdOnset(solo) };
-  }
   if (TOPIC_SLEEP_NEED.test(lower)) {
     return { kind: "hold", reply: holdSchedule(solo, false) };
   }
@@ -394,9 +400,6 @@ function route(q: string, lower: string, consult: BaselineConsult, solo: boolean
     return { kind: "explain", reply: namedMedsReply(consult) };
   }
   if (TOPIC_WIND_DOWN.test(lower)) {
-    return { kind: "hold", reply: holdSchedule(solo, false) };
-  }
-  if (TOPIC_SCHEDULE.test(lower)) {
     return { kind: "hold", reply: holdSchedule(solo, false) };
   }
 

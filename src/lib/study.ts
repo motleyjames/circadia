@@ -63,14 +63,20 @@ export function ageBand(age: number): AgeBand {
   return "65+";
 }
 
-export function bmiBand(heightCm: number, weightKg: number): BmiBand {
-  if (heightCm === DEFAULT_HEIGHT_CM && weightKg === DEFAULT_WEIGHT_KG) return "unconfirmed";
+function bandFromBmi(heightCm: number, weightKg: number): BmiBand {
   const bmi = bmiKgM(weightKg, heightCm);
   if (bmi < 18.5) return "underweight";
   if (bmi < 25) return "healthy";
   if (bmi < 30) return "overweight";
   if (bmi < 35) return "obesity-1";
   return "obesity-2";
+}
+
+export function bmiBand(heightCm: number, weightKg: number, bodyConfirmed?: boolean): BmiBand {
+  if (bodyConfirmed === true) return bandFromBmi(heightCm, weightKg);
+  if (bodyConfirmed === false) return "unconfirmed";
+  if (heightCm === DEFAULT_HEIGHT_CM && weightKg === DEFAULT_WEIGHT_KG) return "unconfirmed";
+  return bandFromBmi(heightCm, weightKg);
 }
 
 export function buildStudyPack(state: CircadiaState, now = new Date()): StudyPack {
@@ -128,7 +134,7 @@ export function buildStudyPack(state: CircadiaState, now = new Date()): StudyPac
       sex: profile.sex,
       struggles: [...profile.struggles],
       activity: profile.activity,
-      bmiBand: bmiBand(profile.heightCm, profile.weightKg),
+      bmiBand: bmiBand(profile.heightCm, profile.weightKg, profile.bodyConfirmed),
       medicationClasses: medicationClasses(profile.medications),
       supplementCount: profile.supplements.filter((s) => s.trim()).length,
       targetSleep: profile.targetSleep,

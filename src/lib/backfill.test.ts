@@ -65,7 +65,16 @@ describe("backfillableDates", () => {
       clinicianId: "clin-1",
       enrolledAt: "2026-09-16T08:00:00.000Z",
     });
-    expect(backfillableDates(TODAY, [], episode)).toEqual(["2026-09-17", "2026-09-16"]);
+    expect(backfillableDates(TODAY, [], episode)).toEqual(["2026-09-17"]);
+  });
+
+  it("does not offer the enrollment morning, only dates with an episode slot", () => {
+    const episode = createEpisode({
+      clinicianId: "clin-1",
+      enrolledAt: "2026-09-16T22:00:00.000Z",
+    });
+    expect(backfillableDates("2026-09-18", [], episode)).not.toContain("2026-09-16");
+    expect(applyBackfill([], night("2026-09-16"), "2026-09-18", episode)).toEqual([]);
   });
 });
 

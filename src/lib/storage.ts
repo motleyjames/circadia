@@ -1513,6 +1513,7 @@ function coerceProfile(value: CircadiaState["profile"] | unknown): Profile | nul
     notificationsEnabled: Boolean(p.notificationsEnabled),
     onboardingComplete: complete,
     scheduledDays: coerceScheduledDays(p.scheduledDays),
+    ...(p.bodyConfirmed === true ? { bodyConfirmed: true } : {}),
   };
 }
 
@@ -1780,9 +1781,15 @@ function coerceIntakeDraft(value: unknown): IntakeDraft | null {
     if (d.phase !== "earlier" && d.phase !== "neither" && d.phase !== "later") return null;
     draft.phase = d.phase as IntakePhase;
   }
+  if (d.sleepTime !== undefined) {
+    if (d.sleepTime === "") draft.sleepTime = "";
+    else if (!isClock(d.sleepTime)) return null;
+    else draft.sleepTime = normalizeClock(d.sleepTime);
+  }
   if (d.wakeTime !== undefined) {
-    if (!isClock(d.wakeTime)) return null;
-    draft.wakeTime = normalizeClock(d.wakeTime);
+    if (d.wakeTime === "") draft.wakeTime = "";
+    else if (!isClock(d.wakeTime)) return null;
+    else draft.wakeTime = normalizeClock(d.wakeTime);
   }
   if (d.stimulant !== undefined) {
     if (typeof d.stimulant !== "string") return null;

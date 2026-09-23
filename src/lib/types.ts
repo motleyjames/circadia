@@ -42,6 +42,11 @@ export type Profile = {
   sex: Sex;
   heightCm: number;
   weightKg: number;
+  /**
+   * Local only. Set when the person enters height and weight.
+   * Never sent. Absent on profiles that predate the flag.
+   */
+  bodyConfirmed?: boolean;
   activity: ActivityLevel;
   /** Local login identifier. Never copied into a night pack. Not a channel to the tester. */
   email: string;
@@ -241,6 +246,7 @@ export type IntakeDraft = {
   problem?: IntakeProblem;
   phase?: IntakePhase;
   wakeTime?: string;
+  sleepTime?: string;
   stimulant?: string;
   scheduledDays?: ScheduledDays;
 };

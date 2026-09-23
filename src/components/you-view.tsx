@@ -82,6 +82,7 @@ export function YouView() {
   if (!profile) return null;
   const current = profile;
   const metric = profile.units === "metric";
+  const observing = isObserving(state.episode, state.reports, new Date());
 
   function persist(patch: Partial<Profile>) {
     saveProfile({ ...current, ...patch });
@@ -140,7 +141,9 @@ export function YouView() {
           >
             <div className="grid gap-5 lg:grid-cols-2">
               <div>
-                <p className="mb-2 text-[12px] text-zinc-500">Asleep-by</p>
+                <p className="mb-2 text-[12px] text-zinc-500">
+                  {observing ? "Usual bedtime" : "Asleep-by"}
+                </p>
                 <BubbleGroup
                   size="compact"
                   value={profile.targetSleep}
@@ -153,7 +156,9 @@ export function YouView() {
                 />
               </div>
               <div>
-                <p className="mb-2 text-[12px] text-zinc-500">Wake</p>
+                <p className="mb-2 text-[12px] text-zinc-500">
+                  {observing ? "Usual get-up time" : "Wake"}
+                </p>
                 <BubbleGroup
                   size="compact"
                   value={profile.targetWake}
@@ -177,7 +182,7 @@ export function YouView() {
 
             <NotificationSetting
               enabled={profile.notificationsEnabled}
-              observing={isObserving(state.episode, state.reports, new Date())}
+              observing={observing}
               onChange={(notificationsEnabled) => persist({ notificationsEnabled })}
             />
           </Panel>
@@ -216,7 +221,9 @@ export function YouView() {
                       value={cm}
                       inputMode="decimal"
                       onChange={setCm}
-                      onBlur={() => persist({ heightCm: Number(cm) || profile.heightCm })}
+                      onBlur={() =>
+                        persist({ heightCm: Number(cm) || profile.heightCm, bodyConfirmed: true })
+                      }
                     />
                     <UnitField
                       label="Weight"
@@ -224,7 +231,9 @@ export function YouView() {
                       value={kg}
                       inputMode="decimal"
                       onChange={setKg}
-                      onBlur={() => persist({ weightKg: Number(kg) || profile.weightKg })}
+                      onBlur={() =>
+                        persist({ weightKg: Number(kg) || profile.weightKg, bodyConfirmed: true })
+                      }
                     />
                   </>
                 ) : (
@@ -237,7 +246,10 @@ export function YouView() {
                           value={feet}
                           onChange={(e) => setFeet(e.target.value)}
                           onBlur={() =>
-                            persist({ heightCm: feetInchesToCm(Number(feet) || 0, Number(inches) || 0) })
+                            persist({
+                              heightCm: feetInchesToCm(Number(feet) || 0, Number(inches) || 0),
+                              bodyConfirmed: true,
+                            })
                           }
                           aria-label="Height, feet"
                           className="h-10 rounded-xl border-white/10 bg-white/5"
@@ -248,7 +260,10 @@ export function YouView() {
                           value={inches}
                           onChange={(e) => setInches(e.target.value)}
                           onBlur={() =>
-                            persist({ heightCm: feetInchesToCm(Number(feet) || 0, Number(inches) || 0) })
+                            persist({
+                              heightCm: feetInchesToCm(Number(feet) || 0, Number(inches) || 0),
+                              bodyConfirmed: true,
+                            })
                           }
                           aria-label="Height, inches"
                           className="h-10 rounded-xl border-white/10 bg-white/5"
@@ -262,7 +277,7 @@ export function YouView() {
                       value={pounds}
                       inputMode="decimal"
                       onChange={setPounds}
-                      onBlur={() => persist({ weightKg: lbToKg(Number(pounds) || 0) })}
+                      onBlur={() => persist({ weightKg: lbToKg(Number(pounds) || 0), bodyConfirmed: true })}
                     />
                   </>
                 )}
@@ -559,21 +574,23 @@ export function YouView() {
                 onInstalled={() => logOut()}
               />
             </div>
-            <div className="border-b border-white/[0.08]">
-              <button
-                type="button"
-                className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-zinc-100"
-                onClick={() => {
-                  if (state.reports.length > 0) {
-                    setSampleOpen(true);
-                    return;
-                  }
-                  loadSampleWeek();
-                }}
-              >
-                Load sample week
-              </button>
-            </div>
+            {!state.episode && !state.study.consented ? (
+              <div className="border-b border-white/[0.08]">
+                <button
+                  type="button"
+                  className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-zinc-100"
+                  onClick={() => {
+                    if (state.reports.length > 0) {
+                      setSampleOpen(true);
+                      return;
+                    }
+                    loadSampleWeek();
+                  }}
+                >
+                  Load sample week
+                </button>
+              </div>
+            ) : null}
             <button
               type="button"
               className="flex min-h-11 w-full items-center px-4 text-left text-[17px] text-red-300/90"

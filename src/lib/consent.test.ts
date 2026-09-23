@@ -9,6 +9,7 @@ import {
   CONSENT_EMAIL,
   CONSENT_LEAVE_PATH,
   CONSENT_LEAVE_UNINSTALL,
+  CONSENT_FAULT_DISCLOSURE,
   CONSENT_NOW_RECEIVES_LESS,
   CONSENT_VERSION,
   DISCLOSURE_GROUP_HEADINGS,
@@ -98,7 +99,7 @@ describe("consent disclosure", () => {
       "Safety notes",
     ]);
     expect(DISCLOSURE_GROUP_SUMMARIES["About you"]).toBe(
-      "a few facts, mostly as groups — like your age group and the sex you chose — never your name or exact measurements.",
+      "a few facts, mostly as groups — like your age group, the sex you chose, and when you joined — never your name or exact measurements.",
     );
     expect(DISCLOSURE_GROUP_SUMMARIES["Each morning"]).toBe(
       "your times, how long things took, how you rated the night, and anything different the day before.",
@@ -137,7 +138,7 @@ describe("consent gates sending", () => {
     const fresh = await joinWithConsent(withProfile(), invite.code, true);
     expect(fresh.ok).toBe(true);
     if (!fresh.ok) return;
-    expect(CONSENT_VERSION).toBe(4);
+    expect(CONSENT_VERSION).toBe(5);
     expect(hasCurrentConsent({ consentVersion: 3 })).toBe(false);
     expect(hasCurrentConsent({ consentVersion: 2 })).toBe(false);
     expect(hasCurrentConsent({ consentVersion: 1 })).toBe(false);
@@ -225,6 +226,13 @@ describe("consent screen copy", () => {
     expect(src).toContain("It takes about a minute.");
     expect(src).not.toContain("two minutes");
     expect(src).toContain("See every item");
+    expect(src).toContain("CONSENT_FAULT_DISCLOSURE");
+    expect(src).toContain("The dates of your nights");
+    expect(CONSENT_FAULT_DISCLOSURE).toBe(
+      "If the app hits an error: the error message, where in the app's code it happened, which screen you were on, and when.",
+    );
+    expect(DISCLOSURE_LINES.targetSleep).toBe("your usual bedtime");
+    expect(DISCLOSURE_LINES.targetWake).toBe("your usual get-up time");
     expect(src).toContain("<details");
     expect(src).toContain("disclosureGroupItems");
     expect(src).toContain("DISCLOSURE_GROUP_SUMMARIES");
@@ -236,7 +244,8 @@ describe("consent screen copy", () => {
     expect(isReturningConsentReader({ consentVersion: 1 })).toBe(true);
     expect(isReturningConsentReader({ consentVersion: 2 })).toBe(true);
     expect(isReturningConsentReader({ consentVersion: 3 })).toBe(true);
-    expect(isReturningConsentReader({ consentVersion: 4 })).toBe(false);
+    expect(isReturningConsentReader({ consentVersion: 4 })).toBe(true);
+    expect(isReturningConsentReader({ consentVersion: CONSENT_VERSION })).toBe(false);
     expect(isReturningConsentReader({ consentVersion: null })).toBe(false);
     expect(stoppedSendingLine()).toContain(DISCLOSURE_LINES.hadDream);
     expect(stoppedSendingLine()).toContain(DISCLOSURE_LINES.spins);
@@ -251,7 +260,8 @@ describe("consent screen copy", () => {
       stoppedSendingLine(),
       addedToListLine(),
     ]);
-    expect(returningConsentLines({ consentVersion: 4 })).toEqual([]);
+    expect(returningConsentLines({ consentVersion: 4 })).toEqual([addedToListLine()]);
+    expect(returningConsentLines({ consentVersion: CONSENT_VERSION })).toEqual([]);
   });
 
   it("the Leaving section tells testers to email if they delete the app without leaving", () => {
