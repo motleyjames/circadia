@@ -8,9 +8,9 @@ import { LOCAL_FILE_KEY } from "./login";
 import { TABS } from "./nav";
 
 describe("phone diary shell", () => {
-  it("is version 0.17.0 and keeps the vault key local:this-computer", () => {
-    expect(APP_VERSION).toBe("0.17.0");
-    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.17.0");
+  it("is version 0.18.0 and keeps the vault key local:this-computer", () => {
+    expect(APP_VERSION).toBe("0.18.0");
+    expect(JSON.parse(readFileSync("package.json", "utf8")).version).toBe("0.18.0");
     expect(LOCAL_FILE_KEY).toBe("local:this-computer");
   });
 
@@ -242,7 +242,7 @@ describe("phone diary shell", () => {
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack:static");
     expect(JSON.parse(readFileSync("package.json", "utf8")).scripts["phone:sync"]).toContain("pack-mac-diary.cjs");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("Pack Mac diary");
-    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.17.0");
+    expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("MARKETING_VERSION = 0.18.0");
     expect(readFileSync("phone/ios/App/App.xcodeproj/project.pbxproj", "utf8")).toContain("CURRENT_PROJECT_VERSION = 42");
     const scene = readFileSync("phone/ios/App/App/SceneDelegate.swift", "utf8");
     expect(scene).toContain("class CircadiaBridgeViewController: CAPBridgeViewController");
@@ -389,7 +389,7 @@ describe("phone diary shell", () => {
       env: { ...process.env, CIRCADIA_GATE_ONLY: "1", CIRCADIA_OPERATOR_PUBLIC: pub },
     });
     rmSync(pubDir, { recursive: true, force: true });
-    expect(run.stdout).toContain("0.17.0");
+    expect(run.stdout).toContain("0.18.0");
     expect(run.stdout).not.toContain("Compiling");
     // The guard must sit above the first mutating step, or the gate is decorative.
     const shell = readFileSync("scripts/put-on-phone.sh", "utf8");

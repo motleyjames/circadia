@@ -1573,5 +1573,68 @@
     "replace": "",
     "testFile": "src/lib/consent.test.ts",
     "testName": "every hidden key names the visible line that covers it"
+  },
+  {
+    "id": "observation-drops-enrolled",
+    "why": "nextState() never leaves enrolled, so a baseline-only check turns observation off for every real tester.",
+    "file": "src/lib/observation.ts",
+    "find": "  if (episode.state !== \"enrolled\" && episode.state !== \"baseline\") return false;\n",
+    "replace": "  if (episode.state !== \"baseline\") return false;\n",
+    "testFile": "src/lib/observation.test.ts",
+    "testName": "is false for treatment and discharged, and true for enrolled"
+  },
+  {
+    "id": "observation-evening-pings-in-baseline",
+    "why": "Evening pings on a baseline night change the sleep the baseline is measuring.",
+    "file": "src/lib/sleep-notifications.ts",
+    "find": "    const baselineNight = episode ? nightDayInBaseline(episode, day) : false;\n",
+    "replace": "    const baselineNight = false;\n",
+    "testFile": "src/lib/sleep-notifications.test.ts",
+    "testName": "a plan made on night 1 has no evening pings on baseline days and 07:30 Last night mornings"
+  },
+  {
+    "id": "observation-baseline-morning-delay-zero",
+    "why": "The baseline morning is wake plus 30 minutes. Zero puts it at wake time, which is the treatment-era ping.",
+    "file": "src/lib/sleep-notifications.ts",
+    "find": "export const BASELINE_MORNING_DELAY_MINUTES = 30;\n",
+    "replace": "export const BASELINE_MORNING_DELAY_MINUTES = 0;\n",
+    "testFile": "src/lib/sleep-notifications.test.ts",
+    "testName": "a plan made on night 1 has no evening pings on baseline days and 07:30 Last night mornings"
+  },
+  {
+    "id": "observation-tonight-branch-off",
+    "why": "Disabling the Tonight observation branch leaves the countdown on during a baseline.",
+    "file": "src/components/tonight-view.tsx",
+    "find": "  if (observing) {\n    const baselineNights = state.episode?.baselineNights ?? 14;\n",
+    "replace": "  if (false && observing) {\n    const baselineNights = state.episode?.baselineNights ?? 14;\n",
+    "testFile": "src/lib/observation.test.ts",
+    "testName": "while observing, non-solo, on night 6 shows Night 6 of 14 and no sleep figure above WindDown"
+  },
+  {
+    "id": "observation-notes-branch-off",
+    "why": "Disabling the Notes observation branch shows efficiency during a baseline.",
+    "file": "src/components/insights-view.tsx",
+    "find": "  if (observing) {\n    const nights = state.episode?.baselineNights ?? 14;\n",
+    "replace": "  if (false && observing) {\n    const nights = state.episode?.baselineNights ?? 14;\n",
+    "testFile": "src/lib/observation.test.ts",
+    "testName": "while observing with 5 filed nights shows no numbers"
+  },
+  {
+    "id": "observation-notify-key-drops-episode",
+    "why": "Without episode on notifyKey, enrolling does not re-plan and evening pings already scheduled stay on the phone.",
+    "file": "src/context/circadia-store.tsx",
+    "find": "    state.episode?.enrolledAt ?? \"\",\n    state.episode?.state ?? \"\",\n    state.episode?.baselineNights ?? \"\",\n",
+    "replace": "",
+    "testFile": "src/lib/observation.test.ts",
+    "testName": "changes when episode enrolledAt, state or baselineNights move, and not when chat moves"
+  },
+  {
+    "id": "observation-sleep-figure-drops-clock",
+    "why": "A clock time is a sleep figure. Dropping the clock pattern lets 07:30 through on a baseline surface.",
+    "file": "src/lib/observation.ts",
+    "find": "  if (/\\b\\d{1,2}:\\d{2}\\b/.test(text)) return true;\n",
+    "replace": "",
+    "testFile": "src/lib/observation.test.ts",
+    "testName": "is true for percentages, durations, decimals, clocks and countdowns"
   }
 ]

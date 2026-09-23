@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { answerQuestion, makeChatMessage } from "@/lib/chat";
+import { isObserving } from "@/lib/observation";
 import { threadFromLive, upsertConsult } from "@/lib/consult-threads";
 import { sampleWeekState } from "@/lib/demo";
 import { installFaultReporter } from "@/lib/fault-reporter";
@@ -384,6 +385,33 @@ export function CircadiaSafeTree({ children }: { children: ReactNode }) {
   return <CircadiaContext.Provider value={NOOP_VALUE}>{children}</CircadiaContext.Provider>;
 }
 
+/** Test seam. Supplies NOOP_VALUE with state replaced. Not used in the app. */
+export function CircadiaPreviewTree({
+  state,
+  children,
+}: {
+  state: CircadiaState;
+  children?: ReactNode;
+}) {
+  return <CircadiaContext.Provider value={{ ...NOOP_VALUE, state }}>{children}</CircadiaContext.Provider>;
+}
+
+/** Inputs the notification planner re-runs on. Pure so a test can watch it move. */
+export function notifyKeyFor(state: CircadiaState): string {
+  if (!state.profile) return "";
+  return [
+    state.profile.notificationsEnabled,
+    state.profile.targetSleep,
+    state.profile.targetWake,
+    state.profile.scheduledDays.join(""),
+    state.reports.length,
+    state.reports.at(-1)?.morningDate ?? "",
+    state.episode?.enrolledAt ?? "",
+    state.episode?.state ?? "",
+    state.episode?.baselineNights ?? "",
+  ].join("|");
+}
+
 export function CircadiaProvider({ children }: { children: ReactNode }) {
   const state = useSyncExternalStore(subscribe, snapshot, serverSnapshot);
   const session = useSyncExternalStore(subscribe, currentSession, serverSession);
@@ -400,16 +428,7 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
   // toggle, either target, or the set of filed mornings. syncNotifications replaces
   // the whole pending set, so a reminder can never outlive the reason for it — the
   // morning ping for a morning just filed is gone before the app finishes saving.
-  const notifyKey = state.profile
-    ? [
-        state.profile.notificationsEnabled,
-        state.profile.targetSleep,
-        state.profile.targetWake,
-        state.profile.scheduledDays.join(""),
-        state.reports.length,
-        state.reports.at(-1)?.morningDate ?? "",
-      ].join("|")
-    : "";
+  const notifyKey = notifyKeyFor(state);
   // Asked at most once per session, and only once the OS says asking is still
   // possible. The previous version asked only while filing the very first morning
   // ever, so anyone who already had a diary — which is everyone who had been using
@@ -456,13 +475,21 @@ export function CircadiaProvider({ children }: { children: ReactNode }) {
         return;
       }
       const live = snapshot().profile ?? profile;
-      await syncNotifications({ profile: live, reports: snapshot().reports });
+      const liveState = snapshot();
+      await syncNotifications({
+        profile: live,
+        reports: liveState.reports,
+        episode: liveState.episode,
+      });
 
       // Confirm the feature works the first time it does, while the phone is still
       // in their hand. Without it the first thing anyone learns about reminders is
       // hours of silence, which is exactly what a broken build looks like.
       if (live.notificationsEnabled) {
-        void confirmNotificationsOnce(formatClock(screenOffClock(live.targetSleep), live.units));
+        void confirmNotificationsOnce(
+          formatClock(screenOffClock(live.targetSleep), live.units),
+          isObserving(liveState.episode, liveState.reports, new Date()),
+        );
       }
     })();
     // notifyKey carries every input; snapshot() is read inside so the effect never

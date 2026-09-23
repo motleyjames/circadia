@@ -1,3 +1,5 @@
+import type { Episode } from "@/lib/episode";
+import { morningInBaseline, nightDayInBaseline } from "@/lib/observation";
 import { isScheduledMorning } from "@/lib/schedule";
 import { HEALTHY_EFFICIENCY_PCT, weekGeometry, type WeekGeometry } from "@/lib/sleep-metrics";
 import { clockToMinutes, formatClock, formatDuration, screenOffClock } from "@/lib/time";
@@ -48,6 +50,9 @@ export type Ping = {
  * of the morning it asks about had started to fade.
  */
 export const MORNING_DELAY_MINUTES = 0;
+
+/** How long after target wake the morning ping lands during a baseline. */
+export const BASELINE_MORNING_DELAY_MINUTES = 30;
 
 /**
  * Warning before the wind-down cue, in minutes.
@@ -134,6 +139,7 @@ export function weeklyLine(week: WeekGeometry | null): string | null {
 export type PlanInput = {
   profile: Profile;
   reports: MorningReport[];
+  episode?: Episode | null;
 };
 
 /**
@@ -143,7 +149,7 @@ export type PlanInput = {
  * re-schedules this list, so there is exactly one source of truth for what is on
  * the device and no way for a stale ping to survive a settings change.
  */
-export function planNotifications({ profile, reports }: PlanInput, now = new Date()): Ping[] {
+export function planNotifications({ profile, reports, episode }: PlanInput, now = new Date()): Ping[] {
   if (!profile.notificationsEnabled) return [];
 
   const screensDownClock = screenOffClock(profile.targetSleep);
@@ -155,50 +161,71 @@ export function planNotifications({ profile, reports }: PlanInput, now = new Dat
 
   for (let offset = 0; offset < HORIZON_DAYS; offset += 1) {
     const day = addDays(now, offset);
+    const baselineNight = episode ? nightDayInBaseline(episode, day) : false;
+    const baselineMorning = episode ? morningInBaseline(episode, day) : false;
 
-    // 1. An hour before that, the warning. Same event, enough notice to act on it.
-    const windDownAt = atClock(day, screensDownClock);
-    windDownAt.setMinutes(windDownAt.getMinutes() - WIND_DOWN_WARNING_MINUTES);
-    if (windDownAt > now) {
-      out.push({
-        id: pingId("wind-down", day),
-        kind: "wind-down",
-        at: windDownAt,
-        title: "Screens down in an hour",
-        body: `Wind-down starts at ${formatClock(screensDownClock, profile.units)}. Good moment to finish what you are in the middle of.`,
-      });
-    }
+    if (!baselineNight) {
+      // 1. An hour before that, the warning. Same event, enough notice to act on it.
+      const windDownAt = atClock(day, screensDownClock);
+      windDownAt.setMinutes(windDownAt.getMinutes() - WIND_DOWN_WARNING_MINUTES);
+      if (windDownAt > now) {
+        out.push({
+          id: pingId("wind-down", day),
+          kind: "wind-down",
+          at: windDownAt,
+          title: "Screens down in an hour",
+          body: `Wind-down starts at ${formatClock(screensDownClock, profile.units)}. Good moment to finish what you are in the middle of.`,
+        });
+      }
 
-    // 2. Screens down, an hour before the sleep target. The notification IS the cue,
-    //    so it says what to do and explicitly does not ask to be opened.
-    const screensDownAt = atClock(day, screensDownClock);
-    if (screensDownAt > now) {
-      out.push({
-        id: pingId("screens-down", day),
-        kind: "screens-down",
-        at: screensDownAt,
-        title: "Screens down",
-        body: `Asleep by ${formatClock(profile.targetSleep, profile.units)} gives you your window. Dim the room — no need to open this.`,
-      });
+      // 2. Screens down, an hour before the sleep target. The notification IS the cue,
+      //    so it says what to do and explicitly does not ask to be opened.
+      const screensDownAt = atClock(day, screensDownClock);
+      if (screensDownAt > now) {
+        out.push({
+          id: pingId("screens-down", day),
+          kind: "screens-down",
+          at: screensDownAt,
+          title: "Screens down",
+          body: `Asleep by ${formatClock(profile.targetSleep, profile.units)} gives you your window. Dim the room — no need to open this.`,
+        });
+      }
     }
 
     // 3. Morning, at the wake target — but only for a morning that is not already
     //    filed. The ping for a morning already written would be nagging.
     const morningAt = atClock(day, profile.targetWake);
-    morningAt.setMinutes(morningAt.getMinutes() + MORNING_DELAY_MINUTES);
+    morningAt.setMinutes(
+      morningAt.getMinutes() + (baselineMorning ? BASELINE_MORNING_DELAY_MINUTES : MORNING_DELAY_MINUTES),
+    );
     if (morningAt > now && !filed.has(isoDate(day))) {
-      out.push({
-        id: pingId("morning", day),
-        kind: "morning",
-        at: morningAt,
-        title: "Morning",
-        body: "Two minutes on last night, while it is still fresh. Rough answers are fine.",
-      });
+      out.push(
+        baselineMorning
+          ? {
+              id: pingId("morning", day),
+              kind: "morning",
+              at: morningAt,
+              title: "Last night",
+              body: "While it's fresh. About a minute.",
+            }
+          : {
+              id: pingId("morning", day),
+              kind: "morning",
+              at: morningAt,
+              title: "Morning",
+              body: "Two minutes on last night, while it is still fresh. Rough answers are fine.",
+            },
+      );
     }
 
     // 4. The weekly read, the evening before the next morning they have to be up for,
     //    so a shift worker gets it on their own week rather than the calendar's.
-    if (finding && !weeklySent && isScheduledMorning(isoDate(addDays(day, 1)), profile.scheduledDays)) {
+    if (
+      !baselineNight &&
+      finding &&
+      !weeklySent &&
+      isScheduledMorning(isoDate(addDays(day, 1)), profile.scheduledDays)
+    ) {
       const weeklyAt = atClock(day, weeklyClock(profile));
       if (weeklyAt > now && !withinQuietHours(weeklyClock(profile), profile.targetSleep, profile.targetWake)) {
         out.push({
