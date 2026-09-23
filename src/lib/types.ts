@@ -17,11 +17,11 @@ export type SupplementKind = "melatonin" | "magnesium" | "both" | "antihistamine
 
 export type ScreenOffMinutes = 0 | 15 | 30 | 45 | 60;
 
-export type LatencyBucket = 5 | 15 | 30 | 50 | 75;
+export type LatencyBucket = 5 | 10 | 15 | 20 | 30 | 45 | 50 | 60 | 75 | 90 | 120 | 180;
 
 export type WindDownHelp = "yes" | "a_bit" | "no" | "did_not_use";
 
-export type NightWakingDuration = 0 | 10 | 25 | 45 | 70;
+export type NightWakingDuration = 0 | 5 | 10 | 15 | 20 | 25 | 30 | 45 | 50 | 60 | 70 | 75 | 90 | 120 | 180;
 
 /** How many separate awakenings, not counting the final one. 4 means "four or more". */
 export type AwakeningCount = 0 | 1 | 2 | 3 | 4;
@@ -109,6 +109,10 @@ export type MorningReport = {
   outOfBedAt?: string;
   awakeningCount?: AwakeningCount;
   napMinutes?: NapMinutes;
+  caffeineAfter2pm?: boolean;
+  latencyFloor?: boolean;
+  wakingFloor?: boolean;
+  morningSeconds?: number;
 };
 
 export type WindDownSession = {
@@ -197,6 +201,7 @@ export type MorningDraft = {
   morningDate: string;
   step: number;
   wokeAt?: string;
+  outOfBedAt?: string;
   inBedAt?: string;
   lightsOutSame?: boolean;
   triedToSleepAt?: string;
@@ -218,6 +223,10 @@ export type MorningDraft = {
   includeDream?: boolean;
   dreamText?: string;
   wantMeaning?: boolean;
+  caffeineAfter2pm?: boolean;
+  latencyFloor?: boolean;
+  wakingFloor?: boolean;
+  morningStartedAt?: number;
 };
 
 export type IntakeProblem = "falling" | "staying" | "both";
@@ -259,14 +268,14 @@ export type StudyNight = {
   drank: boolean;
   drinkCount?: number;
   spins?: boolean;
-  screenOffMinutes: ScreenOffMinutes;
+  screenOffMinutes?: ScreenOffMinutes;
   sleepLatencyMinutes: LatencyBucket;
   wokeInNight: boolean;
   nightWakingMinutes: NightWakingDuration;
   usedSupplement: boolean;
   supplementKind?: SupplementKind;
-  windDownHelped: WindDownHelp;
-  hadDream: boolean;
+  windDownHelped?: WindDownHelp;
+  hadDream?: boolean;
   inBedAt?: string;
   triedToSleepAt?: string;
   outOfBedAt?: string;
@@ -275,6 +284,10 @@ export type StudyNight = {
   filedLate?: boolean;
   /** Position since enrollment, from 0. Absent for nights filed before joining. */
   episodeNight?: number;
+  caffeineAfter2pm?: boolean;
+  latencyFloor?: boolean;
+  wakingFloor?: boolean;
+  morningSeconds?: number;
 };
 
 export type RosterEvent = {
@@ -340,12 +353,12 @@ export type StudyPack = {
     targetWake: string;
   };
   nights: StudyNight[];
-  sessions: {
+  sessions?: {
     meditation: number;
     soundscape: number;
     completed: number;
   };
-  chat: {
+  chat?: {
     turns: number;
     topics: string[];
   };

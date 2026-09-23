@@ -99,7 +99,7 @@ npm run build
 
 ## iPhone (diary only)
 
-Somnadia 0.16.0 — two compiles, two opens. Dock fade is a CSS cover inside Somnadia.app. Phone open is UIKit. They must not share a `.next` folder.
+Somnadia 0.17.0 — two compiles, two opens. Dock fade is a CSS cover inside Somnadia.app. Phone open is UIKit. They must not share a `.next` folder.
 
 `pack:static` / `put-on-phone` writes `out/`. Next 16 `output: "export"` with a custom distDir treats that folder as `out/` and still builds into `.next`, so Somnadia does not use `.next-phone` as distDir. Pack stashes a stamped diary-server `.next` (`.next-dock-stash`), exports, then restores. Quit Somnadia.app before `put-on-phone` so the running `next start` is not standing on that folder. `skipWebOpenCover` is Capacitor-only (`isPhoneNative()`), never a `NEXT_PUBLIC_` flag Next inlines into Somnadia.app. After a poisoned pack, Somnadia.app rebuilds when `.next/circadia-kind` is missing or the tree is `output: "export"`. Somnadia.app also strips those pack env vars in the Swift launcher, so `open Somnadia.app` from the same terminal as `put-on-phone` cannot `next start` a phone export.
 

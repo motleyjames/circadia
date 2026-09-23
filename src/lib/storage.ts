@@ -58,6 +58,7 @@ import type {
 } from "@/lib/types";
 import { isPackSafetyCategory, normalizeInviteCode, normalizeInviteCodeV2 } from "@/lib/invite";
 import { isClock, normalizeClock } from "@/lib/windows";
+import { isAcceptedLatencyMinutes, isAcceptedWakingMinutes } from "@/lib/pack-keys";
 
 /** Legacy single-file blob. Migrated once into the vault. */
 export const STORAGE_KEY = "circadia:v1";
@@ -1578,6 +1579,23 @@ function coerceReport(value: unknown): MorningReport | null {
     napMinutes: coerceNapMinutes(r.napMinutes),
   };
   if (r.filedLate === true) report.filedLate = true;
+  if (typeof r.caffeineAfter2pm === "boolean") report.caffeineAfter2pm = r.caffeineAfter2pm;
+  if (r.latencyFloor === true) report.latencyFloor = true;
+  if (r.wakingFloor === true) report.wakingFloor = true;
+  if (
+    typeof r.morningSeconds === "number" &&
+    Number.isInteger(r.morningSeconds) &&
+    r.morningSeconds >= 0 &&
+    r.morningSeconds <= 86400
+  ) {
+    report.morningSeconds = r.morningSeconds;
+  }
+  if (isAcceptedLatencyMinutes(r.sleepLatencyMinutes)) {
+    report.sleepLatencyMinutes = r.sleepLatencyMinutes;
+  }
+  if (isAcceptedWakingMinutes(r.nightWakingMinutes)) {
+    report.nightWakingMinutes = r.nightWakingMinutes;
+  }
   return report;
 }
 
@@ -1592,6 +1610,10 @@ function coerceMorningDraft(value: unknown): MorningDraft | null {
   if (d.wokeAt !== undefined) {
     if (!isClock(d.wokeAt)) return null;
     draft.wokeAt = normalizeClock(d.wokeAt);
+  }
+  if (d.outOfBedAt !== undefined) {
+    if (!isClock(d.outOfBedAt)) return null;
+    draft.outOfBedAt = normalizeClock(d.outOfBedAt);
   }
   if (d.inBedAt !== undefined) {
     if (!isClock(d.inBedAt)) return null;
@@ -1648,15 +1670,7 @@ function coerceMorningDraft(value: unknown): MorningDraft | null {
     draft.screenOffMinutes = d.screenOffMinutes;
   }
   if (d.sleepLatencyMinutes !== undefined) {
-    if (
-      d.sleepLatencyMinutes !== 5 &&
-      d.sleepLatencyMinutes !== 15 &&
-      d.sleepLatencyMinutes !== 30 &&
-      d.sleepLatencyMinutes !== 50 &&
-      d.sleepLatencyMinutes !== 75
-    ) {
-      return null;
-    }
+    if (!isAcceptedLatencyMinutes(d.sleepLatencyMinutes)) return null;
     draft.sleepLatencyMinutes = d.sleepLatencyMinutes;
   }
   if (d.wokeInNight !== undefined) {
@@ -1664,15 +1678,7 @@ function coerceMorningDraft(value: unknown): MorningDraft | null {
     draft.wokeInNight = d.wokeInNight;
   }
   if (d.nightWakingMinutes !== undefined) {
-    if (
-      d.nightWakingMinutes !== 0 &&
-      d.nightWakingMinutes !== 10 &&
-      d.nightWakingMinutes !== 25 &&
-      d.nightWakingMinutes !== 45 &&
-      d.nightWakingMinutes !== 70
-    ) {
-      return null;
-    }
+    if (!isAcceptedWakingMinutes(d.nightWakingMinutes)) return null;
     draft.nightWakingMinutes = d.nightWakingMinutes;
   }
   if (d.usedSupplement !== undefined) {
@@ -1710,6 +1716,22 @@ function coerceMorningDraft(value: unknown): MorningDraft | null {
   if (d.wantMeaning !== undefined) {
     if (typeof d.wantMeaning !== "boolean") return null;
     draft.wantMeaning = d.wantMeaning;
+  }
+  if (d.caffeineAfter2pm !== undefined) {
+    if (typeof d.caffeineAfter2pm !== "boolean") return null;
+    draft.caffeineAfter2pm = d.caffeineAfter2pm;
+  }
+  if (d.latencyFloor !== undefined) {
+    if (typeof d.latencyFloor !== "boolean") return null;
+    draft.latencyFloor = d.latencyFloor;
+  }
+  if (d.wakingFloor !== undefined) {
+    if (typeof d.wakingFloor !== "boolean") return null;
+    draft.wakingFloor = d.wakingFloor;
+  }
+  if (d.morningStartedAt !== undefined) {
+    if (typeof d.morningStartedAt !== "number" || !Number.isFinite(d.morningStartedAt)) return null;
+    draft.morningStartedAt = d.morningStartedAt;
   }
   return draft;
 }

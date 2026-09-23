@@ -596,7 +596,7 @@
   {
     "id": "receivers-reject-new-fields",
     "why": "Leaving safetyFlags off TOP_KEYS refuses every pack that carries a flag \u2014 the fifth-occurrence trap.",
-    "file": "src/lib/study.ts",
+    "file": "src/lib/pack-keys.ts",
     "find": "  \"nightsElapsed\",\n  \"safetyFlags\",\n",
     "replace": "  \"nightsElapsed\",\n",
     "testFile": "src/lib/study.test.ts",
@@ -1325,9 +1325,9 @@
   {
     "id": "consent-pack-key-unmapped",
     "why": "A pack field without a disclosure line means testers were not told what James receives.",
-    "file": "src/lib/study.ts",
-    "find": "export const TOP_KEYS = new Set([\n  \"schema\",\n",
-    "replace": "export const TOP_KEYS = new Set([\n  \"secretField\",\n  \"schema\",\n",
+    "file": "src/lib/pack-keys.ts",
+    "find": "export const SENT_TOP_KEYS = new Set([\n  \"schema\",\n",
+    "replace": "export const SENT_TOP_KEYS = new Set([\n  \"secretField\",\n  \"schema\",\n",
     "testFile": "src/lib/consent.test.ts",
     "testName": "every pack key has a disclosure line"
   },
@@ -1425,9 +1425,117 @@
     "id": "consent-version-stays-1",
     "why": "Anyone who accepted version 1 must read the new words before the next send. Leaving the version at 1 lets James send without seeing them.",
     "file": "src/lib/consent.ts",
-    "find": "export const CONSENT_VERSION = 2;\n",
+    "find": "export const CONSENT_VERSION = 3;\n",
     "replace": "export const CONSENT_VERSION = 1;\n",
     "testFile": "src/lib/consent.test.ts",
     "testName": "no pack is sealed or sent without consent at CONSENT_VERSION"
+  },
+  {
+    "id": "sent-accepted-merged",
+    "why": "One list serving both sent and accepted either rejects old packs or discloses data that is no longer collected.",
+    "file": "src/lib/pack-keys.ts",
+    "find": "export const ACCEPTED_TOP_KEYS = new Set([...SENT_TOP_KEYS, ...LEGACY_TOP_KEYS]);\n",
+    "replace": "export const ACCEPTED_TOP_KEYS = SENT_TOP_KEYS;\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "sent and accepted are separate"
+  },
+  {
+    "id": "builder-sends-hadDream",
+    "why": "A removed key on a fresh pack is a silent leak of a field testers were told we no longer collect.",
+    "file": "src/lib/study.ts",
+    "find": "      if (report.usedSupplement && report.supplementKind) night.supplementKind = report.supplementKind;\n",
+    "replace": "      if (report.usedSupplement && report.supplementKind) night.supplementKind = report.supplementKind;\n      night.hadDream = Boolean(report.dream?.text);\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "no removed key is ever sent"
+  },
+  {
+    "id": "receiver-uses-sent-night-keys",
+    "why": "Validating against sent keys alone refuses every older pack that still carries a removed field.",
+    "file": "src/lib/study.ts",
+    "find": "export const NIGHT_KEYS = ACCEPTED_NIGHT_KEYS;\n",
+    "replace": "export const NIGHT_KEYS = SENT_NIGHT_KEYS;\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "both receivers accept a new pack and an old pack carrying every removed key"
+  },
+  {
+    "id": "duration-allowlist-opens",
+    "why": "Anything other than the listed minutes must be rejected. A number check is not an allowlist.",
+    "file": "src/lib/study.ts",
+    "find": "    if (!isAcceptedLatencyMinutes(n.sleepLatencyMinutes)) {\n      return { ok: false, error: \"Invalid duration.\" };\n    }\n",
+    "replace": "    if (typeof n.sleepLatencyMinutes !== \"number\") {\n      return { ok: false, error: \"Invalid duration.\" };\n    }\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "a duration outside the accepted values is rejected"
+  },
+  {
+    "id": "ceiling-clamped-at-75",
+    "why": "Capping latency at 75 minutes overstates sleep for the people with the worst insomnia.",
+    "file": "src/lib/sleep-metrics.ts",
+    "find": "  const latencyMinutes = Math.max(0, report.sleepLatencyMinutes ?? 0);\n",
+    "replace": "  const latencyMinutes = Math.min(75, Math.max(0, report.sleepLatencyMinutes ?? 0));\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "a three-hour latency produces a lower efficiency than a 75-minute one"
+  },
+  {
+    "id": "floor-not-an-upper-bound",
+    "why": "A floor night rendered as an exact percentage is a lie about how much they slept.",
+    "file": "src/lib/sleep-metrics.ts",
+    "find": "    efficiencyIsUpperBound: report.latencyFloor === true || report.wakingFloor === true,\n",
+    "replace": "    efficiencyIsUpperBound: false,\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "3 h or more sets the floor flag and the console renders an upper bound"
+  },
+  {
+    "id": "golden-efficiency-changes",
+    "why": "Old nights must compute the same efficiency they did before the ceiling came off.",
+    "file": "src/lib/sleep-metrics.ts",
+    "find": "    efficiencyPct: Math.round((totalSleepMinutes / timeInBedMinutes) * 1000) / 10,\n",
+    "replace": "    efficiencyPct: Math.round((totalSleepMinutes / timeInBedMinutes) * 100) / 1,\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "old bucketed nights compute the same efficiencies"
+  },
+  {
+    "id": "nothing-sets-caffeine",
+    "why": "Nothing must file with no context fields. A hidden caffeine flag invents a fact.",
+    "file": "src/lib/morning-diary.ts",
+    "find": "export function emptyMorningContext(): MorningContext {\n  return { drank: false, usedSupplement: false };\n}\n",
+    "replace": "export function emptyMorningContext(): MorningContext {\n  return { drank: false, usedSupplement: false, caffeineAfter2pm: true };\n}\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "Nothing files immediately with no context fields set"
+  },
+  {
+    "id": "night-bar-crosses",
+    "why": "Handles that pass each other invent a night that could not have happened.",
+    "file": "src/lib/night-clocks.ts",
+    "find": "    if (next[1] > next[2] || next[2] > next[3] || next[3] <= 0 || next[3] > maxOut) {\n      return clocks;\n    }\n",
+    "replace": "    if (false && (next[1] > next[2] || next[2] > next[3] || next[3] <= 0 || next[3] > maxOut)) {\n      return clocks;\n    }\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "the night bar never produces clocks out of order"
+  },
+  {
+    "id": "clock-sentence-rewritten",
+    "why": "The clock-watching sentence is clinical instruction. Rewording it is a protocol change.",
+    "file": "src/lib/morning-diary.ts",
+    "find": "  \"Your best guess is fine. Please don't check a clock tonight to get this right.\";\n",
+    "replace": "  \"Check a clock if you want this exact.\";\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "the clock sentence appears verbatim on the latency screen"
+  },
+  {
+    "id": "after-file-shows-percent",
+    "why": "A sleep number after filing changes the sleep the baseline is measuring.",
+    "file": "src/lib/morning-diary.ts",
+    "find": "  return `Night ${episodeNight + 1} of 14 recorded.`;\n",
+    "replace": "  return `Night ${episodeNight + 1} of 14 recorded. 82%`;\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "the after-filing screen shows no sleep number"
+  },
+  {
+    "id": "consent-version-stays-2",
+    "why": "What testers agree to has changed. Anyone who accepted 2 must see the screen again.",
+    "file": "src/lib/consent.ts",
+    "find": "export const CONSENT_VERSION = 3;\n",
+    "replace": "export const CONSENT_VERSION = 2;\n",
+    "testFile": "src/lib/diary-2.test.ts",
+    "testName": "CONSENT_VERSION is 3 and a person who accepted 2 sees the screen again"
   }
 ]

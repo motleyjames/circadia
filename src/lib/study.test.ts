@@ -134,11 +134,10 @@ describe("buildStudyPack", () => {
     expect(pack.profile.supplementCount).toBe(1);
     expect(pack.nights).toHaveLength(1);
     expect(pack.nights[0]?.nightIndex).toBe(0);
-    expect(pack.nights[0]?.hadDream).toBe(true);
+    expect(pack.nights[0]?.hadDream).toBeUndefined();
     expect(pack.nights[0]?.drinkCount).toBe(4);
-    expect(pack.chat.turns).toBe(2);
-    expect(pack.chat.topics).toEqual(["otc-antihistamines"]);
-    expect(pack.sessions.completed).toBe(1);
+    expect(pack.chat).toBeUndefined();
+    expect(pack.sessions).toBeUndefined();
 
     expect(blob).not.toMatch(/james@example.com/i);
     expect(blob).not.toMatch(/3035550100/);
@@ -185,8 +184,7 @@ describe("buildStudyPack", () => {
       },
     ];
     const pack = buildStudyPack(state);
-    expect(pack.chat.turns).toBe(2);
-    expect(pack.chat.topics).toEqual(["otc-antihistamines"]);
+    expect(pack.chat).toBeUndefined();
     expect(JSON.stringify(pack)).not.toMatch(/Unisom/i);
     expect(anonymityViolations(pack, state)).toEqual([]);
   });
@@ -453,7 +451,7 @@ describe("study pack night geometry", () => {
     expect(blob).not.toMatch(/orexin/);
     expect(blob).not.toMatch(/supplementNote/);
     expect(blob).not.toMatch(/researchNotes/);
-    expect(pack.nights[0]?.hadDream).toBe(true);
+    expect(pack.nights[0]?.hadDream).toBeUndefined();
   });
 
   it("the anonymity scan is not weakened", () => {
@@ -483,7 +481,7 @@ describe("study pack night geometry", () => {
     ).toContain("timestamp");
     expect(anonymityViolations({ ...pack, appVersion: "shipped-2026-12-25" }, state)).toContain("calendar-date");
     expect(
-      anonymityViolations({ ...pack, chat: { ...pack.chat, topics: [...pack.chat.topics, "note 2025-03-09"] } }, state),
+      anonymityViolations({ ...pack, chat: { turns: 1, topics: ["note 2025-03-09"] } }, state),
     ).toContain("calendar-date");
     expect(anonymityViolations(pack, state)).toEqual([]);
   });
@@ -571,7 +569,7 @@ describe("solo enrollment packs", () => {
     const pack = buildStudyPack(state);
     expect(pack.nightsElapsed).toBeUndefined();
     expect(Object.keys(pack).sort()).toEqual(
-      ["appVersion", "chat", "demoWeek", "nights", "participantId", "profile", "schema", "sessions", "surface"].sort(),
+      ["appVersion", "demoWeek", "nights", "participantId", "profile", "schema", "surface"].sort(),
     );
     const again = buildStudyPack(state);
     expect(again).toEqual(pack);

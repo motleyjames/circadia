@@ -80,7 +80,8 @@ describe("consent gates sending", () => {
     const fresh = await joinWithConsent(withProfile(), invite.code, true);
     expect(fresh.ok).toBe(true);
     if (!fresh.ok) return;
-    expect(CONSENT_VERSION).toBe(2);
+    expect(CONSENT_VERSION).toBe(3);
+    expect(hasCurrentConsent({ consentVersion: 2 })).toBe(false);
     expect(hasCurrentConsent({ consentVersion: 1 })).toBe(false);
     expect(hasCurrentConsent(fresh.state.study)).toBe(true);
     expect(fresh.state.study.consentVersion).toBe(CONSENT_VERSION);

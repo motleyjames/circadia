@@ -9,6 +9,7 @@ import { useOperatorInbox } from "@/context/operator-inbox";
 import {
   buildConsoleModel,
   dismissOrphan,
+  formatEfficiencyPct,
   nameOrphan,
   type ConsoleTester,
   type NightSlot,
@@ -301,7 +302,9 @@ function TesterRow({
         </div>
         {tester.slots.length ? <NightStrip slots={tester.slots} label={stripLabel} /> : <div />}
         <div className="text-[20px] font-semibold tabular-nums text-op-ink">
-          {tester.sleepEfficiencyPct !== null ? `${tester.sleepEfficiencyPct}%` : "—"}
+          {tester.sleepEfficiencyPct !== null
+            ? formatEfficiencyPct(tester.sleepEfficiencyPct, tester.sleepEfficiencyUpperBound)
+            : "—"}
         </div>
         <div className="flex flex-col items-start gap-1">
           <div

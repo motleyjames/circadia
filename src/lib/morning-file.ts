@@ -210,6 +210,8 @@ function latencyValue(value: LatencyBucket): string {
       return "40–60m";
     case 75:
       return "1h+";
+    default:
+      return value >= 180 ? "3h+" : value >= 60 ? `${value / 60}h` : `${value}m`;
   }
 }
 
@@ -230,6 +232,8 @@ function wakingDuration(value: NightWakingDuration): string {
       return "~45m up";
     case 70:
       return "1h+ up";
+    default:
+      return value >= 180 ? "3h+ up" : value >= 60 ? `${value / 60}h up` : `${value}m up`;
   }
 }
 
