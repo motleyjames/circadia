@@ -372,8 +372,8 @@
     "id": "pack-sends-dream-text",
     "why": "Dream text rides out on the pack. Free text is how a name leaves the device.",
     "file": "src/lib/study.ts",
-    "find": "        hadDream: Boolean(report.dream?.text),\n",
-    "replace": "        hadDream: Boolean(report.dream?.text),\n        dream: report.dream?.text,\n",
+    "find": "      if (typeof report.filedLate === \"boolean\") night.filedLate = report.filedLate;\n",
+    "replace": "      if (typeof report.filedLate === \"boolean\") night.filedLate = report.filedLate;\n      if (report.dream?.text) Object.assign(night, { dream: report.dream.text });\n",
     "testFile": "src/lib/study.test.ts",
     "testName": "no free text reaches a pack"
   },
@@ -714,8 +714,8 @@
     "id": "console-missed-night-zeros-efficiency",
     "why": "Dividing scored nights by nightsElapsed treats a missed morning as 0% efficiency, which is not a night that was filed.",
     "file": "src/lib/console-model.ts",
-    "find": "  const sleepEfficiencyPct = scored.length\n    ? Math.round(scored.reduce((sum, n) => sum + n, 0) / scored.length)\n    : null;\n",
-    "replace": "  const sleepEfficiencyPct = nightsElapsed\n    ? Math.round(scored.reduce((sum, n) => sum + n, 0) / nightsElapsed)\n    : null;\n",
+    "find": "  const sleepEfficiencyPct = scored.length\n    ? Math.round(scored.reduce((sum, n) => sum + n.efficiencyPct, 0) / scored.length)\n    : null;\n",
+    "replace": "  const sleepEfficiencyPct = nightsElapsed\n    ? Math.round(scored.reduce((sum, n) => sum + n.efficiencyPct, 0) / nightsElapsed)\n    : null;\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "a missed night never lowers sleep efficiency"
   },
@@ -1218,8 +1218,8 @@
     "id": "console-james-slot-merge",
     "why": "James filed one night. Merging the old slot-1 pack with the corrected slot-0 pack, and counting an unreached slot, draws two bars and 200%.",
     "file": "src/lib/console-model.ts",
-    "find": "  const source = newest.pack.nights;\n  const filed = new Map<number, { night: StudyNight; efficiencyPct: number | null }>();\n  for (const night of source) {\n    if (night.episodeNight === undefined) continue;\n    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n    if (nightsElapsed !== null && night.episodeNight >= nightsElapsed) continue;\n    filed.set(night.episodeNight, { night, efficiencyPct: nightEfficiency(night) });\n  }\n",
-    "replace": "  const source = ordered.flatMap((row) => row.pack.nights);\n  const filed = new Map<number, { night: StudyNight; efficiencyPct: number | null }>();\n  for (const night of source) {\n    if (night.episodeNight === undefined) continue;\n    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n    filed.set(night.episodeNight, { night, efficiencyPct: nightEfficiency(night) });\n  }\n",
+    "find": "  const source = newest.pack.nights;\n  const filed = new Map<number, { night: StudyNight; scored: NightScore | null }>();\n  for (const night of source) {\n    if (night.episodeNight === undefined) continue;\n    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n    if (nightsElapsed !== null && night.episodeNight >= nightsElapsed) continue;\n    filed.set(night.episodeNight, { night, scored: nightScore(night) });\n  }\n",
+    "replace": "  const source = ordered.flatMap((row) => row.pack.nights);\n  const filed = new Map<number, { night: StudyNight; scored: NightScore | null }>();\n  for (const night of source) {\n    if (night.episodeNight === undefined) continue;\n    if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;\n    filed.set(night.episodeNight, { night, scored: nightScore(night) });\n  }\n",
     "testFile": "src/lib/console-model.test.ts",
     "testName": "James's case: slot 1 in an older pack, slot 0 in the newer, is one bar in slot 0, 1 filed, 100%"
   },
@@ -1283,6 +1283,15 @@
     "file": "src/lib/product.ts",
     "find": "export const PRODUCT_NAME = \"Somnadia\";\n",
     "replace": "export const PRODUCT_NAME = \"Circadia\";\n",
+    "testFile": "src/lib/product-rename.test.ts",
+    "testName": "display surfaces contain no whole-word Circadia"
+  },
+  {
+    "id": "rename-api-says-circadia",
+    "why": "A person who folds a locked copy reads this error. Circadia on that line is the rename failing.",
+    "file": "src/app/api/locked-diary/route.ts",
+    "find": "    return NextResponse.json({ ok: false, error: `That file is not a ${PRODUCT_NAME} diary.` }, { status: 400 });\n",
+    "replace": "    return NextResponse.json({ ok: false, error: \"That file is not a Circadia diary.\" }, { status: 400 });\n",
     "testFile": "src/lib/product-rename.test.ts",
     "testName": "display surfaces contain no whole-word Circadia"
   },

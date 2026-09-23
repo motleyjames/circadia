@@ -4,7 +4,13 @@ import { describe, expect, it } from "vitest";
 import { CONSENT_VERSION, DISCLOSURE_LINES, hasCurrentConsent, packDisclosureKeys, receivesCoversEveryMappedKey, unmappedPackKeys, whatJamesReceives } from "./consent";
 import { formatEfficiencyPct } from "./console-model";
 import { emptyMorningContext, fileMorningReport, CLOCK_WATCHING_SENTENCE, afterFileHeadline, afterFileNote, afterFileHasSleepNumber } from "./morning-diary";
-import { clocksInOrder, nudgeNightHandle, usualNightClocks, type NightClocks } from "./night-clocks";
+import {
+  clocksInOrder,
+  NIGHT_HANDLE_ORDER,
+  nudgeNightHandle,
+  setNightHandle,
+  type NightClocks,
+} from "./night-clocks";
 import {
   ACCEPTED_NIGHT_KEYS,
   ACCEPTED_TOP_KEYS,
@@ -365,18 +371,54 @@ describe("diary 2.0 invariants", () => {
   });
 
   it("the night bar never produces clocks out of order", () => {
-    let next = usualNightClocks("23:00", "07:00");
-    expect(clocksInOrder(next)).toBe(true);
-    for (let i = 0; i < 40; i++) next = nudgeNightHandle(next, "triedToSleepAt", -15);
-    expect(clocksInOrder(next)).toBe(true);
-    expect(next.triedToSleepAt).toBe(next.inBedAt);
-    for (let i = 0; i < 40; i++) next = nudgeNightHandle(next, "wokeAt", 15);
-    expect(clocksInOrder(next)).toBe(true);
-    for (let i = 0; i < 40; i++) next = nudgeNightHandle(next, "outOfBedAt", -15);
-    expect(clocksInOrder(next)).toBe(true);
-    expect(next.outOfBedAt).toBe(next.wokeAt);
-    for (let i = 0; i < 40; i++) next = nudgeNightHandle(next, "inBedAt", 15);
-    expect(clocksInOrder(next)).toBe(true);
+    const separated: NightClocks = {
+      inBedAt: "23:00",
+      triedToSleepAt: "23:30",
+      wokeAt: "06:30",
+      outOfBedAt: "07:00",
+    };
+    expect(clocksInOrder(separated)).toBe(true);
+    for (const handle of NIGHT_HANDLE_ORDER) {
+      for (const delta of [-15, 15] as const) {
+        expect(clocksInOrder(nudgeNightHandle(separated, handle, delta))).toBe(true);
+      }
+    }
+
+    const atTried: NightClocks = { ...separated, inBedAt: "23:30", triedToSleepAt: "23:30" };
+    const inBedPastTried = nudgeNightHandle(atTried, "inBedAt", 15);
+    expect(clocksInOrder(inBedPastTried)).toBe(true);
+    expect(inBedPastTried.inBedAt).toBe(atTried.inBedAt);
+    const triedPastInBed = nudgeNightHandle(atTried, "triedToSleepAt", -15);
+    expect(clocksInOrder(triedPastInBed)).toBe(true);
+    expect(triedPastInBed.triedToSleepAt).toBe(atTried.inBedAt);
+
+    const atWoke: NightClocks = { ...separated, triedToSleepAt: "06:30", wokeAt: "06:30" };
+    const triedPastWoke = nudgeNightHandle(atWoke, "triedToSleepAt", 15);
+    expect(clocksInOrder(triedPastWoke)).toBe(true);
+    expect(triedPastWoke.triedToSleepAt).toBe(atWoke.wokeAt);
+    const wokePastTried = nudgeNightHandle(atWoke, "wokeAt", -15);
+    expect(clocksInOrder(wokePastTried)).toBe(true);
+    expect(wokePastTried.wokeAt).toBe(atWoke.triedToSleepAt);
+
+    const atOut: NightClocks = { ...separated, wokeAt: "07:00", outOfBedAt: "07:00" };
+    const wokePastOut = nudgeNightHandle(atOut, "wokeAt", 15);
+    expect(clocksInOrder(wokePastOut)).toBe(true);
+    expect(wokePastOut.wokeAt).toBe(atOut.outOfBedAt);
+    const outPastWoke = nudgeNightHandle(atOut, "outOfBedAt", -15);
+    expect(clocksInOrder(outPastWoke)).toBe(true);
+    expect(outPastWoke.outOfBedAt).toBe(atOut.wokeAt);
+    expect(clocksInOrder(nudgeNightHandle(atOut, "outOfBedAt", 15))).toBe(true);
+    expect(clocksInOrder(nudgeNightHandle(atTried, "inBedAt", -15))).toBe(true);
+
+    expect(setNightHandle(separated, "inBedAt", "23:45")).toEqual(separated);
+    expect(setNightHandle(separated, "triedToSleepAt", "22:45")).toEqual(separated);
+    expect(setNightHandle(separated, "triedToSleepAt", "06:45")).toEqual(separated);
+    expect(setNightHandle(separated, "wokeAt", "23:15")).toEqual(separated);
+    expect(setNightHandle(separated, "wokeAt", "07:15")).toEqual(separated);
+    expect(setNightHandle(separated, "outOfBedAt", "06:15")).toEqual(separated);
+    const earlierInBed = setNightHandle(separated, "inBedAt", "22:45");
+    expect(earlierInBed).not.toEqual(separated);
+    expect(clocksInOrder(earlierInBed)).toBe(true);
   });
 
   it("the clock sentence appears verbatim on the latency screen", () => {
