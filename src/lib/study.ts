@@ -17,6 +17,16 @@ import type {
 } from "@/lib/types";
 import { APP_VERSION } from "@/lib/version";
 import { isClock as isWallClock, normalizeClock } from "@/lib/windows";
+import {
+  ACCEPTED_NIGHT_KEYS,
+  ACCEPTED_TOP_KEYS,
+  isAcceptedLatencyMinutes,
+  isAcceptedWakingMinutes,
+  LEGACY_CHAT_KEYS,
+  LEGACY_SESSION_KEYS,
+  SENT_FLAG_KEYS,
+  SENT_PROFILE_KEYS,
+} from "@/lib/pack-keys";
 
 export const STUDY_SCHEMA = "circadia-study-v1" as const;
 
@@ -77,16 +87,12 @@ export function buildStudyPack(state: CircadiaState, now = new Date()): StudyPac
         durationMinutes: overnightDuration(report.fellAsleepAt, report.wokeAt),
         rating: report.rating,
         drank: report.drank,
-        screenOffMinutes: report.screenOffMinutes,
         sleepLatencyMinutes: report.sleepLatencyMinutes,
         wokeInNight: report.wokeInNight,
         nightWakingMinutes: report.nightWakingMinutes,
         usedSupplement: report.usedSupplement,
-        windDownHelped: report.windDownHelped,
-        hadDream: Boolean(report.dream?.text),
       };
       if (report.drank && typeof report.drinkCount === "number") night.drinkCount = report.drinkCount;
-      if (typeof report.spins === "boolean") night.spins = report.spins;
       if (report.usedSupplement && report.supplementKind) night.supplementKind = report.supplementKind;
       if (isWallClock(report.inBedAt)) night.inBedAt = normalizeClock(report.inBedAt);
       if (isWallClock(report.triedToSleepAt)) night.triedToSleepAt = normalizeClock(report.triedToSleepAt);
@@ -94,19 +100,22 @@ export function buildStudyPack(state: CircadiaState, now = new Date()): StudyPac
       if (isAwakeningCount(report.awakeningCount)) night.awakeningCount = report.awakeningCount;
       if (isNapMinutes(report.napMinutes)) night.napMinutes = report.napMinutes;
       if (typeof report.filedLate === "boolean") night.filedLate = report.filedLate;
+      if (typeof report.caffeineAfter2pm === "boolean") night.caffeineAfter2pm = report.caffeineAfter2pm;
+      if (report.latencyFloor === true) night.latencyFloor = true;
+      if (report.wakingFloor === true) night.wakingFloor = true;
+      if (
+        typeof report.morningSeconds === "number" &&
+        Number.isInteger(report.morningSeconds) &&
+        report.morningSeconds >= 0
+      ) {
+        night.morningSeconds = report.morningSeconds;
+      }
       if (state.episode) {
         const position = episodeNightOf(state.episode.enrolledAt, report.morningDate);
         if (position !== null) night.episodeNight = position;
       }
       return night;
     });
-
-  const allChat = consultMessages(state.chat, state.consultHistory);
-  const topics = [
-    ...new Set(
-      allChat.flatMap((msg) => (msg.role === "circadia" && msg.citations ? msg.citations : [])),
-    ),
-  ].sort();
 
   const pack: StudyPack = {
     schema: STUDY_SCHEMA,
@@ -126,15 +135,6 @@ export function buildStudyPack(state: CircadiaState, now = new Date()): StudyPac
       targetWake: profile.targetWake,
     },
     nights,
-    sessions: {
-      meditation: state.sessions.filter((s) => s.kind === "meditation").length,
-      soundscape: state.sessions.filter((s) => s.kind === "soundscape").length,
-      completed: state.sessions.filter((s) => s.completed).length,
-    },
-    chat: {
-      turns: Math.min(500, allChat.length),
-      topics,
-    },
   };
   if (state.episode) {
     pack.nightsElapsed = nightsElapsedSince(state.episode.enrolledAt, now);
@@ -337,61 +337,12 @@ export function assertSendable(payload: unknown, state: CircadiaState): string[]
 
 export type ValidateResult = { ok: true; value: StudyPack } | { ok: false; error: string };
 
-export const TOP_KEYS = new Set([
-  "schema",
-  "participantId",
-  "appVersion",
-  "surface",
-  "demoWeek",
-  "profile",
-  "nights",
-  "sessions",
-  "chat",
-  "nightsElapsed",
-  "safetyFlags",
-]);
-
-export const PROFILE_KEYS = new Set([
-  "ageBand",
-  "sex",
-  "struggles",
-  "activity",
-  "bmiBand",
-  "medicationClasses",
-  "supplementCount",
-  "targetSleep",
-  "targetWake",
-]);
-
-export const NIGHT_KEYS = new Set([
-  "nightIndex",
-  "fellAsleepAt",
-  "wokeAt",
-  "durationMinutes",
-  "rating",
-  "drank",
-  "drinkCount",
-  "spins",
-  "screenOffMinutes",
-  "sleepLatencyMinutes",
-  "wokeInNight",
-  "nightWakingMinutes",
-  "usedSupplement",
-  "supplementKind",
-  "windDownHelped",
-  "hadDream",
-  "inBedAt",
-  "triedToSleepAt",
-  "outOfBedAt",
-  "awakeningCount",
-  "napMinutes",
-  "filedLate",
-  "episodeNight",
-]);
-
-export const SESSION_KEYS = new Set(["meditation", "soundscape", "completed"]);
-export const CHAT_KEYS = new Set(["turns", "topics"]);
-export const FLAG_KEYS = new Set(["category", "episodeNight"]);
+export const TOP_KEYS = ACCEPTED_TOP_KEYS;
+export const PROFILE_KEYS = SENT_PROFILE_KEYS;
+export const NIGHT_KEYS = ACCEPTED_NIGHT_KEYS;
+export const SESSION_KEYS = LEGACY_SESSION_KEYS;
+export const CHAT_KEYS = LEGACY_CHAT_KEYS;
+export const FLAG_KEYS = SENT_FLAG_KEYS;
 
 const AWAKENING_COUNTS = new Set<AwakeningCount>([0, 1, 2, 3, 4]);
 const NAP_MINUTES = new Set<NapMinutes>([0, 20, 45, 90]);
@@ -500,7 +451,34 @@ export function validateStudyPack(raw: unknown): ValidateResult {
     if (typeof n.drank !== "boolean" || typeof n.wokeInNight !== "boolean" || typeof n.usedSupplement !== "boolean") {
       return { ok: false, error: "Invalid night flags." };
     }
-    if (typeof n.hadDream !== "boolean") return { ok: false, error: "Invalid dream flag." };
+    if (n.hadDream !== undefined && typeof n.hadDream !== "boolean") {
+      return { ok: false, error: "Invalid dream flag." };
+    }
+    if (!isAcceptedLatencyMinutes(n.sleepLatencyMinutes)) {
+      return { ok: false, error: "Invalid duration." };
+    }
+    if (!isAcceptedWakingMinutes(n.nightWakingMinutes)) {
+      return { ok: false, error: "Invalid duration." };
+    }
+    if (n.drinkCount !== undefined) {
+      if (typeof n.drinkCount !== "number" || n.drinkCount < 1 || n.drinkCount > 5 || !Number.isInteger(n.drinkCount)) {
+        return { ok: false, error: "Invalid drink count." };
+      }
+    }
+    if (n.caffeineAfter2pm !== undefined && typeof n.caffeineAfter2pm !== "boolean") {
+      return { ok: false, error: "Invalid caffeineAfter2pm." };
+    }
+    if (n.latencyFloor !== undefined && typeof n.latencyFloor !== "boolean") {
+      return { ok: false, error: "Invalid latencyFloor." };
+    }
+    if (n.wakingFloor !== undefined && typeof n.wakingFloor !== "boolean") {
+      return { ok: false, error: "Invalid wakingFloor." };
+    }
+    if (n.morningSeconds !== undefined) {
+      if (typeof n.morningSeconds !== "number" || !Number.isInteger(n.morningSeconds) || n.morningSeconds < 0 || n.morningSeconds > 86400) {
+        return { ok: false, error: "Invalid morningSeconds." };
+      }
+    }
     if (n.inBedAt !== undefined) {
       if (!isWallClock(n.inBedAt)) return { ok: false, error: "Invalid night clocks." };
       n.inBedAt = normalizeClock(n.inBedAt);
@@ -533,31 +511,43 @@ export function validateStudyPack(raw: unknown): ValidateResult {
     nights.push(n as unknown as StudyNight);
   }
 
-  if (!p.sessions || typeof p.sessions !== "object" || Array.isArray(p.sessions)) {
-    return { ok: false, error: "Invalid sessions." };
-  }
-  const sessions = p.sessions as Record<string, unknown>;
-  if (extraKeys(sessions, SESSION_KEYS).length) {
-    return { ok: false, error: "Unknown sessions field." };
-  }
-  if (
-    typeof sessions.meditation !== "number" ||
-    typeof sessions.soundscape !== "number" ||
-    typeof sessions.completed !== "number"
-  ) {
-    return { ok: false, error: "Invalid session counts." };
+  let sessions: StudyPack["sessions"];
+  if (p.sessions !== undefined) {
+    if (!p.sessions || typeof p.sessions !== "object" || Array.isArray(p.sessions)) {
+      return { ok: false, error: "Invalid sessions." };
+    }
+    const rawSessions = p.sessions as Record<string, unknown>;
+    if (extraKeys(rawSessions, SESSION_KEYS).length) {
+      return { ok: false, error: "Unknown sessions field." };
+    }
+    if (
+      typeof rawSessions.meditation !== "number" ||
+      typeof rawSessions.soundscape !== "number" ||
+      typeof rawSessions.completed !== "number"
+    ) {
+      return { ok: false, error: "Invalid session counts." };
+    }
+    sessions = {
+      meditation: rawSessions.meditation,
+      soundscape: rawSessions.soundscape,
+      completed: rawSessions.completed,
+    };
   }
 
-  if (!p.chat || typeof p.chat !== "object" || Array.isArray(p.chat)) {
-    return { ok: false, error: "Invalid chat summary." };
-  }
-  const chat = p.chat as Record<string, unknown>;
-  if (extraKeys(chat, CHAT_KEYS).length) return { ok: false, error: "Unknown chat field." };
-  if (typeof chat.turns !== "number" || chat.turns < 0 || chat.turns > 500) {
-    return { ok: false, error: "Invalid chat turns." };
-  }
-  if (!Array.isArray(chat.topics) || chat.topics.some((t) => typeof t !== "string" || t.length > 64)) {
-    return { ok: false, error: "Invalid chat topics." };
+  let chat: StudyPack["chat"];
+  if (p.chat !== undefined) {
+    if (!p.chat || typeof p.chat !== "object" || Array.isArray(p.chat)) {
+      return { ok: false, error: "Invalid chat summary." };
+    }
+    const rawChat = p.chat as Record<string, unknown>;
+    if (extraKeys(rawChat, CHAT_KEYS).length) return { ok: false, error: "Unknown chat field." };
+    if (typeof rawChat.turns !== "number" || rawChat.turns < 0 || rawChat.turns > 500) {
+      return { ok: false, error: "Invalid chat turns." };
+    }
+    if (!Array.isArray(rawChat.topics) || rawChat.topics.some((t) => typeof t !== "string" || t.length > 64)) {
+      return { ok: false, error: "Invalid chat topics." };
+    }
+    chat = { turns: rawChat.turns, topics: rawChat.topics as string[] };
   }
 
   let safetyFlags: SafetyFlag[] | undefined;
@@ -602,15 +592,8 @@ export function validateStudyPack(raw: unknown): ValidateResult {
         targetWake: profile.targetWake as string,
       },
       nights,
-      sessions: {
-        meditation: sessions.meditation as number,
-        soundscape: sessions.soundscape as number,
-        completed: sessions.completed as number,
-      },
-      chat: {
-        turns: chat.turns as number,
-        topics: chat.topics as string[],
-      },
+      ...(sessions ? { sessions } : {}),
+      ...(chat ? { chat } : {}),
       ...(typeof p.nightsElapsed === "number" ? { nightsElapsed: p.nightsElapsed } : {}),
       ...(safetyFlags ? { safetyFlags } : {}),
     },

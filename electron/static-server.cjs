@@ -88,6 +88,9 @@ function recordRejectedPack(inbox, reason) {
   }
 }
 
+const ACCEPTED_LATENCY_MINUTES = new Set([5, 10, 15, 20, 30, 45, 50, 60, 75, 90, 120, 180]);
+const ACCEPTED_WAKING_MINUTES = new Set([0, 5, 10, 15, 20, 25, 30, 45, 50, 60, 70, 75, 90, 120, 180]);
+
 function studyNightGeometryOk(raw) {
   if (!Array.isArray(raw.nights)) return true;
   for (const row of raw.nights) {
@@ -100,6 +103,12 @@ function studyNightGeometryOk(raw) {
     if (row.awakeningCount !== undefined && ![0, 1, 2, 3, 4].includes(row.awakeningCount)) return false;
     if (row.napMinutes !== undefined && ![0, 20, 45, 90].includes(row.napMinutes)) return false;
     if (row.filedLate !== undefined && typeof row.filedLate !== "boolean") return false;
+    if (row.sleepLatencyMinutes !== undefined && !ACCEPTED_LATENCY_MINUTES.has(row.sleepLatencyMinutes)) {
+      return false;
+    }
+    if (row.nightWakingMinutes !== undefined && !ACCEPTED_WAKING_MINUTES.has(row.nightWakingMinutes)) {
+      return false;
+    }
   }
   return true;
 }

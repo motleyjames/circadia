@@ -46,6 +46,8 @@ export type NightGeometry = {
   terminalMinutes: number;
   /** Awakenings not counting the final one, when recorded. */
   awakeningCount: number | null;
+  /** True when a duration was recorded as "at least" this long. Efficiency is then an upper bound. */
+  efficiencyIsUpperBound: boolean;
 };
 
 /** Sleep clinics generally treat 85% and up as healthy. */
@@ -92,6 +94,8 @@ export type NightGeometryInput = Pick<
   | "wokeInNight"
   | "nightWakingMinutes"
   | "awakeningCount"
+  | "latencyFloor"
+  | "wakingFloor"
 >;
 
 export function nightGeometry(report: NightGeometryInput): NightGeometry | null {
@@ -130,6 +134,7 @@ export function nightGeometry(report: NightGeometryInput): NightGeometry | null 
     wasoMinutes,
     terminalMinutes,
     awakeningCount: typeof report.awakeningCount === "number" ? report.awakeningCount : null,
+    efficiencyIsUpperBound: report.latencyFloor === true || report.wakingFloor === true,
   };
 }
 

@@ -3,46 +3,51 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DiaryLink } from "@/components/diary-tab-link";
 import { useCircadia } from "@/context/circadia-store";
-import { BubbleGroup, YesNo } from "@/components/bubbles";
-import { MorningFile } from "@/components/morning-file";
+import { BubbleGroup } from "@/components/bubbles";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { NightBar } from "@/components/night-bar";
 import { backfillableDates } from "@/lib/backfill";
+import { episodeNightOf } from "@/lib/episode";
+import {
+  AWAKENING_CHIPS,
+  AWAKENING_QUESTION,
+  CLOCK_WATCHING_SENTENCE,
+  CONTEXT_QUESTION,
+  DURATION_CHIPS,
+  DRINK_CHIPS,
+  emptyMorningContext,
+  fileMorningReport,
+  LATENCY_QUESTION,
+  NAP_CHIPS,
+  RATING_CHIPS,
+  RATING_QUESTION,
+  SLEEP_AID_CHIPS,
+  WASO_QUESTION,
+  afterFileHeadline,
+  afterFileNote,
+  type MorningContext,
+  type MorningContextChip,
+} from "@/lib/morning-diary";
+import { clocksInOrder, usualNightClocks, type NightClocks } from "@/lib/night-clocks";
 import type {
   AwakeningCount,
   LatencyBucket,
   MorningDraft,
-  MorningReport,
-  NapMinutes,
   NightWakingDuration,
-  ScreenOffMinutes,
   SleepRating,
-  SupplementKind,
-  WindDownHelp,
 } from "@/lib/types";
 import { reportForMorning } from "@/lib/morning-file";
-import { formatMorningDate, shiftIsoDate } from "@/lib/schedule";
-import { addMinutesToClock, clockFromDate, formatClock, overnightDuration, todayIsoDate } from "@/lib/time";
-import { SLEEP_AID_QUESTION } from "@/lib/intake";
+import { formatMorningDate } from "@/lib/schedule";
+import { todayIsoDate } from "@/lib/time";
 import { hapticLight, hapticSelect } from "@/lib/haptics";
-import { navigateDiary } from "@/lib/diary-route";
 
-const SLEEP_TIMES = ["21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30", "03:00"];
-const WAKE_TIMES = ["05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00", "11:00", "12:00"];
-const BED_TIMES = ["21:00", "21:30", "22:00", "22:30", "23:00", "23:30", "00:00", "00:30", "01:00", "01:30", "02:00", "02:30"];
-/** Minutes after the final awakening. "Straight away" is the common answer. */
-const GET_UP_DELAYS = [0, 10, 20, 45, 90] as const;
+const STEPS = ["night", "latency", "stay", "rating", "context"] as const;
 
 export function CheckInFlow() {
   const { state, withdrawMorning, saveMorningDraft } = useCircadia();
-  // Captured once. This was `todayIsoDate()` evaluated on every render, so an
-  // interview begun before midnight and finished after it was written to the next
-  // day — mis-attributing the night and permanently blocking the real morning.
   const [today] = useState(() => todayIsoDate());
   const existing = reportForMorning(state.reports, today);
   const missed = backfillableDates(today, state.reports, state.episode);
-  const [revising, setRevising] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [filingDate, setFilingDate] = useState<string | null>(null);
   const [interviewKey, setInterviewKey] = useState(0);
@@ -51,13 +56,10 @@ export function CheckInFlow() {
 
   return (
     <>
-      {existing && !revising && !late ? (
+      {existing && !late ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <MorningFile
-            report={existing}
-            units={state.profile?.units ?? "imperial"}
-            demoWeek={state.demoWeek}
-            onCorrect={() => setRevising(true)}
+          <AfterFile
+            morningDate={today}
             onWithdraw={() => setWithdrawOpen(true)}
           />
           <div className="px-5 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -66,10 +68,9 @@ export function CheckInFlow() {
         </div>
       ) : (
         <MorningInterview
-          key={late ? `late-${interviewDate}-${interviewKey}` : existing ? `revise-${existing.id}` : `fresh-${interviewKey}`}
+          key={late ? `late-${interviewDate}-${interviewKey}` : `fresh-${interviewKey}`}
           morningDate={interviewDate}
           filedLate={late}
-          existing={late ? null : existing}
           missedDates={late ? [] : missed}
           onPickMissed={setFilingDate}
           onDiscardDraft={() => {
@@ -77,7 +78,7 @@ export function CheckInFlow() {
             setFilingDate(null);
             setInterviewKey((n) => n + 1);
           }}
-          onCancel={late ? () => setFilingDate(null) : existing ? () => setRevising(false) : undefined}
+          onCancel={late ? () => setFilingDate(null) : undefined}
         />
       )}
       <ConfirmDialog
@@ -96,7 +97,6 @@ export function CheckInFlow() {
 function MorningInterview({
   morningDate,
   filedLate,
-  existing,
   missedDates,
   onPickMissed,
   onDiscardDraft,
@@ -104,278 +104,130 @@ function MorningInterview({
 }: {
   morningDate: string;
   filedLate: boolean;
-  existing: MorningReport | null;
   missedDates: string[];
   onPickMissed: (date: string) => void;
   onDiscardDraft: () => void;
   onCancel?: () => void;
 }) {
   const { state, addReport, saveMorningDraft } = useCircadia();
-  const today = morningDate;
-  const priorNight = shiftIsoDate(today, -1);
   const stored = state.morningDraft?.morningDate === morningDate ? state.morningDraft : null;
   const closed = useRef(false);
-  const usedWindDown = state.sessions.some(
-    (s) => s.startedAt.slice(0, 10) === priorNight || s.startedAt.slice(0, 10) === today,
-  );
-
-  // Bedtime barely moves for most people, so last night's answer is offered as the
-  // default rather than asked cold. Confirm-or-correct is the whole tap budget.
-  const lastNight = useMemo(
-    () => (filedLate ? undefined : [...state.reports].sort((a, b) => a.morningDate.localeCompare(b.morningDate)).at(-1)),
-    [filedLate, state.reports],
-  );
+  const startedAt = useRef(stored?.morningStartedAt ?? Date.now());
+  const usual = usualNightClocks(state.profile?.targetSleep ?? "23:00", state.profile?.targetWake ?? "07:00");
 
   const [step, setStep] = useState(stored?.step ?? 0);
-  const [wokeAt, setWokeAt] = useState(existing?.wokeAt ?? stored?.wokeAt ?? clockFromDate(new Date()));
-  // Consensus Sleep Diary geometry. `fellAsleepAt` is no longer asked — nobody can
-  // report the clock time they fell asleep, and asking teaches clock-watching. It
-  // is derived from lights-out plus latency at save time.
-  const [inBedAt, setInBedAt] = useState(
-    existing?.inBedAt ?? stored?.inBedAt ?? lastNight?.inBedAt ?? state.profile?.targetSleep ?? "23:00",
-  );
-  const [lightsOutSame, setLightsOutSame] = useState(
-    existing
-      ? (existing.triedToSleepAt ?? existing.inBedAt) === existing.inBedAt
-      : stored?.lightsOutSame ?? true,
-  );
-  const [triedToSleepAt, setTriedToSleepAt] = useState(
-    existing?.triedToSleepAt ?? existing?.inBedAt ?? stored?.triedToSleepAt ?? state.profile?.targetSleep ?? "23:00",
-  );
-  const [getUpDelay, setGetUpDelay] = useState<number | undefined>(
-    existing?.outOfBedAt ? overnightDuration(existing.wokeAt, existing.outOfBedAt) : stored?.getUpDelay,
+  const [clocks, setClocks] = useState<NightClocks>(() => ({
+    inBedAt: stored?.inBedAt ?? usual.inBedAt,
+    triedToSleepAt: stored?.triedToSleepAt ?? usual.triedToSleepAt,
+    wokeAt: stored?.wokeAt ?? usual.wokeAt,
+    outOfBedAt: stored?.outOfBedAt ?? usual.outOfBedAt,
+  }));
+  const [sleepLatencyMinutes, setSleepLatencyMinutes] = useState<LatencyBucket | undefined>(
+    stored?.sleepLatencyMinutes,
   );
   const [awakeningCount, setAwakeningCount] = useState<AwakeningCount | undefined>(
-    existing?.awakeningCount ?? stored?.awakeningCount,
+    stored?.awakeningCount,
   );
-  const [napMinutes, setNapMinutes] = useState<NapMinutes | undefined>(existing?.napMinutes ?? stored?.napMinutes);
-  const [rating, setRating] = useState<SleepRating | undefined>(existing?.rating ?? stored?.rating);
-  const [drank, setDrank] = useState<boolean | undefined>(existing?.drank ?? stored?.drank);
-  const [drinkCount, setDrinkCount] = useState<number | undefined>(existing?.drinkCount ?? stored?.drinkCount);
-  const [spins, setSpins] = useState<boolean | undefined>(existing?.spins ?? stored?.spins);
-  const [screenOffMinutes, setScreenOffMinutes] = useState<ScreenOffMinutes | undefined>(
-    existing?.screenOffMinutes ?? stored?.screenOffMinutes,
+  const [nightWakingMinutes, setNightWakingMinutes] = useState<NightWakingDuration | undefined>(
+    stored?.nightWakingMinutes,
   );
-  const [sleepLatencyMinutes, setSleepLatencyMinutes] = useState<LatencyBucket | undefined>(
-    existing?.sleepLatencyMinutes ?? stored?.sleepLatencyMinutes,
-  );
-  const [wokeInNight, setWokeInNight] = useState<boolean | undefined>(existing?.wokeInNight ?? stored?.wokeInNight);
-  const [nightWakingMinutes, setNightWakingMinutes] = useState<NightWakingDuration>(
-    existing?.nightWakingMinutes ?? stored?.nightWakingMinutes ?? 25,
-  );
-  const [usedSupplement, setUsedSupplement] = useState<boolean | undefined>(
-    existing?.usedSupplement ?? stored?.usedSupplement,
-  );
-  const [supplementKind, setSupplementKind] = useState<SupplementKind | undefined>(
-    existing?.supplementKind ?? stored?.supplementKind,
-  );
-  const [supplementNote, setSupplementNote] = useState(existing?.supplementNote ?? stored?.supplementNote ?? "");
-  const [windDownHelped, setWindDownHelped] = useState<WindDownHelp | undefined>(
-    existing?.windDownHelped ?? stored?.windDownHelped ?? (usedWindDown ? undefined : "did_not_use"),
-  );
-  const [includeDream, setIncludeDream] = useState(Boolean(existing?.dream) || Boolean(stored?.includeDream));
-  const [dreamText, setDreamText] = useState(existing?.dream?.text ?? stored?.dreamText ?? "");
-  const [wantMeaning, setWantMeaning] = useState(existing?.dream?.wantMeaning ?? stored?.wantMeaning ?? false);
+  const [rating, setRating] = useState<SleepRating | undefined>(stored?.rating);
+  const [context, setContext] = useState<MorningContext>(() => ({
+    ...emptyMorningContext(),
+    napMinutes: stored?.napMinutes,
+    drank: stored?.drank ?? false,
+    drinkCount: stored?.drinkCount === 1 || stored?.drinkCount === 2 || stored?.drinkCount === 3 || stored?.drinkCount === 4
+      ? stored.drinkCount
+      : undefined,
+    caffeineAfter2pm: stored?.caffeineAfter2pm,
+    usedSupplement: stored?.usedSupplement ?? false,
+    supplementKind: stored?.supplementKind,
+  }));
+  const [followUp, setFollowUp] = useState<MorningContextChip | null>(null);
   const pickingUp = Boolean(stored && (stored.step > 0 || stored.rating !== undefined || stored.inBedAt));
-
   const units = state.profile?.units ?? "imperial";
+  const current = STEPS[Math.min(step, STEPS.length - 1)];
 
   useEffect(() => {
-    if (closed.current || existing) return;
-    const draft: MorningDraft = { morningDate, step };
-    if (wokeAt) draft.wokeAt = wokeAt;
-    if (inBedAt) draft.inBedAt = inBedAt;
-    draft.lightsOutSame = lightsOutSame;
-    if (triedToSleepAt) draft.triedToSleepAt = triedToSleepAt;
-    if (getUpDelay !== undefined) draft.getUpDelay = getUpDelay;
-    if (awakeningCount !== undefined) draft.awakeningCount = awakeningCount;
-    if (napMinutes !== undefined) draft.napMinutes = napMinutes;
-    if (rating !== undefined) draft.rating = rating;
-    if (drank !== undefined) draft.drank = drank;
-    if (drinkCount !== undefined) draft.drinkCount = drinkCount;
-    if (spins !== undefined) draft.spins = spins;
-    if (screenOffMinutes !== undefined) draft.screenOffMinutes = screenOffMinutes;
+    if (closed.current) return;
+    const draft: MorningDraft = { morningDate, step, morningStartedAt: startedAt.current };
+    draft.inBedAt = clocks.inBedAt;
+    draft.triedToSleepAt = clocks.triedToSleepAt;
+    draft.wokeAt = clocks.wokeAt;
+    draft.outOfBedAt = clocks.outOfBedAt;
     if (sleepLatencyMinutes !== undefined) draft.sleepLatencyMinutes = sleepLatencyMinutes;
-    if (wokeInNight !== undefined) draft.wokeInNight = wokeInNight;
-    draft.nightWakingMinutes = nightWakingMinutes;
-    if (usedSupplement !== undefined) draft.usedSupplement = usedSupplement;
-    if (supplementKind) draft.supplementKind = supplementKind;
-    if (supplementNote) draft.supplementNote = supplementNote;
-    if (windDownHelped) draft.windDownHelped = windDownHelped;
-    draft.includeDream = includeDream;
-    if (dreamText) draft.dreamText = dreamText;
-    draft.wantMeaning = wantMeaning;
+    if (awakeningCount !== undefined) draft.awakeningCount = awakeningCount;
+    if (nightWakingMinutes !== undefined) draft.nightWakingMinutes = nightWakingMinutes;
+    if (rating !== undefined) draft.rating = rating;
+    if (context.napMinutes !== undefined) draft.napMinutes = context.napMinutes;
+    draft.drank = context.drank;
+    if (context.drinkCount !== undefined) draft.drinkCount = context.drinkCount;
+    if (context.caffeineAfter2pm !== undefined) draft.caffeineAfter2pm = context.caffeineAfter2pm;
+    draft.usedSupplement = context.usedSupplement;
+    if (context.supplementKind) draft.supplementKind = context.supplementKind;
     saveMorningDraft(draft);
   }, [
     awakeningCount,
-    drank,
-    dreamText,
-    drinkCount,
-    existing,
-    getUpDelay,
-    inBedAt,
-    includeDream,
-    lightsOutSame,
+    clocks.inBedAt,
+    clocks.outOfBedAt,
+    clocks.triedToSleepAt,
+    clocks.wokeAt,
+    context,
     morningDate,
-    napMinutes,
     nightWakingMinutes,
     rating,
     saveMorningDraft,
-    screenOffMinutes,
     sleepLatencyMinutes,
-    spins,
     step,
-    supplementKind,
-    supplementNote,
-    triedToSleepAt,
-    usedSupplement,
-    wantMeaning,
-    windDownHelped,
-    wokeAt,
-    wokeInNight,
   ]);
 
-  const steps = useMemo(() => {
-    // In the order the night happened — recall is markedly better that way than
-    // jumping around the clock.
-    const list = ["bed", "latency", "stay", "wake", "up", "rating", "nap", "drink", "screens", "supp", "wind", "dream"] as const;
-    return list;
-  }, []);
-
-  const current = steps[step];
-
-  function canAdvance(): boolean {
-    switch (current) {
-      case "wake":
-        return Boolean(wokeAt);
-      case "bed":
-        return Boolean(inBedAt) && (lightsOutSame || Boolean(triedToSleepAt));
-      case "up":
-        return getUpDelay !== undefined;
-      case "nap":
-        return napMinutes !== undefined;
-      case "rating":
-        return rating !== undefined;
-      case "drink":
-        if (drank === undefined) return false;
-        if (drank && (spins === undefined || drinkCount === undefined)) return false;
-        return true;
-      case "screens":
-        return screenOffMinutes !== undefined;
-      case "latency":
-        return sleepLatencyMinutes !== undefined;
-      case "stay":
-        if (wokeInNight === undefined) return false;
-        // Count and duration are different clinical facts: one 90-minute waking is
-        // not five 18-minute ones. Only asked when there was a waking.
-        if (wokeInNight && awakeningCount === undefined) return false;
-        return true;
-      case "supp":
-        if (usedSupplement === undefined) return false;
-        if (!usedSupplement) return true;
-        if (!supplementKind) return false;
-        if (supplementKind === "other" && !supplementNote.trim()) return false;
-        return true;
-      case "wind":
-        return windDownHelped !== undefined;
-      case "dream":
-        return true;
-    }
+  function file(nextContext: MorningContext) {
+    if (sleepLatencyMinutes === undefined || awakeningCount === undefined || rating === undefined) return;
+    if (awakeningCount > 0 && nightWakingMinutes === undefined) return;
+    if (!existingGuard()) return;
+    closed.current = true;
+    addReport(
+      fileMorningReport({
+        morningDate,
+        clocks,
+        sleepLatencyMinutes,
+        awakeningCount,
+        nightWakingMinutes,
+        rating,
+        context: nextContext,
+        filedLate,
+        morningSeconds: Math.round((Date.now() - startedAt.current) / 1000),
+      }),
+    );
+    void hapticLight();
   }
 
-  function advance() {
-    setStep((s) => Math.min(s + 1, steps.length - 1));
+  function existingGuard(): boolean {
+    if (reportForMorning(state.reports, morningDate)) {
+      setSaveError("This morning is already filed.");
+      return false;
+    }
+    return true;
   }
 
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  function save() {
-    if (
-      rating === undefined ||
-      drank === undefined ||
-      screenOffMinutes === undefined ||
-      sleepLatencyMinutes === undefined ||
-      wokeInNight === undefined ||
-      usedSupplement === undefined ||
-      (usedSupplement && !supplementKind) ||
-      (usedSupplement && supplementKind === "other" && !supplementNote.trim()) ||
-      windDownHelped === undefined ||
-      getUpDelay === undefined ||
-      napMinutes === undefined ||
-      (wokeInNight && awakeningCount === undefined) ||
-      (drank && (drinkCount === undefined || spins === undefined))
-    ) {
-      setSaveError("Something above is still blank. Step back and finish it, then file.");
-      return;
-    }
-    // A fresh interview cannot write if today already has a page.
-    // Revision is the only second pass, and it replaces — it does not append.
-    if (!existing && reportForMorning(state.reports, today)) {
-      setSaveError("This morning is already filed. Open it from Notes to change an answer.");
-      return;
-    }
-    closed.current = true;
-    setSaveError(null);
-    const lightsOut = lightsOutSame ? inBedAt : triedToSleepAt;
-    const payload: Omit<MorningReport, "id" | "createdAt"> = {
-      morningDate: today,
-      wokeAt,
-      // Derived, not asked. Lights-out plus how long it took.
-      fellAsleepAt: addMinutesToClock(lightsOut, sleepLatencyMinutes),
-      inBedAt,
-      triedToSleepAt: lightsOut,
-      outOfBedAt: addMinutesToClock(wokeAt, getUpDelay),
-      awakeningCount: wokeInNight ? awakeningCount : 0,
-      napMinutes,
-      rating,
-      drank,
-      screenOffMinutes,
-      sleepLatencyMinutes,
-      wokeInNight,
-      nightWakingMinutes: wokeInNight ? nightWakingMinutes : 0,
-      usedSupplement,
-      windDownHelped,
-    };
-    if (drank) {
-      payload.drinkCount = drinkCount;
-      payload.spins = spins;
-    }
-    if (usedSupplement) payload.supplementKind = supplementKind;
-    if (usedSupplement && supplementKind === "other" && supplementNote.trim()) {
-      payload.supplementNote = supplementNote.trim().slice(0, 80);
-    }
-    if (includeDream && dreamText.trim()) {
-      payload.dream = { text: dreamText.trim(), wantMeaning };
-    }
-    addReport(payload);
-    void hapticLight();
-    navigateDiary("/insights");
-  }
-
   return (
     <div className="phone-page-y flex min-h-0 flex-1 flex-col px-5 md:pt-[max(2rem,env(safe-area-inset-top))]">
       <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">
-        {existing ? "Correcting this morning" : filedLate ? "Missed morning" : "Morning interview"}
+        {filedLate ? "Missed morning" : "Your night"}
       </p>
       <h1 className="font-heading mt-1 text-2xl text-zinc-50">
-        {existing
-          ? "Same date. New answers."
-          : filedLate
-            ? "From memory. Marked as late so the grid can tell."
-            : "About forty seconds. Rough answers are fine — close beats exact."}
+        {filedLate ? "From memory. Marked as late so the grid can tell." : "Your night."}
       </h1>
       <p className="mt-1 text-xs text-zinc-500">
-        {existing
-          ? `${formatMorningDate(today)} · same page, new answers.`
-          : filedLate
-            ? `${formatMorningDate(today)} · filed late.`
-            : `${formatMorningDate(today)} · one page.`}
+        {filedLate ? `${formatMorningDate(morningDate)} · filed late.` : formatMorningDate(morningDate)}
       </p>
       {pickingUp ? (
         <p className="mt-3 text-[13px] leading-relaxed text-sky-200/90">Picking up where you left off.</p>
       ) : null}
-      {!existing && !filedLate ? <MissedMornings dates={missedDates} onPick={onPickMissed} /> : null}
-      {!existing && state.reports.length === 0 ? (
+      {!filedLate ? <MissedMornings dates={missedDates} onPick={onPickMissed} /> : null}
+      {!filedLate && state.reports.length === 0 ? (
         <p className="mt-3 max-w-[44ch] text-[12px] leading-relaxed text-zinc-500">
           Already filed on the other Somnadia?{" "}
           <DiaryLink href="/you" className="text-zinc-300">
@@ -386,344 +238,163 @@ function MorningInterview({
       ) : null}
 
       <div className="mt-6 mb-4 flex gap-1">
-        {steps.map((key, i) => (
-          <span
-            key={key}
-            className={`h-1 flex-1 rounded-full ${i <= step ? "bg-violet-300/80" : "bg-white/10"}`}
-          />
+        {STEPS.map((key, i) => (
+          <span key={key} className={`h-1 flex-1 rounded-full ${i <= step ? "bg-violet-300/80" : "bg-white/10"}`} />
         ))}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pb-4">
-        {current === "wake" ? (
-          <Block title="When did you wake up?" hint="About is fine.">
-            <BubbleGroup
-              value={wokeAt}
-              onChange={(v) => {
-                setWokeAt(v);
-                advance();
+        {current === "night" ? (
+          <div>
+            <NightBar clocks={clocks} units={units} onChange={setClocks} />
+            <button
+              type="button"
+              className="mt-6 w-full rounded-full bg-sky-300 px-5 py-3 text-[17px] font-semibold text-zinc-950"
+              onClick={() => {
+                void hapticSelect();
+                setClocks(usual);
+                setStep(1);
               }}
-              columns={3}
-              options={WAKE_TIMES.map((t) => ({ value: t, label: formatClock(t, units) }))}
-            />
-          </Block>
-        ) : null}
-
-        {current === "bed" ? (
-          <Block
-            title="What time did you get into bed?"
-            hint={lastNight?.inBedAt ? `Last night you said ${formatClock(lastNight.inBedAt, units)}. Tap to keep it or pick another.` : "Getting in — not falling asleep."}
-          >
-            <div className="space-y-4">
-              <BubbleGroup
-                value={inBedAt}
-                onChange={(v) => {
-                  setInBedAt(v);
-                  if (lightsOutSame) setTriedToSleepAt(v);
-                }}
-                columns={3}
-                options={BED_TIMES.map((t) => ({ value: t, label: formatClock(t, units) }))}
-              />
-              <p className="text-xs text-zinc-400">Did you try to sleep straight away?</p>
-              <YesNo
-                value={lightsOutSame}
-                onChange={(v) => {
-                  setLightsOutSame(v);
-                  if (v) {
-                    setTriedToSleepAt(inBedAt);
-                    advance();
-                  }
-                }}
-                yesLabel="Straight away"
-                noLabel="Read or watched first"
-              />
-              {lightsOutSame ? null : (
-                <div className="space-y-2">
-                  <p className="text-xs text-zinc-400">Lights out at?</p>
-                  <BubbleGroup
-                    value={triedToSleepAt}
-                    onChange={(v) => {
-                      setTriedToSleepAt(v);
-                      advance();
-                    }}
-                    columns={3}
-                    options={SLEEP_TIMES.map((t) => ({ value: t, label: formatClock(t, units) }))}
-                  />
-                </div>
-              )}
-            </div>
-          </Block>
-        ) : null}
-
-        {current === "up" ? (
-          <Block
-            title="And when did you get out of bed?"
-            hint="Time lying there after waking counts against you, so it is worth being honest."
-          >
-            <BubbleGroup
-              value={getUpDelay}
-              onChange={(v) => {
-                setGetUpDelay(v);
-                advance();
-              }}
-              columns={2}
-              options={GET_UP_DELAYS.map((m) => ({
-                value: m as number,
-                label: m === 0 ? "Straight away" : `${m} min later`,
-                hint: formatClock(addMinutesToClock(wokeAt, m), units),
-              }))}
-            />
-          </Block>
-        ) : null}
-
-        {current === "nap" ? (
-          <Block title="Did you nap yesterday?" hint="Naps change how much sleep pressure you brought to the night.">
-            <BubbleGroup
-              value={napMinutes}
-              onChange={(v) => {
-                setNapMinutes(v);
-                advance();
-              }}
-              columns={2}
-              options={[
-                { value: 0 as NapMinutes, label: "No nap" },
-                { value: 20 as NapMinutes, label: "About 20 min" },
-                { value: 45 as NapMinutes, label: "About 45 min" },
-                { value: 90 as NapMinutes, label: "An hour or more" },
-              ]}
-            />
-          </Block>
-        ) : null}
-
-        {current === "rating" ? (
-          <Block title="How did the night feel?" hint="1 wrecked · 5 restored">
-            <BubbleGroup
-              value={rating}
-              onChange={(v) => {
-                setRating(v);
-                advance();
-              }}
-              columns={5}
-              options={[1, 2, 3, 4, 5].map((n) => ({
-                value: n as SleepRating,
-                label: String(n),
-              }))}
-            />
-          </Block>
-        ) : null}
-
-        {current === "drink" ? (
-          <Block title="Did you drink last night?" hint="Alcohol. Not water. Follow-ups only if yes.">
-            <YesNo
-              value={drank}
-              onChange={(v) => {
-                setDrank(v);
-                if (!v) {
-                  setSpins(undefined);
-                  advance();
-                }
-              }}
-            />
-            {drank ? (
-              <div className="mt-5 space-y-4">
-                <p className="text-xs text-zinc-400">How many?</p>
-                <BubbleGroup
-                  value={drinkCount}
-                  onChange={(n) => {
-                    setDrinkCount(n);
-                    if (spins !== undefined) advance();
-                  }}
-                  columns={5}
-                  options={[1, 2, 3, 4, 5].map((n) => ({
-                    value: n,
-                    label: n === 5 ? "5+" : String(n),
-                  }))}
-                />
-                <p className="text-xs text-zinc-400">Spins?</p>
-                <YesNo
-                  value={spins}
-                  onChange={(v) => {
-                    setSpins(v);
-                    if (drinkCount !== undefined) advance();
-                  }}
-                />
-              </div>
-            ) : null}
-          </Block>
-        ) : null}
-
-        {current === "screens" ? (
-          <Block title="How long were you off screens before bed?" hint="About.">
-            <BubbleGroup
-              value={screenOffMinutes}
-              onChange={(v) => {
-                setScreenOffMinutes(v);
-                advance();
-              }}
-              options={[
-                { value: 0 as ScreenOffMinutes, label: "None", hint: "in bed with it" },
-                { value: 15 as ScreenOffMinutes, label: "~15m" },
-                { value: 30 as ScreenOffMinutes, label: "~30m" },
-                { value: 45 as ScreenOffMinutes, label: "~45m" },
-                { value: 60 as ScreenOffMinutes, label: "1h+" },
-              ]}
-            />
-          </Block>
+            >
+              Same as usual
+            </button>
+          </div>
         ) : null}
 
         {current === "latency" ? (
-          <Block title="How long did you lie awake before sleeping?" hint="About.">
+          <Block title={LATENCY_QUESTION} hint={CLOCK_WATCHING_SENTENCE}>
             <BubbleGroup
               value={sleepLatencyMinutes}
               onChange={(v) => {
                 setSleepLatencyMinutes(v);
-                advance();
+                setStep(2);
               }}
-              options={[
-                { value: 5 as LatencyBucket, label: "<10m" },
-                { value: 15 as LatencyBucket, label: "10–20" },
-                { value: 30 as LatencyBucket, label: "20–40" },
-                { value: 50 as LatencyBucket, label: "40–60" },
-                { value: 75 as LatencyBucket, label: "60+" },
-              ]}
+              options={DURATION_CHIPS.map((chip) => ({ value: chip.value, label: chip.label }))}
             />
           </Block>
         ) : null}
 
         {current === "stay" ? (
-          <Block title="Did you wake in the night and struggle to fall back?" hint="Staying asleep, not a bathroom trip that was easy.">
-            <YesNo
-              value={wokeInNight}
+          <Block title={AWAKENING_QUESTION}>
+            <BubbleGroup
+              value={awakeningCount}
               onChange={(v) => {
-                setWokeInNight(v);
-                if (!v) advance();
-              }}
-            />
-            {wokeInNight ? (
-              <div className="mt-5 space-y-5">
-                <div>
-                  {/* Count and duration are separate facts. One long waking and five
-                      short ones are different nights, and only the count says which. */}
-                  <p className="mb-2 text-xs text-zinc-400">How many times?</p>
-                  <BubbleGroup
-                    value={awakeningCount}
-                    onChange={setAwakeningCount}
-                    columns={4}
-                    options={[
-                      { value: 1 as AwakeningCount, label: "Once" },
-                      { value: 2 as AwakeningCount, label: "Twice" },
-                      { value: 3 as AwakeningCount, label: "3" },
-                      { value: 4 as AwakeningCount, label: "4+" },
-                    ]}
-                  />
-                </div>
-                <div>
-                  <p className="mb-2 text-xs text-zinc-400">Awake for how long in total?</p>
-                  <BubbleGroup
-                    value={nightWakingMinutes}
-                    onChange={(v) => {
-                      setNightWakingMinutes(v);
-                      if (awakeningCount !== undefined) advance();
-                    }}
-                    options={[
-                      { value: 10 as NightWakingDuration, label: "~10m" },
-                      { value: 25 as NightWakingDuration, label: "~25m" },
-                      { value: 45 as NightWakingDuration, label: "~45m" },
-                      { value: 70 as NightWakingDuration, label: "1h+" },
-                    ]}
-                  />
-                </div>
-              </div>
-            ) : null}
-          </Block>
-        ) : null}
-
-        {current === "supp" ? (
-          <Block
-            title={SLEEP_AID_QUESTION}
-            hint="Anything you took for this night — a gummy, magnesium, Unisom. Not a daytime vitamin."
-          >
-            <YesNo
-              value={usedSupplement}
-              onChange={(v) => {
-                setUsedSupplement(v);
-                if (!v) {
-                  setSupplementKind(undefined);
-                  setSupplementNote("");
-                  advance();
+                setAwakeningCount(v);
+                if (v === 0) {
+                  setNightWakingMinutes(0);
+                  setStep(3);
                 }
               }}
+              columns={3}
+              options={AWAKENING_CHIPS.map((chip) => ({ value: chip.value, label: chip.label }))}
             />
-            {usedSupplement ? (
-              <div className="mt-5">
-                <p className="mb-2 text-xs text-zinc-400">Which?</p>
+            {awakeningCount !== undefined && awakeningCount > 0 ? (
+              <div className="mt-6">
+                <h3 className="mb-3 text-lg text-zinc-50">{WASO_QUESTION}</h3>
                 <BubbleGroup
-                  value={supplementKind}
+                  value={nightWakingMinutes}
                   onChange={(v) => {
-                    setSupplementKind(v);
-                    if (v !== "other") {
-                      setSupplementNote("");
-                      advance();
-                    }
+                    setNightWakingMinutes(v);
+                    setStep(3);
                   }}
-                  options={[
-                    { value: "melatonin" as SupplementKind, label: "Melatonin" },
-                    { value: "magnesium" as SupplementKind, label: "Magnesium" },
-                    { value: "both" as SupplementKind, label: "Both of those" },
-                    { value: "antihistamine" as SupplementKind, label: "Unisom-type" },
-                    { value: "other" as SupplementKind, label: "Something else" },
-                  ]}
+                  options={DURATION_CHIPS.map((chip) => ({ value: chip.value, label: chip.label }))}
                 />
-                {supplementKind === "other" ? (
-                  <label className="mt-4 block">
-                    <span className="text-xs text-zinc-400">What was it?</span>
-                    <Input
-                      value={supplementNote}
-                      onChange={(e) => setSupplementNote(e.target.value.slice(0, 80))}
-                      placeholder="Name is fine. Stays on this device."
-                      className="mt-2 h-12 rounded-2xl border-white/10 bg-white/4 px-4 text-zinc-50"
-                    />
-                  </label>
-                ) : null}
               </div>
             ) : null}
           </Block>
         ) : null}
 
-        {current === "wind" ? (
-          <Block title="Did last night’s wind-down help?" hint="Meditation, noise, or neither.">
+        {current === "rating" ? (
+          <Block title={RATING_QUESTION}>
             <BubbleGroup
-              value={windDownHelped}
+              value={rating}
               onChange={(v) => {
-                setWindDownHelped(v);
-                advance();
+                setRating(v);
+                setStep(4);
               }}
-              options={[
-                { value: "yes" as WindDownHelp, label: "Yes" },
-                { value: "a_bit" as WindDownHelp, label: "A bit" },
-                { value: "no" as WindDownHelp, label: "No" },
-                { value: "did_not_use" as WindDownHelp, label: "Didn’t use" },
-              ]}
+              options={RATING_CHIPS.map((chip) => ({ value: chip.value, label: chip.label }))}
             />
           </Block>
         ) : null}
 
-        {current === "dream" ? (
-          <Block title="Dream report — optional" hint="Skip if you do not care. Toggle meaning only if you want Somnadia to look.">
-            <YesNo value={includeDream} onChange={setIncludeDream} yesLabel="Add a dream" noLabel="Skip" />
-            {includeDream ? (
-              <div className="mt-4 space-y-3">
-                <Textarea
-                  value={dreamText}
-                  onChange={(e) => setDreamText(e.target.value)}
-                  placeholder="Whatever you remember. Fragments are enough."
-                  className="min-h-28 rounded-2xl border-white/10 bg-white/5"
+        {current === "context" ? (
+          <Block title={CONTEXT_QUESTION}>
+            <div className="flex flex-wrap gap-2">
+              {(
+                [
+                  ["nap", "Nap"],
+                  ["alcohol", "Alcohol"],
+                  ["caffeine", "Caffeine after 2 pm"],
+                  ["aid", "Sleep aid"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`rounded-full border px-4 py-2 text-[15px] ${
+                    followUp === id ? "border-sky-300 bg-sky-300/15 text-sky-100" : "border-white/12 text-zinc-100"
+                  }`}
+                  onClick={() => {
+                    void hapticSelect();
+                    setFollowUp(id);
+                    if (id === "caffeine") {
+                      setContext((prev) => ({ ...prev, caffeineAfter2pm: true }));
+                    }
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="rounded-full border border-white/12 px-4 py-2 text-[15px] text-zinc-100"
+                onClick={() => {
+                  void hapticSelect();
+                  file(emptyMorningContext());
+                }}
+              >
+                Nothing
+              </button>
+            </div>
+            {followUp === "nap" ? (
+              <div className="mt-5">
+                <BubbleGroup
+                  value={context.napMinutes}
+                  onChange={(v) => setContext((prev) => ({ ...prev, napMinutes: v }))}
+                  options={NAP_CHIPS.map((chip) => ({ value: chip.value, label: chip.label }))}
                 />
-                <div>
-                  <p className="mb-2 text-xs text-zinc-400">Any meaning behind it?</p>
-                  <YesNo value={wantMeaning} onChange={setWantMeaning} yesLabel="Look" noLabel="Just store it" />
-                </div>
               </div>
+            ) : null}
+            {followUp === "alcohol" ? (
+              <div className="mt-5">
+                <BubbleGroup
+                  value={context.drinkCount}
+                  onChange={(v) => setContext((prev) => ({ ...prev, drank: true, drinkCount: v }))}
+                  columns={4}
+                  options={DRINK_CHIPS.map((chip) => ({ value: chip.value, label: chip.label }))}
+                />
+              </div>
+            ) : null}
+            {followUp === "aid" ? (
+              <div className="mt-5">
+                <BubbleGroup
+                  value={context.supplementKind}
+                  onChange={(v) => setContext((prev) => ({ ...prev, usedSupplement: true, supplementKind: v }))}
+                  options={SLEEP_AID_CHIPS.map((chip) => ({ value: chip.value, label: chip.label }))}
+                />
+              </div>
+            ) : null}
+            {followUp ? (
+              <button
+                type="button"
+                className="mt-6 w-full rounded-full bg-sky-300 px-5 py-3 text-[17px] font-semibold text-zinc-950"
+                onClick={() => {
+                  void hapticSelect();
+                  file(context);
+                }}
+              >
+                Done
+              </button>
             ) : null}
           </Block>
         ) : null}
@@ -740,12 +411,13 @@ function MorningInterview({
               onCancel();
               return;
             }
+            setFollowUp(null);
             setStep((s) => Math.max(0, s - 1));
           }}
         >
           {step === 0 && onCancel ? "Cancel" : "Back"}
         </button>
-        {pickingUp && !existing ? (
+        {pickingUp ? (
           <button
             type="button"
             className="rounded-full px-4 py-2 text-[15px] text-zinc-400"
@@ -758,26 +430,20 @@ function MorningInterview({
             Discard draft
           </button>
         ) : null}
-        {step < steps.length - 1 ? (
+        {current === "night" ? (
           <button
             type="button"
             className="rounded-full bg-sky-300 px-5 py-2.5 text-[17px] font-semibold text-zinc-950 disabled:opacity-40"
-            disabled={!canAdvance()}
+            disabled={!clocksInOrder(clocks)}
             onClick={() => {
               void hapticSelect();
-              advance();
+              setStep(1);
             }}
           >
             Next
           </button>
         ) : (
-          <button
-            type="button"
-            className="rounded-full btn-primary px-5 py-2.5 text-[17px] font-semibold"
-            onClick={save}
-          >
-            {existing ? "Save this page" : "File this morning"}
-          </button>
+          <span />
         )}
       </div>
       {saveError ? (
@@ -785,6 +451,50 @@ function MorningInterview({
           {saveError}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function AfterFile({
+  morningDate,
+  onWithdraw,
+}: {
+  morningDate: string;
+  onWithdraw: () => void;
+}) {
+  const { state } = useCircadia();
+  const episodeNight = state.episode ? episodeNightOf(state.episode.enrolledAt, morningDate) : null;
+  const headline = afterFileHeadline(episodeNight);
+  const note = afterFileNote(episodeNight);
+  const filled = useMemo(() => {
+    const slots = Array.from({ length: 14 }, () => false);
+    if (!state.episode) return slots;
+    for (const report of state.reports) {
+      const n = episodeNightOf(state.episode.enrolledAt, report.morningDate);
+      if (n !== null && n >= 0 && n < 14) slots[n] = true;
+    }
+    return slots;
+  }, [state.episode, state.reports]);
+
+  return (
+    <div className="phone-page-y flex min-h-0 flex-1 flex-col px-5 md:pt-[max(2rem,env(safe-area-inset-top))]">
+      <p className="text-[11px] tracking-[0.28em] text-sky-300/80 uppercase">Morning</p>
+      <h1 className="font-heading mt-2 text-3xl text-zinc-50">{headline}</h1>
+      {state.episode && episodeNight !== null && episodeNight >= 0 && episodeNight < 14 ? (
+        <div className="mt-6 flex gap-1.5" aria-hidden>
+          {filled.map((on, i) => (
+            <span key={i} className={`h-2 flex-1 rounded-full ${on ? "bg-sky-300/80" : "bg-white/10"}`} />
+          ))}
+        </div>
+      ) : null}
+      {note ? <p className="mt-5 text-[17px] leading-relaxed text-zinc-300">{note}</p> : null}
+      <button
+        type="button"
+        className="mt-auto mb-[max(1rem,env(safe-area-inset-bottom))] self-start text-[13px] text-zinc-500"
+        onClick={onWithdraw}
+      >
+        Withdraw this morning
+      </button>
     </div>
   );
 }

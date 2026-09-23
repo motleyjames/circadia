@@ -32,6 +32,7 @@ export type SlotKind = "bar" | "outline" | "dashed" | "empty";
 export type NightSlot = {
   kind: SlotKind;
   efficiencyPct: number | null;
+  efficiencyUpperBound?: boolean;
 };
 
 export type ConsoleSectionId =
@@ -57,6 +58,7 @@ export type ConsoleTester = {
   progressLabel: string;
   filedLabel: string;
   sleepEfficiencyPct: number | null;
+  sleepEfficiencyUpperBound: boolean;
   slots: NightSlot[];
   flags: PackSafetyCategory[];
   reason: string;
@@ -336,6 +338,7 @@ function withdrawnBookTester(invite: OperatorInvite): ConsoleTester {
     progressLabel: progressLabel(null, 0),
     filedLabel: filedLabel(null, 0, 0),
     sleepEfficiencyPct: null,
+    sleepEfficiencyUpperBound: false,
     slots: [],
     flags: [],
     reason: "Left the study.",
@@ -358,12 +361,12 @@ function stitchTester(
   const packNights = newest.pack.nights;
   const packNightCount = packNights.length;
   const source = newest.pack.nights;
-  const filed = new Map<number, { night: StudyNight; efficiencyPct: number | null }>();
+  const filed = new Map<number, { night: StudyNight; scored: NightScore | null }>();
   for (const night of source) {
     if (night.episodeNight === undefined) continue;
     if (!Number.isInteger(night.episodeNight) || night.episodeNight < 0) continue;
     if (nightsElapsed !== null && night.episodeNight >= nightsElapsed) continue;
-    filed.set(night.episodeNight, { night, efficiencyPct: nightEfficiency(night) });
+    filed.set(night.episodeNight, { night, scored: nightScore(night) });
   }
 
   const notEnrolled = nightsElapsed === null;
@@ -384,11 +387,12 @@ function stitchTester(
   const arrived = parseInboxStamp(newest.file);
   const slots = notEnrolled ? [] : buildSlots(filed, nightsElapsed);
   const scored = (notEnrolled ? packNights : [...filed.values()].map((row) => row.night))
-    .map(nightEfficiency)
-    .filter((n): n is number => n !== null);
+    .map(nightScore)
+    .filter((n): n is NightScore => n !== null);
   const sleepEfficiencyPct = scored.length
-    ? Math.round(scored.reduce((sum, n) => sum + n, 0) / scored.length)
+    ? Math.round(scored.reduce((sum, n) => sum + n.efficiencyPct, 0) / scored.length)
     : null;
+  const sleepEfficiencyUpperBound = scored.some((n) => n.upperBound);
   const missed = nightsElapsed !== null ? Math.max(0, nightsElapsed - filed.size) : 0;
   const orphan = !inBook;
 
@@ -408,6 +412,7 @@ function stitchTester(
     progressLabel: progressLabel(nightsElapsed, packNightCount),
     filedLabel: filedLabel(nightsElapsed, nightsFiled, packNightCount),
     sleepEfficiencyPct,
+    sleepEfficiencyUpperBound,
     slots,
     flags,
     reason: reasonFor({ section, flags, missedLastTwo, nightsElapsed, nightsFiled, missed, orphan }),
@@ -438,7 +443,7 @@ function lastTwoUnfiled(nightsElapsed: number, filed: Map<number, unknown>): boo
 }
 
 function buildSlots(
-  filed: Map<number, { efficiencyPct: number | null }>,
+  filed: Map<number, { scored: NightScore | null }>,
   nightsElapsed: number | null,
 ): NightSlot[] {
   const slots: NightSlot[] = [];
@@ -446,8 +451,12 @@ function buildSlots(
     const row = filed.get(i);
     if (row) {
       slots.push(
-        row.efficiencyPct !== null
-          ? { kind: "bar", efficiencyPct: row.efficiencyPct }
+        row.scored
+          ? {
+              kind: "bar",
+              efficiencyPct: row.scored.efficiencyPct,
+              efficiencyUpperBound: row.scored.upperBound || undefined,
+            }
           : { kind: "outline", efficiencyPct: null },
       );
       continue;
@@ -476,7 +485,9 @@ function allowlistedFlags(raw: unknown): PackSafetyCategory[] {
   return out;
 }
 
-function nightEfficiency(night: StudyNight): number | null {
+type NightScore = { efficiencyPct: number; upperBound: boolean };
+
+function nightScore(night: StudyNight): NightScore | null {
   const geometry = nightGeometry({
     inBedAt: night.inBedAt,
     outOfBedAt: night.outOfBedAt,
@@ -486,8 +497,16 @@ function nightEfficiency(night: StudyNight): number | null {
     wokeInNight: night.wokeInNight,
     nightWakingMinutes: night.nightWakingMinutes,
     awakeningCount: night.awakeningCount,
+    latencyFloor: night.latencyFloor,
+    wakingFloor: night.wakingFloor,
   });
-  return geometry ? geometry.efficiencyPct : null;
+  if (!geometry) return null;
+  return { efficiencyPct: geometry.efficiencyPct, upperBound: geometry.efficiencyIsUpperBound };
+}
+
+export function formatEfficiencyPct(pct: number, upperBound: boolean): string {
+  const figure = `${Math.round(pct)}%`;
+  return upperBound ? `≤ ${figure}` : figure;
 }
 
 function progressLabel(nightsElapsed: number | null, _packNightCount: number): string {

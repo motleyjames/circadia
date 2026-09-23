@@ -80,7 +80,8 @@ describe("useCircadia during prerender", () => {
     expect(filed).not.toContain("This morning is filed");
     expect(filed).not.toContain("The interview is closed");
     expect(filed).not.toContain("Correct this morning");
-    expect(checkIn).toContain("File this morning");
+    expect(checkIn).toContain("Same as usual");
+    expect(checkIn).toContain("Nothing");
     expect(checkIn).toContain("reportForMorning(state.reports, today)");
     expect(checkIn).not.toContain("Save night");
     expect(checkIn).not.toContain("this morning is already logged");

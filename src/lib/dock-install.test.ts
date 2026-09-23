@@ -173,13 +173,14 @@ describe("Dock install invariants", () => {
 describe("morning sleep-aid question", () => {
   it("asks about any sleep supplement, not only melatonin or magnesium", () => {
     expect(SLEEP_AID_QUESTION).toBe("Did you take any supplements last night to help you sleep?");
-    expect(checkIn).toContain("SLEEP_AID_QUESTION");
+    expect(checkIn).toContain("SLEEP_AID_CHIPS");
     expect(checkIn).not.toContain("Melatonin or magnesium last night?");
     expect(checkIn).not.toContain("overwrite today's log");
-    expect(checkIn).toContain("File this morning");
+    expect(checkIn).toContain("Same as usual");
+    expect(checkIn).toContain("Nothing");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).toContain("Notes for this morning");
     expect(readFileSync("src/components/morning-file.tsx", "utf8")).not.toContain("The interview is closed");
-    expect(APP_VERSION).toBe("0.16.0");
+    expect(APP_VERSION).toBe("0.17.0");
   });
 
   it("does not run diary views while compiling the operator", () => {

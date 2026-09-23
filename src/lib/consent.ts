@@ -1,16 +1,10 @@
 import { enrollWithInvite, PACK_SAFETY_CATEGORIES } from "@/lib/invite";
 import { CRISIS_LIFELINE_NUMBER } from "@/lib/safety-copy";
-import {
-  CHAT_KEYS,
-  FLAG_KEYS,
-  NIGHT_KEYS,
-  PROFILE_KEYS,
-  SESSION_KEYS,
-  TOP_KEYS,
-} from "@/lib/study";
+import { FLAG_KEYS, PROFILE_KEYS } from "@/lib/study";
+import { SENT_NIGHT_KEYS, SENT_TOP_KEYS } from "@/lib/pack-keys";
 import type { CircadiaState, StudyState } from "@/lib/types";
 
-export const CONSENT_VERSION = 2;
+export const CONSENT_VERSION = 3;
 
 export const CONSENT_EMAIL = "hello@somnadia.com";
 export const CONSENT_LEAVE_PATH = "You → Leave the study";
@@ -64,6 +58,10 @@ export const DISCLOSURE_LINES: Record<string, string> = {
   napMinutes: "whether you napped, and for how long",
   filedLate: "whether you filed the morning late",
   episodeNight: "which night of the test this belonged to",
+  caffeineAfter2pm: "whether you had caffeine after 2 pm",
+  latencyFloor: "whether falling asleep took at least three hours",
+  wakingFloor: "whether you were awake in the night at least three hours",
+  morningSeconds: "how many seconds the morning took to file",
   meditation: "how many times you used a meditation",
   soundscape: "how many times you used a soundscape",
   completed: "how many wind-downs you finished",
@@ -80,19 +78,15 @@ const HIDDEN_FROM_LIST = new Set([
   "surface",
   "profile",
   "nights",
-  "sessions",
-  "chat",
   "safetyFlags",
   "category",
 ]);
 
 export function packDisclosureKeys(): string[] {
   return [
-    ...TOP_KEYS,
+    ...SENT_TOP_KEYS,
     ...PROFILE_KEYS,
-    ...NIGHT_KEYS,
-    ...SESSION_KEYS,
-    ...CHAT_KEYS,
+    ...SENT_NIGHT_KEYS,
     ...FLAG_KEYS,
     ...PACK_SAFETY_CATEGORIES,
   ];
@@ -115,12 +109,11 @@ export function whatJamesReceives(): string[] {
     `${cap(DISCLOSURE_LINES.ageBand)}, ${DISCLOSURE_LINES.sex}, ${DISCLOSURE_LINES.struggles}, ${DISCLOSURE_LINES.activity}, and ${DISCLOSURE_LINES.bmiBand}.`,
     `${cap(DISCLOSURE_LINES.medicationClasses)}, ${DISCLOSURE_LINES.supplementCount}, ${DISCLOSURE_LINES.targetSleep}, and ${DISCLOSURE_LINES.targetWake}.`,
     `Each morning: ${DISCLOSURE_LINES.inBedAt}, ${DISCLOSURE_LINES.triedToSleepAt}, ${DISCLOSURE_LINES.fellAsleepAt}, ${DISCLOSURE_LINES.wokeAt}, and ${DISCLOSURE_LINES.outOfBedAt}; ${DISCLOSURE_LINES.durationMinutes}; ${DISCLOSURE_LINES.rating}; and ${DISCLOSURE_LINES.filedLate}.`,
-    `${cap(DISCLOSURE_LINES.drank)}, and ${DISCLOSURE_LINES.drinkCount}; ${DISCLOSURE_LINES.spins}; ${DISCLOSURE_LINES.screenOffMinutes}; and ${DISCLOSURE_LINES.sleepLatencyMinutes}.`,
-    `${cap(DISCLOSURE_LINES.wokeInNight)}, ${DISCLOSURE_LINES.awakeningCount}, and ${DISCLOSURE_LINES.nightWakingMinutes}; and ${DISCLOSURE_LINES.napMinutes}.`,
-    `${cap(DISCLOSURE_LINES.usedSupplement)}, and ${DISCLOSURE_LINES.supplementKind}; ${DISCLOSURE_LINES.windDownHelped}; and ${DISCLOSURE_LINES.hadDream}.`,
+    `${cap(DISCLOSURE_LINES.drank)}, and ${DISCLOSURE_LINES.drinkCount}; ${DISCLOSURE_LINES.sleepLatencyMinutes}; and ${DISCLOSURE_LINES.latencyFloor}.`,
+    `${cap(DISCLOSURE_LINES.wokeInNight)}, ${DISCLOSURE_LINES.awakeningCount}, and ${DISCLOSURE_LINES.nightWakingMinutes}; ${DISCLOSURE_LINES.wakingFloor}; and ${DISCLOSURE_LINES.napMinutes}.`,
+    `${cap(DISCLOSURE_LINES.usedSupplement)}, and ${DISCLOSURE_LINES.supplementKind}; and ${DISCLOSURE_LINES.caffeineAfter2pm}.`,
     `${cap(DISCLOSURE_LINES.nightIndex)}, and ${DISCLOSURE_LINES.episodeNight}.`,
-    `${cap(DISCLOSURE_LINES.meditation)}, ${DISCLOSURE_LINES.soundscape}, and ${DISCLOSURE_LINES.completed}.`,
-    `${cap(DISCLOSURE_LINES.turns)}, and ${DISCLOSURE_LINES.topics}.`,
+    `${cap(DISCLOSURE_LINES.morningSeconds)}.`,
     `${cap(DISCLOSURE_LINES.appVersion)}, ${DISCLOSURE_LINES.nightsElapsed}, and ${DISCLOSURE_LINES.demoWeek}.`,
     `If it comes up: ${DISCLOSURE_LINES["witnessed-apnea"]}, or ${DISCLOSURE_LINES["drowsy-driving"]}.`,
   ];
