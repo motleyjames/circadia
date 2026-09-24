@@ -4,9 +4,10 @@
 # when that invariant breaks.
 #
 # For every row in scripts/mutations.json:
-#   1. run the named test unmutated   (control: must pass, which also proves the
-#      test name is real — vitest treats "zero matching tests" as a failure, so
-#      without the control a typo in testName reads as a killed mutant)
+#   1. run the named test unmutated   (control: must pass AND report at least
+#      one passed test. vitest -t is a regex, and a filter that matches nothing
+#      in a file that exists skips every test and exits 0, so exit status alone
+#      cannot prove the name is real. testName is escaped to a literal first.)
 #   2. copy the source file to a temp backup
 #   3. apply the literal find/replace, asserting the file actually changed
 #      (a drifted find string would mutate nothing and report a survivor as killed)
@@ -136,6 +137,7 @@ while [ "$i" -lt "$count" ]; do
   file="$(manifest_field "$i" file)"
   test_file="$(manifest_field "$i" testFile)"
   test_name="$(manifest_field "$i" testName)"
+  test_pattern="$(printf '%s' "$test_name" | sed 's#[][\.*^$?+(){}|]#\\&#g')"
 
   echo "── $id"
   echo "   file: $file"
@@ -151,8 +153,12 @@ while [ "$i" -lt "$count" ]; do
 
   # 1. control run — the test must pass against untouched source.
   control_exit=0
-  npx vitest run "$test_file" -t "$test_name" >"$BACKUP_DIR/$i-control.log" 2>&1 || control_exit=$?
+  npx vitest run "$test_file" -t "$test_pattern" >"$BACKUP_DIR/$i-control.log" 2>&1 || control_exit=$?
   echo "   control exit: $control_exit"
+  if [ "$control_exit" -eq 0 ] && ! grep -Eq 'Tests .*passed' "$BACKUP_DIR/$i-control.log"; then
+    control_exit=97
+    echo "   control ran no test: the name matches nothing in $test_file."
+  fi
   if [ "$control_exit" -ne 0 ]; then
     echo "   CONTROL-FAIL: test does not pass unmutated (or the name matches nothing)."
     echo "   log: $BACKUP_DIR/$i-control.log"
@@ -182,7 +188,7 @@ while [ "$i" -lt "$count" ]; do
 
   # 4. mutant run.
   mutant_exit=0
-  npx vitest run "$test_file" -t "$test_name" >"$BACKUP_DIR/$i-mutant.log" 2>&1 || mutant_exit=$?
+  npx vitest run "$test_file" -t "$test_pattern" >"$BACKUP_DIR/$i-mutant.log" 2>&1 || mutant_exit=$?
   echo "   mutant exit: $mutant_exit"
   if [ "$mutant_exit" -ne 0 ]; then
     verdict="KILLED"
